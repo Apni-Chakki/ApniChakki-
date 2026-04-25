@@ -1,0 +1,1 @@
+const fs = require('fs'); const file = 'c:/Users/sb850/Desktop/Apni Chakki/Atta Chakki Frontend/src/components/admin/PrintTaskList.jsx'; let content = fs.readFileSync(file, 'utf8'); content = content.replace(/\\\\\/g, '\').replace(/\\\\\$/g, '$'); fs.writeFileSync(file, content);

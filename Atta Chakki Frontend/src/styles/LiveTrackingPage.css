@@ -1,0 +1,608 @@
+/* ============================================================
+ * LiveTrackingPage — InDrive-style Tracking Styles
+ * ============================================================ */
+
+/* ─── Loading State ─── */
+.live-tracking-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.loading-spinner {
+  text-align: center;
+  color: white;
+}
+
+.loading-spinner .loading-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+}
+
+.loading-spinner h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.loading-spinner p {
+  font-size: 0.875rem;
+  opacity: 0.7;
+}
+
+/* ─── Error State ─── */
+.live-tracking-error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e1b2e 0%, #2d1b3d 100%);
+  padding: 24px;
+}
+
+.error-card {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.error-card .error-icon {
+  width: 56px;
+  height: 56px;
+  color: #f59e0b;
+  margin: 0 auto 20px;
+}
+
+.error-card h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.error-card p {
+  font-size: 0.95rem;
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+/* ─── Delivered State ─── */
+.live-tracking-delivered {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+  padding: 24px;
+}
+
+.delivered-card {
+  text-align: center;
+  color: white;
+  max-width: 420px;
+}
+
+.delivered-checkmark {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  animation: deliveredPulse 2s ease-in-out infinite;
+}
+
+.delivered-icon {
+  width: 56px;
+  height: 56px;
+  color: #a7f3d0;
+}
+
+.delivered-card h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.delivered-card p {
+  font-size: 1rem;
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.delivered-driver {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.delivered-thanks {
+  margin-top: 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+@keyframes deliveredPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(167, 243, 208, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(167, 243, 208, 0); }
+}
+
+/* ─── Main Tracking Page ─── */
+.live-tracking-page {
+  min-height: 100vh;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ─── Map Container ─── */
+.tracking-map-container {
+  position: relative;
+  flex: 1;
+  min-height: 55vh;
+}
+
+.tracking-map {
+  width: 100%;
+  height: 100%;
+  min-height: 55vh;
+}
+
+.tracking-map-placeholder {
+  width: 100%;
+  height: 55vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #1e293b;
+  color: #94a3b8;
+  gap: 12px;
+}
+
+.tracking-map-placeholder .placeholder-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.5;
+}
+
+/* ─── Map Overlays ─── */
+.map-live-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(220, 38, 38, 0.95);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 24px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  z-index: 10;
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+.map-live-badge .live-dot {
+  width: 14px;
+  height: 14px;
+  animation: spin 2s linear infinite;
+}
+
+.map-offline-badge {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(245, 158, 11, 0.95);
+  color: #1e1b3a;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+}
+
+.map-offline-badge .offline-icon {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+/* ─── Bottom Sheet ─── */
+.tracking-bottom-sheet {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 28px 28px 0 0;
+  margin-top: -24px;
+  position: relative;
+  z-index: 20;
+  padding: 0 20px 32px;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── ETA Header ─── */
+.eta-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px 0 16px;
+}
+
+.eta-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 10px 24px;
+  border-radius: 40px;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.eta-pill .eta-clock-icon {
+  width: 18px;
+  height: 18px;
+  color: white;
+}
+
+.eta-pill .eta-clock-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.eta-pill .eta-time {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.distance-text {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ─── ETA Card ─── */
+.eta-card {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.eta-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eta-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.eta-main .eta-nav-icon {
+  width: 24px;
+  height: 24px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.eta-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.eta-value {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.eta-speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px 14px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.eta-speed .speed-icon {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+}
+
+.eta-speed span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.last-update {
+  font-size: 0.7rem;
+  color: #475569;
+  margin-top: 8px;
+  text-align: right;
+}
+
+/* ─── Driver Card ─── */
+.driver-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.driver-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.driver-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.driver-avatar .avatar-icon {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+
+.driver-details {
+  flex: 1;
+}
+
+.driver-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 2px;
+}
+
+.driver-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.driver-subtitle .verified-icon {
+  width: 12px;
+  height: 12px;
+  color: #22c55e;
+}
+
+.driver-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+.driver-rating .star-icon {
+  width: 14px;
+  height: 14px;
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+
+.driver-rating span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+/* ─── Driver Action Buttons ─── */
+.driver-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.call-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.call-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+.maps-btn {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.maps-btn:hover {
+  background: rgba(59, 130, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+.action-btn .action-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ─── Delivery Details Card ─── */
+.delivery-details-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.detail-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.destination-icon {
+  color: #ef4444;
+}
+
+.package-icon {
+  color: #8b5cf6;
+}
+
+.detail-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.detail-value.amount {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #a78bfa;
+}
+
+.detail-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 12px 0;
+}
+
+/* ─── Footer ─── */
+.tracking-footer {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.tracking-footer p {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.tracking-footer strong {
+  color: #64748b;
+}
+
+/* ─── Keyframe Animations ─── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Responsive: Desktop ─── */
+@media (min-width: 768px) {
+  .live-tracking-page {
+    flex-direction: row;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .tracking-map-container {
+    flex: 1;
+    min-height: 100vh;
+  }
+
+  .tracking-map {
+    min-height: 100vh;
+  }
+
+  .tracking-bottom-sheet {
+    width: 420px;
+    min-width: 420px;
+    height: 100vh;
+    overflow-y: auto;
+    border-radius: 0;
+    margin-top: 0;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .eta-header {
+    padding-top: 28px;
+  }
+}
+
+/* ─── Responsive: Large screens ─── */
+@media (min-width: 1200px) {
+  .tracking-bottom-sheet {
+    width: 460px;
+    min-width: 460px;
+  }
+}

@@ -1,0 +1,11 @@
+# CORS is handled by PHP in config/cors.php
+# This file ensures all requests (including OPTIONS preflight) reach PHP
+
+# Simply let Apache serve PHP files directly
+# No rewriting needed - files exist as .php files
+
+# If needed for friendly URLs, uncomment below:
+# RewriteEngine On
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteRule ^(.*)$ index.php/$1 [QSA,L]

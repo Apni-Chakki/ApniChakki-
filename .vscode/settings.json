@@ -1,0 +1,50 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "mkdir": true,
+        "Out-Null": true,
+        "Move-Item": true,
+        "/^node -e \"const fs=require\\('fs'\\); const code = fs\\.readFileSync\\('c:/Users/sb850/Desktop/Apni Chakki/Atta Chakki Frontend/src/components/admin/PrintOrderDetails\\.jsx', 'utf8'\\); try \\{ require\\('@babel/core'\\)\\.parseSync\\(code, \\{filename: 'PrintOrderDetails\\.jsx', presets: \\['@babel/preset-react'\\]\\}\\); \\} catch \\(e\\) \\{ console\\.error\\(e\\.message\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npx eslint": true,
+        "0..30": true,
+        "80..100": true,
+        "npx vite": true,
+        "/^node -e \"const fs=require\\('fs'\\); let code = fs\\.readFileSync\\('src/components/admin/PrintTaskList\\.jsx', 'utf8'\\); code = code\\.replace\\(/\\\\\\\\\\\\`/g, '\\\\`'\\); code = code\\.replace\\(/\\\\\\\\\\\\\\$\\\\\\{/g, '\\$\\{'\\); fs\\.writeFileSync\\('src/components/admin/PrintTaskList\\.jsx', code\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "Set-Content": true,
+        "/^node -e \"const fs = require\\('fs'\\); const file = 'c:/Users/sb850/Desktop/Apni Chakki/Atta Chakki Frontend/src/components/admin/PrintTaskList\\.jsx'; let content = fs\\.readFileSync\\(file, 'utf8'\\); content = content\\.replace\\(/\\\\\\\\\\\\`/g, '\\\\`'\\)\\.replace\\(/\\\\\\\\\\\\\\$/g, '\\$'\\); fs\\.writeFileSync\\(file, content\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Content fix\\.js \"const fs = require\\('fs'\\); const file = 'c:/Users/sb850/Desktop/Apni Chakki/Atta Chakki Frontend/src/components/admin/PrintTaskList\\.jsx'; let content = fs\\.readFileSync\\(file, 'utf8'\\); content = content\\.replace\\(/\\\\\\\\\\\\\\\\\\\\`/g, '\\\\`'\\)\\.replace\\(/\\\\\\\\\\\\\\\\\\\\\\$/g, '\\$'\\); fs\\.writeFileSync\\(file, content\\);\"\nnode fix\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm run build": true,
+        "\\\");": true,
+        "/^php -v$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^@\"\nconst fs = require\\('fs'\\);\nconst file = 'Atta Chakki Frontend/src/components/admin/OrdersRecord\\.jsx';\nlet content = fs\\.readFileSync\\(file, 'utf8'\\);\ncontent = content\\.replace\\('transition-colors duration-200\"\\\\r\\\\n              \\\\r\\\\n              <select', 'transition-colors duration-200\"\\\\n                />\\\\n              </div>\\\\n              \\\\n              <select'\\);\ncontent = content\\.replace\\('transition-colors duration-200\"\\\\\\\\n              \\\\\\\\n              <select', 'transition-colors duration-200\"\\\\\\\\n                />\\\\\\\\n              </div>\\\\\\\\n              \\\\\\\\n              <select'\\);\nfs\\.writeFileSync\\(file, content\\);\n\"@ > fix\\.js; node fix\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^@\"\nconst fs = require\\('fs'\\);\nconst file = 'Atta Chakki Frontend/src/components/admin/OrdersRecord\\.jsx';\nlet content = fs\\.readFileSync\\(file, 'utf8'\\);\ncontent = content\\.replace\\(/duration-200\"\\[\\\\s\\]\\*<select/, 'duration-200\"\\\\n                />\\\\n              </div>\\\\n              \\\\n              <select'\\);\nfs\\.writeFileSync\\(file, content\\);\n\"@ > fix\\.js; node fix\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "Select": true,
+        "foreach": true,
+        "/^php -r \"require 'Atta_Chakki_API/config/connect\\.php'; \\\\\\$r = \\\\\\$conn->query\\('ALTER TABLE orders ADD COLUMN cancellation_reason TEXT NULL;'\\); echo \\\\\\$r \\? 'Success' : \\\\\\$conn->error;\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "type": true,
+        "Copy-Item": true
+    }
+}
