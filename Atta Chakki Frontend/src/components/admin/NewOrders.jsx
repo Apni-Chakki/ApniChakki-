@@ -134,7 +134,9 @@ export function NewOrders() {
   };
 
   // --- 4. ASSIGN DRIVER VIA API ---
-  const handleAssignPersonnel = async (orderId, personnelName) => {
+  // personnelPhone is passed explicitly so the DB always has driver_phone even if
+  // the name-based lookup in the backend fails.
+  const handleAssignPersonnel = async (orderId, personnelName, personnelPhone = null) => {
     // Optimistic UI update (makes it look instantly fast on the screen)
     setOrders(orders.map(o => o.id === orderId ? {...o, deliveryPersonnel: personnelName} : o));
 
@@ -142,7 +144,7 @@ export function NewOrders() {
       const response = await fetch(`${API_BASE_URL}/assign_driver.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_name: personnelName })
+        body: JSON.stringify({ order_id: orderId, driver_name: personnelName, driver_phone: personnelPhone })
       });
 
       const result = await response.json();
@@ -234,7 +236,7 @@ export function NewOrders() {
                       activePersonnel.map(person => (
                         <DropdownMenuItem
                           key={person.id}
-                          onSelect={() => handleAssignPersonnel(order.id, person.name)}
+                          onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
                           className="cursor-pointer text-xs"
                         >
                           <span>{person.name}</span>

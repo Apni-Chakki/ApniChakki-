@@ -89,7 +89,7 @@ export function PickupRequests() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAssignPersonnel = async (orderId, personnelName) => {
+  const handleAssignPersonnel = async (orderId, personnelName, personnelPhone = null) => {
     setOrders(prevOrders => prevOrders.map(order => (
       order.id === orderId ? { ...order, driver_name: personnelName } : order
     )));
@@ -98,7 +98,7 @@ export function PickupRequests() {
       const response = await fetch(`${API_BASE_URL}/assign_driver.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_name: personnelName })
+        body: JSON.stringify({ order_id: orderId, driver_name: personnelName, driver_phone: personnelPhone })
       });
 
       const result = await response.json();
@@ -329,7 +329,7 @@ export function PickupRequests() {
                                   activePersonnel.map(person => (
                                     <DropdownMenuItem
                                       key={person.id}
-                                      onSelect={() => handleAssignPersonnel(order.id, person.name)}
+                                      onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
                                       className="cursor-pointer text-xs"
                                     >
                                       <span>{person.name}</span>
