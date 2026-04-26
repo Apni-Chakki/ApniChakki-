@@ -19,7 +19,8 @@ export function Settings() {
     deliveryAreas: 'Sorrunding of Thokar Niaz Baig',
     deliveryCharge: '50',
     minOrderForFreeDelivery: '500',
-    announcement: 'Special Offer: Get 10% off on your first order of fresh stone-ground flour!'
+    announcement: 'Special Offer: Get 10% off on your first order of fresh stone-ground flour!',
+    processingTimePerKg: '2'
   });
 
   useEffect(() => {
@@ -163,6 +164,21 @@ export function Settings() {
               onChange={(e) => setSettings({ ...settings, closingTime: e.target.value })}
             />
           </div>
+        </div>
+        <div className="mt-6 border-t pt-4">
+          <Label htmlFor="processingTimePerKg" className="mb-2 block">Processing Time Per Kg (minutes)</Label>
+          <Input
+            id="processingTimePerKg"
+            type="number"
+            min="1"
+            step="0.5"
+            value={settings.processingTimePerKg}
+            onChange={(e) => setSettings({ ...settings, processingTimePerKg: e.target.value })}
+            className="w-full md:w-1/2"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            This value is used by the auto-scheduler to calculate the Estimated Completion Time (ETA) for each order.
+          </p>
         </div>
       </Card>
 

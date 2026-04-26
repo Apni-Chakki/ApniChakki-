@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Phone, Navigation, CheckCircle, Package, LogOut, Wheat, Clock, Truck, Radio, MessageCircle, Link2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -483,8 +483,14 @@ export function DeliveryPanel() {
       const result = await response.json();
       
       if (result.success) {
-        toast.success('Status updated to Coming for Pickup!');
+        toast.success('Status updated to Coming for Pickup! GPS tracking started.');
         
+        // GPS tracking shuru karo takay admin location dekh sake
+        startGpsTracking(order.id);
+
+        // Tracking link generate karo
+        const trackingData = await generateTrackingLink(order);
+
         const cPhone = result.customer_phone || order.phone;
         const cName = result.customer_name || order.customerName;
         
@@ -494,12 +500,20 @@ export function DeliveryPanel() {
             ? '92' + customerPhone.substring(1) 
             : customerPhone.startsWith('92') ? customerPhone : '92' + customerPhone;
 
-          const msg = encodeURIComponent(
-            `🚚 *Apni Chakki Pickup Update*\n\n` +
-            `Hello ${cName || 'Customer'},\n\nOur rider is on the way to your location to pick up your order #${order.id}. Please keep the items ready!\n\n` +
-            `📦 Amount: TBD`
-          );
-          window.open(`https://wa.me/${formattedPhone}?text=${msg}`, '_blank');
+          // Agar tracking link mil gayi to use karo, warna simple message
+          let whatsappUrl;
+          if (trackingData?.whatsapp_url) {
+            whatsappUrl = trackingData.whatsapp_url;
+          } else {
+            const msg = encodeURIComponent(
+              `🚚 *Apni Chakki Pickup Update*\n\n` +
+              `Hello ${cName || 'Customer'},\n\nOur rider is on the way to your location to pick up your order #${order.id}. Please keep the items ready!\n\n` +
+              `📦 Amount: TBD`
+            );
+            whatsappUrl = `https://wa.me/${formattedPhone}?text=${msg}`;
+          }
+          
+          setTimeout(() => window.open(whatsappUrl, '_blank'), 800);
         }
         
         loadOrders();
@@ -512,8 +526,11 @@ export function DeliveryPanel() {
   };
 
   const handleArrivedAtShopForPickup = async (order) => {
-    if (confirm(`Mark pickup for order #${order.id} as Arrived at Shop?`)) {
+    if (confirm(`Mark order #${order.id} as Arrived at Shop (Pickup Complete)?`)) {
       try {
+        // GPS tracking band karo
+        stopGpsTracking(order.id);
+
         const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -521,7 +538,7 @@ export function DeliveryPanel() {
         });
         const result = await response.json();
         if (result.success) {
-          toast.success('Pickup marked as Arrived at Shop!');
+          toast.success('✅ Pickup complete! Admin ko update ho gaya.');
           loadOrders();
         } else {
           toast.error('Failed to update status');
@@ -603,13 +620,13 @@ export function DeliveryPanel() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => {
-              const isPickupRequest = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
+              const isPickupRequest = ['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0;
               // If it's a pickup request, it is actionable in pending/processing state too.
-              const isActionable = ['pending', 'processing', 'ready', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup'].includes(order.status);
+              const isActionable = ['pending', 'processing', 'ready', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status);
               const isTracking = !!activeTracking[order.id];
               
               return (
-              <Card key={order.id} className={`p-5 overflow-hidden ${!isActionable ? 'opacity-75 bg-gray-50' : 'border-l-4 border-l-primary'}`}>
+              <Card key={order.id} className={`p-5 ${!isActionable ? 'opacity-75 bg-gray-50' : 'border-l-4 border-l-primary'}`}>
                 <div className="space-y-4">
                   {/* Order Header */}
                   <div className="flex items-start justify-between">
@@ -667,47 +684,88 @@ export function DeliveryPanel() {
                   </div>
 
                   {isActionable && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-2">
                       {isPickupRequest ? (
                         <>
-                          {order.status !== 'coming_for_pickup' && (
-                            <Button
-                              variant="secondary"
-                              className="w-full sm:col-span-2 bg-blue-600 hover:bg-blue-700 text-white"
+                          {/* Status: pickup_assigned — sirf I'm Coming button */}
+                          {order.status === 'pickup_assigned' && (
+                            <button
+                              className="w-full h-11 rounded-md px-8 flex items-center justify-center gap-2 text-sm font-medium text-white transition-colors"
+                              style={{ backgroundColor: '#2563eb' }}
                               onClick={() => handleComingForPickup(order)}
                             >
-                              <Navigation className="h-4 w-4 mr-2" />
+                              <Navigation className="h-4 w-4" />
                               {t("I'm coming")}
-                            </Button>
+                            </button>
                           )}
+
+                          {/* Status: coming_for_pickup — WhatsApp Share + Mark as Arrived */}
                           {order.status === 'coming_for_pickup' && (
-                            <Button
-                              onClick={() => handleArrivedAtShopForPickup(order)}
-                              className="w-full sm:col-span-2 bg-teal-600 hover:bg-teal-700 text-white"
-                              size="lg"
-                            >
-                              <CheckCircle className="h-5 w-5 mr-2" />
-                              {t('Mark as Delivered')}
-                            </Button>
+                            <>
+                              {/* WhatsApp Share button */}
+                              {order.phone && (
+                                <button
+                                  className="w-full h-11 rounded-md px-4 flex items-center justify-center gap-2 text-sm font-medium border transition-colors"
+                                  style={{ borderColor: '#22c55e', color: '#15803d', backgroundColor: '#f0fdf4' }}
+                                  onClick={() => {
+                                    const trackingData = trackingLinks[order.id];
+                                    if (trackingData?.whatsapp_url) {
+                                      window.open(trackingData.whatsapp_url, '_blank');
+                                    } else {
+                                      generateTrackingLink(order).then(data => {
+                                        if (data?.whatsapp_url) {
+                                          window.open(data.whatsapp_url, '_blank');
+                                        } else {
+                                          getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 }).then(pos => {
+                                            const url = generateWhatsAppLink(order, pos?.coords?.latitude, pos?.coords?.longitude);
+                                            window.open(url, '_blank');
+                                          });
+                                        }
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                  {t('Share Live Location')}
+                                </button>
+                              )}
+
+                              {/* Mark as Arrived at Shop */}
+                              <button
+                                className="w-full h-12 rounded-md px-4 flex items-center justify-center gap-2 text-base font-semibold text-white transition-colors"
+                                style={{ backgroundColor: '#0d9488' }}
+                                onClick={() => handleArrivedAtShopForPickup(order)}
+                              >
+                                <CheckCircle className="h-5 w-5" />
+                                {t('Mark as Arrived at Shop')}
+                              </button>
+                            </>
+                          )}
+
+                          {/* Status: arrived_at_shop — sirf info dikhao */}
+                          {order.status === 'arrived_at_shop' && (
+                            <div className="w-full text-center text-sm text-teal-700 font-semibold bg-teal-50 rounded-md py-3 border border-teal-200">
+                              ✅ Arrived at Shop — Admin processing karega
+                            </div>
                           )}
                         </>
                       ) : (
                         <>
                           {order.status !== 'out-for-delivery' ? (
-                            <Button
-                              className="w-full sm:col-span-2 bg-blue-600 hover:bg-blue-700 text-white"
-                              size="lg"
+                            <button
+                              className="w-full h-11 rounded-md flex items-center justify-center gap-2 text-sm font-semibold text-white transition-colors"
+                              style={{ backgroundColor: '#2563eb' }}
                               onClick={() => handleStartDelivery(order)}
                             >
-                              <Truck className="h-5 w-5 mr-2" />
+                              <Truck className="h-5 w-5" />
                               {t('Start Delivery')}
-                            </Button>
+                            </button>
                           ) : (
                             <>
                               {order.phone && (
-                                <Button
-                                  variant="outline"
-                                  className="w-full border-green-500 text-green-700 hover:bg-green-50 gap-2"
+                                <button
+                                  className="w-full h-11 rounded-md flex items-center justify-center gap-2 text-sm font-medium border transition-colors"
+                                  style={{ borderColor: '#22c55e', color: '#15803d', backgroundColor: '#f0fdf4' }}
                                   onClick={() => {
                                     getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 })
                                       .then((pos) => {
@@ -716,7 +774,6 @@ export function DeliveryPanel() {
                                           window.open(url, '_blank');
                                           return;
                                         }
-
                                         toast.info(t('Could not get current location. Sending the update without live coordinates.'));
                                         window.open(generateWhatsAppLink(order, null, null), '_blank');
                                       });
@@ -724,24 +781,24 @@ export function DeliveryPanel() {
                                 >
                                   <MessageCircle className="h-4 w-4" />
                                   {t('Send WhatsApp Update')}
-                                </Button>
+                                </button>
                               )}
-                              <Button
-                                variant="secondary"
-                                className="w-full"
+                              <button
+                                className="w-full h-11 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+                                style={{ backgroundColor: '#e2e8f0', color: '#334155' }}
                                 onClick={() => handleImComing(order)}
                               >
-                                <Navigation className="h-4 w-4 mr-2" />
+                                <Navigation className="h-4 w-4" />
                                 {t("I'm coming")}
-                              </Button>
-                              <Button
+                              </button>
+                              <button
+                                className="w-full h-12 rounded-md flex items-center justify-center gap-2 text-base font-semibold text-white transition-colors"
+                                style={{ backgroundColor: '#16a34a' }}
                                 onClick={() => handleCompleteDelivery(order)}
-                                className="w-full sm:col-span-2 bg-green-600 hover:bg-green-700 text-white"
-                                size="lg"
                               >
-                                <CheckCircle className="h-5 w-5 mr-2" />
+                                <CheckCircle className="h-5 w-5" />
                                 {t('Mark as Delivered')}
-                              </Button>
+                              </button>
                             </>
                           )}
                         </>
