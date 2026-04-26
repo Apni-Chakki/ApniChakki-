@@ -8,8 +8,9 @@
 function getOperationalHours($conn) {
     $opening = '09:00';
     $closing = '20:00';
+    $processing_time_per_kg = 2; // Default 2 mins per kg
     
-    $sql = "SELECT setting_key, setting_value FROM store_settings WHERE setting_key IN ('openingTime', 'closingTime')";
+    $sql = "SELECT setting_key, setting_value FROM store_settings WHERE setting_key IN ('openingTime', 'closingTime', 'processingTimePerKg')";
     $result = $conn->query($sql);
     
     if ($result) {
@@ -20,10 +21,15 @@ function getOperationalHours($conn) {
             if ($row['setting_key'] === 'closingTime') {
                 $closing = $row['setting_value'];
             }
+            if ($row['setting_key'] === 'processingTimePerKg') {
+                $processing_time_per_kg = floatval($row['setting_value']);
+            }
         }
     }
     
-    return ['opening' => $opening, 'closing' => $closing];
+    if ($processing_time_per_kg <= 0) $processing_time_per_kg = 2; // safety fallback
+    
+    return ['opening' => $opening, 'closing' => $closing, 'processing_time_per_kg' => $processing_time_per_kg];
 }
 
 /**
@@ -32,7 +38,7 @@ function getOperationalHours($conn) {
 function calculateOrderWeight($conn, $order_id) {
     $total_weight = 0;
     
-    $sql = "SELECT oi.quantity, p.unit FROM order_items oi 
+    $sql = "SELECT oi.quantity, oi.price_at_purchase, p.unit FROM order_items oi 
             JOIN products p ON oi.product_id = p.id 
             WHERE oi.order_id = ?";
     $stmt = $conn->prepare($sql);
@@ -41,12 +47,15 @@ function calculateOrderWeight($conn, $order_id) {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
-        // only count weight-based items (kg), services don't count
-        if ($row['unit'] === 'kg' || $row['unit'] === 'g') {
-            $qty = floatval($row['quantity']);
-            if ($row['unit'] === 'g') {
-                $qty = $qty / 1000; // convert grams to kg
-            }
+        $unit = strtolower(trim($row['unit']));
+        $qty = floatval($row['quantity']);
+        
+        if ($unit === 'kg') {
+            $total_weight += $qty;
+        } else if ($unit === 'g') {
+            $total_weight += ($qty / 1000); // convert grams to kg
+        } else if ($unit === 'trip' && floatval($row['price_at_purchase']) > 0) {
+            // Trip item jiska weight admin ne confirm kar diya — quantity ab kg mein hai
             $total_weight += $qty;
         }
     }
@@ -112,10 +121,11 @@ function scheduleOrder($conn, $order_id) {
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
     $closing_time = $hours['closing'];
+    $processing_speed = $hours['processing_time_per_kg'];
     
     // step 2: calculate order weight and processing time
     $total_weight = calculateOrderWeight($conn, $order_id);
-    $processing_minutes = ceil($total_weight * 2); // 2 min per kg
+    $processing_minutes = ceil($total_weight * $processing_speed);
     
     // step 3: determine today's date and current time
     $today = date('Y-m-d');
@@ -209,6 +219,7 @@ function scheduleOrder($conn, $order_id) {
 function recalculateSchedule($conn, $date) {
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
+    $processing_speed = $hours['processing_time_per_kg'];
     
     // get all active orders for this date sorted by queue position
     $sql = "SELECT id, total_weight_kg, processing_time_minutes FROM orders 
@@ -236,7 +247,7 @@ function recalculateSchedule($conn, $date) {
     foreach ($orders as $order) {
         $processing_mins = intval($order['processing_time_minutes']);
         if ($processing_mins <= 0) {
-            $processing_mins = ceil(floatval($order['total_weight_kg']) * 2);
+            $processing_mins = ceil(floatval($order['total_weight_kg']) * $processing_speed);
         }
         
         $eta = clone $current_time;
