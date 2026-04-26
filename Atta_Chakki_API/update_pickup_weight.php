@@ -1,13 +1,4 @@
 <?php
-/**
- * Update pickup weights proxy
- */
-require_once __DIR__ . '/config/cors.php';
-require_once __DIR__ . '/controllers/orders/update_pickup_weight.php';
-
-?>
-<?php
-// update_pickup_weight.php
 // API for admin to enter actual weights for pickup-request items when they arrive at shop
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/connect.php';
@@ -77,7 +68,7 @@ try {
         $lineTotal = $weight * $price;
         $totalAmount += $lineTotal;
 
-        // update order_items.quantity and keep price_at_purchase as product price
+        // update order_items quantity and price
         $updateSql = "UPDATE order_items SET quantity = ?, price_at_purchase = ? WHERE id = ?";
         $stmt = $conn->prepare($updateSql);
         $stmt->bind_param("ddi", $weight, $price, $order_item_id);

@@ -31,16 +31,25 @@ try {
         $item_res = $conn->query("SELECT id, quantity, product_id, price_at_purchase FROM order_items WHERE order_id = '$order_id'");
         while($i = $item_res->fetch_assoc()) {
              $pid = $i['product_id'];
-             $prod_res = $conn->query("SELECT name, unit FROM products WHERE id = '$pid'");
+             // Fetch current price per kg from products table
+             $prod_res = $conn->query("SELECT name, unit, price FROM products WHERE id = '$pid'");
              if ($p = $prod_res->fetch_assoc()) {
-                 $i['name'] = $p['name'];
-                 $i['unit'] = $p['unit'];
-                 if (strtolower(trim($p['unit'])) === 'trip') {
+                 $i['name']          = $p['name'];
+                 $i['price_per_kg']  = floatval($p['price']);
+                 $rawUnit = strtolower(trim($p['unit']));
+                 // Agar unit 'trip' tha lekin weight confirm ho gayi (price_at_purchase > 0) to 'kg' dikhao
+                 if ($rawUnit === 'trip' && floatval($i['price_at_purchase']) > 0) {
+                     $i['unit'] = 'kg';
+                 } else {
+                     $i['unit'] = $p['unit'];
+                 }
+                 if ($rawUnit === 'trip') {
                      $has_trip_item = true;
                  }
              } else {
-                 $i['name'] = "Item #$pid";
-                 $i['unit'] = 'kg';
+                 $i['name']         = "Item #$pid";
+                 $i['unit']         = 'kg';
+                 $i['price_per_kg'] = 0;
              }
              $items[] = $i;
         }

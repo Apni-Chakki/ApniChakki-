@@ -48,8 +48,14 @@ try {
              $prod_res = $conn->query("SELECT name, unit FROM products WHERE id = '$pid'");
              if ($p = $prod_res->fetch_assoc()) {
                  $i['name'] = $p['name'];
-                 $i['unit'] = $p['unit'];
-                 if (strtolower(trim($p['unit'])) === 'trip') {
+                 $rawUnit = strtolower(trim($p['unit']));
+                 // Agar unit 'trip' tha lekin weight confirm ho gayi (price_at_purchase > 0) to 'kg' dikhao
+                 if ($rawUnit === 'trip' && floatval($i['price_at_purchase']) > 0) {
+                     $i['unit'] = 'kg';
+                 } else {
+                     $i['unit'] = $p['unit'];
+                 }
+                 if ($rawUnit === 'trip') {
                      $has_trip_item = true;
                  }
              } else {
