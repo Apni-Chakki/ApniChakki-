@@ -239,12 +239,10 @@ export function UserAccount() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-foreground mb-2">{t('My Account')}</h1>
-            <p className="text-muted-foreground">{t('Manage your profile and view order history')}</p>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
+        <div className="mb-8">
+          <h1 className="text-foreground mb-1">{t('My Account')}</h1>
+          <p className="text-muted-foreground mb-3">{t('Manage your profile and view order history')}</p>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-2" />
             {t('Sign Out')}
           </Button>
@@ -258,18 +256,18 @@ export function UserAccount() {
 
           <TabsContent value="profile">
             <Card className="p-6 md:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <User className="h-8 w-8 text-primary" />
                   </div>
-                  <div>
-                    <h2 className="text-foreground">{profile.name}</h2>
-                    <p className="text-muted-foreground">{profile.phone}</p>
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-xl text-foreground leading-tight truncate">{profile.name}</h2>
+                    <p className="text-sm text-muted-foreground truncate">{profile.phone}</p>
                   </div>
                 </div>
                 {!editMode && (
-                  <Button onClick={handleEdit} variant="outline">
+                  <Button onClick={handleEdit} variant="outline" className="w-full">
                     <Edit className="h-4 w-4 mr-2" />
                     {t('Edit Details')}
                   </Button>

@@ -139,25 +139,22 @@ export function ReviewsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 sm:py-12 max-w-6xl">
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold text-foreground">Customer Reviews</h1>
-        </div>
-
+      <div className="mb-6">
+        <Button variant="ghost" size="sm" asChild style={{ marginLeft: '-0.5rem', marginBottom: '0.5rem' }}>
+          <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Link>
+        </Button>
+        <h1 className="text-3xl font-bold text-foreground text-center">Customer Reviews</h1>
         {user && user.role !== 'admin' && !formOpen && (
-          <Button onClick={() => { 
-              setFormOpen(true); 
-              setEditId(null); 
-              setMyRating(5); 
-              setMyComment(''); 
-          }}>
-            Write a Review
-          </Button>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.75rem' }}>
+            <Button onClick={() => {
+                setFormOpen(true);
+                setEditId(null);
+                setMyRating(5);
+                setMyComment('');
+            }}>
+              Write a Review
+            </Button>
+          </div>
         )}
       </div>
 
@@ -171,20 +168,20 @@ export function ReviewsPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 p-1 bg-secondary rounded-lg self-end sm:self-auto">
-          <Button 
-            variant={filterRating === 'all' ? 'default' : 'ghost'} 
+        <div className="flex gap-1 flex-wrap p-1 bg-secondary rounded-lg self-end sm:self-auto">
+          <Button
+            variant={filterRating === 'all' ? 'default' : 'ghost'}
             onClick={() => setFilterRating('all')}
-            className="text-sm h-9 px-3"
+            className="text-xs h-8 px-2"
           >
             All
           </Button>
           {[5, 4, 3, 2, 1].map(stars => (
             <Button
               key={stars}
-              variant={filterRating === stars.toString() ? 'default' : 'ghost'} 
+              variant={filterRating === stars.toString() ? 'default' : 'ghost'}
               onClick={() => setFilterRating(stars.toString())}
-              className="text-sm h-9 px-3 flex items-center gap-1"
+              className="text-xs h-8 px-2"
             >
               {stars} ★
             </Button>
@@ -246,7 +243,7 @@ export function ReviewsPage() {
              </div>
              <div>
                <div className="mt-6 border-t pt-4 border-border/50">
-                 <p className="font-semibold text-foreground text-lg">{review.user_name}</p>
+                 <p className="font-semibold text-foreground text-sm truncate">{review.user_name}</p>
                  <p className="text-sm text-muted-foreground mt-1">
                    {new Date(review.timestamp).toLocaleDateString(undefined, {
                      year: 'numeric',
