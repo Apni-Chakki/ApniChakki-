@@ -174,8 +174,7 @@ export function Homepage() {
                   {allCategories.map((category) => (
                     <Card
                       key={category.id}
-                      className="cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 group relative overflow-hidden w-full"
-                      style={{ height: '300px' }} 
+                      className="category-card-responsive cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 group relative overflow-hidden w-full"
                       onClick={() => setSelectedCategory(category.id)}
                     >
                       <div 

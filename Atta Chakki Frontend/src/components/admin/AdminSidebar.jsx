@@ -1,13 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, Calendar, CheckCircle, Wheat, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, Wheat, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { LanguageToggle } from '../LanguageToggle';
 import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../../config';
 
-export function AdminSidebar() {
+export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -41,10 +42,22 @@ export function AdminSidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 flex flex-col">
-      <div className="p-6 border-b border-sidebar-border">
+    <aside className={`admin-sidebar-el w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 flex flex-col${isOpen ? ' sidebar-open' : ''}`}>
+      <div className="p-6 border-b border-sidebar-border" style={{ position: 'relative' }}>
+        {/* Close button — only visible on mobile via CSS */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="admin-sidebar-close"
+          style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+          aria-label="Close sidebar"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+
         <div className="flex items-center justify-between mb-2">
-           <Link to="/admin/dashboard" className="flex items-center gap-2">
+           <Link to="/admin/dashboard" className="flex items-center gap-2" onClick={onClose}>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
               <Wheat className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -68,6 +81,7 @@ export function AdminSidebar() {
               <li key={item.path}>
                 <Link
                   to={item.path}
+                  onClick={onClose}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground'

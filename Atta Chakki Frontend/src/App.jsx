@@ -4,7 +4,7 @@ import { CartProvider } from './lib/CartContext';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { Toaster } from './components/ui/sonner';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 import { API_BASE_URL } from './config';
 import wheatLogo from './assets/Wheat and Flour.png';
 
@@ -80,14 +80,37 @@ function CustomerLayout({ children }) {
 
 // admin page layout
 function AdminLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-      <main className="flex-1 p-8">
-        <Suspense fallback={<PageLoader />}>
-          {children}
-        </Suspense>
-      </main>
+    <div className="flex min-h-screen bg-background" style={{ position: 'relative' }}>
+      {/* Mobile overlay */}
+      <div
+        className={`admin-sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
+      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="admin-main-content">
+        {/* Mobile top bar — hidden on desktop via CSS */}
+        <div className="admin-mobile-topbar">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open sidebar"
+            style={{ padding: '0.5rem', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--foreground)' }}
+          >
+            <Menu style={{ width: '1.25rem', height: '1.25rem' }} />
+          </button>
+          <span style={{ marginLeft: '0.75rem', fontWeight: 600, fontSize: '1rem' }}>Admin Panel</span>
+        </div>
+
+        <main className="admin-main-inner">
+          <Suspense fallback={<PageLoader />}>
+            {children}
+          </Suspense>
+        </main>
+      </div>
     </div>
   );
 }
