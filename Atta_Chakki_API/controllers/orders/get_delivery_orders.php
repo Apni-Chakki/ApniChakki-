@@ -10,22 +10,23 @@ if (!isset($_GET['driver_phone'])) {
     exit;
 }
 
-$driver_phone = $conn->real_escape_string($_GET['driver_phone']);
+$driver_phone = $_GET['driver_phone'];
 
+// Only fetch orders explicitly assigned to this driver by their phone number.
+// No OR fallback — that was causing all unassigned 'ready' orders to leak to every driver.
 $sql = "SELECT o.*, u.full_name as customer_name, u.phone as customer_phone
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.id
-        WHERE (o.driver_phone = ? OR (o.status = 'ready' AND (o.driver_phone IS NULL OR o.driver_phone = '')))
-        AND o.status IN ('out-for-delivery', 'pickup_assigned', 'coming_for_pickup', 'pending', 'processing', 'ready')
+        WHERE o.driver_phone = ?
+        AND o.status IN ('out-for-delivery', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop', 'ready')
         ORDER BY 
             CASE o.status
                 WHEN 'out-for-delivery' THEN 1
                 WHEN 'coming_for_pickup' THEN 2
-                WHEN 'ready' THEN 3
-                WHEN 'pickup_assigned' THEN 4
-                WHEN 'processing' THEN 5
-                WHEN 'pending' THEN 6
-                ELSE 7
+                WHEN 'arrived_at_shop' THEN 3
+                WHEN 'ready' THEN 4
+                WHEN 'pickup_assigned' THEN 5
+                ELSE 6
             END ASC,
             o.created_at ASC";
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '../ui/card';
-import { ShoppingBag, Clock, CheckCircle, TrendingUp, DollarSign, Package, AlertTriangle, Users, AlertCircle, RefreshCcw } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, TrendingUp, DollarSign, Package, AlertTriangle, Users, AlertCircle, RefreshCcw, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,14 @@ import { Skeleton } from '../ui/skeleton';
 import { API_BASE_URL } from '../../config'; 
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -36,9 +44,54 @@ export function Dashboard() {
 
   const notifiedOrders = useRef(new Set());
 
+  // EOD State
+  const [eodData, setEodData] = useState(null);
+  const [showEodModal, setShowEodModal] = useState(false);
+  const [isProcessingEod, setIsProcessingEod] = useState(false);
+
   useEffect(() => {
     fetchStats();
+    checkEodStatus();
   }, []);
+
+  const checkEodStatus = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/check_eod_status.php`);
+      const data = await response.json();
+      if (data.success && data.has_leftover) {
+        setEodData(data);
+        setShowEodModal(true);
+      }
+    } catch (error) {
+      console.error("Failed to check EOD status:", error);
+    }
+  };
+
+  const handleEodAction = async (actionType) => {
+    setIsProcessingEod(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/process_rollover.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: actionType })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`EOD Rollover completed successfully! (${actionType === 'keep_priority' ? 'Priority Kept' : 'Auto-Filled'})`);
+        setShowEodModal(false);
+        fetchStats(); // Refresh dashboard stats
+      } else {
+        toast.error(data.message || 'Failed to process rollover');
+      }
+    } catch (error) {
+      console.error("Rollover error:", error);
+      toast.error('Network error during rollover');
+    } finally {
+      setIsProcessingEod(false);
+    }
+  };
 
   // Polling for arrived_at_shop orders
   useEffect(() => {
@@ -267,6 +320,68 @@ export function Dashboard() {
           })}
         </div>
       </div>
+
+      {/* EOD Rollover Modal */}
+      <Dialog open={showEodModal} onOpenChange={(open) => {
+        // Prevent closing by clicking outside if we want to force a decision
+        if (!isProcessingEod && open === false) {
+           // We might want to allow them to close it, or force them.
+           // For now, let's allow closing to not completely block the admin if they misclicked.
+           // Or strictly block them: uncomment below line to strictly block.
+           // return; 
+           setShowEodModal(false);
+        }
+      }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-orange-600 flex items-center gap-2">
+              <AlertCircle className="h-6 w-6" />
+              End of Day (EOD) Rollover Required
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-700 mt-4">
+              You have <strong>{eodData?.leftover_count} pending order(s)</strong> left over from previous days 
+              (Total Weight: {eodData?.leftover_total_weight_kg} kg, Est. Processing: {eodData?.leftover_total_minutes} mins).
+              <br/><br/>
+              How would you like to handle today's schedule?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+            <div className="border rounded-xl p-4 bg-orange-50/50 hover:bg-orange-50 transition-colors">
+              <h3 className="font-bold text-orange-800 text-lg mb-2">Option A: Keep Priority</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Carry forward yesterday's pending orders to today, making them the first priority. Today's scheduled orders will be delayed accordingly.
+              </p>
+              <Button 
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white" 
+                onClick={() => handleEodAction('keep_priority')}
+                disabled={isProcessingEod}
+              >
+                {isProcessingEod ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
+                Select Option A
+              </Button>
+            </div>
+
+            <div className="border rounded-xl p-4 bg-blue-50/50 hover:bg-blue-50 transition-colors">
+              <h3 className="font-bold text-blue-800 text-lg mb-2">Option B: Auto-Fill & Reschedule</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Push the leftover orders into tomorrow's list. Automatically pull fresh orders from tomorrow's queue to fill today's available capacity.
+              </p>
+              <Button 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                onClick={() => handleEodAction('auto_fill')}
+                disabled={isProcessingEod}
+              >
+                {isProcessingEod ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
+                Select Option B
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 text-center">
+            * Capacity is calculated based on Store Settings ({eodData?.opening_time} to {eodData?.closing_time}).
+          </p>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

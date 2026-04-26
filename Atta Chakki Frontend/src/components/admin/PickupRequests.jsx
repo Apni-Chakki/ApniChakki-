@@ -89,7 +89,7 @@ export function PickupRequests() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAssignPersonnel = async (orderId, personnelName) => {
+  const handleAssignPersonnel = async (orderId, personnelName, personnelPhone = null) => {
     setOrders(prevOrders => prevOrders.map(order => (
       order.id === orderId ? { ...order, driver_name: personnelName } : order
     )));
@@ -98,7 +98,7 @@ export function PickupRequests() {
       const response = await fetch(`${API_BASE_URL}/assign_driver.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_name: personnelName })
+        body: JSON.stringify({ order_id: orderId, driver_name: personnelName, driver_phone: personnelPhone })
       });
 
       const result = await response.json();
@@ -174,11 +174,16 @@ export function PickupRequests() {
 
   const handleSaveWeights = async () => {
     if (!selectedOrder) return;
-    const itemsPayload = Object.keys(weightInputs).map(key => ({ order_item_id: parseInt(key), actual_weight_kg: parseFloat(weightInputs[key]) }));
-    // basic validation
+
+    const itemsPayload = Object.keys(weightInputs).map(key => ({
+      order_item_id: parseInt(key),
+      actual_weight_kg: parseFloat(weightInputs[key])
+    }));
+
+    // validation
     for (const it of itemsPayload) {
       if (!it.order_item_id || !it.actual_weight_kg || it.actual_weight_kg <= 0) {
-        toast.error('Please enter valid weight for all items.');
+        toast.error('Please enter valid weight (kg) for all items.');
         return;
       }
     }
@@ -192,7 +197,7 @@ export function PickupRequests() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Weights saved and order scheduled');
+        toast.success(`✅ Weights saved! Total Bill: Rs. ${data.new_total?.toLocaleString()}`);
         setShowWeightModal(false);
         setSelectedOrder(null);
         setWeightInputs({});
@@ -206,6 +211,16 @@ export function PickupRequests() {
     } finally {
       setIsSavingWeights(false);
     }
+  };
+
+  // Live total calculator for modal preview
+  const calcLiveTotal = () => {
+    if (!selectedOrder?.items) return 0;
+    return selectedOrder.items.reduce((sum, it) => {
+      const kg = parseFloat(weightInputs[it.id] || 0);
+      const price = parseFloat(it.price_per_kg || 0);
+      return sum + (kg * price);
+    }, 0);
   };
 
   if (loading) {
@@ -329,7 +344,7 @@ export function PickupRequests() {
                                   activePersonnel.map(person => (
                                     <DropdownMenuItem
                                       key={person.id}
-                                      onSelect={() => handleAssignPersonnel(order.id, person.name)}
+                                      onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
                                       className="cursor-pointer text-xs"
                                     >
                                       <span>{person.name}</span>
@@ -418,43 +433,96 @@ export function PickupRequests() {
       </AlertDialog>
 
       <Dialog open={showWeightModal} onOpenChange={(open) => { if(!open) { setShowWeightModal(false); setSelectedOrder(null); setWeightInputs({}); } }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitleText>Update Actual Weights</DialogTitleText>
+            <DialogTitleText>⚖️ Update Actual Weights</DialogTitleText>
             <DialogDescription>
-              Enter the actual weight (kg) for each item in this order. This will update the order totals and trigger auto-scheduling.
+              Order #{selectedOrder?.id} — Enter the actual weight in <strong>kg</strong> for each item. 
+              Bill will be calculated automatically based on current price.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 mt-3">
+          <div className="space-y-3 mt-2">
+            {/* Column Headers */}
+            <div className="grid grid-cols-4 gap-2 text-xs font-semibold text-muted-foreground border-b pb-2">
+              <span>Item</span>
+              <span className="text-center">Price/kg</span>
+              <span className="text-center">Weight (kg)</span>
+              <span className="text-right">Line Total</span>
+            </div>
+
             {selectedOrder && selectedOrder.items && selectedOrder.items.length > 0 ? (
-              selectedOrder.items.map((it) => (
-                <div key={it.id} className="flex items-center justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="font-medium">{it.name || `Item #${it.product_id}`}</div>
-                    <div className="text-sm text-muted-foreground">Unit: {it.unit || 'kg'}</div>
+              selectedOrder.items.map((it) => {
+                const kg = parseFloat(weightInputs[it.id] || 0);
+                const pricePerKg = parseFloat(it.price_per_kg || 0);
+                const lineTotal = kg * pricePerKg;
+
+                return (
+                  <div key={it.id} className="grid grid-cols-4 gap-2 items-center">
+                    {/* Item Name */}
+                    <div>
+                      <div className="font-medium text-sm">{it.name || `Item #${it.product_id}`}</div>
+                      <div className="text-xs text-muted-foreground">Unit: {it.unit || 'trip'}</div>
+                    </div>
+
+                    {/* Price per kg */}
+                    <div className="text-center text-sm font-semibold text-primary">
+                      Rs. {pricePerKg.toLocaleString()}
+                    </div>
+
+                    {/* Weight Input (in kg) */}
+                    <div>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        placeholder="0.0"
+                        value={weightInputs[it.id] ?? ''}
+                        onChange={(e) => handleWeightChange(it.id, e.target.value)}
+                        className="w-full border rounded px-2 py-1.5 text-center text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    {/* Line Total */}
+                    <div className={`text-right text-sm font-bold ${lineTotal > 0 ? 'text-green-700' : 'text-muted-foreground'}`}>
+                      {lineTotal > 0 ? `Rs. ${lineTotal.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
+                    </div>
                   </div>
-                  <div className="w-36">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={weightInputs[it.id] ?? ''}
-                      onChange={(e) => handleWeightChange(it.id, e.target.value)}
-                      className="w-full border rounded px-2 py-1"
-                    />
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div>No items found for this order.</div>
+              <div className="text-center text-muted-foreground py-4">No items found for this order.</div>
             )}
+
+            {/* Grand Total */}
+            <div className="border-t pt-3 flex items-center justify-between">
+              <span className="font-semibold text-sm">Estimated Total Bill</span>
+              <span className="text-xl font-bold text-primary">
+                Rs. {calcLiveTotal().toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded p-2">
+              ⚡ After saving, this order will be automatically scheduled and moved to Today's Work or Tomorrow's List.
+            </p>
           </div>
 
           <DialogFooter>
             <div className="flex w-full gap-2 justify-end">
-              <Button variant="outline" onClick={() => { setShowWeightModal(false); setSelectedOrder(null); setWeightInputs({}); }}>Cancel</Button>
-              <Button onClick={handleSaveWeights} disabled={isSavingWeights}>{isSavingWeights ? 'Saving...' : 'Save & Schedule'}</Button>
+              <Button variant="outline" onClick={() => { setShowWeightModal(false); setSelectedOrder(null); setWeightInputs({}); }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveWeights} 
+                disabled={isSavingWeights || calcLiveTotal() === 0}
+                className="gap-2"
+              >
+                {isSavingWeights ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+                ) : (
+                  <>💾 Save & Schedule (Rs. {calcLiveTotal().toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })})</>
+                )}
+              </Button>
             </div>
           </DialogFooter>
         </DialogContent>
