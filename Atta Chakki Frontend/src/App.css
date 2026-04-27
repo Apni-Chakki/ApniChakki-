@@ -1,8 +1,150 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
+/* ============================================================
+   RESPONSIVE STYLES — ApniChakki
+   Plain CSS so these work without Tailwind recompilation.
+   ============================================================ */
+
+/* ---- Header: Desktop nav vs Mobile hamburger ---- */
+.nav-desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.nav-mobile-btn {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+.nav-mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1rem 1rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 49;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.nav-mobile-menu.open {
+  display: flex;
+}
+.nav-mobile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.nav-mobile-link:hover {
+  background: var(--accent);
+}
+.nav-mobile-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.25rem 0;
+}
+
+@media (max-width: 767px) {
+  .nav-desktop-actions { display: none !important; }
+  .nav-mobile-btn { display: flex; }
+}
+
+/* ---- Admin Sidebar: Full sidebar on desktop, drawer on mobile ---- */
+.admin-sidebar-el {
+  /* desktop: static in flex row */
+  flex-shrink: 0;
+}
+.admin-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+}
+.admin-sidebar-overlay.visible {
+  display: block;
+}
+.admin-mobile-topbar {
+  display: none;
+  align-items: center;
+  height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+.admin-sidebar-close {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .admin-sidebar-el {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .admin-sidebar-el.sidebar-open {
+    transform: translateX(0);
+  }
+  .admin-mobile-topbar { display: flex; }
+  .admin-sidebar-close { display: flex; }
+}
+
+/* ---- Category cards: responsive height ---- */
+.category-card-responsive {
+  height: 180px;
+}
+@media (min-width: 480px) {
+  .category-card-responsive { height: 210px; }
+}
+@media (min-width: 768px) {
+  .category-card-responsive { height: 260px; }
+}
+@media (min-width: 1024px) {
+  .category-card-responsive { height: 300px; }
+}
+
+/* ---- Admin main content: account for no sidebar on mobile ---- */
+.admin-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.admin-main-inner {
+  flex: 1;
   padding: 2rem;
-  text-align: center;
+  overflow: auto;
+}
+@media (max-width: 767px) {
+  .admin-main-inner { padding: 1rem; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .admin-main-inner { padding: 1.5rem; }
+}
+
+/* ---- Global: prevent horizontal overflow on all screens ---- */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Reset Vite default root styles */
+#root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
 .logo {
