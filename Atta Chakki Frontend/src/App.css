@@ -115,6 +115,25 @@
   .category-card-responsive { height: 300px; }
 }
 
+/* ---- Category grid: 1 col < 375px, 2 col 375-767px, 3 col 768px+ ---- */
+.category-grid-responsive {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 375px) {
+  .category-grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+  .category-grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
 /* ---- Admin main content: account for no sidebar on mobile ---- */
 .admin-main-content {
   flex: 1;

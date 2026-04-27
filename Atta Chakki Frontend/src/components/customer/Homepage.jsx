@@ -170,7 +170,7 @@ export function Homepage() {
                   <p className="text-sm text-muted-foreground">{t('Please check back later or contact us for more information.')}</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="category-grid-responsive">
                   {allCategories.map((category) => (
                     <Card
                       key={category.id}
