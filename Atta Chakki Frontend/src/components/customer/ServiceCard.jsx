@@ -22,7 +22,8 @@ export function ServiceCard({ service }) {
 
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
   const isPickupEligible = service.id == 1 || service?.unit?.toLowerCase() === 'trip'; 
-  const isOutOfStock = stock <= 0;
+  // Trip products are services, never out of stock
+  const isOutOfStock = isPickupEligible ? false : stock <= 0;
 
   const handleAddToCart = () => {
     if (isOutOfStock) {

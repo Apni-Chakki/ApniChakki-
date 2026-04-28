@@ -76,22 +76,22 @@ export function CartProvider({ children }) {
     });
   };
 
-  const updateQuantity = (serviceId, quantity) => {
+  const updateQuantity = (serviceId, quantity, isWeightPending = false) => {
     setCart(prev => {
-      const itemInCart = prev.find(item => item.service.id === serviceId);
-      if (!itemInCart || itemInCart.isWeightPending) return prev;
+      const itemInCart = prev.find(item => item.service.id === serviceId && item.isWeightPending === isWeightPending);
+      if (!itemInCart) return prev;
 
       if (quantity <= 0) {
-        return prev.filter(item => item.service.id !== serviceId);
+        return prev.filter(item => !(item.service.id === serviceId && item.isWeightPending === isWeightPending));
       }
       return prev.map(item =>
-        item.service.id === serviceId ? { ...item, quantity } : item
+        item.service.id === serviceId && item.isWeightPending === isWeightPending ? { ...item, quantity } : item
       );
     });
   };
 
-  const removeFromCart = (serviceId) => {
-    setCart(prev => prev.filter(item => item.service.id !== serviceId));
+  const removeFromCart = (serviceId, isWeightPending = false) => {
+    setCart(prev => prev.filter(item => !(item.service.id === serviceId && item.isWeightPending === isWeightPending)));
   };
 
   const clearCart = () => {
