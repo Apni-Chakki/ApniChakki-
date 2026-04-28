@@ -371,7 +371,13 @@ Gristmill's - Fresh Flour Daily
     const now = new Date();
     const etaDate = new Date(eta);
     const diffMs = etaDate - now;
-    if (diffMs <= 0) return 'Ready soon';
+    if (diffMs <= 0) {
+      const minsOverdue = Math.floor(Math.abs(diffMs) / 60000);
+      if (minsOverdue < 60) return `${minsOverdue}m overdue`;
+      const hrs = Math.floor(minsOverdue / 60);
+      const remainMins = minsOverdue % 60;
+      return `${hrs}h ${remainMins}m overdue`;
+    }
     const mins = Math.ceil(diffMs / 60000);
     if (mins < 60) return `${mins} min`;
     const hrs = Math.floor(mins / 60);
@@ -380,15 +386,20 @@ Gristmill's - Fresh Flour Daily
   };
 
   // OrderCard inner component
-  const OrderCard = ({ order }) => (
+  const OrderCard = ({ order }) => {
+    const isOverdue = order.estimated_completion_time ? new Date(order.estimated_completion_time) < new Date() : false;
+    
+    return (
     <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
-      order.is_carried_forward
-        ? 'border-l-orange-500'
-        : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
-          ? 'border-l-amber-500'
-          : 'border-l-blue-600'
+      isOverdue 
+        ? 'border-l-red-600 animate-glow-red relative z-10'
+        : order.is_carried_forward
+          ? 'border-l-orange-500'
+          : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
+            ? 'border-l-amber-500'
+            : 'border-l-blue-600'
     }`}>
-      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
+      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
@@ -413,31 +424,35 @@ Gristmill's - Fresh Flour Daily
 
       <CardContent className="space-y-5 px-6">
         {/* ETA & scheduling info card */}
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-4 rounded-lg">
+        <div className={`p-4 rounded-lg border transition-colors ${
+          isOverdue 
+            ? 'bg-red-50 border-red-300' 
+            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+        }`}>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
+              <div className={`flex items-center justify-center gap-1 mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
                 <Timer className="h-4 w-4" />
                 <span className="text-xs font-semibold uppercase">ETA</span>
               </div>
-              <p className="text-lg font-bold text-emerald-800">{formatETA(order.estimated_completion_time)}</p>
-              <p className="text-xs text-emerald-600">{getTimeRemaining(order.estimated_completion_time)}</p>
+              <p className={`text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>{formatETA(order.estimated_completion_time)}</p>
+              <p className={`text-xs font-bold ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>{getTimeRemaining(order.estimated_completion_time)}</p>
             </div>
-            <div className="text-center border-x border-emerald-200">
-              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
+            <div className={`text-center border-x ${isOverdue ? 'border-red-200' : 'border-emerald-200'}`}>
+              <div className={`flex items-center justify-center gap-1 mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
                 <Weight className="h-4 w-4" />
                 <span className="text-xs font-semibold uppercase">Weight</span>
               </div>
-              <p className="text-lg font-bold text-emerald-800">{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
-              <p className="text-xs text-emerald-600">{order.processing_time_minutes || Math.ceil(parseFloat(order.total_weight_kg || 1) * 2)} mins</p>
+              <p className={`text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
+              <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>{order.processing_time_minutes || Math.ceil(parseFloat(order.total_weight_kg || 1) * 2)} mins</p>
             </div>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
+              <div className={`flex items-center justify-center gap-1 mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
                 <Package className="h-4 w-4" />
                 <span className="text-xs font-semibold uppercase">Queue</span>
               </div>
-              <p className="text-lg font-bold text-emerald-800">#{order.queue_position || '-'}</p>
-              <p className="text-xs text-emerald-600">Position</p>
+              <p className={`text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>#{order.queue_position || '-'}</p>
+              <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>Position</p>
             </div>
           </div>
         </div>
@@ -552,7 +567,8 @@ Gristmill's - Fresh Flour Daily
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   if (loading) {
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" /></div>;
