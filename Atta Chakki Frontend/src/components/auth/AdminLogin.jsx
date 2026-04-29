@@ -6,7 +6,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { toast } from 'sonner';
-import { API_BASE_URL } from '../../config'; 
+import { useTranslation } from 'react-i18next';
+import { API_BASE_URL } from '../../config';
 import { useAuth } from '../../lib/AuthContext'; // <-- RESTORED THIS
 
 export function AdminLogin() {
@@ -16,7 +17,8 @@ export function AdminLogin() {
   const navigate = useNavigate();
   
   // RESTORED THIS: We need to tell the app globally that you are logged in
-  const { setUser } = useAuth(); 
+  const { setUser } = useAuth();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,7 +67,7 @@ export function AdminLogin() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <Button variant="ghost" className="mb-4" onClick={() => navigate('/')}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t('Back to Home')}
         </Button>
         
         <Card>
@@ -73,43 +75,45 @@ export function AdminLogin() {
             <div className="mx-auto h-12 w-12 rounded-full bg-primary flex items-center justify-center mb-2">
               <Wheat className="h-6 w-6 text-primary-foreground" />
             </div>
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
-            <CardDescription>Enter your credentials</CardDescription>
+            <CardTitle className="text-2xl">{t('Admin Login')}</CardTitle>
+            <CardDescription>{t('Enter your credentials')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">{t('Phone Number')}</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="phone"
                     type="tel"
                     placeholder="03001234567"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="pl-10"
+                    className="ps-12"
+                    style={{ paddingInlineStart: '3rem' }}
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('Password')}</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={t('Enter your password')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="ps-12"
+                    style={{ paddingInlineStart: '3rem' }}
                     required
                   />
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? t('Signing in...') : t('Sign In')}
               </Button>
             </form>
           </CardContent>

@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -17,6 +18,7 @@ const sectionVariants = {
 };
 
 export function UserReviews() {
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,19 +58,19 @@ export function UserReviews() {
     >
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 md:mb-10 gap-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground">Top Rated Reviews</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">{t('Top Rated Reviews')}</h2>
           <div className="flex flex-row items-center gap-4">
             <Button asChild variant="outline">
-              <Link to="/reviews">View All</Link>
+              <Link to="/reviews">{t('View All')}</Link>
             </Button>
             <Button asChild>
-              <Link to="/reviews" state={{ openReviewForm: true }}>Write a Review</Link>
+              <Link to="/reviews" state={{ openReviewForm: true }}>{t('Write a Review')}</Link>
             </Button>
           </div>
         </div>
         
         {reviews.length === 0 ? (
-          <p className="text-center text-muted-foreground">No top reviews yet.</p>
+          <p className="text-center text-muted-foreground">{t('No top reviews yet.')}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
             <AnimatePresence>

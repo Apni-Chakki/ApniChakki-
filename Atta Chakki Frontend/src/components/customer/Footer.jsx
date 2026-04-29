@@ -154,7 +154,7 @@ export function Footer() {
                   <Clock className="h-4 w-4 shrink-0" />
                   <span>{settings.openingTime} - {settings.closingTime}</span>
                 </div>
-                <p className="mt-2 text-primary-foreground/80 italic">Mon - Sun</p>
+                <p className="mt-2 text-primary-foreground/80 italic">{t('Mon - Sun')}</p>
               </div>
             </div>
 
@@ -170,8 +170,8 @@ export function Footer() {
           <div className="mt-12 pt-8 border-t border-primary-foreground/10 text-center flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm opacity-50">&copy; {new Date().getFullYear()} {settings.storeName}. All rights reserved.</p>
             <div className="flex items-center gap-6 text-xs opacity-40">
-              <Link to="/login/admin" className="hover:opacity-100 underline">Staff Portal</Link>
-              <Link to="/login/delivery" className="hover:opacity-100 underline">Delivery Hub</Link>
+              <Link to="/login/admin" className="hover:opacity-100 underline">{t('Staff Portal')}</Link>
+              <Link to="/login/delivery" className="hover:opacity-100 underline">{t('Delivery Hub')}</Link>
             </div>
           </div>
         </div>

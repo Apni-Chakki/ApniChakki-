@@ -7,6 +7,7 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useAuth } from '../../lib/AuthContext';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import loginBg from '../../assets/login-page bg.jpg';
 
 const BG_IMAGES = [
@@ -16,6 +17,7 @@ const BG_IMAGES = [
 ];
 
 export function CustomerSignUp() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -35,44 +37,44 @@ export function CustomerSignUp() {
 
   const validate = () => {
     if (name.trim().length < 2) {
-      toast.error('Full name must be at least 2 characters.');
+      toast.error(t('Full name must be at least 2 characters.'));
       return false;
     }
     if (name.trim().length > 50) {
-      toast.error('Full name must not exceed 50 characters.');
+      toast.error(t('Full name must not exceed 50 characters.'));
       return false;
     }
     const cleanPhone = phone.replace(/\s/g, '');
     if (!/^\d{11}$/.test(cleanPhone)) {
-      toast.error('Phone number must be exactly 11 digits with no spaces.');
+      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
       return false;
     }
     if (address && address.trim().length > 150) {
-      toast.error('Delivery address must not exceed 150 characters.');
+      toast.error(t('Delivery address must not exceed 150 characters.'));
       return false;
     }
     if (/\s/.test(password)) {
-      toast.error('Password must not contain spaces.');
+      toast.error(t('Password must not contain spaces.'));
       return false;
     }
     if (password.length < 8) {
-      toast.error('Password must be at least 8 characters.');
+      toast.error(t('Password must be at least 8 characters.'));
       return false;
     }
     if (password.length > 50) {
-      toast.error('Password must not exceed 50 characters.');
+      toast.error(t('Password must not exceed 50 characters.'));
       return false;
     }
     if (!/^[A-Z]/.test(password)) {
-      toast.error('Password must start with a capital letter.');
+      toast.error(t('Password must start with a capital letter.'));
       return false;
     }
     if (!/[0-9]/.test(password)) {
-      toast.error('Password must contain at least one number.');
+      toast.error(t('Password must contain at least one number.'));
       return false;
     }
     if (!/[^A-Za-z0-9]/.test(password)) {
-      toast.error('Password must contain at least one special character.');
+      toast.error(t('Password must contain at least one special character.'));
       return false;
     }
     return true;
@@ -85,13 +87,13 @@ export function CustomerSignUp() {
     try {
       const success = await signup(name.trim(), phone, password, address.trim());
       if (success) {
-        toast.success('Account created successfully! You are now logged in.');
+        toast.success(t('Account created successfully! You are now logged in.'));
         navigate('/');
       } else {
-        toast.error('An account with this phone number may already exist or registration failed.');
+        toast.error(t('An account with this phone number may already exist or registration failed.'));
       }
     } catch (error) {
-      toast.error('An error occurred. Please try again.');
+      toast.error(t('An error occurred. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +142,7 @@ export function CustomerSignUp() {
           onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
         >
           <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
-          Back to Home
+          {t('Back to Home')}
         </button>
       </div>
 
@@ -170,9 +172,9 @@ export function CustomerSignUp() {
               }}>
                 <User style={{ width: '1.6rem', height: '1.6rem', color: 'white' }} />
               </div>
-              <CardTitle className="text-2xl">Create Customer Account</CardTitle>
+              <CardTitle className="text-2xl">{t('Create Customer Account')}</CardTitle>
               <CardDescription>
-                Sign up to track your orders and save your preferences
+                {t('Sign up to track your orders and save your preferences')}
               </CardDescription>
             </CardHeader>
 
@@ -180,17 +182,18 @@ export function CustomerSignUp() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Full Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">{t('Full Name')}</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <User className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="name"
                       type="text"
-                      placeholder="e.g., Ahmed Ali"
+                      placeholder={t('e.g., Ahmed Ali')}
                       value={name}
                       onChange={e => setName(e.target.value.replace(/^ /, '').replace(/  +/g, ' '))}
                       maxLength={50}
-                      className="pl-10"
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
                       required
                     />
                   </div>
@@ -198,9 +201,9 @@ export function CustomerSignUp() {
 
                 {/* Phone */}
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">{t('Phone Number')}</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="phone"
                       type="tel"
@@ -209,7 +212,8 @@ export function CustomerSignUp() {
                       onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                       maxLength={11}
                       inputMode="numeric"
-                      className="pl-10"
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
                       required
                     />
                   </div>
@@ -217,34 +221,36 @@ export function CustomerSignUp() {
 
                 {/* Delivery Address */}
                 <div className="space-y-2">
-                  <Label htmlFor="address">Delivery Address <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Optional)</span></Label>
+                  <Label htmlFor="address">{t('Delivery Address')} <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>{t('(Optional)')}</span></Label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <MapPin className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="address"
                       type="text"
-                      placeholder="Enter your street address"
+                      placeholder={t('Enter your street address')}
                       value={address}
                       onChange={e => setAddress(e.target.value.replace(/^ /, '').replace(/  +/g, ' '))}
                       maxLength={150}
-                      className="pl-10"
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
                     />
                   </div>
                 </div>
 
                 {/* Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t('Password')}</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Create a password"
+                      placeholder={t('Create a password')}
                       value={password}
                       onChange={e => setPassword(e.target.value.replace(/\s/g, ''))}
                       maxLength={50}
-                      className="pl-10 pr-10"
+                      className="ps-12 pe-10"
+                      style={{ paddingInlineStart: '3rem', paddingInlineEnd: '2.5rem' }}
                       required
                     />
                     <button
@@ -253,7 +259,7 @@ export function CustomerSignUp() {
                       tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       style={{
-                        position: 'absolute', right: '0.625rem', top: '50%',
+                        position: 'absolute', insetInlineEnd: '0.625rem', top: '50%',
                         transform: 'translateY(-50%)',
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: 'var(--muted-foreground)',
@@ -267,19 +273,19 @@ export function CustomerSignUp() {
                     </button>
                   </div>
                   <p style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: '0.25rem' }}>
-                    8–50 chars · starts with capital · must include a number & special character
+                    {t('8–50 chars · starts with capital · must include a number & special character')}
                   </p>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Creating Account...' : 'Sign Up'}
+                  {isLoading ? t('Creating Account...') : t('Sign Up')}
                 </Button>
 
                 <div className="text-center text-sm">
                   <p className="text-muted-foreground">
-                    Already have an account?{' '}
+                    {t('Already have an account?')}{' '}
                     <Link to="/login/customer" className="text-primary hover:underline font-medium">
-                      Log In
+                      {t('Log In')}
                     </Link>
                   </p>
                 </div>
