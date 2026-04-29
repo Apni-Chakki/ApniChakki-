@@ -191,7 +191,8 @@ function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     $last_completion = getLastCompletionTime($conn, $today);
     
     if ($last_completion) {
-        $start_time = new DateTime($last_completion);
+        $last_dt = new DateTime($last_completion);
+        $start_time = ($now > $last_dt) ? clone $now : $last_dt;
     } else {
         $opening_dt = new DateTime($today . ' ' . $opening_time . ':00');
         $start_time = ($now > $opening_dt) ? clone $now : $opening_dt;
@@ -317,7 +318,8 @@ function scheduleOrder($conn, $order_id) {
         $last_completion = getLastCompletionTime($conn, $today);
         
         if ($last_completion) {
-            $start_time = new DateTime($last_completion);
+            $last_dt = new DateTime($last_completion);
+            $start_time = ($now > $last_dt) ? clone $now : $last_dt;
         } else {
             $opening_dt = new DateTime($today . ' ' . $opening_time . ':00');
             $start_time = ($now > $opening_dt) ? clone $now : $opening_dt;

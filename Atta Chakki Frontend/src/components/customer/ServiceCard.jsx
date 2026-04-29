@@ -21,7 +21,8 @@ export function ServiceCard({ service }) {
   const { t } = useTranslation();
 
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
-  const isPickupEligible = service.id == 1 || service?.unit?.toLowerCase() === 'trip'; 
+  const isOnlyPickup = service?.unit?.toLowerCase() === 'trip';
+  const isPickupEligible = service.id == 1 || isOnlyPickup; 
   // Trip products are services, never out of stock
   const isOutOfStock = isPickupEligible ? false : stock <= 0;
 
@@ -89,12 +90,22 @@ export function ServiceCard({ service }) {
             <p className="text-primary">
               Rs. {service.price} / {t(service.unit || 'unit')}
             </p>
-            {stock < 10 && stock > 0 && (
+            {stock < 10 && stock > 0 && !isOnlyPickup && (
                  <p className="text-xs text-red-500 mt-1">{t('Only')} {stock} {t('left')}!</p>
             )}
           </div>
           
-          {isPickupEligible ? (
+          {isOnlyPickup ? (
+            <div className="flex flex-col gap-2">
+              <Button
+                className="w-full bg-primary hover:bg-primary/90"
+                onClick={handleAddPickupRequest}
+                disabled={isAddedToCart}
+              >
+                {isPickupRequested ? t('Pickup Request Added ✓') : t('Add Pickup Request')}
+              </Button>
+            </div>
+          ) : isPickupEligible ? (
             <div className="flex flex-col gap-2">
               <Button
                 className="w-full bg-primary hover:bg-primary/90"
