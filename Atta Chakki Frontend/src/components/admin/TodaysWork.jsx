@@ -393,23 +393,16 @@ Gristmill's - Fresh Flour Daily
     <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
       isOverdue 
         ? 'border-l-red-600 animate-glow-red relative z-10'
-        : order.is_carried_forward
-          ? 'border-l-orange-500'
-          : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
-            ? 'border-l-amber-500'
-            : 'border-l-blue-600'
+        : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
+          ? 'border-l-amber-500'
+          : 'border-l-blue-600'
     }`}>
-      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
+      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : 'bg-slate-50/50'}`}>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
               Order #{order.id}
-              {order.is_carried_forward && (
-                <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-[10px] px-2 py-0.5 font-bold">
-                  <History className="h-3 w-3 mr-1" /> CARRIED FORWARD
-                </Badge>
-              )}
-            </CardTitle>
+              </CardTitle>
             <p className="text-sm font-medium text-muted-foreground mt-2 flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Created: {new Date(order.created_at).toLocaleString()}
@@ -574,9 +567,6 @@ Gristmill's - Fresh Flour Daily
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" /></div>;
   }
 
-  const carriedForwardOrders = orders.filter(o => o.is_carried_forward);
-  const todayNewOrders = orders.filter(o => !o.is_carried_forward);
-
   return (
     <TooltipProvider>
     <div className="space-y-6">
@@ -662,48 +652,10 @@ Gristmill's - Fresh Flour Daily
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {/* Carried Forward Section */}
-          {carriedForwardOrders.length > 0 && (
-            <>
-              <div className="flex items-center gap-3 px-1">
-                <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-sm font-bold">
-                  <History className="h-4 w-4" />
-                  Carried Forward from Yesterday
-                </div>
-                <div className="flex-1 h-px bg-orange-200" />
-                <span className="text-xs text-orange-600 font-semibold">
-                  {carriedForwardOrders.length} order(s)
-                </span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {carriedForwardOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Today's New Orders Section */}
-          {todayNewOrders.length > 0 && (
-            <>
-              <div className="flex items-center gap-3 px-1">
-                <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-sm font-bold">
-                  <CalendarClock className="h-4 w-4" />
-                  Today's New Orders
-                </div>
-                <div className="flex-1 h-px bg-blue-200" />
-                <span className="text-xs text-blue-600 font-semibold">
-                  {todayNewOrders.length} order(s)
-                </span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {todayNewOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
-              </div>
-            </>
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {orders.map((order) => (
+            <OrderCard key={order.id} order={order} />
+          ))}
         </div>
       )}
 
