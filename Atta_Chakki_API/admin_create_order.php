@@ -89,6 +89,13 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
                 throw new Exception("Failed to add Item");
             }
             
+            // Check if unit is trip before deducting stock
+            $unit_check = $conn->query("SELECT unit FROM products WHERE id = " . $prod_id);
+            $unit_row = $unit_check->fetch_assoc();
+            if ($unit_row && strtolower(trim($unit_row['unit'])) === 'trip') {
+                continue; // Skip stock deduction for service items
+            }
+            
             $inv_stmt->bind_param("di", $qty, $prod_id);
             if (!$inv_stmt->execute()) {
                 throw new Exception("Failed to subtract Inventory");

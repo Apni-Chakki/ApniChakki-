@@ -21,7 +21,7 @@ try {
                 p.updated_at
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE 1=1";
+            WHERE LOWER(TRIM(p.unit)) != 'trip'";
     
     if ($low_stock) {
         $sql .= " AND p.stock_quantity < p.min_stock_level";

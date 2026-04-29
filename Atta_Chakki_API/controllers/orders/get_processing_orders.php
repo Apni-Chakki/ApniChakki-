@@ -76,6 +76,11 @@ try {
         
         $row['items'] = $items;
         $row['total'] = $row['total_amount'];
+        
+        // Flag carried-forward orders (created before today)
+        $created_date = date('Y-m-d', strtotime($row['created_at']));
+        $row['is_carried_forward'] = ($created_date < $today) ? true : false;
+        
         $orders[] = $row;
     }
     $stmt->close();

@@ -27,7 +27,7 @@ try {
     $overdueCount = 0; 
     
     // checking low stock
-    $lowStockQuery = "SELECT id, name, stock_quantity, min_stock_level, unit FROM products WHERE stock_quantity <= min_stock_level";
+    $lowStockQuery = "SELECT id, name, stock_quantity, min_stock_level, unit FROM products WHERE stock_quantity <= min_stock_level AND LOWER(TRIM(unit)) != 'trip'";
     $lowStockResult = $conn->query($lowStockQuery);
     $lowStockCount = 0;
     $lowStockItems = [];

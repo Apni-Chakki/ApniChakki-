@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { deductFromInventory } from '../../lib/inventoryUtils';
@@ -379,9 +379,187 @@ Gristmill's - Fresh Flour Daily
     return `${hrs}h ${remainMins}m`;
   };
 
+  // OrderCard inner component
+  const OrderCard = ({ order }) => (
+    <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
+      order.is_carried_forward
+        ? 'border-l-orange-500'
+        : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
+          ? 'border-l-amber-500'
+          : 'border-l-blue-600'
+    }`}>
+      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
+              Order #{order.id}
+              {order.is_carried_forward && (
+                <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-[10px] px-2 py-0.5 font-bold">
+                  <History className="h-3 w-3 mr-1" /> CARRIED FORWARD
+                </Badge>
+              )}
+            </CardTitle>
+            <p className="text-sm font-medium text-muted-foreground mt-2 flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Created: {new Date(order.created_at).toLocaleString()}
+            </p>
+          </div>
+          <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
+            <span className="text-xl font-bold text-slate-800">Rs. {parseInt(order.total_amount).toLocaleString()}</span>
+            <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-5 px-6">
+        {/* ETA & scheduling info card */}
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-4 rounded-lg">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
+                <Timer className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase">ETA</span>
+              </div>
+              <p className="text-lg font-bold text-emerald-800">{formatETA(order.estimated_completion_time)}</p>
+              <p className="text-xs text-emerald-600">{getTimeRemaining(order.estimated_completion_time)}</p>
+            </div>
+            <div className="text-center border-x border-emerald-200">
+              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
+                <Weight className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase">Weight</span>
+              </div>
+              <p className="text-lg font-bold text-emerald-800">{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
+              <p className="text-xs text-emerald-600">{order.processing_time_minutes || Math.ceil(parseFloat(order.total_weight_kg || 1) * 2)} mins</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
+                <Package className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase">Queue</span>
+              </div>
+              <p className="text-lg font-bold text-emerald-800">#{order.queue_position || '-'}</p>
+              <p className="text-xs text-emerald-600">Position</p>
+            </div>
+          </div>
+        </div>
+
+        {/* customer info */}
+        <div className="bg-muted/30 p-3 rounded-md space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{order.customer_name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-muted-foreground" />
+            <span>{order.customer_phone}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span>{order.shipping_address}</span>
+          </div>
+          {order.driver_name && (
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-slate-700">Driver: {order.driver_name}</span>
+            </div>
+          )}
+        </div>
+
+        {/* order items */}
+        <div>
+          <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+            <Package className="h-4 w-4" /> Items to Prepare:
+          </h4>
+          <ul className="divide-y border rounded-md">
+            {order.items.map((item, idx) => (
+              <li key={idx} className="p-2 text-sm flex justify-between items-center bg-white">
+                <span>{item.name}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">x {item.quantity}</Badge>
+                  {item.unit && <span className="text-xs text-muted-foreground">{item.unit}</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* actions */}
+        <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          <Button
+            className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
+            onClick={() => markAsReady(order)}
+            disabled={sendingBill === order.id}
+          >
+            {sendingBill === order.id ? (
+              <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
+            ) : (
+              <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full border-2 border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm font-medium"
+            onClick={() => moveToTomorrow(order)}
+            disabled={overriding === order.id}
+          >
+            {overriding === order.id ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Moving...</>
+            ) : (
+              <><CalendarClock className="h-4 w-4 mr-2" /> Push to Tomorrow</>
+            )}
+          </Button>
+
+          {order.type === 'delivery' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className={`border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
+                  <Truck className="h-4 w-4 mr-2" />
+                  {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {activePersonnel.length > 0 ? (
+                  activePersonnel.map(person => (
+                    <DropdownMenuItem key={person.id} onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)} className="cursor-pointer text-xs">
+                      <span>{person.name}</span>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => handleAssignPersonnel(order.id, '')} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs">
+                  Clear
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button size="sm" variant="outline" disabled className="border-slate-200 text-slate-500 opacity-60 cursor-default">
+              <Package className="h-4 w-4 mr-2" />
+              Self Pickup
+            </Button>
+          )}
+
+          <Button variant="outline" className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium" onClick={() => handlePrint(order)}>
+            <Printer className="h-5 w-5 mr-2" /> Print
+          </Button>
+
+          <Button variant="destructive" className="w-full shadow-sm font-medium" onClick={() => setCancelOrder(order)}>
+            <Trash2 className="h-5 w-5 mr-2" /> Cancel
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" /></div>;
   }
+
+  const carriedForwardOrders = orders.filter(o => o.is_carried_forward);
+  const todayNewOrders = orders.filter(o => !o.is_carried_forward);
 
   return (
     <TooltipProvider>
@@ -429,9 +607,10 @@ Gristmill's - Fresh Flour Daily
                 <span className="font-semibold text-blue-900">Today's Capacity</span>
               </div>
               <div className="text-sm text-blue-700 text-right">
-                <span className="font-bold">{Math.round(capacity.booked_minutes)}</span> / {Math.round(capacity.total_minutes)} mins used
+                <span className="font-bold">{Math.round(capacity.booked_minutes)}</span> mins booked
                 <span className="mx-2">•</span>
                 <span className="font-bold text-green-700">{Math.round(capacity.remaining_minutes)} mins</span> remaining
+                <span className="text-xs text-blue-500 ml-1">(from now)</span>
               </div>
             </div>
             <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
@@ -446,7 +625,10 @@ Gristmill's - Fresh Flour Daily
             </div>
             <div className="flex justify-between mt-1 text-xs text-blue-600">
               <span>{capacity.opening_time} (Open)</span>
-              <span className="font-semibold">{capacity.percentage_used}% utilized</span>
+              <span className="font-semibold">
+                {capacity.percentage_used}% utilized
+                {capacity.current_time && <span className="ml-2 text-blue-400">· Now: {capacity.current_time}</span>}
+              </span>
               <span>{capacity.closing_time} (Close)</span>
             </div>
           </CardContent>
@@ -464,196 +646,48 @@ Gristmill's - Fresh Flour Daily
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {orders.map((order) => (
-            <Card key={order.id} className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
-              order.is_manually_overridden === '1' || order.is_manually_overridden === 1 
-                ? 'border-l-amber-500' 
-                : 'border-l-blue-600'
-            }`}>
-              <CardHeader className="pb-2 bg-slate-50/50 rounded-t-xl mb-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
-                      Order #{order.id}
-                    </CardTitle>
-                    <p className="text-sm font-medium text-muted-foreground mt-2 flex items-center gap-2">
-                      <Clock className="h-4 w-4" /> 
-                      Created: {new Date(order.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
-                    <span className="text-xl font-bold text-slate-800">Rs. {parseInt(order.total_amount).toLocaleString()}</span>
-                    <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
-                  </div>
+        <div className="space-y-6">
+          {/* Carried Forward Section */}
+          {carriedForwardOrders.length > 0 && (
+            <>
+              <div className="flex items-center gap-3 px-1">
+                <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-sm font-bold">
+                  <History className="h-4 w-4" />
+                  Carried Forward from Yesterday
                 </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-5 px-6">
-                {/* ETA & scheduling info card */}
-                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-4 rounded-lg">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
-                        <Timer className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase">ETA</span>
-                      </div>
-                      <p className="text-lg font-bold text-emerald-800">{formatETA(order.estimated_completion_time)}</p>
-                      <p className="text-xs text-emerald-600">{getTimeRemaining(order.estimated_completion_time)}</p>
-                    </div>
-                    <div className="text-center border-x border-emerald-200">
-                      <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
-                        <Weight className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase">Weight</span>
-                      </div>
-                      <p className="text-lg font-bold text-emerald-800">{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
-                      <p className="text-xs text-emerald-600">{order.processing_time_minutes || Math.ceil(parseFloat(order.total_weight_kg || 1) * 2)} mins</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
-                        <Package className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase">Queue</span>
-                      </div>
-                      <p className="text-lg font-bold text-emerald-800">#{order.queue_position || '-'}</p>
-                      <p className="text-xs text-emerald-600">Position</p>
-                    </div>
-                  </div>
+                <div className="flex-1 h-px bg-orange-200" />
+                <span className="text-xs text-orange-600 font-semibold">
+                  {carriedForwardOrders.length} order(s)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {carriedForwardOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Today's New Orders Section */}
+          {todayNewOrders.length > 0 && (
+            <>
+              <div className="flex items-center gap-3 px-1">
+                <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-sm font-bold">
+                  <CalendarClock className="h-4 w-4" />
+                  Today's New Orders
                 </div>
-
-                {/* customer info */}
-                <div className="bg-muted/30 p-3 rounded-md space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{order.customer_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.customer_phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.shipping_address}</span>
-                  </div>
-                  {order.driver_name && (
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-slate-700">Driver: {order.driver_name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* order items */}
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4" /> Items to Prepare:
-                  </h4>
-                  <ul className="divide-y border rounded-md">
-                    {order.items.map((item, idx) => (
-                      <li key={idx} className="p-2 text-sm flex justify-between items-center bg-white">
-                        <span>{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">x {item.quantity}</Badge>
-                          {item.unit && <span className="text-xs text-muted-foreground">{item.unit}</span>}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* actions */}
-                <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70" 
-                    onClick={() => markAsReady(order)}
-                    disabled={sendingBill === order.id}
-                  >
-                    {sendingBill === order.id ? (
-                      <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
-                    ) : (
-                      <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
-                    )}
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                                      className="w-full border-2 border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm font-medium"
-                    onClick={() => moveToTomorrow(order)}
-                    disabled={overriding === order.id}
-                  >
-                    {overriding === order.id ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Moving...</>
-                    ) : (
-                      <><CalendarClock className="h-4 w-4 mr-2" /> Push to Tomorrow</>
-                    )}
-                  </Button>
-
-                  {order.type === 'delivery' ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className={`border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}
-                        >
-                          <Truck className="h-4 w-4 mr-2" />
-                          {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {activePersonnel.length > 0 ? (
-                          activePersonnel.map(person => (
-                            <DropdownMenuItem
-                              key={person.id}
-                              onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
-                              className="cursor-pointer text-xs"
-                            >
-                              <span>{person.name}</span>
-                            </DropdownMenuItem>
-                          ))
-                        ) : (
-                          <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onSelect={() => handleAssignPersonnel(order.id, '')}
-                          className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
-                        >
-                          Clear
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <div className="space-y-2">
-                      <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => handleMovePickupToAdmin(order)}>
-                        <Truck className="h-4 w-4 mr-2" /> Move to Admin
-                      </Button>
-                      <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => handleGenerateTrackingLink(order)}>
-                        <MapPin className="h-4 w-4 mr-2" /> Share Tracking
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button 
-                    variant="outline"
-                    className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium" 
-                    onClick={() => handlePrint(order)}
-                  >
-                    <Printer className="h-5 w-5 mr-2" /> Print
-                  </Button>
-
-                  <Button
-                    variant="destructive"
-                    className="w-full shadow-sm font-medium"
-                    onClick={() => setCancelOrder(order)}
-                  >
-                    <Trash2 className="h-5 w-5 mr-2" /> Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="flex-1 h-px bg-blue-200" />
+                <span className="text-xs text-blue-600 font-semibold">
+                  {todayNewOrders.length} order(s)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {todayNewOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

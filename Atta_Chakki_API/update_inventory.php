@@ -40,6 +40,13 @@ foreach ($items as $item) {
         break;
     }
 
+    // Check if unit is trip before deducting/restoring stock
+    $unit_check = $conn->query("SELECT unit FROM products WHERE id = " . $productId);
+    $unit_row = $unit_check->fetch_assoc();
+    if ($unit_row && strtolower(trim($unit_row['unit'])) === 'trip') {
+        continue; // Skip stock update for service items
+    }
+
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param("di", $quantity, $productId);

@@ -17,6 +17,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     $amount_paid_input = isset($data->amount_paid) ? floatval($data->amount_paid) : 0;
     
     $is_pickup_request = isset($data->is_pickup_request) ? filter_var($data->is_pickup_request, FILTER_VALIDATE_BOOLEAN) : false;
+    $is_kg_order = isset($data->is_kg_order) ? filter_var($data->is_kg_order, FILTER_VALIDATE_BOOLEAN) : false;
     $order_type = isset($data->order_type) ? $data->order_type : 'delivery';
     
     // mapping payment methods to db values
@@ -73,9 +74,17 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     // For orders that include Trip items, we keep only non-trip sum in DB total (or 0 if none)
     $total_amount = $non_trip_total;
 
-    if ($is_pickup_request || $order_type === 'pickup' || $has_trip_item) {
+    // For orders that include Trip items → pickup flow (TBD pricing, admin weighs later)
+    // For Kg orders → immediate pricing, bypass admin weight step
+    if ($has_trip_item) {
         $total_amount = 0;
         $is_pickup_request = true;
+        $is_kg_order = false;
+    } else if ($is_kg_order || !$is_pickup_request) {
+        // Kg order: weight is known, price is calculated immediately
+        // total_amount already has the correct non-trip total
+        $is_pickup_request = false;
+        $is_kg_order = true;
     }
 
     if(empty($valid_items)) {
@@ -104,8 +113,13 @@ if(isset($data->user_id) && isset($data->cart_items)) {
 
     try {
         // inserting into orders table
-        // If the order is a pickup request, mark it as pickup_pending so Admin can handle weight confirmation
-        $status = $is_pickup_request ? 'pickup_pending' : 'pending';
+        // If the order is a pickup request (trip items), mark as pickup_pending for admin weight confirmation
+        // If it's a Kg order, go straight to 'pending' for immediate scheduling
+        if ($is_pickup_request) {
+            $status = 'pickup_pending';
+        } else {
+            $status = 'pending'; // Kg order → immediate scheduling
+        }
         $col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'amount_paid'");
         $has_amount_paid_col = ($col_check && $col_check->num_rows > 0);if ($has_amount_paid_col) {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
@@ -132,9 +146,10 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         }
         $item_stmt->close();
 
-        // deducting stock
+        // deducting stock (skip trip-unit products — they are services, not physical inventory)
         $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?");
         foreach($valid_items as $v_item) {
+            if (strtolower(trim($v_item['unit'])) === 'trip') continue; // skip services
             $inv_stmt->bind_param("di", $v_item['quantity'], $v_item['product_id']);
             if (!$inv_stmt->execute()) {
                 throw new Exception("Failed to update product stock: " . $inv_stmt->error);
@@ -152,7 +167,9 @@ if(isset($data->user_id) && isset($data->cart_items)) {
 
         $conn->commit();
         
-        // auto-schedule only if this is not a pickup-assigned (Trip/TBD) order
+        // auto-schedule:
+        // - Kg orders: always schedule immediately (weight and price are known)
+        // - Pickup requests (trip items): do NOT schedule until admin confirms weight
         $schedule_result = null;
         if (!$is_pickup_request) {
             require_once __DIR__ . '/controllers/orders/order_scheduler.php';
@@ -163,13 +180,20 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         $message = "Order placed successfully";
         if ($final_payment_status === 'partial') {
             $message .= ". Rs. " . number_format($remaining, 2) . " added to Udhaar.";
-        } elseif ($final_payment_status === 'pending') {
+        } elseif ($final_payment_status === 'pending' && $total_amount > 0) {
             $message .= ". Full amount Rs. " . number_format($total_amount, 2) . " added to Udhaar.";
         }
         
-        // add scheduling info to message
-        if ($schedule_result['status'] === 'scheduled-tomorrow') {
-            $message .= " (Scheduled for tomorrow due to capacity)";
+        // add scheduling info to message based on new reason codes
+        if ($schedule_result && isset($schedule_result['schedule_reason'])) {
+            $reason = $schedule_result['schedule_reason'];
+            if ($reason === 'time_cutoff') {
+                $message .= " (Scheduled for tomorrow — shop closing time buffer reached)";
+            } else if ($reason === 'capacity_full') {
+                $message .= " (Scheduled for tomorrow — today's order slots are full)";
+            } else if ($reason === 'no_time_left') {
+                $message .= " (Scheduled for tomorrow — not enough processing time left today)";
+            }
         }
         
         echo json_encode([
@@ -179,7 +203,9 @@ if(isset($data->user_id) && isset($data->cart_items)) {
             "payment_status" => $final_payment_status, 
             "amount_paid" => $amount_paid_input, 
             "remaining_balance" => $remaining,
-            "schedule" => $schedule_result
+            "schedule" => $schedule_result,
+            "is_today" => ($schedule_result && isset($schedule_result['is_today'])) ? $schedule_result['is_today'] : null,
+            "assigned_date" => ($schedule_result && isset($schedule_result['assigned_date'])) ? $schedule_result['assigned_date'] : null
         ]);
     } catch (Exception $e) {
         $conn->rollback();

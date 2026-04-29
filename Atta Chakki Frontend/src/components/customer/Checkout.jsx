@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Trash2, Building2, Smartphone, Banknote, Loader2, WalletCards, CreditCard, Shield, CheckCircle2, AlertCircle, TestTube2, Crosshair, Navigation } from 'lucide-react';
+import { MapPin, Trash2, Building2, Smartphone, Banknote, Loader2, WalletCards, CreditCard, Shield, CheckCircle2, AlertCircle, TestTube2, Crosshair, Navigation, Calendar, Clock, Sun, Sunrise } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -153,13 +153,55 @@ export function Checkout() {
   const total = getTotalPrice();
   const hasPendingWeightItem = cart.some(item => item.isWeightPending);
   const hasTripItem = cart.some(item => item.service?.unit?.toLowerCase() === 'trip');
-  const isTbdOrder = hasTripItem || orderType === 'pickup';
+  // Only trip-based items are TBD — Kg orders always have known weight & price
+  const isTbdOrder = hasTripItem;
+  // Determine if this is a Kg order (user knows weight, price is calculated immediately)
+  const isKgOrder = !hasTripItem && cart.length > 0;
+
+  // ── Schedule Preview State ──
+  const [schedulePreview, setSchedulePreview] = useState(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
 
   useEffect(() => {
     if (hasTripItem) {
       setOrderType('delivery');
     }
   }, [hasTripItem, cart]);
+
+  // ── Fetch schedule availability when cart changes ──
+  useEffect(() => {
+    if (cart.length === 0) {
+      setSchedulePreview(null);
+      return;
+    }
+
+    const totalWeight = cart.reduce((sum, item) => {
+      if (item.isWeightPending) return sum;
+      const unit = item.service?.unit?.toLowerCase() || 'kg';
+      if (unit === 'kg') return sum + item.quantity;
+      if (unit === 'g') return sum + (item.quantity / 1000);
+      return sum;
+    }, 0) || 1;
+
+    const fetchSchedule = async () => {
+      setScheduleLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/controllers/orders/check_schedule.php?weight=${totalWeight}`);
+        const data = await res.json();
+        if (data.success && data.schedule) {
+          setSchedulePreview(data.schedule);
+        }
+      } catch (err) {
+        console.warn('Schedule check failed:', err);
+      } finally {
+        setScheduleLoading(false);
+      }
+    };
+
+    // Debounce: wait 500ms after last cart change
+    const timer = setTimeout(fetchSchedule, 500);
+    return () => clearTimeout(timer);
+  }, [cart]);
 
   useEffect(() => {
     if (user && user.role === 'customer') {
@@ -474,7 +516,8 @@ export function Checkout() {
         payment_status: 'pending',
         amount_paid: 0,
         order_type: orderType,
-        is_pickup_request: isTbdOrder
+        is_pickup_request: isTbdOrder,
+        is_kg_order: isKgOrder
       };
 
       const orderResponse = await fetch(`${API_BASE_URL}/place_order.php`, {
@@ -546,7 +589,8 @@ export function Checkout() {
       transaction_id: transactionId || null,
       amount_paid: paidAmount,
       order_type: orderType,
-      is_pickup_request: isTbdOrder
+      is_pickup_request: isTbdOrder,
+      is_kg_order: isKgOrder
     };
 
     try {
@@ -653,7 +697,7 @@ export function Checkout() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeFromCart(item.service.id)}
+                  onClick={() => removeFromCart(item.service.id, item.isWeightPending)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -671,6 +715,96 @@ export function Checkout() {
           )}
         </div>
       </Card>
+
+      {/* ── Expected Schedule Banner ── */}
+      {cart.length > 0 && (
+        <Card className={`p-0 mb-6 overflow-hidden border-2 transition-all duration-500 ${
+          scheduleLoading 
+            ? 'border-border opacity-70' 
+            : schedulePreview?.is_today 
+              ? 'border-green-300 dark:border-green-700' 
+              : 'border-amber-300 dark:border-amber-700'
+        }`}>
+          {scheduleLoading ? (
+            <div className="flex items-center justify-center gap-3 py-5">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">{t('Checking schedule availability...')}</span>
+            </div>
+          ) : schedulePreview ? (
+            <div>
+              {/* Header strip */}
+              <div className={`px-5 py-3 flex items-center gap-3 ${
+                schedulePreview.is_today 
+                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-emerald-950/30' 
+                  : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30'
+              }`}>
+                <div className={`p-2.5 rounded-xl ${
+                  schedulePreview.is_today 
+                    ? 'bg-green-100 dark:bg-green-900/60' 
+                    : 'bg-amber-100 dark:bg-amber-900/60'
+                }`}>
+                  {schedulePreview.is_today 
+                    ? <Sun className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    : <Sunrise className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                  }
+                </div>
+                <div className="flex-1">
+                  <p className={`text-base font-bold ${
+                    schedulePreview.is_today 
+                      ? 'text-green-700 dark:text-green-400' 
+                      : 'text-amber-700 dark:text-amber-400'
+                  }`}>
+                    {schedulePreview.is_today ? `📦 ${t('Expected')}: ${t('Today')}` : `📅 ${t('Expected')}: ${t('Tomorrow')}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {schedulePreview.reason}
+                  </p>
+                </div>
+              </div>
+
+              {/* Details row */}
+              <div className="px-5 py-3 flex items-center gap-4 flex-wrap border-t border-border/50">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">{t('ETA')}:</span>
+                  <span className="text-xs font-semibold text-foreground">{schedulePreview.estimated_completion_display}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">{t('Date')}:</span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {new Date(schedulePreview.assigned_date + 'T00:00:00').toLocaleDateString('en-PK', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t('Today\'s Orders')}:</span>
+                  <span className={`text-xs font-bold ${
+                    schedulePreview.today_order_count >= schedulePreview.max_daily_orders 
+                      ? 'text-red-600' 
+                      : 'text-foreground'
+                  }`}>
+                    {schedulePreview.today_order_count}/{schedulePreview.max_daily_orders}
+                  </span>
+                </div>
+                {!schedulePreview.is_today && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">{t('Cutoff was')}:</span>
+                    <span className="text-xs font-semibold text-foreground">{schedulePreview.cutoff_time_display}</span>
+                  </div>
+                )}
+                {schedulePreview.server_time_display && (
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <Clock className="h-3 w-3 text-muted-foreground/60" />
+                    <span className="text-[10px] text-muted-foreground/70 font-mono">
+                      {schedulePreview.server_time_display} · {schedulePreview.server_timezone || 'UTC'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </Card>
+      )}
 
       {/* Customer Details */}
       <Card className="p-6 mb-6">

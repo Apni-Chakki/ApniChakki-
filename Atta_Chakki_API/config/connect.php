@@ -1,5 +1,9 @@
 <?php
 // connecting to db
+// SET TIMEZONE — Pakistan Standard Time (UTC+5)
+// This is critical for all scheduling, ETA, and date calculations
+date_default_timezone_set('Asia/Karachi');
+
 $old_report = mysqli_report(MYSQLI_REPORT_OFF);
 
 $servername = "localhost";

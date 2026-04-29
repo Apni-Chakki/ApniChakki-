@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '../ui/card';
-import { ShoppingBag, Clock, CheckCircle, TrendingUp, DollarSign, Package, AlertTriangle, Users, AlertCircle, RefreshCcw, Loader2 } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, TrendingUp, DollarSign, Package, AlertTriangle, Users, AlertCircle, RefreshCcw, Loader2, Weight, Timer, User, Phone, MapPin, ArrowRight, CalendarClock, History } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '../ui/skeleton';
 import { API_BASE_URL } from '../../config'; 
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { toast } from 'sonner';
+import { Checkbox } from '../ui/checkbox';
+import { ScrollArea } from '../ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -44,10 +47,14 @@ export function Dashboard() {
 
   const notifiedOrders = useRef(new Set());
 
-  // EOD State
+  // EOD State - Option A flow with checkbox selection
   const [eodData, setEodData] = useState(null);
   const [showEodModal, setShowEodModal] = useState(false);
   const [isProcessingEod, setIsProcessingEod] = useState(false);
+  const [yesterdayOrders, setYesterdayOrders] = useState([]);
+  const [selectedCompleted, setSelectedCompleted] = useState(new Set());
+  const [eodStep, setEodStep] = useState('loading'); // 'loading' | 'select' | 'processing' | 'done'
+  const [loadingYesterday, setLoadingYesterday] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -61,12 +68,95 @@ export function Dashboard() {
       if (data.success && data.has_leftover) {
         setEodData(data);
         setShowEodModal(true);
+        setEodStep('loading');
+        // Automatically fetch detailed yesterday orders
+        fetchYesterdayOrders();
       }
     } catch (error) {
       console.error("Failed to check EOD status:", error);
     }
   };
 
+  const fetchYesterdayOrders = async () => {
+    setLoadingYesterday(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/get_yesterday_pending.php`);
+      const data = await response.json();
+      if (data.success) {
+        setYesterdayOrders(data.orders || []);
+        setEodStep('select');
+      } else {
+        toast.error('Failed to load yesterday\'s orders');
+        setEodStep('select');
+      }
+    } catch (error) {
+      console.error("Error fetching yesterday orders:", error);
+      toast.error('Network error loading orders');
+      setEodStep('select');
+    } finally {
+      setLoadingYesterday(false);
+    }
+  };
+
+  const toggleOrderCompleted = (orderId) => {
+    setSelectedCompleted(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCompleted.size === yesterdayOrders.length) {
+      setSelectedCompleted(new Set());
+    } else {
+      setSelectedCompleted(new Set(yesterdayOrders.map(o => o.id)));
+    }
+  };
+
+  const handleProcessEodSelection = async () => {
+    setIsProcessingEod(true);
+    setEodStep('processing');
+    try {
+      const response = await fetch(`${API_BASE_URL}/process_eod_selection.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          completed_order_ids: Array.from(selectedCompleted)
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        const pendingCount = yesterdayOrders.length - selectedCompleted.size;
+        setEodStep('done');
+        toast.success(
+          `✅ ${data.completed_count} order(s) marked completed, ${data.carried_forward_count} carried forward to today's queue.`
+        );
+        setTimeout(() => {
+          setShowEodModal(false);
+          setEodStep('loading');
+          setSelectedCompleted(new Set());
+          setYesterdayOrders([]);
+          fetchStats();
+        }, 1500);
+      } else {
+        toast.error(data.message || 'Failed to process selection');
+        setEodStep('select');
+      }
+    } catch (error) {
+      console.error("EOD selection error:", error);
+      toast.error('Network error during processing');
+      setEodStep('select');
+    } finally {
+      setIsProcessingEod(false);
+    }
+  };
+
+  // Legacy Option B handler (auto_fill)
   const handleEodAction = async (actionType) => {
     setIsProcessingEod(true);
     try {
@@ -79,9 +169,9 @@ export function Dashboard() {
       });
       const data = await response.json();
       if (data.success) {
-        toast.success(`EOD Rollover completed successfully! (${actionType === 'keep_priority' ? 'Priority Kept' : 'Auto-Filled'})`);
+        toast.success(`EOD Rollover completed successfully! (Auto-Filled & Rescheduled)`);
         setShowEodModal(false);
-        fetchStats(); // Refresh dashboard stats
+        fetchStats();
       } else {
         toast.error(data.message || 'Failed to process rollover');
       }
@@ -321,65 +411,225 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* EOD Rollover Modal */}
+      {/* EOD Rollover Modal - Option A with checkbox selection */}
       <Dialog open={showEodModal} onOpenChange={(open) => {
-        // Prevent closing by clicking outside if we want to force a decision
         if (!isProcessingEod && open === false) {
-           // We might want to allow them to close it, or force them.
-           // For now, let's allow closing to not completely block the admin if they misclicked.
-           // Or strictly block them: uncomment below line to strictly block.
-           // return; 
            setShowEodModal(false);
+           setEodStep('loading');
+           setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-2xl font-bold text-orange-600 flex items-center gap-2">
               <AlertCircle className="h-6 w-6" />
-              End of Day (EOD) Rollover Required
+              End of Day (EOD) — Previous Day Review
             </DialogTitle>
-            <DialogDescription className="text-base text-gray-700 mt-4">
-              You have <strong>{eodData?.leftover_count} pending order(s)</strong> left over from previous days 
-              (Total Weight: {eodData?.leftover_total_weight_kg} kg, Est. Processing: {eodData?.leftover_total_minutes} mins).
-              <br/><br/>
-              How would you like to handle today's schedule?
+            <DialogDescription className="text-base text-gray-700 mt-2">
+              You have <strong>{eodData?.leftover_count || yesterdayOrders.length} pending order(s)</strong> from previous days 
+              (Total Weight: <strong>{eodData?.leftover_total_weight_kg || 0} kg</strong>, Est. Processing: <strong>{eodData?.leftover_total_minutes || 0} mins</strong>).
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-            <div className="border rounded-xl p-4 bg-orange-50/50 hover:bg-orange-50 transition-colors">
-              <h3 className="font-bold text-orange-800 text-lg mb-2">Option A: Keep Priority</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Carry forward yesterday's pending orders to today, making them the first priority. Today's scheduled orders will be delayed accordingly.
-              </p>
-              <Button 
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white" 
-                onClick={() => handleEodAction('keep_priority')}
-                disabled={isProcessingEod}
-              >
-                {isProcessingEod ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
-                Select Option A
-              </Button>
+          {/* Step: Loading */}
+          {eodStep === 'loading' && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="h-10 w-10 animate-spin text-orange-500 mb-4" />
+              <p className="text-gray-500 font-medium">Loading yesterday's pending orders...</p>
             </div>
+          )}
 
-            <div className="border rounded-xl p-4 bg-blue-50/50 hover:bg-blue-50 transition-colors">
-              <h3 className="font-bold text-blue-800 text-lg mb-2">Option B: Auto-Fill & Reschedule</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Push the leftover orders into tomorrow's list. Automatically pull fresh orders from tomorrow's queue to fill today's available capacity.
-              </p>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
-                onClick={() => handleEodAction('auto_fill')}
-                disabled={isProcessingEod}
-              >
-                {isProcessingEod ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
-                Select Option B
-              </Button>
+          {/* Step: Select completed orders */}
+          {eodStep === 'select' && (
+            <div className="flex flex-col gap-4 min-h-0 flex-1">
+              {/* Instruction banner */}
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
+                <h3 className="font-bold text-amber-900 text-base flex items-center gap-2">
+                  <History className="h-5 w-5 text-amber-600" />
+                  Which of these orders from yesterday have been completed?
+                </h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  Select the orders that were finished. Unselected orders will be carried forward to the <strong>top of Today's Work List</strong>.
+                </p>
+              </div>
+
+              {/* Select All / Summary bar */}
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2.5 border">
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="select-all-eod" 
+                    checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
+                    onCheckedChange={toggleSelectAll}
+                    className="h-5 w-5"
+                  />
+                  <label htmlFor="select-all-eod" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                    Select All ({yesterdayOrders.length})
+                  </label>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                    {selectedCompleted.size} Completed
+                  </Badge>
+                  <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100">
+                    <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                    {yesterdayOrders.length - selectedCompleted.size} Carry Forward
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Orders list with checkboxes */}
+              <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: 'calc(90vh - 380px)' }}>
+                <div className="space-y-3 pr-4 pb-2">
+                  {yesterdayOrders.map((order) => {
+                    const isChecked = selectedCompleted.has(order.id);
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => toggleOrderCompleted(order.id)}
+                        className={`relative border rounded-xl p-4 cursor-pointer transition-all duration-200 select-none ${
+                          isChecked 
+                            ? 'bg-green-50/80 border-green-300 shadow-sm ring-1 ring-green-200' 
+                            : 'bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm'
+                        }`}
+                      >
+                        {/* Completed overlay badge */}
+                        {isChecked && (
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-green-600 text-white text-[10px] px-2 py-0.5">
+                              <CheckCircle className="h-3 w-3 mr-1" /> COMPLETED
+                            </Badge>
+                          </div>
+                        )}
+
+                        <div className="flex items-start gap-4">
+                          {/* Checkbox */}
+                          <div className="pt-1">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={() => toggleOrderCompleted(order.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-5 w-5"
+                            />
+                          </div>
+
+                          {/* Order details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-bold text-base text-gray-900">Order #{order.id}</h4>
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-5 border-gray-300 text-gray-600">
+                                  {order.assigned_date || new Date(order.created_at).toLocaleDateString()}
+                                </Badge>
+                              </div>
+                              {!isChecked && (
+                                <span className="text-lg font-bold text-gray-800">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <User className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="font-medium">{order.customer_name}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                <span>{order.customer_phone}</span>
+                              </div>
+                            </div>
+
+                            {/* Items summary */}
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {order.items?.map((item, idx) => (
+                                <span key={idx} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full">
+                                  {item.name} × {item.quantity}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Weight & time chips */}
+                            <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Weight className="h-3 w-3" />
+                                {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Timer className="h-3 w-3" />
+                                {order.processing_time_minutes || '~'} mins
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate max-w-[180px]">{order.shipping_address || 'N/A'}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {yesterdayOrders.length === 0 && (
+                    <div className="text-center py-12 text-gray-400">
+                      <CheckCircle className="h-10 w-10 mx-auto mb-3 text-green-400" />
+                      <p className="font-medium">No pending orders from previous days!</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Action footer */}
+              <div className="shrink-0 border-t pt-4 space-y-3">
+                {/* Visual summary of what will happen */}
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="bg-green-50 border border-green-200 rounded-lg py-2.5 px-3">
+                    <p className="text-2xl font-bold text-green-700">{selectedCompleted.size}</p>
+                    <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Will be Completed</p>
+                  </div>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg py-2.5 px-3">
+                    <p className="text-2xl font-bold text-orange-700">{yesterdayOrders.length - selectedCompleted.size}</p>
+                    <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Carry Forward to Today</p>
+                  </div>
+                </div>
+
+                <Button 
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-base h-12 shadow-md" 
+                  onClick={handleProcessEodSelection}
+                  disabled={isProcessingEod}
+                >
+                  {isProcessingEod ? (
+                    <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Processing...</>
+                  ) : (
+                    <><ArrowRight className="h-5 w-5 mr-2" /> Confirm & Start Today's Work</>
+                  )}
+                </Button>
+
+                <p className="text-xs text-gray-500 text-center">
+                  * Unchecked orders will be placed at the <strong>top</strong> of today's processing queue with priority.
+                  Capacity: {eodData?.opening_time || '08:00'} to {eodData?.closing_time || '21:00'}.
+                </p>
+              </div>
             </div>
-          </div>
-          <p className="text-xs text-gray-500 text-center">
-            * Capacity is calculated based on Store Settings ({eodData?.opening_time} to {eodData?.closing_time}).
-          </p>
+          )}
+
+          {/* Step: Processing */}
+          {eodStep === 'processing' && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="h-10 w-10 animate-spin text-orange-500 mb-4" />
+              <p className="text-gray-700 font-semibold text-lg">Processing your selections...</p>
+              <p className="text-gray-500 text-sm mt-1">Updating order statuses and recalculating today's schedule.</p>
+            </div>
+          )}
+
+          {/* Step: Done */}
+          {eodStep === 'done' && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="rounded-full bg-green-100 p-4 mb-4">
+                <CheckCircle className="h-10 w-10 text-green-600" />
+              </div>
+              <p className="text-gray-900 font-bold text-xl">All Set!</p>
+              <p className="text-gray-500 text-sm mt-1">Today's work list has been updated. Redirecting...</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
