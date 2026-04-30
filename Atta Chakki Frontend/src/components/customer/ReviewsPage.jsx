@@ -7,8 +7,10 @@ import { Loader2, ArrowLeft, Edit2, Trash2, Send } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export function ReviewsPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const { user } = useAuth();
   const [reviews, setReviews] = useState([]);
@@ -141,9 +143,9 @@ export function ReviewsPage() {
     <div className="container mx-auto px-4 py-8 sm:py-12 max-w-6xl">
       <div className="mb-6">
         <Button variant="ghost" size="sm" asChild style={{ marginLeft: '-0.5rem', marginBottom: '0.5rem' }}>
-          <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Link>
+          <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> {t('Back')}</Link>
         </Button>
-        <h1 className="text-3xl font-bold text-foreground text-center">Customer Reviews</h1>
+        <h1 className="text-3xl font-bold text-foreground text-center">{t('Customer Reviews')}</h1>
         {user && user.role !== 'admin' && !formOpen && (
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.75rem' }}>
             <Button onClick={() => {
@@ -152,7 +154,7 @@ export function ReviewsPage() {
                 setMyRating(5);
                 setMyComment('');
             }}>
-              Write a Review
+              {t('Write a Review')}
             </Button>
           </div>
         )}
@@ -160,7 +162,7 @@ export function ReviewsPage() {
 
       <div className="bg-card shadow-sm border border-border p-6 rounded-xl mb-8 flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 className="text-xl font-semibold mb-1">Average Overview</h2>
+          <h2 className="text-xl font-semibold mb-1">{t('Average Overview')}</h2>
           <div className="flex gap-4 items-center">
             <RollingStarRating rating={Math.round(stats.average || 0)} />
             <span className="font-bold text-lg">{stats.average || '0.0'} / 5</span>
@@ -174,7 +176,7 @@ export function ReviewsPage() {
             onClick={() => setFilterRating('all')}
             className="text-xs h-8 px-2"
           >
-            All
+            {t('All')}
           </Button>
           {[5, 4, 3, 2, 1].map(stars => (
             <Button
@@ -193,32 +195,32 @@ export function ReviewsPage() {
         <Card className="p-6 mb-8 border-primary/20 bg-primary/5 animate-in fade-in slide-in-from-top-4 duration-500 shadow-md">
             <div className="flex justify-between items-center mb-4 border-b border-border/50 pb-4">
                <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                   {editId ? 'Edit Your Review' : 'Create a Review'}
+                   {editId ? t('Edit Your Review') : t('Create a Review')}
                </h3>
                <Button variant="ghost" className="h-8 hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => setFormOpen(false)}>Cancel</Button>
             </div>
             
             <div className="mb-6 bg-background rounded-lg p-4 border border-border shadow-sm">
-                <label className="block mb-2 font-medium text-muted-foreground">Rating</label>
+                <label className="block mb-2 font-medium text-muted-foreground">{t('Rating')}</label>
                 <div className="flex justify-center sm:justify-start">
                     <RollingStarRating interactive rating={myRating} onRatingChange={setMyRating} />
                 </div>
             </div>
 
             <div className="mb-6">
-                <label className="block mb-2 font-medium text-muted-foreground">Share your experience</label>
-                <textarea 
+                <label className="block mb-2 font-medium text-muted-foreground">{t('Share your experience')}</label>
+                <textarea
                    className="w-full min-h-[120px] p-4 rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-y shadow-sm"
                    value={myComment}
                    onChange={e => setMyComment(e.target.value)}
-                   placeholder="What did you like about our products?"
+                   placeholder={t('What did you like about our products?')}
                 />
             </div>
 
             <div className="flex justify-end mt-4">
                 <Button onClick={handleAddOrEdit} disabled={submitting} size="lg" className="w-full sm:w-auto">
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {editId ? 'Update Review' : 'Post Review'} <Send className="w-4 h-4 ml-2"/>
+                    {editId ? t('Update Review') : t('Post Review')} <Send className="w-4 h-4 ml-2"/>
                 </Button>
             </div>
         </Card>
@@ -227,11 +229,11 @@ export function ReviewsPage() {
       {loading ? (
         <div className="flex justify-center flex-col items-center py-20">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">Loading comments...</p>
+          <p className="text-muted-foreground">{t('Loading comments...')}</p>
         </div>
       ) : reviews.length === 0 ? (
         <div className="text-center py-20 bg-secondary rounded-xl">
-          <p className="text-xl text-muted-foreground">No reviews found for this filter.</p>
+          <p className="text-xl text-muted-foreground">{t('No reviews found for this filter.')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

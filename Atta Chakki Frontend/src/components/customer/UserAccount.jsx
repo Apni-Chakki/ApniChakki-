@@ -131,11 +131,11 @@ export function UserAccount() {
   // --- NEW: API Connected Save Function ---
   const handleSave = async () => {
     if (!tempProfile.name.trim()) {
-      toast.error('Name is required');
+      toast.error(t('Name is required'));
       return;
     }
     if (!tempProfile.phone.trim()) {
-      toast.error('Phone number is required');
+      toast.error(t('Phone number is required'));
       return;
     }
 
@@ -369,8 +369,8 @@ export function UserAccount() {
                           </span>
                         </div>                          {order.status === 'cancelled' && order.cancelReason && (
                             <p className="text-sm text-red-600 font-medium mt-1">
-                              Reason: {order.cancelReason} 
-                              {order.cancelledBy && ` (by ${order.cancelledBy})`}
+                              {t('Reason:')} {order.cancelReason}
+                              {order.cancelledBy && ` (${t('by')} ${order.cancelledBy})`}
                             </p>
                           )}                        <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
                       </div>
@@ -425,7 +425,7 @@ export function UserAccount() {
                           </span>
                           {order.amountPaid > 0 && order.paymentStatus !== 'paid' && (
                             <p className="text-xs text-green-600 mt-0.5">
-                              Paid: Rs. {order.amountPaid.toLocaleString()}
+                              {t('Paid:')} Rs. {order.amountPaid.toLocaleString()}
                             </p>
                           )}
                         </div>

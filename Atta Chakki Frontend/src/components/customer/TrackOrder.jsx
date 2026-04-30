@@ -195,11 +195,11 @@ export function TrackOrder() {
       <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
         <Card className="p-8 max-w-md w-full text-center shadow-lg border-primary/20 rounded-2xl">
           <User className="w-16 h-16 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Login Required</h2>
-          <p className="text-slate-600 mb-6">You must be logged in to track your specific orders.</p>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">{t('Login Required')}</h2>
+          <p className="text-slate-600 mb-6">{t('You must be logged in to track your specific orders.')}</p>
           <Link to="/customer-login">
             <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl">
-              Sign In to Track Order
+              {t('Sign In to Track Order')}
             </Button>
           </Link>
         </Card>

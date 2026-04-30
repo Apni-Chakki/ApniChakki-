@@ -7,6 +7,7 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useAuth } from '../../lib/AuthContext';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export function DeliveryLogin() {
   const [phone, setPhone] = useState('');
@@ -14,28 +15,29 @@ export function DeliveryLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!phone || !password) {
-      toast.error('Please enter phone number and password');
+      toast.error(t('Please enter phone number and password'));
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
       const success = await login(phone, password, 'delivery');
       if (success) {
-        toast.success('Welcome back!');
+        toast.success(t('Welcome back!'));
         navigate('/delivery');
       } else {
-        toast.error('Invalid credentials. Please check your phone number and password.');
+        toast.error(t('Invalid credentials. Please check your phone number and password.'));
       }
     } catch (error) {
       console.error("Delivery Login Error:", error);
-      toast.error('An error occurred. Please try again.');
+      toast.error(t('An error occurred. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +52,7 @@ export function DeliveryLogin() {
           onClick={() => navigate('/')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Home
+          {t('Back to Home')}
         </Button>
         
         <Card>
@@ -58,49 +60,51 @@ export function DeliveryLogin() {
             <div className="mx-auto h-12 w-12 rounded-full bg-success flex items-center justify-center mb-2">
               <Truck className="h-6 w-6 text-success-foreground" />
             </div>
-            <CardTitle className="text-2xl">Delivery Login</CardTitle>
+            <CardTitle className="text-2xl">{t('Delivery Login')}</CardTitle>
             <CardDescription>
-              Enter your phone number and password to access the delivery panel
+              {t('Enter your phone number and password to access the delivery panel')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">{t('Phone Number')}</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="phone"
                     type="tel"
                     placeholder="03XX XXXXXXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="pl-10"
+                    className="ps-12"
+                    style={{ paddingInlineStart: '3rem' }}
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('Password')}</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={t('Enter your password')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="ps-12"
+                    style={{ paddingInlineStart: '3rem' }}
                     required
                   />
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? t('Signing in...') : t('Sign In')}
               </Button>
               <div className="text-xs text-center text-muted-foreground mt-4">
-                <p>Contact admin if you forgot your password</p>
-                <p className="mt-1 text-primary/80">Default password: 123456</p>
+                <p>{t('Contact admin if you forgot your password')}</p>
+                <p className="mt-1 text-primary/80">{t('Default password: 123456')}</p>
               </div>
             </form>
           </CardContent>

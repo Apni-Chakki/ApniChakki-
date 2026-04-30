@@ -167,10 +167,10 @@ export function Homepage() {
 
         <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
           <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight">
-            {HERO_SLIDES[currentSlide].title}
+            {t(HERO_SLIDES[currentSlide].title)}
           </h1>
           <p className="text-white/90 text-base sm:text-lg md:text-xl max-w-2xl px-4">
-            {HERO_SLIDES[currentSlide].subtitle}
+            {t(HERO_SLIDES[currentSlide].subtitle)}
           </p>
         </div>
       </section>
@@ -264,7 +264,7 @@ export function Homepage() {
       <section className="py-8 sm:py-12 md:py-16 px-4 bg-secondary/20">
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="mb-4 sm:mb-6 text-3xl font-bold text-foreground">
-            {t('Why Choose')} Apni Atta Chakki?
+            {t('Why Choose Apni Atta Chakki?')}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mt-6 sm:mt-8">
             <div className="p-5 sm:p-6 bg-card rounded-lg shadow-md border border-border">
