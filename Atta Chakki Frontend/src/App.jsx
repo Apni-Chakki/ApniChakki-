@@ -78,11 +78,10 @@ function CustomerLayout({ children }) {
   );
 }
 
-// admin page layout
 function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
-    <div className="flex min-h-screen bg-background" style={{ position: 'relative' }}>
+    <div className="flex bg-background" style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
       {/* Mobile overlay */}
       <div
         className={`admin-sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
