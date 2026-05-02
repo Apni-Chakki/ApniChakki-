@@ -38,7 +38,8 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
     { path: '/admin/delivery', label: 'Delivery Team', icon: Truck },
     { path: '/admin/live-tracking', label: 'Live Tracking', icon: Radio },
     { path: '/admin/comments', label: 'Manage Comments', icon: MessageSquare },
-    { path: '/admin/settings', label: 'Store Settings', icon: Settings }
+    { path: '/admin/settings', label: 'Store Settings', icon: Settings },
+    { path: '/admin/hero-settings', label: 'Hero Settings', icon: LayoutDashboard }
   ];
 
   return (
