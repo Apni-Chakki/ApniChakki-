@@ -23,12 +23,14 @@ import {
   FileText,
   Loader2, // Added for loading state
   Monitor,
-  Store
+  Store,
+  Download
 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog'; 
 import { toast } from 'sonner'; 
+import * as XLSX from 'xlsx';
 import { API_BASE_URL } from '../../config'; // <-- NEW: Added API Config
 
 export function OrdersRecord() {
@@ -115,7 +117,9 @@ export function OrdersRecord() {
 
   const matchesDate = (orderDateStr) => {
     if (!dateRange || !dateRange.from) return true;
-    const orderDate = new Date(orderDateStr);
+    // Replace space with T to fix Safari/iOS Invalid Date bug with MySQL timestamps
+    const safeDateStr = typeof orderDateStr === 'string' ? orderDateStr.replace(' ', 'T') : orderDateStr;
+    const orderDate = new Date(safeDateStr);
     const fromDate = new Date(dateRange.from);
     fromDate.setHours(0, 0, 0, 0);
     if (orderDate < fromDate) return false;
@@ -192,6 +196,63 @@ export function OrdersRecord() {
             return <Badge className='bg-orange-500 text-white mt-1'>Unpaid</Badge>;
     }
   }
+
+  // --- Export to Real Excel (.xlsx) ---
+  const handleExportCSV = () => {
+    if (filteredOrders.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+
+    // Prepare data as array of objects for Excel
+    const excelData = filteredOrders.map(order => {
+      const remainingBalance = order.total - (order.advancePayment || 0);
+      const itemsStr = order.items.map(i => `${i.service.name} x${i.quantity}`).join(' | ');
+      
+      return {
+        'Order ID': order.id,
+        'Date': new Date(order.createdAt).toLocaleDateString(),
+        'Customer Name': order.customerName || '',
+        'Phone': order.phone || '',
+        'Items': itemsStr,
+        'Total Amount (Rs)': order.total,
+        'Advance Paid (Rs)': order.advancePayment || 0,
+        'Remaining Due (Rs)': remainingBalance > 0 ? remainingBalance : 0,
+        'Payment Status': order.paymentStatus,
+        'Order Status': order.status,
+        'Source': order.source,
+        'Delivery/Pickup': order.type
+      };
+    });
+
+    // Create a new workbook and a worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // Auto-adjust column widths (basic approximation)
+    const columnWidths = [
+      { wch: 10 }, // Order ID
+      { wch: 12 }, // Date
+      { wch: 20 }, // Customer Name
+      { wch: 15 }, // Phone
+      { wch: 40 }, // Items
+      { wch: 18 }, // Total Amount
+      { wch: 18 }, // Advance Paid
+      { wch: 18 }, // Remaining Due
+      { wch: 15 }, // Payment Status
+      { wch: 15 }, // Order Status
+      { wch: 12 }, // Source
+      { wch: 15 }  // Delivery/Pickup
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Orders");
+
+    // Generate Excel file and trigger download
+    XLSX.writeFile(workbook, `Orders_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success('Excel file downloaded successfully');
+  };
 
   // --- Record payment via API ---
   const handleSavePayment = async () => {
@@ -410,9 +471,20 @@ export function OrdersRecord() {
             </div>
 
             <Button 
+              variant="outline" 
+              size="sm"
+              className="ml-auto text-xs h-8 text-green-700 border-green-200 hover:bg-green-50"
+              disabled={filteredOrders.length === 0}
+              onClick={handleExportCSV}
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Export
+            </Button>
+            
+            <Button 
               variant="default" 
               size="sm"
-              className="ml-auto text-xs h-8"
+              className="text-xs h-8"
               disabled={filteredOrders.length === 0}
               onClick={() => setShowPrintList(true)}
             >
@@ -446,6 +518,7 @@ export function OrdersRecord() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="whitespace-nowrap">Order ID</TableHead>
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
                   <TableHead className="whitespace-nowrap">Customer</TableHead>
                   <TableHead className="whitespace-nowrap">Items</TableHead>
                   <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
@@ -471,6 +544,13 @@ export function OrdersRecord() {
                          {order.source === 'manual' ? <Store className="h-2.5 w-2.5" /> : <Monitor className="h-2.5 w-2.5" />}
                          {order.source}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        <span className="font-medium text-foreground">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        <br />
+                        <span className="text-[10px]">{new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-xs">

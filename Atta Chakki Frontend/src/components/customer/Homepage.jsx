@@ -8,14 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { useCart } from '../../lib/CartContext';
 import { API_BASE_URL } from '../../config';
 
-// Import your custom local images
-import wheatImg from '../../assets/Wheat and Flour.png';
-import gramImg from '../../assets/Gram and pulses.png';
-import riceImg from '../../assets/Rice.png';
-import spicesImg from '../../assets/Spices.png';
-import cottonImg from '../../assets/cotton.png';
-import convenienceImg from '../../assets/convienece serviecs.png';
-
 const HERO_SLIDES = [
   {
     image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
@@ -33,16 +25,6 @@ const HERO_SLIDES = [
     subtitle: "Expert Cotton Penja, Quilt filling & home delivery — all in one place."
   }
 ];
-
-// Map of local images for default fallback
-const DEFAULT_CATEGORY_IMAGES = {
-  'wheat': wheatImg,
-  'gram': gramImg,
-  'rice': riceImg,
-  'spices': spicesImg,
-  'cotton': cottonImg,
-  'service': convenienceImg
-};
 
 export function Homepage() {
   const [services, setServices] = useState([]);
@@ -105,21 +87,12 @@ export function Homepage() {
     window.addEventListener('categoriesUpdated', handleCategoryUpdate);
     return () => window.removeEventListener('categoriesUpdated', handleCategoryUpdate);
   }, []);
-  // Use only database categories - no static fallback
+  // Use only database categories
   const allCategories = dbCategories.map((dbCat, index) => {
-    // Get fallback image - prefer local asset, then hero image
-    let imageUrl = dbCat.image_url;
-    
-    // If no valid URL, use local image asset
-    if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl.endsWith('.png'))) {
-      const categoryName = (dbCat.name || '').toLowerCase().replace(/\s+/g, '_');
-      imageUrl = DEFAULT_CATEGORY_IMAGES[categoryName] || HERO_SLIDES[0].image;
-    }
-    
     return {
       id: dbCat.id || dbCat.name,
       labelKey: dbCat.name,
-      imageUrl: imageUrl,
+      imageUrl: dbCat.image_url || '',
       overlayColor: ['bg-primary/35', 'bg-accent/30', 'bg-secondary/40', 'bg-orange-600/35', 'bg-amber-500/30', 'bg-accent/25'][index % 6]
     };
   });
