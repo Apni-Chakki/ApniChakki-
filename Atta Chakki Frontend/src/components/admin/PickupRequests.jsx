@@ -377,11 +377,11 @@ export function PickupRequests() {
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                className="shadow-sm px-2"
+                                className="shadow-sm px-4"
                                 onClick={() => setCancelOrder(order)}
                                 title="Delete/Cancel Request"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 text-white" />
                               </Button>
                           </div>
                         </div>

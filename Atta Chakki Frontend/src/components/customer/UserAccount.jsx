@@ -267,7 +267,7 @@ export function UserAccount() {
                   </div>
                 </div>
                 {!editMode && (
-                  <Button onClick={handleEdit} variant="outline" className="w-full">
+                  <Button onClick={handleEdit}>
                     <Edit className="h-4 w-4 mr-2" />
                     {t('Edit Details')}
                   </Button>

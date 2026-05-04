@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
+import { useDynamicTranslation } from '../../lib/useDynamicTranslation';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -20,7 +21,7 @@ export function ServiceCard({ service }) {
   const [isPickupRequested, setIsPickupRequested] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const { addToCart } = useCart();
-  const { t } = useTranslation();
+  const { t, tDynamic } = useDynamicTranslation();
 
   const [isCleaningSelected, setIsCleaningSelected] = useState(service.is_grinding_service ? true : false);
   const [isGrindingSelected, setIsGrindingSelected] = useState(service.is_grinding_service ? true : false);
@@ -110,12 +111,14 @@ export function ServiceCard({ service }) {
         
         <div className="p-4 flex flex-col gap-3 flex-1">
           <div className="flex-1">
-            <h3 className="text-foreground mb-1">{t(service.name)}</h3>
+            <h3 className="text-foreground mb-1">{tDynamic(service.name)}</h3>
             {service.description && (
-              <p className="text-muted-foreground text-sm mb-2">{t(service.description)}</p>
+              <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
             <p className="text-primary font-bold text-lg">
               Rs. {currentPrice} / {t(service.unit || 'unit')}
+            <p className="text-primary">
+              Rs. {service.price} / {tDynamic(service.unit || 'unit')}
             </p>
             {!!service.is_grinding_service && (
                <div className="mt-3 p-4 bg-orange-50/40 border border-orange-100 rounded-xl space-y-3 shadow-sm animate-in fade-in zoom-in-95 duration-300">
@@ -184,23 +187,23 @@ export function ServiceCard({ service }) {
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="flex items-center border border-border rounded-md">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={isOutOfStock || isPickupRequested}
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-4 w-4" strokeWidth={3} />
                   </Button>
-                  <span className="w-10 sm:w-12 text-center text-sm sm:text-base">{quantity}</span>
+                  <span className="w-10 sm:w-12 text-center text-sm sm:text-base font-bold">{quantity}</span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                     onClick={() => setQuantity(quantity + 1)}
                     disabled={isOutOfStock || isPickupRequested}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4" strokeWidth={3} />
                   </Button>
                 </div>
                 
@@ -217,23 +220,23 @@ export function ServiceCard({ service }) {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center border border-border rounded-md">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={isOutOfStock}
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-4 w-4" strokeWidth={3} />
                 </Button>
-                <span className="w-10 sm:w-12 text-center text-sm sm:text-base">{quantity}</span>
+                <span className="w-10 sm:w-12 text-center text-sm sm:text-base font-bold">{quantity}</span>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                   onClick={() => setQuantity(quantity + 1)}
                   disabled={isOutOfStock}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" strokeWidth={3} />
                 </Button>
               </div>
               

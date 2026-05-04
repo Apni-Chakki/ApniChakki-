@@ -483,12 +483,12 @@ export function DigitalKhata() {
                     </TableCell>
                     <TableCell>
                       <Button 
-                        variant="ghost" 
+                        variant="destructive" 
                         size="icon" 
-                        className="text-destructive hover:bg-destructive/10"
+                        className="h-8 w-8 px-0 flex items-center justify-center"
                         onClick={() => handleDelete(expense.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-white" />
                       </Button>
                     </TableCell>
                   </TableRow>

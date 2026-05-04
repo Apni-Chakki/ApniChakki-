@@ -12,6 +12,7 @@ import wheatLogo from './assets/Wheat and Flour.png';
 import { Header } from './components/customer/Header';
 import { Footer } from './components/customer/Footer';
 import { AdminSidebar } from './components/admin/AdminSidebar';
+import { LanguageToggle } from './components/LanguageToggle';
 
 // lazy loading all pages
 
@@ -81,6 +82,8 @@ function CustomerLayout({ children }) {
 
 function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const initial = user?.name?.charAt(0)?.toUpperCase() || 'A';
   return (
     <div className="flex bg-background" style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
       {/* Mobile overlay */}
@@ -93,16 +96,23 @@ function AdminLayout({ children }) {
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="admin-main-content">
-        {/* Mobile top bar — hidden on desktop via CSS */}
-        <div className="admin-mobile-topbar">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open sidebar"
-            style={{ padding: '0.5rem', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--foreground)' }}
-          >
-            <Menu style={{ width: '1.25rem', height: '1.25rem' }} />
-          </button>
-          <span style={{ marginLeft: '0.75rem', fontWeight: 600, fontSize: '1rem' }}>Admin Panel</span>
+        {/* Top header bar */}
+        <div className="admin-topbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+              className="admin-mobile-menu-btn"
+              style={{ padding: '0.5rem', borderRadius: '0.375rem', display: 'none', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--foreground)' }}
+            >
+              <Menu style={{ width: '1.25rem', height: '1.25rem' }} />
+            </button>
+            <span className="admin-topbar-title">Admin</span>
+          </div>
+          <div className="admin-topbar-actions">
+            <LanguageToggle />
+            <div className="admin-topbar-avatar" title={user?.name || 'Admin'}>{initial}</div>
+          </div>
         </div>
 
         <main className="admin-main-inner">

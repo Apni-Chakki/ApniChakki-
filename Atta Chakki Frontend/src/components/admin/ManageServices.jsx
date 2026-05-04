@@ -553,11 +553,12 @@ export function ManageServices() {
                   </Button>
                   <Button
                     onClick={() => handleDelete(service.id)}
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
                     disabled={isAdding || editingId !== null}
+                    className="px-4"
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash2 className="h-4 w-4 text-white" />
                   </Button>
                 </div>
               </div>

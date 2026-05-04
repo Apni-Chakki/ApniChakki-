@@ -416,27 +416,17 @@ export function NewOrders() {
                   Tomorrow
                 </Button>
 
-                <Button
-                  size="sm"
-                  className="bg-success hover:bg-success/90 text-success-foreground text-xs h-8"
-                  onClick={() => updateOrderStatus(order.id, 'processing')}
-                >
-                  <Truck className="h-3 w-3 mr-1" />
-                  Start
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="text-xs h-8"
-                  onClick={() => setCancelOrder(order)}
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Cancel
-                </Button>
-              </div>
-            );
-          }}
+              <Button
+                size="sm"
+                variant="destructive"
+                className="text-xs h-8 px-4"
+                onClick={() => setCancelOrder(order)}
+              >
+                <Trash2 className="h-3 w-3 mr-1 text-white" />
+                Cancel
+              </Button>
+            </div>
+          )}
         />
 
         {/* ─── Cancel Order Dialog ─────────────────────────────────────── */}

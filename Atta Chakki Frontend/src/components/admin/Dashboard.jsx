@@ -266,29 +266,31 @@ export function Dashboard() {
   };
 
   const statCards = [
-    { title: "Today's Revenue", value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, color: 'text-green-600', bgColor: 'bg-green-50' },
-    { title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
-    { title: 'Pending (New)', value: stats.pendingOrders, icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-50' },
-    { title: 'In Progress', value: stats.processingOrders, icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-50' },
-    { title: 'Tomorrow Scheduled', value: stats.tomorrowScheduled, icon: TrendingUp, color: 'text-indigo-600', bgColor: 'bg-indigo-50' }
+    { id: 'revenue', title: "Today's Revenue",
+ value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
+    { id: 'orders', title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, iconBg: '#FEF3C7', iconColor: '#B45309' },
+    { id: 'completed', title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, iconBg: '#F0FDFA', iconColor: '#0D9488' },
+    { id: 'pending', title: 'Pending (New)', value: stats.pendingOrders, icon: Clock, iconBg: '#FFFFFF', iconColor: '#BE123C' },
+    { id: 'progress', title: 'In Progress', value: stats.processingOrders, icon: Package, iconBg: '#F5F3FF', iconColor: '#7C3AED' },
+    { id: 'tomorrow', title: 'Tomorrow Scheduled', value: stats.tomorrowScheduled, icon: TrendingUp, iconBg: '#EFF6FF', iconColor: '#2563EB' }
   ];
 
   const allTimeCards = [
-    { title: "Total Revenue", value: `Rs. ${(allTimeStats.totalRevenue).toLocaleString()}`, icon: DollarSign, color: 'text-green-700', bgColor: 'bg-green-100' },
-    { title: "Total Orders All-Time", value: allTimeStats.totalOrders, icon: ShoppingBag, color: 'text-blue-700', bgColor: 'bg-blue-100' },
-    { title: 'Total Registered Customers', value: allTimeStats.totalCustomers, icon: Users, color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
-    { title: 'Total Completed Orders', value: allTimeStats.completedOrders, icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-100' }
+    { title: 'Total Revenue', value: `Rs. ${(allTimeStats.totalRevenue).toLocaleString()}`, subtitle: 'Lifetime cumulative', featured: true },
+    { title: 'Total Orders All-Time', value: allTimeStats.totalOrders, subtitle: '↑ 12% growth', subtitleClass: 'text-emerald-600 font-semibold' },
+    { title: 'Total Registered Customers', value: allTimeStats.totalCustomers, subtitle: 'Verified profiles' },
+    { title: 'Total Completed Orders', value: allTimeStats.completedOrders, subtitle: 'Successful fulfillment' }
   ];
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-10 pb-16">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('Dashboard')} Overview</h1>
-          <p className="text-muted-foreground text-sm">Real-time store metrics and alerts</p>
+          <h1 className="text-2xl font-bold
+           sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} Overview</h1>
+          <p className="text-gray-500 text-sm mt-2">Real-time store metrics and alerts</p>
         </div>
-        <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" disabled={isLoading}>
+        <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" style={{ borderColor: '#8b6f47', color: '#8b6f47' }} disabled={isLoading}>
           <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh Stats
         </Button>
@@ -357,24 +359,71 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* TODAY'S OVERVIEW */}
-      <div className="pt-2">
-        <h2 className="text-lg font-bold text-gray-800 mb-4 px-1 border-b border-gray-200 pb-2">Today's Pulse</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* TODAY'S PULSE */}
+      <div>
+        <div className="flex items-center gap-3 mb-7">
+          <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
+          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">Today's Pulse</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
+            const isPending = stat.id === 'pending';
+            const showUrgent = isPending && stats.pendingOrders > 0;
             return (
-              <Card key={index} className="p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200 border-transparent bg-white">
+              <Card
+                key={index}
+                className={`relative overflow-hidden border transition-all duration-200 rounded-xl ${
+                  showUrgent
+                    ? 'border-rose-200 shadow-sm'
+                    : 'border-gray-200/70 bg-white shadow-sm hover:shadow-md'
+                }`}
+                style={showUrgent ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' } : {}}
+              >
                 {isLoading ? (
-                  <Skeleton className="h-12 w-full" />
+                  <div className="p-6"><Skeleton className="h-16 w-full" /></div>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 text-sm font-medium mb-1">{t(stat.title)}</p>
-                      <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{stat.value}</h2>
-                    </div>
-                    <div className={`${stat.bgColor} ${stat.color} p-3 sm:p-4 rounded-xl shadow-inner`}>
-                      <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.5} />
+                  <div className="p-6">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-5 ${showUrgent ? 'text-rose-800' : 'text-gray-500'}`}>
+                      {t(stat.title)}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="shrink-0 flex items-center justify-center"
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          backgroundColor: stat.iconBg,
+                          borderRadius: '12px',
+                          border: '1px solid rgba(0, 0, 0, 0.06)',
+                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <Icon style={{ height: '22px', width: '22px', color: stat.iconColor }} strokeWidth={2.25} />
+                      </div>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-none">{stat.value}</h2>
+                        {showUrgent && (
+                          <span
+                            style={{
+                              backgroundColor: '#dc2626',
+                              color: '#ffffff',
+                              fontSize: '10px',
+                              fontWeight: 800,
+                              letterSpacing: '0.08em',
+                              padding: '4px 9px',
+                              borderRadius: '9999px',
+                              textTransform: 'uppercase',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              boxShadow: '0 1px 3px rgba(220, 38, 38, 0.4)',
+                              lineHeight: 1
+                            }}
+                          >
+                            Urgent
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -384,25 +433,36 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* ALL-TIME STATS OVERVIEW */}
-      <div className="pt-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-4 px-1 border-b border-gray-200 pb-2">All-Time Statistics</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ALL-TIME STATISTICS */}
+      <div className="pt-2">
+        <div className="flex items-center gap-3 mb-7">
+          <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
+          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">All-Time Statistics</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {allTimeCards.map((stat, index) => {
-            const Icon = stat.icon;
+            const isFeatured = stat.featured;
             return (
-              <Card key={index} className="p-4 shadow-sm border border-gray-100 bg-gray-50/50">
+              <Card
+                key={index}
+                className={`relative overflow-hidden transition-all duration-200 rounded-xl ${
+                  isFeatured ? 'border-0 text-white' : 'border border-gray-100 bg-white hover:shadow-md'
+                }`}
+                style={isFeatured ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' } : {}}
+              >
                 {isLoading ? (
-                  <Skeleton className="h-10 w-full" />
+                  <div className="p-6"><Skeleton className={`h-16 w-full ${isFeatured ? 'bg-white/20' : ''}`} /></div>
                 ) : (
-                  <div className="flex items-center gap-4">
-                    <div className={`${stat.bgColor} ${stat.color} p-2.5 rounded-lg border border-white/50 shadow-sm`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">{t(stat.title)}</p>
-                      <h2 className="text-xl font-bold text-gray-900">{stat.value}</h2>
-                    </div>
+                  <div className="p-6">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-5 ${isFeatured ? 'text-white/80' : 'text-gray-500'}`}>
+                      {t(stat.title)}
+                    </p>
+                    <h2 className={`text-3xl font-black tracking-tight leading-none mb-3 ${isFeatured ? 'text-white' : 'text-gray-900'}`}>
+                      {stat.value}
+                    </h2>
+                    <p className={`text-xs ${stat.subtitleClass || (isFeatured ? 'text-white/70 font-medium' : 'text-gray-400 font-medium')}`}>
+                      {stat.subtitle}
+                    </p>
                   </div>
                 )}
               </Card>

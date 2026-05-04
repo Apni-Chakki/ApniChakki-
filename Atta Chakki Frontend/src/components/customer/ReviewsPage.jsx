@@ -217,8 +217,8 @@ export function ReviewsPage() {
                 />
             </div>
 
-            <div className="flex justify-end mt-4">
-                <Button onClick={handleAddOrEdit} disabled={submitting} size="lg" className="w-full sm:w-auto">
+            <div className="flex justify-end mt-4 post-review">
+                <Button onClick={handleAddOrEdit} disabled={submitting}>
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {editId ? t('Update Review') : t('Post Review')} <Send className="w-4 h-4 ml-2"/>
                 </Button>
@@ -259,8 +259,8 @@ export function ReviewsPage() {
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(review)}>
                        <Edit2 className="w-4 h-4 mr-2" /> Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteReview(review.id)}>
-                       <Trash2 className="w-4 h-4" />
+                    <Button variant="destructive" size="sm" onClick={() => deleteReview(review.id)} className="px-4">
+                       <Trash2 className="w-4 h-4 text-white" />
                     </Button>
                  </div>
                )}
