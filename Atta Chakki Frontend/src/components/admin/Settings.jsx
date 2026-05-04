@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Clock, MapPin, Phone, Mail, Megaphone } from 'lucide-react';
+import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -20,7 +20,8 @@ export function Settings() {
     deliveryCharge: '50',
     minOrderForFreeDelivery: '500',
     announcement: 'Special Offer: Get 10% off on your first order of fresh stone-ground flour!',
-    processingTimePerKg: '2'
+    processingTimePerKg: '2',
+    heavyOrderThreshold: '100'
   });
 
   useEffect(() => {
@@ -179,6 +180,32 @@ export function Settings() {
           <p className="text-xs text-muted-foreground mt-2">
             This value is used by the auto-scheduler to calculate the Estimated Completion Time (ETA) for each order.
           </p>
+        </div>
+      </Card>
+
+      <Card className="p-6 border-purple-200 bg-purple-50/30">
+        <h2 className="mb-4 flex items-center gap-2 font-semibold text-purple-900">
+          <SplitSquareHorizontal className="h-5 w-5" />
+          Order Automation
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="heavyOrderThreshold" className="mb-1 block">
+              Heavy Order Threshold (kg)
+            </Label>
+            <Input
+              id="heavyOrderThreshold"
+              type="number"
+              min="1"
+              step="1"
+              value={settings.heavyOrderThreshold}
+              onChange={(e) => setSettings({ ...settings, heavyOrderThreshold: e.target.value })}
+              className="w-full md:w-1/2 bg-white"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Orders weighing <strong>more than this value</strong> will automatically be flagged as &ldquo;Heavy Order&rdquo;. Admin will get an option to split them into <em>Today</em> and <em>Tomorrow</em> batches. Bill and &ldquo;Mark as Ready&rdquo; will only appear when <strong>all batches</strong> are complete.
+            </p>
+          </div>
         </div>
       </Card>
 

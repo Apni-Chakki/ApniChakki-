@@ -59,16 +59,20 @@ try {
     }
     $cat_stmt->close();
 
+    $is_grinding_service = isset($data['is_grinding_service']) ? (int)$data['is_grinding_service'] : 0;
+    $cleaning_price = isset($data['cleaning_price']) ? floatval($data['cleaning_price']) : 0.00;
+    $grinding_price = isset($data['grinding_price']) ? floatval($data['grinding_price']) : 0.00;
+
     // inserting the product
     $stock_quantity = 100;
     
-    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, category_id, description, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, category_id, description, image_url, stock_quantity, is_grinding_service, cleaning_price, grinding_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsissd", $name, $price, $unit, $category_id, $description, $image, $stock_quantity);
+    $stmt->bind_param("sdsissdidd", $name, $price, $unit, $category_id, $description, $image, $stock_quantity, $is_grinding_service, $cleaning_price, $grinding_price);
 
     if ($stmt->execute()) {
         http_response_code(201);

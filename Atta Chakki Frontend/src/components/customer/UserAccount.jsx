@@ -100,7 +100,7 @@ export function UserAccount() {
             type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
             items: order.items ? order.items.map(item => ({
                quantity: item.quantity,
-               isWeightPending: false, 
+               isWeightPending: item.is_weight_pending == 1, 
                service: {
                  name: item.name,
                  price: item.price_at_purchase || 0
@@ -358,6 +358,7 @@ export function UserAccount() {
                 </Card>
               ) : (
                 orders.map((order) => {
+                  const hasPending = order.items.some(i => i.isWeightPending);
                   return (
                   <Card key={order.id} className="p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
@@ -378,6 +379,7 @@ export function UserAccount() {
                         <p className="text-sm text-muted-foreground">{t('Total Amount')}</p>
                         <p className="text-primary font-bold">
                           Rs. {order.total.toLocaleString()}
+                          {hasPending && <span className="text-xs ml-1">(+ TBD)</span>}
                         </p>
                       </div>
                     </div>
@@ -391,7 +393,11 @@ export function UserAccount() {
                               {item.service.name} <span className="text-foreground">x {item.quantity}</span>
                             </span>
                             <span className="text-foreground">
-                              Rs. {(item.service.price * item.quantity).toLocaleString()}
+                              {item.isWeightPending ? (
+                                <span className="text-primary font-medium">{t('Pending Wt.')}</span>
+                              ) : (
+                                `Rs. ${(item.service.price * item.quantity).toLocaleString()}`
+                              )}
                             </span>
                           </div>
                         ))}

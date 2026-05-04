@@ -1,5 +1,5 @@
 <?php
-// get products api
+// products nikal rahe han yahan is api me hum log
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/connect.php';
 
@@ -9,9 +9,10 @@ try {
     $category = isset($_GET['category']) ? $_GET['category'] : null;
     
     if ($category) {
-        // filtering by category
+        // category se filter kar rahe han agar di gayi hai tou hum log
         $sql = "SELECT p.id, p.name, p.description, p.price, p.unit, p.image_url, 
-                p.stock_quantity, c.name as category, p.created_at 
+                p.stock_quantity, c.name as category, p.created_at,
+                p.is_grinding_service, p.cleaning_price, p.grinding_price 
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 WHERE c.name = ?
@@ -26,9 +27,10 @@ try {
         $stmt->execute();
         $result = $stmt->get_result();
     } else {
-        // getting all products
+        // sare products nikal rahe han hum yahan par db se
         $sql = "SELECT p.id, p.name, p.description, p.price, p.unit, p.image_url, 
-                p.stock_quantity, c.name as category, p.created_at 
+                p.stock_quantity, c.name as category, p.created_at,
+                p.is_grinding_service, p.cleaning_price, p.grinding_price 
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 ORDER BY p.created_at DESC";
@@ -52,6 +54,9 @@ try {
             'imageUrl' => $row['image_url'],
             'stock_quantity' => floatval($row['stock_quantity']),
             'category' => $row['category'] ?? 'Uncategorized',
+            'is_grinding_service' => (int)($row['is_grinding_service'] ?? 0),
+            'cleaning_price' => floatval($row['cleaning_price'] ?? 0),
+            'grinding_price' => floatval($row['grinding_price'] ?? 0),
             'created_at' => $row['created_at']
         ];
     }

@@ -98,10 +98,15 @@ export function PrintOrderDetails({ order, open, onClose }) {
     return `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px dashed #ccc;padding:7px 0;">
         <div style="flex:1;padding-right:10px;">
-          <div style="font-weight:600;font-size:12px;">${item.service.name}</div>
-          <div style="color:#555;font-size:10px;margin-top:2px;">${item.quantity} ${item.service.unit} × Rs.${Number(item.service.price).toLocaleString()}</div>
+          <div style="font-weight:600;font-size:12px;">${item.name || item.service?.name}</div>
+          ${(item.is_cleaning == 1 || item.is_grinding == 1) ? `
+            <div style="color:#666;font-size:9px;font-style:italic;margin-top:2px;">
+              (${item.is_cleaning == 1 ? 'Cleaning' : ''}${item.is_cleaning == 1 && item.is_grinding == 1 ? ' + ' : ''}${item.is_grinding == 1 ? 'Grinding' : ''})
+            </div>
+          ` : ''}
+          <div style="color:#555;font-size:10px;margin-top:2px;">${item.quantity} ${item.unit || item.service?.unit || 'unit'} × Rs.${Number(item.price_at_purchase || item.service?.price).toLocaleString()}</div>
         </div>
-        <div style="font-weight:700;white-space:nowrap;font-size:13px;">Rs.${(item.quantity * item.service.price).toLocaleString()}</div>
+        <div style="font-weight:700;white-space:nowrap;font-size:13px;">Rs.${(item.quantity * (item.price_at_purchase || item.service?.price)).toLocaleString()}</div>
       </div>`;
   }).join('');
 
@@ -351,18 +356,23 @@ export function PrintOrderDetails({ order, open, onClose }) {
                 {order.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-start border-b border-dashed border-border/50 pb-2 last:border-0">
                     <div className="flex-1 pr-4">
-                      <p className="text-[12px] font-semibold whitespace-normal break-words">{item.service.name}</p>
+                      <p className="text-[12px] font-semibold whitespace-normal break-words">{item.name || item.service?.name}</p>
+                      {(item.is_cleaning == 1 || item.is_grinding == 1) && (
+                        <p className="text-[9px] text-muted-foreground italic mt-0.5">
+                           ({item.is_cleaning == 1 ? 'Cleaning' : ''}{item.is_cleaning == 1 && item.is_grinding == 1 ? ' + ' : ''}{item.is_grinding == 1 ? 'Grinding' : ''})
+                        </p>
+                      )}
                       {item.isWeightPending ? (
                         <p className="text-[10px] text-orange-600 font-bold mt-0.5">⚠ WEIGHT TO BE CONFIRMED</p>
                       ) : (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {item.quantity} {item.service.unit} × Rs.{Number(item.service.price).toLocaleString()}
+                          {item.quantity} {item.unit || item.service?.unit || 'unit'} × Rs.{Number(item.price_at_purchase || item.service?.price).toLocaleString()}
                         </p>
                       )}
                     </div>
                     {!item.isWeightPending && (
                       <p className="text-[12px] font-bold whitespace-nowrap">
-                        Rs.{(item.quantity * item.service.price).toLocaleString()}
+                        Rs.{(item.quantity * (item.price_at_purchase || item.service?.price)).toLocaleString()}
                       </p>
                     )}
                   </div>

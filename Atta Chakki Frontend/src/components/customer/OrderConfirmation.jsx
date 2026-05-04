@@ -37,7 +37,8 @@ export function OrderConfirmation() {
           items: (o.items || []).map(item => ({
             name: item.name,
             quantity: item.quantity,
-            price: item.price_at_purchase
+            price: item.price_at_purchase,
+            isWeightPending: item.is_weight_pending == 1
           }))
         });
       }

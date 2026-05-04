@@ -24,8 +24,11 @@ try {
     while ($row = $result->fetch_assoc()) {
         // Map database fields to expected output format
         $row['price'] = floatval($row['price']);
-        $row['stock'] = intval($row['stock_quantity']);  // FIXED: Was trying to access non-existent 'stock' field
-        $row['stock_quantity'] = floatval($row['stock_quantity']);
+        $row['stock'] = intval($row['stock_quantity'] ?? 0);
+        $row['stock_quantity'] = floatval($row['stock_quantity'] ?? 0);
+        $row['is_grinding_service'] = (int)($row['is_grinding_service'] ?? 0);
+        $row['cleaning_price'] = floatval($row['cleaning_price'] ?? 0);
+        $row['grinding_price'] = floatval($row['grinding_price'] ?? 0);
         $products[] = $row;
     }
     
