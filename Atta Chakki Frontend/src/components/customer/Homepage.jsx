@@ -4,7 +4,7 @@ import { UserReviews } from './UserReviews';
 import { Card } from '../ui/card'; 
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useTranslation } from 'react-i18next';
+import { useDynamicTranslation } from '../../lib/useDynamicTranslation';
 import { useCart } from '../../lib/CartContext';
 import { API_BASE_URL } from '../../config';
 
@@ -33,7 +33,7 @@ export function Homepage() {
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlides, setHeroSlides] = useState(DEFAULT_HERO_SLIDES);
-  const { t } = useTranslation();
+  const { t, tDynamic, translateBatch, language } = useDynamicTranslation();
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -101,6 +101,15 @@ export function Homepage() {
     window.addEventListener('categoriesUpdated', handleCategoryUpdate);
     return () => window.removeEventListener('categoriesUpdated', handleCategoryUpdate);
   }, []);
+  // Pre-fetch translations for all dynamic DB text in one batch call
+  useEffect(() => {
+    if (language === 'en') return;
+    const categoryNames = dbCategories.map(c => c.name).filter(Boolean);
+    const productTexts = services.flatMap(s => [s.name, s.description, s.unit].filter(Boolean));
+    const slideTexts = heroSlides.flatMap(s => [s.title, s.subtitle].filter(Boolean));
+    translateBatch([...categoryNames, ...productTexts, ...slideTexts]);
+  }, [dbCategories, services, heroSlides, language]);
+
   // Use only database categories
   const allCategories = dbCategories.map((dbCat, index) => {
     return {
@@ -154,10 +163,10 @@ export function Homepage() {
 
         <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
           <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight">
-            {heroSlides[currentSlide] ? t(heroSlides[currentSlide].title) : ''}
+            {heroSlides[currentSlide] ? tDynamic(heroSlides[currentSlide].title) : ''}
           </h1>
           <p className="text-white/90 text-base sm:text-lg md:text-xl max-w-2xl px-4">
-            {heroSlides[currentSlide] ? t(heroSlides[currentSlide].subtitle) : ''}
+            {heroSlides[currentSlide] ? tDynamic(heroSlides[currentSlide].subtitle) : ''}
           </p>
         </div>
       </section>
@@ -196,7 +205,7 @@ export function Homepage() {
                       <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors duration-300" />
                       <div className="relative h-full flex items-center justify-center px-6">
                         <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-2xl leading-tight">
-                          {t(category.labelKey)}
+                          {tDynamic(category.labelKey)}
                         </h3>
                       </div>
                     </Card>
@@ -217,7 +226,7 @@ export function Homepage() {
                   <ArrowLeft className="h-4 w-4" /> {t('Back to Categories')}
                 </Button>
                 <h2 className="text-2xl font-bold text-foreground">
-                  {t(allCategories.find(c => c.id === selectedCategory)?.labelKey || '')}
+                  {tDynamic(allCategories.find(c => c.id === selectedCategory)?.labelKey || '')}
                 </h2>
               </div>
 

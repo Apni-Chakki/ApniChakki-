@@ -6,7 +6,7 @@ import { useCart } from '../../lib/CartContext';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { motion } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
+import { useDynamicTranslation } from '../../lib/useDynamicTranslation';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -18,7 +18,7 @@ export function ServiceCard({ service }) {
   const [isPickupRequested, setIsPickupRequested] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const { addToCart } = useCart();
-  const { t } = useTranslation();
+  const { t, tDynamic } = useDynamicTranslation();
 
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
   const isOnlyPickup = service?.unit?.toLowerCase() === 'trip';
@@ -83,12 +83,12 @@ export function ServiceCard({ service }) {
         
         <div className="p-4 flex flex-col gap-3 flex-1">
           <div className="flex-1">
-            <h3 className="text-foreground mb-1">{t(service.name)}</h3>
+            <h3 className="text-foreground mb-1">{tDynamic(service.name)}</h3>
             {service.description && (
-              <p className="text-muted-foreground text-sm mb-2">{t(service.description)}</p>
+              <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
             <p className="text-primary">
-              Rs. {service.price} / {t(service.unit || 'unit')}
+              Rs. {service.price} / {tDynamic(service.unit || 'unit')}
             </p>
             {stock < 10 && stock > 0 && !isOnlyPickup && (
                  <p className="text-xs text-red-500 mt-1">{t('Only')} {stock} {t('left')}!</p>

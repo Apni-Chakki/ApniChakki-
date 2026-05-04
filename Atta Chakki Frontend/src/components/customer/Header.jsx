@@ -122,6 +122,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full"
             onClick={() => setIsMenuOpen(prev => !prev)}
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           >
