@@ -154,7 +154,7 @@ export function ManageServices() {
       unit: service.unit,
       description: service.description || '',
       imageUrl: service.image || '', 
-      category: service.category || (categories.length > 0 ? categories[0].name : 'wheat')
+      category: service.category || (categories.length > 0 ? categories[0].name : '')
     });
     setImageFile(null);
   };
@@ -230,7 +230,7 @@ export function ManageServices() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', price: '', unit: 'kg', description: '', imageUrl: '', category: categories.length > 0 ? categories[0].name : 'wheat' });
+    setFormData({ name: '', price: '', unit: 'kg', description: '', imageUrl: '', category: categories.length > 0 ? categories[0].name : '' });
     setImageFile(null);
   };
 

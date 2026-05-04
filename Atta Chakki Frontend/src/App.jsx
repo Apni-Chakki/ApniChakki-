@@ -47,6 +47,7 @@ const ManageCategories = lazy(() => import('./components/admin/ManageCategories'
 const ManageServices = lazy(() => import('./components/admin/ManageServices').then(module => ({ default: module.ManageServices })));
 const ManageDelivery = lazy(() => import('./components/admin/ManageDelivery').then(module => ({ default: module.ManageDelivery })));
 const Settings = lazy(() => import('./components/admin/Settings').then(module => ({ default: module.Settings })));
+const HeroSettings = lazy(() => import('./components/admin/HeroSettings').then(module => ({ default: module.HeroSettings })));
 const AddManualOrder = lazy(() => import('./components/admin/AddManualOrder').then(module => ({ default: module.AddManualOrder })));
 const DigitalKhata = lazy(() => import('./components/admin/DigitalKhata').then(module => ({ default: module.DigitalKhata })));
 const UdhaarKhata = lazy(() => import('./components/admin/UdhaarKhata').then(module => ({ default: module.UdhaarKhata })));
@@ -78,11 +79,10 @@ function CustomerLayout({ children }) {
   );
 }
 
-// admin page layout
 function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
-    <div className="flex min-h-screen bg-background" style={{ position: 'relative' }}>
+    <div className="flex bg-background" style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
       {/* Mobile overlay */}
       <div
         className={`admin-sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
@@ -240,6 +240,7 @@ export default function App() {
             <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

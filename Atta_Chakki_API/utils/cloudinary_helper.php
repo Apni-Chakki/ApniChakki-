@@ -28,9 +28,14 @@ function uploadToCloudinary($file, $folder = 'products') {
     $folderPath = CLOUDINARY_FOLDERS[$folder] ?? CLOUDINARY_FOLDERS['other'];
     $cloudinaryUrl = CLOUDINARY_BASE_URL . '/image/upload';
     
+    $timestamp = time();
+    $signature = sha1('folder=' . $folderPath . '&timestamp=' . $timestamp . CLOUDINARY_API_SECRET);
+    
     $postFields = [
         'file' => new CURLFile($file['tmp_name'], $file['type'], $file['name']),
-        'upload_preset' => CLOUDINARY_UPLOAD_PRESET,
+        'api_key' => CLOUDINARY_API_KEY,
+        'timestamp' => $timestamp,
+        'signature' => $signature,
         'folder' => $folderPath,
         'resource_type' => 'auto'
     ];
@@ -42,7 +47,8 @@ function uploadToCloudinary($file, $folder = 'products') {
         CURLOPT_POSTFIELDS => $postFields,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
     ]);
     
     $response = curl_exec($ch);
@@ -104,7 +110,8 @@ function deleteFromCloudinary($publicId) {
         CURLOPT_POSTFIELDS => http_build_query($postData),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
     ]);
     
     $response = curl_exec($ch);

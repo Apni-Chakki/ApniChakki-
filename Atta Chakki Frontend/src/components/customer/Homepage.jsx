@@ -8,15 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useCart } from '../../lib/CartContext';
 import { API_BASE_URL } from '../../config';
 
-// Import your custom local images
-import wheatImg from '../../assets/Wheat and Flour.png';
-import gramImg from '../../assets/Gram and pulses.png';
-import riceImg from '../../assets/Rice.png';
-import spicesImg from '../../assets/Spices.png';
-import cottonImg from '../../assets/cotton.png';
-import convenienceImg from '../../assets/convienece serviecs.png';
-
-const HERO_SLIDES = [
+const DEFAULT_HERO_SLIDES = [
   {
     image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
     title: "Apka Bhrosa Apki Apni Chakki",
@@ -34,43 +26,47 @@ const HERO_SLIDES = [
   }
 ];
 
-// Map of local images for default fallback
-const DEFAULT_CATEGORY_IMAGES = {
-  'wheat': wheatImg,
-  'gram': gramImg,
-  'rice': riceImg,
-  'spices': spicesImg,
-  'cotton': cottonImg,
-  'service': convenienceImg
-};
-
 export function Homepage() {
   const [services, setServices] = useState([]);
   const [dbCategories, setDbCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [heroSlides, setHeroSlides] = useState(DEFAULT_HERO_SLIDES);
   const { t } = useTranslation();
   const { addToCart } = useCart();
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   // --- CHANGED: Fetch from PHP Backend instead of LocalStorage ---
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
+        const [productsRes, categoriesRes, settingsRes] = await Promise.all([
           fetch(`${API_BASE_URL}/get_products.php`),
-          fetch(`${API_BASE_URL}/get_categories.php`)
+          fetch(`${API_BASE_URL}/get_categories.php`),
+          fetch(`${API_BASE_URL}/get_store_settings.php`)
         ]);
         
         const data = await productsRes.json();
         const catsData = await categoriesRes.json();
+        const settingsData = await settingsRes.json();
+        
+        if (settingsData.success && settingsData.settings && settingsData.settings.heroSlides) {
+          try {
+            const parsed = JSON.parse(settingsData.settings.heroSlides);
+            if (parsed && parsed.length > 0) {
+              setHeroSlides(parsed);
+            }
+          } catch (e) {
+            console.error("Failed to parse hero slides", e);
+          }
+        }
         
         console.log("Categories Response:", catsData);
         console.log("Products Response:", data);
@@ -94,32 +90,23 @@ export function Homepage() {
       }
     };
 
-    fetchProducts();
+    fetchData();
 
     // Listen for category updates from admin panel
     const handleCategoryUpdate = () => {
       console.log("Category update event received, refetching...");
-      fetchProducts();
+      fetchData();
     };
     
     window.addEventListener('categoriesUpdated', handleCategoryUpdate);
     return () => window.removeEventListener('categoriesUpdated', handleCategoryUpdate);
   }, []);
-  // Use only database categories - no static fallback
+  // Use only database categories
   const allCategories = dbCategories.map((dbCat, index) => {
-    // Get fallback image - prefer local asset, then hero image
-    let imageUrl = dbCat.image_url;
-    
-    // If no valid URL, use local image asset
-    if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl.endsWith('.png'))) {
-      const categoryName = (dbCat.name || '').toLowerCase().replace(/\s+/g, '_');
-      imageUrl = DEFAULT_CATEGORY_IMAGES[categoryName] || HERO_SLIDES[0].image;
-    }
-    
     return {
       id: dbCat.id || dbCat.name,
       labelKey: dbCat.name,
-      imageUrl: imageUrl,
+      imageUrl: dbCat.image_url || '',
       overlayColor: ['bg-primary/35', 'bg-accent/30', 'bg-secondary/40', 'bg-orange-600/35', 'bg-amber-500/30', 'bg-accent/25'][index % 6]
     };
   });
@@ -152,7 +139,7 @@ export function Homepage() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden">
-        {HERO_SLIDES.map((slide, i) => (
+        {heroSlides.map((slide, i) => (
           <div
             key={i}
             className="absolute inset-0 bg-cover bg-center"
@@ -167,10 +154,10 @@ export function Homepage() {
 
         <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
           <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight">
-            {t(HERO_SLIDES[currentSlide].title)}
+            {heroSlides[currentSlide] ? t(heroSlides[currentSlide].title) : ''}
           </h1>
           <p className="text-white/90 text-base sm:text-lg md:text-xl max-w-2xl px-4">
-            {t(HERO_SLIDES[currentSlide].subtitle)}
+            {heroSlides[currentSlide] ? t(heroSlides[currentSlide].subtitle) : ''}
           </p>
         </div>
       </section>

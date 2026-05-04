@@ -58,6 +58,8 @@ export function Footer() {
     };
   }, []);
 
+  const [dismissedText, setDismissedText] = useState('');
+
   useEffect(() => {
     // Only add padding when banner is visible AND fixed (not at bottom)
     if (settings.announcement && isBannerVisible && !isAtBottom) {
@@ -67,15 +69,15 @@ export function Footer() {
       document.body.classList.remove('has-announcement');
       document.body.style.paddingBottom = '0';
     }
-    // Show banner when announcement changes
-    if (settings.announcement && !isBannerVisible) {
+    // Only re-show banner if the announcement text changed to something new
+    if (settings.announcement && settings.announcement !== dismissedText && !isBannerVisible) {
       setIsBannerVisible(true);
     }
     return () => {
       document.body.classList.remove('has-announcement');
       document.body.style.paddingBottom = '0';
     };
-  }, [settings.announcement, isBannerVisible, isAtBottom]);
+  }, [settings.announcement, isBannerVisible, isAtBottom, dismissedText]);
 
   return (
     <>
@@ -105,7 +107,7 @@ export function Footer() {
               variant="ghost"
               size="icon"
               className="text-primary-foreground hover:bg-primary-foreground/20 h-9 w-9 rounded-full flex-shrink-0"
-              onClick={() => setIsBannerVisible(false)}
+              onClick={() => { setIsBannerVisible(false); setDismissedText(settings.announcement); }}
             >
               <X className="h-5 w-5" />
             </Button>
