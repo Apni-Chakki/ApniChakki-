@@ -259,8 +259,8 @@ export function ReviewsPage() {
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(review)}>
                        <Edit2 className="w-4 h-4 mr-2" /> Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteReview(review.id)}>
-                       <Trash2 className="w-4 h-4" />
+                    <Button variant="destructive" size="sm" onClick={() => deleteReview(review.id)} className="px-4">
+                       <Trash2 className="w-4 h-4 text-white" />
                     </Button>
                  </div>
                )}

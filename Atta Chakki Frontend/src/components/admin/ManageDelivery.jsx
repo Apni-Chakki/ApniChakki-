@@ -255,11 +255,12 @@ export function ManageDelivery() {
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="destructive"
                           size="icon"
+                          className="h-8 w-8 px-0 flex items-center justify-center"
                           onClick={() => handleDelete(personnel.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4 text-white" />
                         </Button>
                       </div>
                     </TableCell>

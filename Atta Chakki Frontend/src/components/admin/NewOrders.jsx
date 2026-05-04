@@ -302,10 +302,10 @@ export function NewOrders() {
               <Button
                 size="sm"
                 variant="destructive"
-                className="text-xs h-8"
+                className="text-xs h-8 px-4"
                 onClick={() => setCancelOrder(order)}
               >
-                <Trash2 className="h-3 w-3 mr-1" />
+                <Trash2 className="h-3 w-3 mr-1 text-white" />
                 Cancel
               </Button>
             </div>

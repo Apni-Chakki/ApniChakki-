@@ -164,9 +164,9 @@ export function HeroSettings() {
                 variant="destructive" 
                 size="sm" 
                 onClick={() => removeSlide(index)}
-                className="h-8"
+                className="px-6"
               >
-                <Trash2 className="h-4 w-4 mr-2" /> Remove Slide
+                <Trash2 className="h-4 w-4 mr-2 text-white" /> Remove Slide
               </Button>
             </div>
 

@@ -287,9 +287,9 @@ export function ManageCategories() {
                   variant="destructive"
                   size="sm"
                   onClick={() => deleteCategory(category.id)}
-                  className="flex-1"
+                  className="px-6"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4 mr-2 text-white" />
                   Delete
                 </Button>
               </div>

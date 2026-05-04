@@ -561,8 +561,8 @@ Gristmill's - Fresh Flour Daily
             <Printer className="h-5 w-5 mr-2" /> Print
           </Button>
 
-          <Button variant="destructive" className="w-full shadow-sm font-medium" onClick={() => setCancelOrder(order)}>
-            <Trash2 className="h-5 w-5 mr-2" /> Cancel
+          <Button variant="destructive" className="w-full shadow-sm font-medium px-6" onClick={() => setCancelOrder(order)}>
+            <Trash2 className="h-5 w-5 mr-2 text-white" /> Cancel
           </Button>
         </div>
       </CardContent>
