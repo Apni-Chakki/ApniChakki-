@@ -685,13 +685,15 @@ export function Checkout() {
                 ) : (
                   <p className="text-foreground">Rs. {item.service.price * item.quantity}</p>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeFromCart(item.service.id, item.isWeightPending)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 ml-2 bg-red-500 hover:bg-red-600 border-red-600 shadow flex items-center justify-center px-0 py-0"
+                    onClick={() => removeFromCart(item.service.id, item.isWeightPending)}
+                    title={t('Remove Item')}
+                  >
+                    <Trash2 className="h-4 w-4 text-white" strokeWidth={3} />
+                  </Button>
               </div>
             </div>
           ))}

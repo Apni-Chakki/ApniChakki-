@@ -118,23 +118,23 @@ export function ServiceCard({ service }) {
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="flex items-center border border-border rounded-md">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={isOutOfStock || isPickupRequested}
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-4 w-4" strokeWidth={3} />
                   </Button>
-                  <span className="w-10 sm:w-12 text-center text-sm sm:text-base">{quantity}</span>
+                  <span className="w-10 sm:w-12 text-center text-sm sm:text-base font-bold">{quantity}</span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                     onClick={() => setQuantity(quantity + 1)}
                     disabled={isOutOfStock || isPickupRequested}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4" strokeWidth={3} />
                   </Button>
                 </div>
                 
@@ -151,23 +151,23 @@ export function ServiceCard({ service }) {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center border border-border rounded-md">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={isOutOfStock}
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-4 w-4" strokeWidth={3} />
                 </Button>
-                <span className="w-10 sm:w-12 text-center text-sm sm:text-base">{quantity}</span>
+                <span className="w-10 sm:w-12 text-center text-sm sm:text-base font-bold">{quantity}</span>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0"
                   onClick={() => setQuantity(quantity + 1)}
                   disabled={isOutOfStock}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" strokeWidth={3} />
                 </Button>
               </div>
               

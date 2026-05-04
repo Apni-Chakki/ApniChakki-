@@ -54,7 +54,7 @@ export function Header() {
 
   const CartIcon = () => (
     <Link to="/checkout" className="relative" onClick={handleCartClick}>
-      <Button variant="ghost" size="icon" className="rounded-full">
+      <Button variant="ghost" size="icon" className="rounded-full px-0 py-0 flex items-center justify-center">
         <ShoppingCart className="h-5 w-5" />
         {itemCount > 0 && (
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-success text-success-foreground text-[10px] font-bold">
@@ -122,7 +122,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full"
+            className="rounded-full px-0 py-0 flex items-center justify-center"
             onClick={() => setIsMenuOpen(prev => !prev)}
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           >
