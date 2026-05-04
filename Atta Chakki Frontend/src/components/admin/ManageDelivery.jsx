@@ -178,7 +178,8 @@ export function ManageDelivery() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-foreground">Manage Delivery Personnel</h2>
+          <h1 className="text-foreground font-bold
+">Manage Delivery Personnel</h1>
           <p className="text-sm text-muted-foreground">
             Add and manage delivery team members
           </p>

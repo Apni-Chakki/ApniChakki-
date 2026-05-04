@@ -266,7 +266,7 @@ export function Dashboard() {
   };
 
   const statCards = [
-    { id: 'revenue', title: "Today's Revenue", bgColor: '#943636',
+    { id: 'revenue', title: "Today's Revenue",
  value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
     { id: 'orders', title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, iconBg: '#FEF3C7', iconColor: '#B45309' },
     { id: 'completed', title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, iconBg: '#F0FDFA', iconColor: '#0D9488' },
@@ -286,7 +286,8 @@ export function Dashboard() {
     <div className="space-y-10 pb-16">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} Overview</h1>
+          <h1 className="text-2xl font-bold
+           sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} Overview</h1>
           <p className="text-gray-500 text-sm mt-2">Real-time store metrics and alerts</p>
         </div>
         <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" style={{ borderColor: '#8b6f47', color: '#8b6f47' }} disabled={isLoading}>
@@ -362,7 +363,7 @@ export function Dashboard() {
       <div>
         <div className="flex items-center gap-3 mb-7">
           <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Today's Pulse</h2>
+          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">Today's Pulse</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
           {statCards.map((stat, index) => {
@@ -436,7 +437,7 @@ export function Dashboard() {
       <div className="pt-2">
         <div className="flex items-center gap-3 mb-7">
           <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">All-Time Statistics</h2>
+          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">All-Time Statistics</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {allTimeCards.map((stat, index) => {
