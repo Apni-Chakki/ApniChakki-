@@ -217,8 +217,8 @@ export function ReviewsPage() {
                 />
             </div>
 
-            <div className="flex justify-end mt-4">
-                <Button onClick={handleAddOrEdit} disabled={submitting} size="lg" className="w-full sm:w-auto">
+            <div className="flex justify-end mt-4 post-review">
+                <Button onClick={handleAddOrEdit} disabled={submitting}>
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {editId ? t('Update Review') : t('Post Review')} <Send className="w-4 h-4 ml-2"/>
                 </Button>

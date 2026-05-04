@@ -133,7 +133,7 @@ export function Footer() {
               <div className="space-y-3 opacity-90 text-sm">
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 shrink-0" />
-                  <a href={`tel:${settings.phone}`} className="hover:underline">{settings.phone}</a>
+                  <a href={`tel:${settings.phone}`} className="hover:underline" dir="ltr">{settings.phone}</a>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="h-4 w-4 shrink-0" />
@@ -160,7 +160,7 @@ export function Footer() {
 
             {/* About */}
             <div>
-              <h4 className="mb-4 font-bold uppercase tracking-wider text-primary-foreground/70">{settings.storeName}</h4>
+              <h4 className="mb-4 font-bold uppercase tracking-wider text-primary-foreground/70">{t(settings.storeName)}</h4>
               <p className="text-sm opacity-80 leading-relaxed">
                 {t('Traditional stone-ground quality. Serving 100% pure grains for over two decades.')}
               </p>
@@ -168,7 +168,7 @@ export function Footer() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-primary-foreground/10 text-center flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm opacity-50">&copy; {new Date().getFullYear()} {settings.storeName}. All rights reserved.</p>
+            <p className="text-sm opacity-50">&copy; {new Date().getFullYear()} {t(settings.storeName)}. All rights reserved.</p>
             <div className="flex items-center gap-6 text-xs opacity-40">
               <Link to="/login/admin" className="hover:opacity-100 underline">{t('Staff Portal')}</Link>
               <Link to="/login/delivery" className="hover:opacity-100 underline">{t('Delivery Hub')}</Link>
