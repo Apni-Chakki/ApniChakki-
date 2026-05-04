@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal } from 'lucide-react';
 import { Save, Clock, MapPin, Phone, Mail, Megaphone, Map } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -18,7 +19,8 @@ export function Settings() {
     closingTime: '20:00',
     deliveryAreas: 'Lahore City Limits', // Updated default
     announcement: 'Special Offer: Get 10% off on your first order of fresh stone-ground flour!',
-    processingTimePerKg: '2'
+    processingTimePerKg: '2',
+    heavyOrderThreshold: '100'
   });
 
   // NEW: State for our Dynamic Distance Math

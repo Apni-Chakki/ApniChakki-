@@ -99,6 +99,8 @@ export function OrdersRecord() {
             items: order.items ? order.items.map(item => ({
               quantity: item.quantity,
               isWeightPending: item.is_weight_pending || false,
+              is_cleaning: item.is_cleaning == 1,
+              is_grinding: item.is_grinding == 1,
               service: { name: item.name, price: item.price_at_purchase || 0, unit: item.unit || 'Kg' }
             })) : []
           };
@@ -578,7 +580,10 @@ export function OrdersRecord() {
                         {order.items.length > 1 && <p className="text-muted-foreground">+{order.items.length - 1}</p>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-bold">Rs. {order.total}</TableCell>
+                    <TableCell className="text-right font-bold whitespace-nowrap">
+                      Rs. {order.total}
+                      {order.items.some(i => i.isWeightPending) && <span className="text-primary text-[10px] ml-1">(+ TBD)</span>}
+                    </TableCell>
                     <TableCell>
                       <div className="text-xs">
                         {getPaymentStatusBadge(order.paymentStatus)}

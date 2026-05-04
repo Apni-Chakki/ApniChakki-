@@ -11,6 +11,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    $conn->query("CREATE TABLE IF NOT EXISTS comments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        rating INT NOT NULL,
+        comment_text TEXT NOT NULL,
+        status ENUM('active', 'hidden') DEFAULT 'active',
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )");
+
     $input = json_decode(file_get_contents('php://input'), true);
 
     $user_id = $input['user_id'] ?? null;

@@ -25,8 +25,19 @@ export function ManageServices() {
     unit: 'kg',
     description: '',
     imageUrl: '',
-    category: '' 
+    category: '',
+    is_grinding_service: false,
+    cleaning_price: '',
+    grinding_price: ''
   });
+
+  useEffect(() => {
+    if (formData.is_grinding_service) {
+      const cleaning = parseFloat(formData.cleaning_price) || 0;
+      const grinding = parseFloat(formData.grinding_price) || 0;
+      setFormData(prev => ({ ...prev, price: (cleaning + grinding).toString() }));
+    }
+  }, [formData.cleaning_price, formData.grinding_price, formData.is_grinding_service]);
 
   const [imageFile, setImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -125,7 +136,10 @@ export function ManageServices() {
           unit: formData.unit,
           description: formData.description,
           image: formData.imageUrl, // DB uses 'image', React uses 'imageUrl'
-          category: formData.category
+          category: formData.category,
+          is_grinding_service: formData.is_grinding_service ? 1 : 0,
+          cleaning_price: parseFloat(formData.cleaning_price) || 0,
+          grinding_price: parseFloat(formData.grinding_price) || 0
         })
       });
       
@@ -154,7 +168,10 @@ export function ManageServices() {
       unit: service.unit,
       description: service.description || '',
       imageUrl: service.image || '', 
-      category: service.category || (categories.length > 0 ? categories[0].name : '')
+      category: service.category || (categories.length > 0 ? categories[0].name : ''),
+      is_grinding_service: service.is_grinding_service === 1 || service.is_grinding_service === true,
+      cleaning_price: service.cleaning_price?.toString() || '',
+      grinding_price: service.grinding_price?.toString() || ''
     });
     setImageFile(null);
   };
@@ -178,7 +195,10 @@ export function ManageServices() {
           unit: formData.unit,
           description: formData.description,
           image: formData.imageUrl,
-          category: formData.category
+          category: formData.category,
+          is_grinding_service: formData.is_grinding_service ? 1 : 0,
+          cleaning_price: parseFloat(formData.cleaning_price) || 0,
+          grinding_price: parseFloat(formData.grinding_price) || 0
         })
       });
       
@@ -230,7 +250,17 @@ export function ManageServices() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', price: '', unit: 'kg', description: '', imageUrl: '', category: categories.length > 0 ? categories[0].name : '' });
+    setFormData({ 
+      name: '', 
+      price: '', 
+      unit: 'kg', 
+      description: '', 
+      imageUrl: '', 
+      category: categories.length > 0 ? categories[0].name : '',
+      is_grinding_service: false,
+      cleaning_price: '',
+      grinding_price: ''
+    });
     setImageFile(null);
   };
 
@@ -380,15 +410,57 @@ export function ManageServices() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="trackInventory"
-                checked={isTracked}
-                disabled={true} // Controlled automatically by the category dropdown now!
-              />
-              <Label htmlFor="trackInventory" className="text-muted-foreground">
-                Track stock for this service in Inventory Management <span className="text-xs ml-1">(Determined by category)</span>
-              </Label>
+            <div className="flex flex-col gap-4 pt-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_grinding_service"
+                  checked={formData.is_grinding_service}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_grinding_service: checked })}
+                  disabled={isSaving}
+                />
+                <Label htmlFor="is_grinding_service" className="font-semibold text-primary">This is a Grinding Service (with Cleaning & Grinding options)</Label>
+              </div>
+
+              {formData.is_grinding_service && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2">
+                  <div>
+                    <Label htmlFor="cleaning_price">Cleaning Price (Rs) *</Label>
+                    <Input
+                      id="cleaning_price"
+                      type="number"
+                      placeholder="e.g., 2"
+                      value={formData.cleaning_price}
+                      onChange={(e) => setFormData({ ...formData, cleaning_price: e.target.value })}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="grinding_price">Grinding Price (Rs) *</Label>
+                    <Input
+                      id="grinding_price"
+                      type="number"
+                      placeholder="e.g., 8"
+                      value={formData.grinding_price}
+                      onChange={(e) => setFormData({ ...formData, grinding_price: e.target.value })}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <p className="col-span-full text-xs text-muted-foreground">
+                    Total Price will be automatically set to: Rs. {(parseFloat(formData.cleaning_price) || 0) + (parseFloat(formData.grinding_price) || 0)}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="trackInventory"
+                  checked={isTracked}
+                  disabled={true} // Controlled automatically by the category dropdown now!
+                />
+                <Label htmlFor="trackInventory" className="text-muted-foreground">
+                  Track stock for this service in Inventory Management <span className="text-xs ml-1">(Determined by category)</span>
+                </Label>
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -449,13 +521,23 @@ export function ManageServices() {
                       {service.category || 'Uncategorized'}
                     </span>
                     
+                    {service.is_grinding_service ? (
+                      <span className="bg-amber-500/10 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20">
+                        ⚙️ Grinding Service (C: {service.cleaning_price} + G: {service.grinding_price})
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium">
+                        Standard Product
+                      </span>
+                    )}
+
                     {service.category !== 'service' ? (
                       <span className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-xs font-medium">
                         ✓ Inventory Tracked
                       </span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium">
-                        Available
+                      <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium">
+                        Active Service
                       </span>
                     )}
                   </div>

@@ -524,6 +524,16 @@ export function Checkout() {
 
       const orderData = {
         user_id: user.id,
+        cart_items: cart.map(item => ({
+          id: item.service.id,
+          qty: item.quantity,
+          is_cleaning: item.service.is_cleaning ? 1 : 0,
+          is_grinding: item.service.is_grinding ? 1 : 0,
+          price: item.service.price,
+          is_weight_pending: item.isWeightPending ? 1 : 0
+        })),
+        total: isTbdOrder ? 0 : total,
+        address: orderType === 'delivery' ? address : "Pickup From Store",
         cart_items: cart.map(item => ({ id: item.service.id, qty: item.quantity })),
         total: isTbdOrder ? 0 : grandTotal,
         address: fullDeliveryAddress,
@@ -575,6 +585,14 @@ export function Checkout() {
   };
 
   const completeOrder = async (paymentStatus, transactionId, paidAmount = 0) => {
+    // If there are TBD items, and user is paying the current total, it must be 'partial'
+    // because more weight/price will be added later.
+    let finalStatus = paymentStatus;
+    if (hasPendingWeightItem && paymentStatus === 'paid') {
+      finalStatus = 'partial';
+    }
+
+    // Build delivery address with GPS pin link for delivery person
     let deliveryAddress = "Pickup From Store";
     if (orderType === 'delivery') {
       deliveryAddress = `${houseDetails}, ${deliveryArea}`;
@@ -583,13 +601,21 @@ export function Checkout() {
 
     const orderData = {
       user_id: user.id,
+      cart_items: cart.map(item => ({
+        id: item.service.id,
+        qty: item.quantity,
+        is_cleaning: item.service.is_cleaning ? 1 : 0,
+        is_grinding: item.service.is_grinding ? 1 : 0,
+        price: item.service.price
+      })),
+      total: isTbdOrder ? 0 : total,
       cart_items: cart.map(item => ({ id: item.service.id, qty: item.quantity })),
       total: isTbdOrder ? 0 : grandTotal,
       delivery_fee: deliveryFee,
       distance_km: distanceKm.toFixed(1),
       address: deliveryAddress,
       payment_method: isTbdOrder ? 'cash' : paymentMethod,
-      payment_status: paymentStatus,
+      payment_status: finalStatus,
       transaction_id: transactionId || null,
       amount_paid: paidAmount,
       order_type: orderType,
@@ -669,7 +695,14 @@ export function Checkout() {
             <div key={`${item.service.id}-${item.isWeightPending ? 'pending' : 'regular'}-${index}`} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
               <div className="flex-1">
                 <h4 className="text-foreground">{item.service.name}</h4>
-                {item.isWeightPending || isTbdOrder ? (
+                {item.service.is_grinding_service && (
+                  <p className="text-xs text-muted-foreground font-medium">
+                    ({item.service.is_cleaning ? t('Cleaning') : ''} 
+                    {item.service.is_cleaning && item.service.is_grinding ? ' + ' : ''}
+                    {item.service.is_grinding ? t('Grinding') : ''})
+                  </p>
+                )}
+                {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
                   <p className="text-sm text-primary font-medium">
                     {t('Weight to be confirmed (Price TBD)')}
                   </p>
@@ -680,11 +713,18 @@ export function Checkout() {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                {item.isWeightPending || isTbdOrder ? (
+                {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
                   <p className="text-foreground font-semibold">TBD</p>
                 ) : (
                   <p className="text-foreground">Rs. {item.service.price * item.quantity}</p>
                 )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
                   <Button
                     variant="outline"
                     size="icon"
@@ -699,6 +739,10 @@ export function Checkout() {
           ))}
           
           <div className="flex justify-between pt-4 border-t border-border">
+            <span className="text-foreground">{t('Total')}</span>
+            <span className="text-foreground font-bold">
+              Rs. {total}{hasPendingWeightItem && " + TBD"}
+            </span>
             <span className="text-foreground">{t('Cart Subtotal')}</span>
             <span className="text-foreground">{isTbdOrder ? 'TBD' : `Rs. ${total}`}</span>
           </div>
@@ -897,7 +941,7 @@ export function Checkout() {
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Payment Method')}</h3>
           
-          {(total === 0 && hasPendingWeightItem) || isTbdOrder ? (
+          {total === 0 && (hasPendingWeightItem || isTbdOrder) ? (
             <div className="p-4 border border-border rounded-lg bg-secondary/30">
               <div className="flex items-center gap-3">
                 <Banknote className="h-5 w-5 text-primary" />
@@ -1005,7 +1049,7 @@ export function Checkout() {
                   <div className="bg-background border border-border rounded-lg p-4 space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{t('Total Amount')}:</span>
-                      <span className="font-semibold text-foreground">Rs. {total}</span>
+                      <span className="font-semibold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm border-t border-border pt-2">
                       <span className="text-primary font-medium">{t('Paying Now')}:</span>
@@ -1024,11 +1068,15 @@ export function Checkout() {
       </Card>
 
       <Button
-        className="w-full"
+        className="w-full h-12 text-base font-bold shadow-lg"
         size="lg"
         onClick={handlePlaceOrder}
         disabled={isCartEmpty || isDeliveryInvalid}
       >
+        {paymentMethod === 'cash' || (total === 0) ? t('Place Order') : t('Proceed to Payment')} 
+        <span className="ml-2">
+          (Rs. {total}{hasPendingWeightItem && " + TBD"})
+        </span>
         {paymentMethod === 'cash' || isTbdOrder ? t('Place Order') : t('Proceed to Payment')} {isTbdOrder ? '(TBD)' : `(Rs. ${grandTotal})`}{(hasPendingWeightItem && !isTbdOrder) && " + TBD"}
       </Button>
 
@@ -1096,7 +1144,7 @@ export function Checkout() {
               <div className="w-full bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Amount')}:</span>
-                  <span className="font-bold">Rs. {total}</span>
+                  <span className="font-bold">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Method')}:</span>
@@ -1150,7 +1198,7 @@ export function Checkout() {
           {paymentStep === 'input' && (
             <div className="space-y-4">
               <div className="text-center py-3 bg-secondary/30 rounded-lg">
-                <p className="text-3xl font-bold text-foreground">Rs. {total}</p>
+                <p className="text-3xl font-bold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</p>
                 <p className="text-sm text-muted-foreground">{t('Amount to pay')}</p>
                 {hasPendingWeightItem && (
                   <p className="text-xs text-primary mt-1">
@@ -1325,7 +1373,7 @@ export function Checkout() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                     <p className="text-xs font-semibold text-blue-800">{t('Bank Transfer Instructions')}:</p>
                     <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                      <li>{t('Transfer Rs.')} {total} {t('to the account below')}</li>
+                      <li>{t('Transfer Rs.')} {total}{hasPendingWeightItem && " + TBD"} {t('to the account below')}</li>
                       <li>{t('Your order will be confirmed after admin verification')}</li>
                       <li>{t('Please keep the transfer receipt for reference')}</li>
                     </ol>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { deductFromInventory } from '../../lib/inventoryUtils';
@@ -26,8 +26,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Truck, UserPlus, Trash2 } from 'lucide-react';
+import { Truck, UserPlus, Trash2, Calendar } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -47,6 +57,11 @@ export function TodaysWork() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
+  const [splitOrder, setSplitOrder] = useState(null);
+  const [splitBatches, setSplitBatches] = useState([]);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [heavyThreshold, setHeavyThreshold] = useState(100);
+
   const totalWeight = orders.reduce((sum, order) => sum + parseFloat(order.total_weight_kg || 0), 0);
   const totalProcessingMinutes = orders.reduce((sum, order) => sum + parseInt(order.processing_time_minutes || 0), 0);
   const activeDrivers = activePersonnel.length;
@@ -60,6 +75,18 @@ export function TodaysWork() {
       }
     } catch (error) {
       console.error('Error fetching personnel:', error);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
+      const data = await res.json();
+      if (data.success && data.settings?.heavyOrderThreshold) {
+        setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
     }
   };
 
@@ -87,6 +114,7 @@ export function TodaysWork() {
   };
 
   useEffect(() => {
+    fetchSettings();
     fetchPersonnel();
     fetchOrders();
     const interval = setInterval(fetchOrders, 8000);
@@ -215,9 +243,108 @@ export function TodaysWork() {
         toast.error(data.message || 'Failed to move order');
       }
     } catch (error) {
-      toast.error('Network error');
+      toast.error('Network error updating order status');
     } finally {
       setOverriding(null);
+    }
+  };
+
+  const markBatchProcessed = async (order) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, status: 'batch_ready' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        const invResult = await deductFromInventory(order);
+        if (invResult.success) {
+          toast.success(`Batch #${order.id} Processed! Inventory updated.`);
+        } else {
+          toast.warning(`Batch Processed, but inventory issue: ${invResult.message}`);
+        }
+        fetchOrders();
+      } else {
+        toast.error(data.message || 'Failed to update batch status');
+      }
+    } catch (error) {
+      toast.error('Network error updating batch status');
+    }
+  };
+
+  const openSplitModal = (order) => {
+    const totalKg = parseFloat(order.total_weight_kg || 0);
+    const suggested = totalKg > 0 ? Math.floor(totalKg / 2) : '';
+    
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    setSplitBatches([
+      { id: Date.now() + 1, date: today.toISOString().slice(0, 10), weight: suggested.toString() },
+      { id: Date.now() + 2, date: tomorrow.toISOString().slice(0, 10), weight: totalKg > 0 ? (totalKg - suggested).toString() : '' }
+    ]);
+    setSplitOrder(order);
+  };
+
+  const closeSplitModal = () => {
+    setSplitOrder(null);
+    setSplitBatches([]);
+  };
+
+  const handleSplitOrder = async () => {
+    if (!splitOrder) return;
+    const totalKg = parseFloat(splitOrder.total_weight_kg || 0);
+    
+    let sum = 0;
+    const validBatches = [];
+    
+    for (let i = 0; i < splitBatches.length; i++) {
+      const b = splitBatches[i];
+      const w = parseFloat(b.weight);
+      if (isNaN(w) || w <= 0) {
+        toast.error(`Batch ${i + 1} weight must be > 0`);
+        return;
+      }
+      if (!b.date) {
+        toast.error(`Batch ${i + 1} date is missing`);
+        return;
+      }
+      sum += w;
+      validBatches.push({ weight: w, date: b.date });
+    }
+
+    if (totalKg > 0) {
+      const diff = Math.abs(sum - totalKg);
+      if (diff > 0.5) {
+        toast.error(`Batches sum (${sum.toFixed(1)}kg) does not match total ${totalKg}kg.`);
+        return;
+      }
+    }
+
+    setIsSplitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: splitOrder.id,
+          batches: validBatches
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`✅ Order #${splitOrder.id} split successfully!`);
+        closeSplitModal();
+        fetchOrders();
+      } else {
+        toast.error(result.message || "Failed to split order");
+      }
+    } catch (error) {
+      toast.error("Network error — could not split order");
+    } finally {
+      setIsSplitting(false);
     }
   };
 
@@ -279,6 +406,22 @@ Gristmill's - Fresh Flour Daily
           toast.success(`Order #${order.id} is Ready! Inventory updated.`);
         } else {
           toast.warning(`Order is Ready, but inventory issue: ${invResult.message}`);
+        }
+
+        if (order.is_split_batch && order.siblings) {
+          for (const sib of order.siblings) {
+            if (sib.status === 'batch_ready') {
+              try {
+                await fetch(`${API_BASE_URL}/update_order_status.php`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ order_id: sib.id, status: 'ready' })
+                });
+              } catch(e) {
+                console.error("Failed to sync sibling status", e);
+              }
+            }
+          }
         }
 
         const totalAmount = parseFloat(order.total_amount) || 0;
@@ -388,22 +531,35 @@ Gristmill's - Fresh Flour Daily
   // OrderCard inner component
   const OrderCard = ({ order }) => {
     const isOverdue = order.estimated_completion_time ? new Date(order.estimated_completion_time) < new Date() : false;
-    
+    const isSplitBatch = order.is_split_batch === true;
+    const allSiblingsReady = order.all_siblings_ready === true;
+    // If this is a split batch, Mark as Ready is only allowed when ALL siblings are ready
+    const canMarkReady = !isSplitBatch || allSiblingsReady;
+    const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+
     return (
     <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
       isOverdue 
         ? 'border-l-red-600 animate-glow-red relative z-10'
-        : order.is_carried_forward
-          ? 'border-l-orange-500'
-          : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
-            ? 'border-l-amber-500'
-            : 'border-l-blue-600'
+        : isSplitBatch
+          ? 'border-l-purple-500'
+          : order.is_carried_forward
+            ? 'border-l-orange-500'
+            : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
+              ? 'border-l-amber-500'
+              : 'border-l-blue-600'
     }`}>
       <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
               Order #{order.id}
+              {isSplitBatch && (
+                <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] px-2 py-0.5 font-bold">
+                  <SplitSquareHorizontal className="h-3 w-3 mr-1" />
+                  BATCH {order.batch_index} OF {order.siblings?.length || '?'}
+                </Badge>
+              )}
               {order.is_carried_forward && (
                 <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-[10px] px-2 py-0.5 font-bold">
                   <History className="h-3 w-3 mr-1" /> CARRIED FORWARD
@@ -416,7 +572,10 @@ Gristmill's - Fresh Flour Daily
             </p>
           </div>
           <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
-            <span className="text-xl font-bold text-slate-800">Rs. {parseInt(order.total_amount).toLocaleString()}</span>
+            <span className="text-xl font-bold text-slate-800">
+              Rs. {parseInt(order.total_amount).toLocaleString()}
+              {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
+            </span>
             <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
           </div>
         </div>
@@ -457,6 +616,43 @@ Gristmill's - Fresh Flour Daily
           </div>
         </div>
 
+        {/* ── Sibling Batch Status (only for split orders) ──────────────── */}
+        {isSplitBatch && order.siblings && order.siblings.length > 0 && (
+          <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <SplitSquareHorizontal className="h-4 w-4 text-purple-600" />
+              <span className="text-xs font-semibold text-purple-800 uppercase">Split Batches Status</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {order.siblings.map((sib) => (
+                <div
+                  key={sib.id}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${
+                    sib.status === 'ready'
+                      ? 'bg-green-100 text-green-800 border-green-300'
+                      : 'bg-slate-100 text-slate-600 border-slate-300'
+                  }`}
+                >
+                  {sib.status === 'ready'
+                    ? <CheckCircle className="h-3 w-3" />
+                    : <Clock className="h-3 w-3" />}
+                  Batch {sib.batch_index} #{sib.id}
+                  <span className="text-[10px] opacity-70">
+                    ({parseFloat(sib.total_weight_kg || 0).toFixed(1)}kg)
+                  </span>
+                  — {sib.assigned_date === new Date().toISOString().slice(0, 10) ? 'Today' : 'Tomorrow'}
+                </div>
+              ))}
+            </div>
+            {!allSiblingsReady && (
+              <p className="mt-2 text-xs text-purple-700 flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Jab tak <strong>tamam batches ready</strong> nahi hote, Final Bill lock rahega. Ap is batch ko 'Process' kar sakte hain.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* customer info */}
         <div className="bg-muted/30 p-3 rounded-md space-y-2 text-sm">
           <div className="flex items-center gap-2">
@@ -486,11 +682,32 @@ Gristmill's - Fresh Flour Daily
           </h4>
           <ul className="divide-y border rounded-md">
             {order.items.map((item, idx) => (
-              <li key={idx} className="p-2 text-sm flex justify-between items-center bg-white">
-                <span>{item.name}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">x {item.quantity}</Badge>
-                  {item.unit && <span className="text-xs text-muted-foreground">{item.unit}</span>}
+              <li key={idx} className="p-3 text-sm flex justify-between items-start bg-white hover:bg-slate-50 transition-colors">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="font-bold text-slate-800 break-words">{item.name}</p>
+                  {(item.is_cleaning || item.is_grinding) && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.is_cleaning == 1 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          Cleaning
+                        </span>
+                      )}
+                      {item.is_grinding == 1 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          Grinding
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {item.is_weight_pending && (
+                    <p className="text-[10px] font-black text-primary mt-1 flex items-center gap-1 uppercase tracking-wider">
+                      <Timer className="h-3 w-3" /> Weight Pending
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                  {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
                 </div>
               </li>
             ))}
@@ -499,17 +716,48 @@ Gristmill's - Fresh Flour Daily
 
         {/* actions */}
         <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          <Button
-            className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
-            onClick={() => markAsReady(order)}
-            disabled={sendingBill === order.id}
-          >
-            {sendingBill === order.id ? (
-              <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
-            ) : (
-              <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
-            )}
-          </Button>
+          {canMarkReady ? (
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
+              onClick={() => markAsReady(order)}
+              disabled={sendingBill === order.id}
+            >
+              {sendingBill === order.id ? (
+                <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
+              ) : (
+                <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
+              )}
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    className="w-full shadow-md font-medium text-[15px] text-white hover:opacity-90"
+                    style={{ backgroundColor: '#4f46e5' }}
+                    onClick={() => markBatchProcessed(order)}
+                  >
+                    <CheckCircle className="h-5 w-5 mr-2" /> Mark Batch Processed
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs max-w-[220px]">
+                <p>Is batch ko process karen. Final Bill aur Delivery tamam batches complete hone par hogi.</p>
+                <p className="mt-1">Remaining: {(order.siblings || []).filter(s => s.status !== 'ready' && s.status !== 'batch_ready').length} batch(es) pending</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {isHeavy && !isSplitBatch && (
+            <Button
+              variant="outline"
+              className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium animate-pulse"
+              onClick={() => openSplitModal(order)}
+            >
+              <SplitSquareHorizontal className="h-4 w-4 mr-2" />
+              Split Order
+            </Button>
+          )}
 
           <Button
             variant="outline"
@@ -740,6 +988,131 @@ Gristmill's - Fresh Flour Daily
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* ─── Split Order Modal ───────────────────────────────────────── */}
+        <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <SplitSquareHorizontal className="h-5 w-5" />
+                Heavy Order Split — #{splitOrder?.id}
+              </DialogTitle>
+              <DialogDescription>
+                This order is <strong>{parseFloat(splitOrder?.total_weight_kg || 0).toFixed(1)} kg</strong> — exceeding the limit ({heavyThreshold} kg).
+                Split it into <em>Today</em> and <em>Tomorrow</em> batches.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Warning Banner */}
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>
+                After splitting, <strong>Bill and Mark as Ready</strong> will only be available when
+                <strong> all batches are complete</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-3 mt-4 max-h-[350px] overflow-y-auto pr-2">
+              {splitBatches.map((batch, idx) => (
+                <div key={batch.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-md border border-slate-200">
+                  <div className="font-semibold text-slate-500 w-6">{idx + 1}.</div>
+                  <div className="flex-1">
+                    <Label className="text-xs mb-1 block text-slate-600">Date</Label>
+                    <Input 
+                      type="date" 
+                      value={batch.date}
+                      onChange={(e) => {
+                        const newB = [...splitBatches];
+                        newB[idx].date = e.target.value;
+                        setSplitBatches(newB);
+                      }}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Label className="text-xs mb-1 block text-slate-600">Weight (kg)</Label>
+                    <Input 
+                      type="number" 
+                      min="0.1" step="0.5" 
+                      value={batch.weight}
+                      onChange={(e) => {
+                        const newB = [...splitBatches];
+                        newB[idx].weight = e.target.value;
+                        setSplitBatches(newB);
+                      }}
+                    />
+                  </div>
+                  <div className="pt-5">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      disabled={splitBatches.length <= 2}
+                      onClick={() => {
+                        if (splitBatches.length > 2) {
+                          setSplitBatches(splitBatches.filter(b => b.id !== batch.id));
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 text-right">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                onClick={() => {
+                  const lastDate = new Date(splitBatches[splitBatches.length - 1].date);
+                  lastDate.setDate(lastDate.getDate() + 1);
+                  setSplitBatches([...splitBatches, { 
+                    id: Date.now(), 
+                    date: lastDate.toISOString().slice(0, 10), 
+                    weight: '' 
+                  }]);
+                }}
+              >
+                + Add Batch
+              </Button>
+            </div>
+
+            {/* Live total check */}
+            {splitOrder && (() => {
+              const total = parseFloat(splitOrder.total_weight_kg || 0);
+              const sum = splitBatches.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
+              const diff = Math.abs(sum - total);
+              const ok = diff <= 0.5;
+              return total > 0 ? (
+                <div className={`text-xs font-medium rounded px-3 py-2 mt-4 ${ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                  {ok
+                    ? `✅ Total: ${sum.toFixed(1)} kg — Valid!`
+                    : `⚠️ Total: ${sum.toFixed(1)} kg (Expected ~${total} kg) — Mismatch`}
+                </div>
+              ) : null;
+            })()}
+
+            <DialogFooter className="gap-2">
+              <Button onClick={closeSplitModal} disabled={isSplitting} className="hover:opacity-90">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSplitOrder}
+                disabled={isSplitting}
+                className="hover:opacity-90"
+              >
+                {isSplitting ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Splitting...</>
+                ) : (
+                  <><SplitSquareHorizontal className="h-4 w-4 mr-2" /> Split Order</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
     </div>
     </TooltipProvider>
   );

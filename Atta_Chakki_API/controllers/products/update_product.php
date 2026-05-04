@@ -42,15 +42,19 @@ try {
     }
     $cat_stmt->close();
 
+    $is_grinding_service = isset($data['is_grinding_service']) ? (int)$data['is_grinding_service'] : 0;
+    $cleaning_price = isset($data['cleaning_price']) ? floatval($data['cleaning_price']) : 0.00;
+    $grinding_price = isset($data['grinding_price']) ? floatval($data['grinding_price']) : 0.00;
+
     // updating product
-    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, image_url=? WHERE id=?";
+    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, image_url=?, is_grinding_service=?, cleaning_price=?, grinding_price=? WHERE id=?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsissi", $name, $price, $unit, $category_id, $description, $image, $id);
+    $stmt->bind_param("sdsissiddi", $name, $price, $unit, $category_id, $description, $image, $is_grinding_service, $cleaning_price, $grinding_price, $id);
 
     if ($stmt->execute()) {
         http_response_code(200);
