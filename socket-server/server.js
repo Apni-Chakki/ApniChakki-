@@ -1,4 +1,4 @@
-// socket server for live tracking
+// live tracking k liye socket server hai ye
 
 const { createServer } = require('http');
 const { Server } = require('socket.io');
@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 const PORT = process.env.PORT || 3001;
 
 const httpServer = createServer((req, res) => {
-  // health check route
+  // server check karne k liye route
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
@@ -33,15 +33,15 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 });
 
-// storing active drivers and watchers
+// driver aur watchers ka data yahan save hoga
 const activeDrivers = {};
 const orderRooms = {};
 
-// when someone connects
+// jab koi naya banda connect ho
 io.on('connection', (socket) => {
   console.log(`✅ Client connected: ${socket.id}`);
 
-  // driver sends their location
+  // driver apni location bhej raha hai
   socket.on('driver:location_update', (data) => {
     const { order_id, latitude, longitude, heading, speed, driver_name, accuracy } = data;
 
@@ -50,7 +50,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // save latest position
+    // nai location save kar rahe han
     activeDrivers[order_id] = {
       order_id,
       latitude,
@@ -63,7 +63,7 @@ io.on('connection', (socket) => {
       socketId: socket.id
     };
 
-    // send to everyone watching this order
+    // sab ko location bhej rahe han jo dekh rahe han
     const roomName = `order_${order_id}`;
     io.to(roomName).emit('tracking:location_update', {
       order_id,
@@ -76,7 +76,7 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     });
 
-    // also send to admin
+    // admin ko bhi bata rahe han driver kahan hai
     io.to('admin_tracking').emit('tracking:driver_moved', {
       order_id,
       latitude,
@@ -92,7 +92,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // delivery done
+  // jab delivery ho jaye
   socket.on('driver:delivery_completed', (data) => {
     const { order_id, driver_name } = data;
     const roomName = `order_${order_id}`;
@@ -113,7 +113,7 @@ io.on('connection', (socket) => {
     console.log(`✅ Delivery completed: Order #${order_id} by ${driver_name}`);
   });
 
-  // customer wants to track their order
+  // customer order track karna chahta hai
   socket.on('tracking:subscribe', (data) => {
     const { order_id } = data;
     if (!order_id) return;
@@ -126,7 +126,7 @@ io.on('connection', (socket) => {
 
     console.log(`👀 Customer ${socket.id} watching Order #${order_id} (${orderRooms[order_id].size} watchers)`);
 
-    // send current location if driver is active
+    // agar driver online hai to location bhej do
     if (activeDrivers[order_id]) {
       socket.emit('tracking:location_update', {
         ...activeDrivers[order_id],
@@ -135,7 +135,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // customer stops tracking
+  // customer ne tracking band kar di
   socket.on('tracking:unsubscribe', (data) => {
     const { order_id } = data;
     if (!order_id) return;
@@ -149,7 +149,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // admin joins tracking room
+  // admin tracking dekhne aaya hai
   socket.on('admin:subscribe', () => {
     socket.join('admin_tracking');
     console.log(`🔑 Admin ${socket.id} joined admin_tracking`);
@@ -161,7 +161,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // get active drivers list
+  // active drivers ki list nikal rahe han
   socket.on('tracking:get_active_drivers', () => {
     socket.emit('admin:active_drivers', {
       drivers: Object.values(activeDrivers),
@@ -169,7 +169,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // cleanup when someone disconnects
+  // jab koi chala jaye (disconnect)
   socket.on('disconnect', (reason) => {
     console.log(`❌ Client disconnected: ${socket.id} (${reason})`);
 
@@ -190,7 +190,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// removing stale drivers every 30 sec
+// har 30 second baad puray drivers ko saaf kar rahe han
 setInterval(() => {
   const now = Date.now();
   const STALE_THRESHOLD = 2 * 60 * 1000;
@@ -209,7 +209,7 @@ setInterval(() => {
   }
 }, 30000);
 
-// starting the server
+// server start kar rahe han
 httpServer.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════╗
