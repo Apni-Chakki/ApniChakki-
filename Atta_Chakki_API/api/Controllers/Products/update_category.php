@@ -25,6 +25,7 @@ try {
     $id = intval($data['id']);
     $name = trim($data['name']);
     $image_url = isset($data['image_url']) ? trim($data['image_url']) : null;
+    $priority = isset($data['priority']) ? (int)$data['priority'] : 0;
     
     // checking if exists
     $checkSql = "SELECT id FROM categories WHERE id = ?";
@@ -42,13 +43,13 @@ try {
     }
     
     // updating it
-    $sql = "UPDATE categories SET name = ?, image_url = ? WHERE id = ?";
+    $sql = "UPDATE categories SET name = ?, image_url = ?, priority = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
     
-    $stmt->bind_param("ssi", $name, $image_url, $id);
+    $stmt->bind_param("ssii", $name, $image_url, $priority, $id);
     $stmt->execute();
     
     http_response_code(200);
@@ -58,7 +59,8 @@ try {
         'category' => [
             'id' => $id,
             'name' => $name,
-            'image_url' => $image_url
+            'image_url' => $image_url,
+            'priority' => $priority
         ]
     ]);
     

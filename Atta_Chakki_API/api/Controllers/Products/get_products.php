@@ -67,6 +67,8 @@ try {
             'description' => $row['description'],
             'price' => floatval($row['price']),
             'unit' => $row['unit'] ?? 'kg',
+            'dual_unit' => (int)($row['dual_unit'] ?? 0),
+            'weight_options' => !empty($row['weight_options']) ? json_decode($row['weight_options'], true) : [],
             'image_url' => $row['image_url'], // Can be null or Cloudinary URL
             'imageUrl' => $row['image_url'] ?? '', // Alias for frontend compatibility
             'stock_quantity' => floatval($row['stock_quantity'] ?? 0),

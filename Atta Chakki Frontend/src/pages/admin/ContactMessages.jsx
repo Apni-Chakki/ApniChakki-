@@ -43,25 +43,51 @@ export function ContactMessages() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/delete_contact_message.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success('Message deleted successfully');
-        setMessages(messages.filter(msg => msg.id !== id));
-      } else {
-        toast.error(data.message || 'Error deleting message');
+    const deleteMessage = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/delete_contact_message.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          toast.success('Message deleted successfully');
+          setMessages(messages.filter(msg => msg.id !== id));
+        } else {
+          toast.error(data.message || 'Error deleting message');
+        }
+      } catch (err) {
+        toast.error('Network error while deleting message');
       }
-    } catch (err) {
-      toast.error('Network error while deleting message');
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this message?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              deleteMessage();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   const handleOpenReplyModal = (msg) => {

@@ -153,7 +153,7 @@ export function ManageDelivery() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this delivery personnel?')) {
+    const deletePersonnel = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/manage_delivery.php`, {
           method: 'POST',
@@ -169,7 +169,33 @@ export function ManageDelivery() {
       } catch (error) {
         toast.error('Failed to delete');
       }
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this delivery personnel?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              deletePersonnel();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;

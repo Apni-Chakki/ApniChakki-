@@ -27,6 +27,7 @@ const AdminLogin = lazy(() => import('./pages/auth/AdminLogin').then(module => (
 const DeliveryLogin = lazy(() => import('./pages/auth/DeliveryLogin').then(module => ({ default: module.DeliveryLogin })));
 const CustomerLogin = lazy(() => import('./pages/auth/CustomerLogin').then(module => ({ default: module.CustomerLogin })));
 const CustomerSignUp = lazy(() => import('./pages/auth/CustomerSignUp').then(module => ({ default: module.CustomerSignUp })));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then(module => ({ default: module.ForgotPassword })));
 
 // delivery wala panel yahan hai
 const DeliveryPanel = lazy(() => import('./pages/delivery/DeliveryPanel').then(module => ({ default: module.DeliveryPanel })));
@@ -73,7 +74,7 @@ function ProtectedAdminRoute({ children }) {
   else if (storedUser.role && storedUser.role.toLowerCase() !== 'admin') console.warn(`ProtectedRoute: Role mismatch. Expected 'admin', got '${storedUser.role}'`);
 
   if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'admin')) {
-    return <Navigate to="/login/admin" state={{ from: location }} replace />;
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -87,7 +88,18 @@ function ProtectedDeliveryRoute({ children }) {
   const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
 
   if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'delivery')) {
-    return <Navigate to="/login/delivery" state={{ from: location }} replace />;
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+// logged in users ko login page se bachane ke liye (Guest Route)
+function GuestRoute({ children, role, redirectTo }) {
+  const { user } = useAuth();
+  const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
+
+  if (storedUser && storedUser.role && storedUser.role.toLowerCase() === role) {
+    return <Navigate to={redirectTo} replace />;
   }
   return <>{children}</>;
 }
@@ -146,10 +158,11 @@ export default function App() {
         <CartProvider>
           <Routes>
             {/* login wagera ki routes */}
-            <Route path="/login/admin" element={<Suspense fallback={<PageLoader />}><AdminLogin /></Suspense>} />
-            <Route path="/login/delivery" element={<Suspense fallback={<PageLoader />}><DeliveryLogin /></Suspense>} />
-            <Route path="/login/customer" element={<Suspense fallback={<PageLoader />}><CustomerLogin /></Suspense>} />
-            <Route path="/signup/customer" element={<Suspense fallback={<PageLoader />}><CustomerSignUp /></Suspense>} />
+            <Route path="/login/admin" element={<Navigate to="/" replace />} />
+            <Route path="/login/delivery" element={<Navigate to="/" replace />} />
+            <Route path="/login/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerLogin /></Suspense></GuestRoute>} />
+            <Route path="/signup/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerSignUp /></Suspense></GuestRoute>} />
+            <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
 
             {/* customer ki routes */}
             <Route path="/" element={<CustomerLayout><Homepage /></CustomerLayout>} />
@@ -169,7 +182,7 @@ export default function App() {
             {/* admin ki sari routes yahan hain */}
             <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/add-order" element={<ProtectedAdminRoute><AdminLayout><AddManualOrder /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin" element={<Navigate to="/admin/today" replace />} />
+            <Route path="/admin" element={<ProtectedAdminRoute><Navigate to="/admin/today" replace /></ProtectedAdminRoute>} />
             <Route path="/admin/today" element={<ProtectedAdminRoute><AdminLayout><TodaysWork /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/tomorrow" element={<ProtectedAdminRoute><AdminLayout><TomorrowsList /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/ready" element={<ProtectedAdminRoute><AdminLayout><ReadyOrders /></AdminLayout></ProtectedAdminRoute>} />

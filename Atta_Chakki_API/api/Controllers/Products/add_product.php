@@ -88,16 +88,19 @@ try {
     }
 
     // inserting the product
-    $stock_quantity = 100;
+    $stock_quantity = isset($data['stock_quantity']) ? floatval($data['stock_quantity']) : 100.00;
+    $min_stock_level = isset($data['min_stock_level']) ? floatval($data['min_stock_level']) : 10.00;
     $track_inventory = isset($data['track_inventory']) ? (int)$data['track_inventory'] : 1;
+    $dual_unit = isset($data['dual_unit']) ? (int)$data['dual_unit'] : 0;
+    $weight_options = isset($data['weight_options']) && is_array($data['weight_options']) ? json_encode($data['weight_options']) : null;
     
-    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, category_id, description, image_url, stock_quantity, is_grinding_service, cleaning_price, grinding_price, track_inventory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, dual_unit, weight_options, category_id, description, image_url, stock_quantity, min_stock_level, is_grinding_service, cleaning_price, grinding_price, track_inventory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsissdiddi", $name, $price, $unit, $category_id, $description, $image, $stock_quantity, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory);
+    $stmt->bind_param("sdsisissddiddi", $name, $price, $unit, $dual_unit, $weight_options, $category_id, $description, $image, $stock_quantity, $min_stock_level, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory);
 
     if ($stmt->execute()) {
         $product_id = $stmt->insert_id;

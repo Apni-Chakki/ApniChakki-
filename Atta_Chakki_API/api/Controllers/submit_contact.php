@@ -28,6 +28,28 @@ $stmt = $conn->prepare("INSERT INTO contact_messages (name, email, phone, subjec
 $stmt->bind_param("sssss", $name, $email, $phone, $subject, $message);
 
 if ($stmt->execute()) {
+    // Send email via Node.js Email Server
+    $emailServerUrl = 'http://localhost:3001/send-contact-email';
+    
+    $emailData = [
+        'name' => $name,
+        'email' => $email,
+        'phone' => $phone,
+        'subject' => $subject,
+        'message' => $message
+    ];
+
+    $ch = curl_init($emailServerUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    
+    $emailResponse = curl_exec($ch);
+    $emailHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
     echo json_encode([
         "success" => true, 
         "message" => "Thank you! Your message has been sent successfully. We will get back to you soon."

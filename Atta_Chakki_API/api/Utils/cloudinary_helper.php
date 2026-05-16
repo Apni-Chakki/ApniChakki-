@@ -26,10 +26,15 @@ function uploadToCloudinary($file, $folder = 'products') {
     }
     
     $folderPath = CLOUDINARY_FOLDERS[$folder] ?? CLOUDINARY_FOLDERS['other'];
-    $cloudinaryUrl = CLOUDINARY_BASE_URL . '/image/upload';
+    $cloudinaryUrl = 'https://api.cloudinary.com/v1_1/' . CLOUDINARY_CLOUD_NAME . '/image/upload';
     
     $timestamp = time();
-    $signature = sha1('folder=' . $folderPath . '&timestamp=' . $timestamp . CLOUDINARY_API_SECRET);
+    
+    // Parameters to be signed - must be in alphabetical order
+    $toSign = 'folder=' . $folderPath . '&timestamp=' . $timestamp . CLOUDINARY_API_SECRET;
+    $signature = sha1($toSign);
+    
+    error_log('Cloudinary Upload - Cloud: ' . CLOUDINARY_CLOUD_NAME . ', Folder: ' . $folderPath . ', File: ' . $file['name']);
     
     $postFields = [
         'file' => new CURLFile($file['tmp_name'], $file['type'], $file['name']),
@@ -46,9 +51,14 @@ function uploadToCloudinary($file, $folder = 'products') {
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postFields,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT => 120,
+        CURLOPT_CONNECTTIMEOUT => 15,
         CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
+        CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+        // Expect header disable karna zaroori hai - Windows XAMPP par
+        // ye header large uploads ko timeout kara deta hai
+        CURLOPT_HTTPHEADER => ['Expect:'],
     ]);
     
     $response = curl_exec($ch);
@@ -56,7 +66,10 @@ function uploadToCloudinary($file, $folder = 'products') {
     $curlError = curl_error($ch);
     curl_close($ch);
     
+    error_log('Cloudinary Response - HttpCode: ' . $httpCode . ', Error: ' . $curlError);
+    
     if ($curlError) {
+        error_log('CURL Error: ' . $curlError);
         return [
             'success' => false,
             'message' => 'Upload failed: ' . $curlError
@@ -65,7 +78,10 @@ function uploadToCloudinary($file, $folder = 'products') {
     
     $result = json_decode($response, true);
     
+    error_log('Cloudinary Response Body (first 300 chars): ' . substr($response, 0, 300));
+    
     if ($httpCode === 200 && isset($result['secure_url'])) {
+        error_log('SUCCESS: Image uploaded - URL: ' . $result['secure_url']);
         return [
             'success' => true,
             'message' => 'Image uploaded successfully',
@@ -77,8 +93,11 @@ function uploadToCloudinary($file, $folder = 'products') {
         ];
     }
     
-    $errorMessage = $result['error']['message'] ?? ($result['error'] ?? 'Unknown error');
-    error_log('Cloudinary Upload Error: ' . json_encode(['httpCode' => $httpCode, 'error' => $errorMessage, 'cloudName' => CLOUDINARY_CLOUD_NAME, 'preset' => CLOUDINARY_UPLOAD_PRESET, 'response' => $response]));
+    $errorMessage = isset($result['error']) 
+        ? (is_array($result['error']) ? ($result['error']['message'] ?? json_encode($result['error'])) : $result['error'])
+        : 'Unknown error (HTTP ' . $httpCode . ')';
+    
+    error_log('Cloudinary Error: ' . $errorMessage . ' | Full response: ' . $response);
     return ['success' => false, 'message' => 'Cloudinary error: ' . $errorMessage . ' (Check that Cloud Name is correct - should be lowercase without spaces)'];
 }
 

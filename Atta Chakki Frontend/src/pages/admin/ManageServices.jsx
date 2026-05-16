@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, GripVertical, Truck, Weight } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Checkbox } from '../../components/common/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/common/select';
 import { API_BASE_URL } from '../../config';
+import { compressImage } from '../../utils/imageCompressor';
 
 export function ManageServices() {
   const [services, setServices] = useState([]);
@@ -28,8 +29,13 @@ export function ManageServices() {
     category: '',
     has_customizations: false,
     customizations: [],
-    track_inventory: true
+    track_inventory: true,
+    stock_quantity: '100',
+    min_stock_level: '10',
+    dual_unit: false,
+    weight_options: []
   });
+  const [weightInput, setWeightInput] = useState('');
 
   // Auto-calculate total price from customizations
   useEffect(() => {
@@ -83,7 +89,7 @@ export function ManageServices() {
     formDataUpload.append('folder', 'products');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload_image.php`, {
+      const response = await fetch(`${API_BASE_URL}/products/upload_image.php`, {
         method: 'POST',
         body: formDataUpload,
       });
@@ -109,8 +115,9 @@ export function ManageServices() {
   const handleImageChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      await uploadToCloudinary(file);
+      const compressedFile = await compressImage(file);
+      setImageFile(compressedFile);
+      await uploadToCloudinary(compressedFile);
     }
   };
 
@@ -152,6 +159,10 @@ export function ManageServices() {
       cleaning_price: 0,
       grinding_price: 0,
       track_inventory: formData.track_inventory ? 1 : 0,
+      stock_quantity: parseFloat(formData.stock_quantity) || 0,
+      min_stock_level: parseFloat(formData.min_stock_level) || 0,
+      dual_unit: formData.dual_unit ? 1 : 0,
+      weight_options: formData.weight_options.length > 0 ? formData.weight_options : [],
       customizations: formData.has_customizations
         ? formData.customizations.map((c, i) => ({
             option_name: c.option_name,
@@ -224,8 +235,13 @@ export function ManageServices() {
       category: service.category || service.category_name || (categories.length > 0 ? categories[0].name : ''),
       has_customizations: hasCust,
       customizations: fallbackCusts,
-      track_inventory: service.track_inventory === 1 || service.track_inventory === true
+      track_inventory: service.track_inventory === 1 || service.track_inventory === true,
+      stock_quantity: (service.stock_quantity ?? 100).toString(),
+      min_stock_level: (service.min_stock_level ?? 10).toString(),
+      dual_unit: service.dual_unit === 1 || service.dual_unit === true,
+      weight_options: Array.isArray(service.weight_options) ? service.weight_options : []
     });
+    setWeightInput('');
     setImageFile(null);
   };
 
@@ -263,7 +279,7 @@ export function ManageServices() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this service?')) {
+    const deleteService = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/delete_product.php`, {
           method: 'POST',
@@ -280,7 +296,33 @@ export function ManageServices() {
       } catch (error) {
         toast.error('Network error while deleting');
       }
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this service?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              deleteService();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   const resetForm = () => {
@@ -289,8 +331,13 @@ export function ManageServices() {
       category: categories.length > 0 ? categories[0].name : '',
       has_customizations: false,
       customizations: [],
-      track_inventory: true
+      track_inventory: true,
+      stock_quantity: '100',
+      min_stock_level: '10',
+      dual_unit: false,
+      weight_options: []
     });
+    setWeightInput('');
     setImageFile(null);
   };
 
@@ -347,7 +394,7 @@ export function ManageServices() {
                 <select id="unit" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} disabled={isSaving}>
                   <option value="kg">kg</option>
                   <option value="bag">bag</option>
-                  <option value="pack">pack</option>
+                  <option value="liter">liter</option>
                   <option value="piece">piece</option>
                   <option value="trip">trip</option>
                 </select>
@@ -366,6 +413,79 @@ export function ManageServices() {
                 </Select>
               </div>
             </div>
+
+            {/* Dual Unit Toggle (Pickup + KG) */}
+            <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="dual_unit"
+                  checked={formData.dual_unit}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      dual_unit: !!checked,
+                      unit: checked ? 'kg' : prev.unit
+                    }));
+                  }}
+                  disabled={isSaving}
+                />
+                <Label htmlFor="dual_unit" className="font-semibold text-blue-700 cursor-pointer">
+                  🚚 Enable Dual Mode (Pickup Request + Per KG)
+                </Label>
+              </div>
+              {formData.dual_unit && (
+                <p className="text-[10px] text-blue-600 mt-1 ml-6">
+                  Card will show both "Add Pickup Request" (unit=trip, weight TBD) and "Add to Cart" (unit=kg) buttons.
+                </p>
+              )}
+            </div>
+
+            {/* Quick Quantity Options (All Units) */}
+            {formData.unit !== 'trip' && (
+              <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-200">
+                <Label className="font-semibold text-emerald-700 mb-2 block">⚖️ Quick {formData.unit?.toUpperCase() || 'QTY'} Options (e.g. 5, 10, 20)</Label>
+                <p className="text-[10px] text-emerald-600 mb-2">Customer will see these as quick-select buttons along with +/- manual selector.</p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.weight_options.map((w, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300">
+                      {w} {formData.unit || 'unit'}
+                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, weight_options: prev.weight_options.filter((_, i) => i !== idx) }))} className="text-emerald-500 hover:text-red-500 ml-1 font-bold" disabled={isSaving}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder={`Enter ${formData.unit || 'qty'} value...`}
+                    value={weightInput}
+                    onChange={(e) => setWeightInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = parseFloat(weightInput);
+                        if (val > 0 && !formData.weight_options.includes(val)) {
+                          setFormData(prev => ({ ...prev, weight_options: [...prev.weight_options, val].sort((a, b) => a - b) }));
+                          setWeightInput('');
+                        }
+                      }
+                    }}
+                    className="flex-1"
+                    disabled={isSaving}
+                  />
+                  <Button type="button" variant="outline" size="sm" className="border-emerald-400 text-emerald-700 hover:bg-emerald-100" disabled={isSaving} onClick={() => {
+                    const val = parseFloat(weightInput);
+                    if (val > 0 && !formData.weight_options.includes(val)) {
+                      setFormData(prev => ({ ...prev, weight_options: [...prev.weight_options, val].sort((a, b) => a - b) }));
+                      setWeightInput('');
+                    }
+                  }}>
+                    <Plus className="h-4 w-4 mr-1" /> Add
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="description">Description</Label>
@@ -477,6 +597,35 @@ export function ManageServices() {
                   Track stock for this service in Inventory Management
                 </Label>
               </div>
+
+              {formData.track_inventory && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-6 border-l-2 border-primary/20">
+                  <div>
+                    <Label htmlFor="stock_quantity" className="text-xs font-semibold text-primary">Initial Stock Quantity</Label>
+                    <Input
+                      id="stock_quantity"
+                      type="number"
+                      placeholder="e.g., 100"
+                      value={formData.stock_quantity || ''}
+                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                      disabled={isSaving}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="min_stock_level" className="text-xs font-semibold text-primary">Low Stock Threshold (Alert Level)</Label>
+                    <Input
+                      id="min_stock_level"
+                      type="number"
+                      placeholder="e.g., 10"
+                      value={formData.min_stock_level || ''}
+                      onChange={(e) => setFormData({ ...formData, min_stock_level: e.target.value })}
+                      disabled={isSaving}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -536,6 +685,12 @@ export function ManageServices() {
                         <span className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-xs font-medium">✓ Inventory Tracked</span>
                       ) : (
                         <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium">Active Service</span>
+                      )}
+
+                      {(service.dual_unit === 1 || service.dual_unit === true) && (
+                        <span className="bg-blue-600/10 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-300/30">
+                          🚚 Dual Mode (Pickup + KG)
+                        </span>
                       )}
                     </div>
                   </div>

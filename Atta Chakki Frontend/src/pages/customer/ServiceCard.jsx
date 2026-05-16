@@ -52,10 +52,20 @@ export function ServiceCard({ service }) {
     : service.price;
 
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
-  const isOnlyPickup = service?.unit?.toLowerCase() === 'trip';
-  const isPickupEligible = service.id == 1 || isOnlyPickup; 
+  const displayUnit = service.unit || 'unit';
+  // Only treat as "trip-only" if unit is trip AND dual_unit is NOT enabled
+  const isOnlyPickup = displayUnit.toLowerCase() === 'trip' && !service.dual_unit;
+  // dual_unit products support both pickup (trip) and kg modes from one card
+  const isDualUnit = service.dual_unit === 1 || service.dual_unit === true;
+  const isPickupEligible = isDualUnit || isOnlyPickup;
   // Trip waly products out of stock nahi hoty kabhi bhi
   const isOutOfStock = isPickupEligible ? false : stock <= 0;
+
+  // Quick quantity options from admin (works for ALL units)
+  const quickOptions = Array.isArray(service.weight_options) && service.weight_options.length > 0
+    ? service.weight_options
+    : [];
+  const hasQuickOptions = quickOptions.length > 0;
 
   const getSelectedCustomizations = () => {
     return effectiveCustomizations
@@ -74,19 +84,51 @@ export function ServiceCard({ service }) {
       return;
     }
 
-    // Backward compat: derive is_cleaning / is_grinding from selected options
     const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean'));
     const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind'));
+
+    const unitLabel = isDualUnit ? 'kg' : displayUnit;
 
     addToCart({
       ...service,
       price: currentPrice,
+      unit: isDualUnit ? 'kg' : service.unit,
       is_cleaning: isCleaning,
       is_grinding: isGrinding,
       selected_customizations: selected
     }, quantity, false); 
-    toast.success(t(`Added ${quantity} ${service.unit || 'units'} of ${service.name} to cart`));
+    toast.success(t(`Added ${quantity} ${unitLabel} of ${service.name} to cart`));
     setQuantity(1);
+    setIsAddedToCart(true);
+    setIsPickupRequested(false);
+  };
+
+  // Quick add: directly add a preset quantity to cart
+  const handleQuickAdd = (presetQty) => {
+    if (isOutOfStock) {
+      toast.error(t("This item is out of stock."));
+      return;
+    }
+    const selected = getSelectedCustomizations();
+    if (hasCustomizations && selected.length === 0) {
+      toast.error(t("Please select at least one service option"));
+      return;
+    }
+
+    const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean'));
+    const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind'));
+
+    const unitLabel = isDualUnit ? 'kg' : displayUnit;
+
+    addToCart({
+      ...service,
+      price: currentPrice,
+      unit: isDualUnit ? 'kg' : service.unit,
+      is_cleaning: isCleaning,
+      is_grinding: isGrinding,
+      selected_customizations: selected
+    }, presetQty, false); 
+    toast.success(t(`Added ${presetQty} ${unitLabel} of ${service.name} to cart`));
     setIsAddedToCart(true);
     setIsPickupRequested(false);
   };
@@ -104,6 +146,7 @@ export function ServiceCard({ service }) {
     addToCart({
       ...service,
       price: currentPrice,
+      unit: 'trip',
       is_cleaning: isCleaning,
       is_grinding: isGrinding,
       selected_customizations: selected
@@ -111,6 +154,48 @@ export function ServiceCard({ service }) {
     toast.success(t('Pickup request added to cart.'));
     setIsPickupRequested(true);
     setIsAddedToCart(false);
+  };
+
+  // Quick-select chips + manual +/- quantity combined
+  const QuantitySelector = ({ disabled = false }) => {
+    const unitLabel = isDualUnit ? 'kg' : displayUnit;
+    return (
+      <div className="flex flex-col gap-2">
+        {/* Quick-select preset chips */}
+        {hasQuickOptions && (
+          <div className="flex flex-wrap gap-1.5">
+            {quickOptions.map((qty) => (
+              <button
+                key={qty}
+                type="button"
+                disabled={disabled || isOutOfStock}
+                onClick={() => handleQuickAdd(qty)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all duration-200
+                  bg-background text-foreground border-border hover:border-primary hover:bg-primary/10 hover:scale-105 active:scale-95
+                  ${disabled || isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {qty} {unitLabel}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Manual +/- quantity selector */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center border border-border rounded-md">
+            <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={isOutOfStock || disabled}>
+              <Minus className="h-4 w-4" strokeWidth={3} />
+            </Button>
+            <span className="w-auto min-w-[3rem] px-1 sm:px-2 text-center text-sm sm:text-base font-bold">{quantity} <span className="text-xs text-muted-foreground font-medium">{unitLabel}</span></span>
+            <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(quantity + 1)} disabled={isOutOfStock || disabled}>
+              <Plus className="h-4 w-4" strokeWidth={3} />
+            </Button>
+          </div>
+          <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-sm sm:text-base" onClick={handleAddToCart} disabled={isOutOfStock || disabled}>
+            {isOutOfStock ? t("Out of Stock") : isAddedToCart ? t("Added ✓") : t("Add to Cart")}
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -156,7 +241,7 @@ export function ServiceCard({ service }) {
               <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
             <p className="text-primary font-bold text-lg">
-              Rs. {currentPrice} / {tDynamic(service.unit || 'unit')}
+              Rs. {currentPrice} / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
             </p>
 
             {/* Dynamic Customization Options */}
@@ -189,53 +274,30 @@ export function ServiceCard({ service }) {
                   )}
                </div>
             )}
-            {stock < 10 && stock > 0 && !isOnlyPickup && (
+            {stock < 10 && stock > 0 && !isOnlyPickup && !isDualUnit && (
                  <p className="text-xs text-red-500 mt-1">{t('Only')} {stock} {t('left')}!</p>
             )}
           </div>
           
           {isOnlyPickup ? (
+            /* Trip-only products: just show pickup button */
             <div className="flex flex-col gap-2">
               <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isAddedToCart}>
                 {isPickupRequested ? t('Pickup Request Added ✓') : t('Add Pickup Request')}
               </Button>
             </div>
-          ) : isPickupEligible ? (
+          ) : isDualUnit ? (
+            /* Dual Unit products: pickup + quantity selector with quick chips */
             <div className="flex flex-col gap-2">
-              <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isAddedToCart}>
+              <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isPickupRequested}>
                 {isPickupRequested ? t('Pickup Request Added ✓') : t('Add Pickup Request')}
               </Button>
               <p className="text-xs text-muted-foreground text-center">-- {t('OR')} --</p>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center border border-border rounded-md">
-                  <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={isOutOfStock || isPickupRequested}>
-                    <Minus className="h-4 w-4" strokeWidth={3} />
-                  </Button>
-                  <span className="w-10 sm:w-12 text-center text-sm sm:text-base font-bold">{quantity}</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(quantity + 1)} disabled={isOutOfStock || isPickupRequested}>
-                    <Plus className="h-4 w-4" strokeWidth={3} />
-                  </Button>
-                </div>
-                <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-sm sm:text-base" onClick={handleAddToCart} disabled={isOutOfStock || isPickupRequested}>
-                  {isOutOfStock ? t("Out of Stock") : isAddedToCart ? t("Added ✓") : t("Add to Cart")}
-                </Button>
-              </div>
+              <QuantitySelector disabled={isPickupRequested} />
             </div>
           ) : (
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center border border-border rounded-md">
-                <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={isOutOfStock}>
-                  <Minus className="h-4 w-4" strokeWidth={3} />
-                </Button>
-                <span className="w-10 sm:w-12 text-center text-sm sm:text-base font-bold">{quantity}</span>
-                <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(quantity + 1)} disabled={isOutOfStock}>
-                  <Plus className="h-4 w-4" strokeWidth={3} />
-                </Button>
-              </div>
-              <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-sm sm:text-base" onClick={handleAddToCart} disabled={isOutOfStock}>
-                {isOutOfStock ? t("Out of Stock") : isAddedToCart ? t("Added ✓") : t("Add to Cart")}
-              </Button>
-            </div>
+            /* Regular products: quick chips + manual qty */
+            <QuantitySelector />
           )}
         </div>
       </Card>

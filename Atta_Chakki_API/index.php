@@ -52,6 +52,21 @@ if (strpos($path, 'utils/') === 0) {
 
 // domain folders me file dhund rahay hain
 $domains = ['Admin', 'Auth', 'Orders', 'Delivery', 'Products', 'Reviews', 'Expenses', 'Inventory', 'Payments', 'Cart', 'Users'];
+
+// Pehle check karo agar path me domain prefix hai (e.g. "products/upload_image.php")
+foreach ($domains as $domain) {
+    $prefix = strtolower($domain) . '/';
+    if (stripos($path, $prefix) === 0) {
+        $sub_path = substr($path, strlen($prefix));
+        $target = __DIR__ . "/api/Controllers/$domain/$sub_path";
+        if (file_exists($target)) {
+            require_once $target;
+            exit;
+        }
+    }
+}
+
+// Phir plain filename se match karo
 foreach ($domains as $domain) {
     $target = __DIR__ . "/api/Controllers/$domain/$path";
     if (file_exists($target)) {

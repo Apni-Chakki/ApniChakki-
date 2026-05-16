@@ -6,6 +6,7 @@ import { Label } from '../../components/common/label';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Image as ImageIcon, Save } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
+import { compressImage } from '../../utils/imageCompressor';
 
 export function HeroSettings() {
   const [slides, setSlides] = useState([]);
@@ -94,11 +95,12 @@ export function HeroSettings() {
 
     try {
       setUploadingIndex(index);
+      const compressedFile = await compressImage(file);
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', compressedFile);
       formData.append('folder', 'hero');
 
-      const response = await fetch(`${API_BASE_URL}/upload_image.php`, {
+      const response = await fetch(`${API_BASE_URL}/products/upload_image.php`, {
         method: 'POST',
         body: formData,
       });

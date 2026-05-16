@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { API_BASE_URL } from '../../config'; // <-- NEW: API Config
+import { compressImage } from '../../utils/imageCompressor';
 
 export function ManageServices() {
   const [services, setServices] = useState([]);
@@ -73,7 +74,7 @@ export function ManageServices() {
     formDataUpload.append('folder', 'products');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload_image.php`, {
+      const response = await fetch(`${API_BASE_URL}/products/upload_image.php`, {
         method: 'POST',
         body: formDataUpload,
       });
@@ -99,8 +100,9 @@ export function ManageServices() {
   const handleImageChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      await uploadToCloudinary(file);
+      const compressedFile = await compressImage(file);
+      setImageFile(compressedFile);
+      await uploadToCloudinary(compressedFile);
     }
   };
 
@@ -207,7 +209,7 @@ export function ManageServices() {
 
   // --- NEW: DELETE VIA API ---
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this service?')) {
+    const deleteService = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/Manage_Services/delete_product.php`, {
           method: 'POST',
@@ -226,7 +228,33 @@ export function ManageServices() {
       } catch (error) {
         toast.error('Network error while deleting');
       }
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this service?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              deleteService();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   const resetForm = () => {
@@ -306,7 +334,7 @@ export function ManageServices() {
                 >
                   <option value="kg">kg</option>
                   <option value="bag">bag</option>
-                  <option value="pack">pack</option>
+                  <option value="liter">liter</option>
                   <option value="piece">piece</option>
                   <option value="trip">trip</option>
                 </select>

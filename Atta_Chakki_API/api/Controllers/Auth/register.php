@@ -51,6 +51,29 @@ try {
     $user_id = $stmt->insert_id;
     $stmt->close();
 
+    // Get user email if exists
+    $userEmail = $input['email'] ?? '';
+    
+    // Send welcome email via Node.js Email Server (optional)
+    if (!empty($userEmail)) {
+        $emailServerUrl = 'http://localhost:3001/send-welcome-email';
+        
+        $emailData = [
+            'email' => $userEmail,
+            'name' => $full_name
+        ];
+
+        $ch = curl_init($emailServerUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
     http_response_code(201);
     echo json_encode([
         'success' => true,

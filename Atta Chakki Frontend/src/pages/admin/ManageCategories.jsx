@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
 import { Card } from '../../components/common/card';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
+import { compressImage } from '../../utils/imageCompressor';
 
 export function ManageCategories() {
   const [categories, setCategories] = useState([]);
@@ -17,11 +18,14 @@ export function ManageCategories() {
   
   const [formData, setFormData] = useState({
     name: '',
-    imageUrl: ''
+    imageUrl: '',
+    priority: 0
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadFailed, setUploadFailed] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchCategories();
@@ -48,12 +52,13 @@ export function ManageCategories() {
 
   const uploadToCloudinary = async (file) => {
     setIsUploading(true);
+    setUploadFailed(false);
     const formData = new FormData();
     formData.append('image', file);
     formData.append('folder', 'categories');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload_image.php`, {
+      const response = await fetch(`${API_BASE_URL}/products/upload_image.php`, {
         method: 'POST',
         body: formData,
       });
@@ -61,14 +66,17 @@ export function ManageCategories() {
       
       if (data.success) {
         setFormData(prev => ({ ...prev, imageUrl: data.url }));
+        setUploadFailed(false);
         toast.success('Image uploaded successfully!');
         return data.url;
       } else {
+        setUploadFailed(true);
         toast.error(data.message || 'Image upload failed');
         return null;
       }
     } catch (error) {
       console.error("Upload Error:", error);
+      setUploadFailed(true);
       toast.error('Network error during upload');
       return null;
     } finally {
@@ -79,8 +87,17 @@ export function ManageCategories() {
   const handleImageChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      await uploadToCloudinary(file);
+      const compressedFile = await compressImage(file);
+      setImageFile(compressedFile);
+      // Reset input value taa ke same file dobara select ho sake
+      e.target.value = '';
+      await uploadToCloudinary(compressedFile);
+    }
+  };
+
+  const retryUpload = async () => {
+    if (imageFile) {
+      await uploadToCloudinary(imageFile);
     }
   };
 
@@ -95,7 +112,8 @@ export function ManageCategories() {
     const endpoint = editingId ? 'update_category.php' : 'add_category.php';
     const payload = {
       name: formData.name,
-      image_url: formData.imageUrl
+      image_url: formData.imageUrl,
+      priority: parseInt(formData.priority) || 0
     };
     if (editingId) {
       payload.id = editingId;
@@ -131,13 +149,14 @@ export function ManageCategories() {
     setEditingId(cat.id);
     setFormData({
       name: cat.name,
-      imageUrl: cat.image_url || ''
+      imageUrl: cat.image_url || '',
+      priority: cat.priority || 0
     });
     setImageFile(null);
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this category?')) {
+    const deleteCategory = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/delete_category.php`, {
           method: 'POST',
@@ -158,13 +177,41 @@ export function ManageCategories() {
       } catch (error) {
         toast.error('Network error while deleting');
       }
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this category?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              deleteCategory();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   const resetForm = () => {
-    setFormData({ name: '', imageUrl: '' });
+    setFormData({ name: '', imageUrl: '', priority: 0 });
     setImageFile(null);
     setEditingId(null);
+    setUploadFailed(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleCancel = () => {
@@ -210,14 +257,27 @@ export function ManageCategories() {
                 disabled={isSaving}
               />
             </div>
+
+            <div>
+              <Label htmlFor="priority">Priority (Lower numbers show first)</Label>
+              <Input
+                id="priority"
+                type="number"
+                placeholder="e.g., 1"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                disabled={isSaving}
+              />
+            </div>
             
             <div>
               <Label>Category Image</Label>
               <div className="flex flex-col sm:flex-row gap-4 items-start mt-2">
-                <div className="relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors">
+                <div className={`relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors ${uploadFailed ? 'border-red-400' : ''}`}>
                   <input 
                     type="file" 
                     accept="image/*" 
+                    ref={fileInputRef}
                     onChange={handleImageChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     disabled={isUploading || isSaving}
@@ -227,6 +287,21 @@ export function ManageCategories() {
                         <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
                         <p className="text-sm">Uploading...</p>
                      </div>
+                  ) : uploadFailed ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-sm text-red-500 font-medium">⚠ Upload failed</p>
+                      <p className="text-xs text-muted-foreground">{imageFile?.name}</p>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="sm" 
+                        onClick={(e) => { e.stopPropagation(); retryUpload(); }}
+                        className="relative z-10 mt-1"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" /> Retry Upload
+                      </Button>
+                      <p className="text-xs text-muted-foreground">or click to choose another file</p>
+                    </div>
                   ) : formData.imageUrl ? (
                      <img src={formData.imageUrl} alt="Category image" className="h-32 object-contain" />
                   ) : (
@@ -277,7 +352,10 @@ export function ManageCategories() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="mb-1 text-lg font-bold">{cat.name}</h3>
-                  <p className="text-xs text-muted-foreground">ID: {cat.id}</p>
+                  <div className="flex gap-4">
+                    <p className="text-xs text-muted-foreground">ID: {cat.id}</p>
+                    <p className="text-xs font-semibold text-primary">Priority: {cat.priority || 0}</p>
+                  </div>
                 </div>
                 <div className="flex sm:flex-col gap-2">
                   <Button onClick={() => handleEdit(cat)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>

@@ -48,6 +48,9 @@ try {
         $cust_stmt->close();
         $row['customizations'] = $customizations;
 
+        // Decode weight_options JSON for frontend
+        $row['weight_options'] = !empty($row['weight_options']) ? json_decode($row['weight_options'], true) : [];
+
         $products[] = $row;
     }
     

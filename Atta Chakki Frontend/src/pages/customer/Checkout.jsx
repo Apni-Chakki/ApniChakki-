@@ -157,7 +157,9 @@ export function Checkout() {
   const total = getTotalPrice();
   const hasPendingWeightItem = cart.some(item => item.isWeightPending);
   const hasTripItem = cart.some(item => item.service?.unit?.toLowerCase() === 'trip');
-  const isTbdOrder = hasTripItem;
+  const hasKgItem = cart.some(item => item.service?.unit?.toLowerCase() !== 'trip' && !item.isWeightPending);
+  // isTbdOrder only when ALL items are trip/pending — not when mixed with kg items
+  const isTbdOrder = hasTripItem && !hasKgItem;
   const isKgOrder = !hasTripItem && cart.length > 0;
 
   const [schedulePreview, setSchedulePreview] = useState(null);
@@ -330,11 +332,62 @@ export function Checkout() {
     return { addressText: null, inLahore: false };
   }, []);
 
-  // pata khud se bharne k liye logic
+
+
+  const fallbackToManualLocation = useCallback(() => {
+    setGpsCoords({ lat: FALLBACK_CENTER.lat, lng: FALLBACK_CENTER.lng, accuracy: 0 });
+    setShowMap(true);
+    setMapCenter([FALLBACK_CENTER.lat, FALLBACK_CENTER.lng]);
+    setLocationStatus(t('Drag the pin to your general area'));
+    setIsOutOfLahore(false);
+  }, [t]);
+
+  const processLocationFix = useCallback(async (lat, lng, accuracy, source) => {
+    setGpsCoords({ lat, lng, accuracy });
+    setShowMap(true);
+    setMapCenter([lat, lng]);
+
+    const { addressText, inLahore } = await reverseGeocode(lat, lng);
+    setIsOutOfLahore(!inLahore);
+
+    const isLowAccuracy = accuracy > 200; 
+
+    if (isLowAccuracy) {
+      setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
+    } else {
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Detected location is outside Lahore')}`);
+    }
+
+    if (addressText) {
+      setDeliveryArea(addressText);
+    } else {
+      setDeliveryArea(`Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    }
+  }, [reverseGeocode, t]);
+
+  // pata khud se bharne k liye logic — pehle GPS try karo, phir fallback
   useEffect(() => {
     if (orderType === 'delivery' && !deliveryArea && !gpsCoords) {
       const initLocation = async () => {
-        setLocationStatus(`📡 ${t('Fetching area...')}`);
+        setLocationStatus(`📡 ${t('Getting your exact location...')}`);
+        
+        // Try actual GPS first
+        if (navigator.geolocation) {
+          try {
+            const position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true, timeout: 10000, maximumAge: 0,
+              });
+            });
+            const { latitude: lat, longitude: lng, accuracy } = position.coords;
+            await processLocationFix(lat, lng, accuracy, 'GPS');
+            return; // GPS mil gaya, fallback ki zaroorat nahi
+          } catch (geoError) {
+            console.warn('GPS failed on init, using fallback:', geoError.message);
+          }
+        }
+
+        // Fallback if GPS fails
         const { addressText, inLahore } = await reverseGeocode(FALLBACK_CENTER.lat, FALLBACK_CENTER.lng);
         if (addressText) {
           setDeliveryArea(addressText);
@@ -344,7 +397,7 @@ export function Checkout() {
       };
       initLocation();
     }
-  }, [orderType, deliveryArea, gpsCoords, reverseGeocode, t]);
+  }, [orderType, deliveryArea, gpsCoords, reverseGeocode, processLocationFix, t]);
 
   const formatCardNumber = (value) => {
     const digits = value.replace(/\D/g, '').slice(0, 16);
@@ -443,37 +496,7 @@ export function Checkout() {
     }
   }, [reverseGeocode, t]);
 
-  const processLocationFix = useCallback(async (lat, lng, accuracy, source) => {
-    setGpsCoords({ lat, lng, accuracy });
-    setShowMap(true);
-    setMapCenter([lat, lng]);
 
-    const { addressText, inLahore } = await reverseGeocode(lat, lng);
-    setIsOutOfLahore(!inLahore);
-
-    const isLowAccuracy = accuracy > 200; 
-
-    if (isLowAccuracy) {
-      setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
-      toast.info(t('Location is approximate. Drag the pin to your exact area.'));
-    } else {
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Detected location is outside Lahore')}`);
-    }
-
-    if (addressText) {
-      setDeliveryArea(addressText);
-    } else {
-      setDeliveryArea(`Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-    }
-  }, [reverseGeocode, t]);
-
-  const fallbackToManualLocation = useCallback(() => {
-    setGpsCoords({ lat: FALLBACK_CENTER.lat, lng: FALLBACK_CENTER.lng, accuracy: 0 });
-    setShowMap(true);
-    setMapCenter([FALLBACK_CENTER.lat, FALLBACK_CENTER.lng]);
-    setLocationStatus(t('Drag the pin to your general area'));
-    setIsOutOfLahore(false);
-  }, [t]);
 
   const handleGetLocation = async () => {
     setLocationStatus(t('📡 Getting precise GPS fix...'));
@@ -589,6 +612,7 @@ export function Checkout() {
           is_cleaning: item.service.is_cleaning ? 1 : 0,
           is_grinding: item.service.is_grinding ? 1 : 0,
           price: item.service.price,
+          unit: item.service.unit || 'kg',
           is_weight_pending: item.isWeightPending ? 1 : 0,
           selected_customizations: item.service.selected_customizations || []
         })),
@@ -598,7 +622,7 @@ export function Checkout() {
         payment_status: 'pending',
         amount_paid: 0,
         order_type: orderType,
-        is_pickup_request: isTbdOrder,
+        is_pickup_request: hasTripItem,
         is_kg_order: isKgOrder
       };
 
@@ -664,6 +688,8 @@ export function Checkout() {
         is_cleaning: item.service.is_cleaning ? 1 : 0,
         is_grinding: item.service.is_grinding ? 1 : 0,
         price: item.service.price,
+        unit: item.service.unit || 'kg',
+        is_weight_pending: item.isWeightPending ? 1 : 0,
         selected_customizations: item.service.selected_customizations || []
       })),
       total: isTbdOrder ? 0 : grandTotal,
@@ -675,7 +701,7 @@ export function Checkout() {
       transaction_id: transactionId || null,
       amount_paid: paidAmount,
       order_type: orderType,
-      is_pickup_request: isTbdOrder,
+      is_pickup_request: hasTripItem,
       is_kg_order: isKgOrder
     };
 
@@ -964,7 +990,7 @@ export function Checkout() {
                   <MapContainer
                     key={`map-${(gpsCoords || FALLBACK_CENTER).lat}-${(gpsCoords || FALLBACK_CENTER).lng}`}
                     center={[(gpsCoords || FALLBACK_CENTER).lat, (gpsCoords || FALLBACK_CENTER).lng]}
-                    zoom={16}
+                    zoom={17}
                     scrollWheelZoom={true}
                     className="h-full w-full z-0"
                     zoomControl={true}
@@ -1208,10 +1234,6 @@ export function Checkout() {
         onClick={handlePlaceOrder}
         disabled={isCartEmpty || isDeliveryInvalid}
       >
-        {paymentMethod === 'cash' || (total === 0) ? t('Place Order') : t('Proceed to Payment')} 
-        <span className="ml-2">
-          (Rs. {total}{hasPendingWeightItem && " + TBD"})
-        </span>
         {paymentMethod === 'cash' || isTbdOrder ? t('Place Order') : t('Proceed to Payment')} {isTbdOrder ? '(TBD)' : `(Rs. ${grandTotal})`}{(hasPendingWeightItem && !isTbdOrder) && " + TBD"}
       </Button>
 
@@ -1554,6 +1576,7 @@ export function Checkout() {
     </div>
   );
 }
+
 
 
 

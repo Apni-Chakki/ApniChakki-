@@ -1,10 +1,10 @@
 /**
  * Image Upload Hook for React
- * Handles image uploads to Cloudinary via backend
+ * Handles direct image uploads to Cloudinary (unsigned)
  */
 
 import { useState } from 'react';
-import { UPLOAD_ENDPOINT, ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE } from '../config/cloudinary';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE } from '../config/cloudinary';
 
 export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
@@ -35,26 +35,45 @@ export const useImageUpload = () => {
 
     try {
       const formData = new FormData();
-      formData.append('image', file);
-      formData.append('folder', folder);
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      formData.append('folder', folder); // apni-chakki/products or apni-chakki/categories
 
-      const response = await fetch(UPLOAD_ENDPOINT, {
+      // Direct upload to Cloudinary (no backend needed)
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+      
+      const response = await fetch(cloudinaryUrl, {
         method: 'POST',
         body: formData
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `Upload failed with status ${response.status}`);
+      }
+
       const data = await response.json();
 
-      if (!data.success) {
-        throw new Error(data.message || 'Upload failed');
+      if (!data.secure_url) {
+        throw new Error('No URL returned from Cloudinary');
       }
 
       setProgress(100);
-      return data;
+      console.log('Cloudinary upload successful:', data.secure_url);
+      
+      return {
+        success: true,
+        url: data.secure_url,
+        public_id: data.public_id,
+        width: data.width,
+        height: data.height,
+        message: 'Image uploaded successfully'
+      };
 
     } catch (err) {
-      setError(err.message || 'Upload failed');
-      console.error('Image upload error:', err);
+      const errorMsg = err.message || 'Upload failed';
+      setError(errorMsg);
+      console.error('Image upload error:', errorMsg);
       return null;
     } finally {
       setUploading(false);

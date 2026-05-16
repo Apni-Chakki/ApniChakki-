@@ -71,16 +71,18 @@ try {
     }
 
     $track_inventory = isset($data['track_inventory']) ? (int)$data['track_inventory'] : 1;
+    $dual_unit = isset($data['dual_unit']) ? (int)$data['dual_unit'] : 0;
+    $weight_options = isset($data['weight_options']) && is_array($data['weight_options']) ? json_encode($data['weight_options']) : null;
 
     // updating product
-    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, image_url=?, is_grinding_service=?, cleaning_price=?, grinding_price=?, track_inventory=? WHERE id=?";
+    $sql = "UPDATE products SET name=?, price=?, unit=?, dual_unit=?, weight_options=?, category_id=?, description=?, image_url=?, is_grinding_service=?, cleaning_price=?, grinding_price=?, track_inventory=? WHERE id=?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsissiddii", $name, $price, $unit, $category_id, $description, $image, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory, $id);
+    $stmt->bind_param("sdsisissiddii", $name, $price, $unit, $dual_unit, $weight_options, $category_id, $description, $image, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory, $id);
 
     if ($stmt->execute()) {
         $stmt->close();

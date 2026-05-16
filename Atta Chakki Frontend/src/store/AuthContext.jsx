@@ -101,6 +101,29 @@ export function AuthProvider({ children }) {
     return false;
   };
 
+  // google se login karne wala function
+  const googleLogin = async (accessToken) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/google_login.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: accessToken }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUser(data.user);
+        return true;
+      } else {
+        console.error(data.message || "Google login failed");
+        return false;
+      }
+    } catch (error) {
+      console.error("Google Login API Error:", error);
+      return false;
+    }
+  };
+
   // naya account banane wala function
   const signup = async (name, phone, password, address = '') => {
     try {
@@ -121,18 +144,11 @@ export function AuthProvider({ children }) {
 
   // logout wala function
   const logout = () => {
-    const currentRole = user?.role;
     setUser(null);
     localStorage.removeItem('user'); 
     
-    // login page pe wapis bhej rahe han role k mutabiq
-    if (currentRole === 'delivery' || currentRole === 'delivery_boy') {
-      window.location.href = '/login/delivery';
-    } else if (currentRole === 'admin') {
-      window.location.href = '/login/admin';
-    } else {
-      window.location.href = '/login/customer';
-    }
+    // sab users ko main page ya login pe bhej do kyunke direct admin/delivery login ab band hai
+    window.location.href = '/';
   };
 
   const addDeliveryPersonnel = () => {};
@@ -145,6 +161,7 @@ export function AuthProvider({ children }) {
         user,
         setUser,
         login,
+        googleLogin,
         signup, 
         logout,
         isAuthenticated: !!user,

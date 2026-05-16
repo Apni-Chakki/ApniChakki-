@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/Config/connect.php';
 header('Content-Type: application/json');
 
 try {
-    $sql = "SELECT id, name, image_url, created_at FROM categories ORDER BY created_at DESC";
+    $sql = "SELECT id, name, image_url, priority, created_at FROM categories ORDER BY priority ASC, name ASC";
     $result = $conn->query($sql);
     
     if (!$result) {
@@ -22,9 +22,10 @@ try {
         }
         
         $categories[] = [
-            'id' => $row['id'],
+            'id' => (int)$row['id'],
             'name' => $row['name'],
             'image_url' => $image_url,
+            'priority' => (int)($row['priority'] ?? 0),
             'created_at' => $row['created_at']
         ];
     }
