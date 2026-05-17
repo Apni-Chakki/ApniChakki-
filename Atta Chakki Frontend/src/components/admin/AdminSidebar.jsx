@@ -1,19 +1,15 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, Calendar, CheckCircle, Wheat, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X } from 'lucide-react';
-import { Badge } from '../ui/badge';
+import { Clock, Calendar, CheckCircle, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X, Store, ShoppingBag } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { LanguageToggle } from '../LanguageToggle';
 import { useTranslation } from 'react-i18next';
-import { API_BASE_URL } from '../../config';
 
 export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
-  const { t, i18n } = useTranslation();
-  const isRTL = i18n.language === 'ur';
+  const { logout } = useAuth();
+  const { t } = useTranslation();
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -26,7 +22,7 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
     { path: '/admin/add-order', label: 'Add Manual Order', icon: Plus },
     { path: '/admin/today', label: "Today's Work", icon: Clock },
     { path: '/admin/tomorrow', label: "Tomorrow's List", icon: Calendar },
-    { path: '/admin/ready', label: 'Ready Orders', icon: PackageCheck }, // <-- NEW: Ready Orders
+    { path: '/admin/ready', label: 'Ready Orders', icon: PackageCheck },
     { path: '/admin/pickup-requests', label: 'Pickup Requests', icon: Truck },
     { path: '/admin/completed', label: 'Completed Orders', icon: CheckCircle },
     { path: '/admin/records', label: 'Orders Record', icon: FileText },
@@ -34,17 +30,18 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
     { path: '/admin/khata', label: 'Digital Khata', icon: BookOpen },
     { path: '/admin/inventory', label: 'Inventory', icon: Archive },
     { path: '/admin/categories', label: 'Manage Categories', icon: Package },
-    { path: '/admin/services', label: 'Manage Products', icon: Package },
+    { path: '/admin/services', label: 'Manage Products', icon: ShoppingBag },
     { path: '/admin/delivery', label: 'Delivery Team', icon: Truck },
     { path: '/admin/live-tracking', label: 'Live Tracking', icon: Radio },
     { path: '/admin/comments', label: 'Manage Comments', icon: MessageSquare },
-    { path: '/admin/settings', label: 'Store Settings', icon: Settings }
+    { path: '/admin/settings', label: 'Store Settings', icon: Settings },
+    { path: '/admin/hero-settings', label: 'Hero Settings', icon: LayoutDashboard }
   ];
 
   return (
-    <aside className={`admin-sidebar-el w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 flex flex-col${isOpen ? ' sidebar-open' : ''}`}>
-      <div className="p-6 border-b border-sidebar-border" style={{ position: 'relative' }}>
-        {/* Close button — only visible on mobile via CSS */}
+    <aside className={`admin-sidebar-el w-64 bg-white border-r border-gray-100 h-screen sticky top-0 flex flex-col${isOpen ? ' sidebar-open' : ''}`}>
+      {/* Brand Header */}
+      <div className="admin-brand-header">
         <Button
           variant="ghost"
           size="icon"
@@ -56,45 +53,28 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
           <X className="h-5 w-5" />
         </Button>
 
-        <div className="flex items-center justify-between mb-2">
-           <Link to="/admin/dashboard" className="flex items-center gap-2" onClick={onClose}>
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <Wheat className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg text-sidebar-foreground font-semibold">Admin</span>
-          </Link>
-          <LanguageToggle />
-        </div>
-        
-        {user && (
-          <p className="text-xs text-sidebar-foreground/60 mt-1">{t('Welcome back')}, {user.name}</p>
-        )}
+        <Link to="/admin/dashboard" className="block" onClick={onClose}>
+          <h1 className="admin-brand-title">Admin Panel</h1>
+          <p className="admin-brand-subtitle">Store Management</p>
+        </Link>
       </div>
 
-      <nav className="flex-1 p-4 overflow-y-auto">
-        <ul className="space-y-2">
+      {/* Nav items */}
+      <nav className="flex-1 py-4 overflow-y-auto admin-nav-scroll">
+        <ul className="space-y-1 pr-2">
           {navItems.map(item => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
-            
+
             return (
               <li key={item.path}>
                 <Link
                   to={item.path}
                   onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent'
-                  }`}
+                  className={`admin-nav-link ${isActive ? 'admin-nav-link-active' : ''}`}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="flex-1">{t(item.label)}</span>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <Badge className="bg-success text-success-foreground">
-                      {item.badge}
-                    </Badge>
-                  )}
+                  <Icon className="admin-nav-icon" strokeWidth={2} />
+                  <span className="admin-nav-label">{t(item.label)}</span>
                 </Link>
               </li>
             );
@@ -102,19 +82,21 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border space-y-2">
+      {/* Bottom: Back to store + Logout */}
+      <div className="py-3 border-t border-gray-100 space-y-1 pr-2">
         <Link
           to="/"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          className="admin-nav-link"
         >
-          <span>{isRTL ? '→' : '←'} {t('Back to Store')}</span>
+          <Store className="admin-nav-icon" strokeWidth={2} />
+          <span className="admin-nav-label">{t('Back to Store')}</span>
         </Link>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          className="admin-nav-link admin-nav-logout w-full text-left"
         >
-          <LogOut className="h-4 w-4" />
-          <span>{t('Logout')}</span>
+          <LogOut className="admin-nav-icon" strokeWidth={2} />
+          <span className="admin-nav-label">{t('Logout')}</span>
         </button>
       </div>
     </aside>

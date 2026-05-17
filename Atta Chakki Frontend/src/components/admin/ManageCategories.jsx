@@ -311,8 +311,8 @@ export function ManageCategories() {
                   <Button onClick={() => handleEdit(cat)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button onClick={() => handleDelete(cat.id)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                  <Button onClick={() => handleDelete(cat.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="px-4">
+                    <Trash2 className="h-4 w-4 text-white" />
                   </Button>
                 </div>
               </div>

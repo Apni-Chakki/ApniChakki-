@@ -23,12 +23,14 @@ import {
   FileText,
   Loader2, // Added for loading state
   Monitor,
-  Store
+  Store,
+  Download
 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog'; 
 import { toast } from 'sonner'; 
+import * as XLSX from 'xlsx';
 import { API_BASE_URL } from '../../config'; // <-- NEW: Added API Config
 
 export function OrdersRecord() {
@@ -97,6 +99,8 @@ export function OrdersRecord() {
             items: order.items ? order.items.map(item => ({
               quantity: item.quantity,
               isWeightPending: item.is_weight_pending || false,
+              is_cleaning: item.is_cleaning == 1,
+              is_grinding: item.is_grinding == 1,
               service: { name: item.name, price: item.price_at_purchase || 0, unit: item.unit || 'Kg' }
             })) : []
           };
@@ -115,7 +119,9 @@ export function OrdersRecord() {
 
   const matchesDate = (orderDateStr) => {
     if (!dateRange || !dateRange.from) return true;
-    const orderDate = new Date(orderDateStr);
+    // Replace space with T to fix Safari/iOS Invalid Date bug with MySQL timestamps
+    const safeDateStr = typeof orderDateStr === 'string' ? orderDateStr.replace(' ', 'T') : orderDateStr;
+    const orderDate = new Date(safeDateStr);
     const fromDate = new Date(dateRange.from);
     fromDate.setHours(0, 0, 0, 0);
     if (orderDate < fromDate) return false;
@@ -192,6 +198,63 @@ export function OrdersRecord() {
             return <Badge className='bg-orange-500 text-white mt-1'>Unpaid</Badge>;
     }
   }
+
+  // --- Export to Real Excel (.xlsx) ---
+  const handleExportCSV = () => {
+    if (filteredOrders.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+
+    // Prepare data as array of objects for Excel
+    const excelData = filteredOrders.map(order => {
+      const remainingBalance = order.total - (order.advancePayment || 0);
+      const itemsStr = order.items.map(i => `${i.service.name} x${i.quantity}`).join(' | ');
+      
+      return {
+        'Order ID': order.id,
+        'Date': new Date(order.createdAt).toLocaleDateString(),
+        'Customer Name': order.customerName || '',
+        'Phone': order.phone || '',
+        'Items': itemsStr,
+        'Total Amount (Rs)': order.total,
+        'Advance Paid (Rs)': order.advancePayment || 0,
+        'Remaining Due (Rs)': remainingBalance > 0 ? remainingBalance : 0,
+        'Payment Status': order.paymentStatus,
+        'Order Status': order.status,
+        'Source': order.source,
+        'Delivery/Pickup': order.type
+      };
+    });
+
+    // Create a new workbook and a worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // Auto-adjust column widths (basic approximation)
+    const columnWidths = [
+      { wch: 10 }, // Order ID
+      { wch: 12 }, // Date
+      { wch: 20 }, // Customer Name
+      { wch: 15 }, // Phone
+      { wch: 40 }, // Items
+      { wch: 18 }, // Total Amount
+      { wch: 18 }, // Advance Paid
+      { wch: 18 }, // Remaining Due
+      { wch: 15 }, // Payment Status
+      { wch: 15 }, // Order Status
+      { wch: 12 }, // Source
+      { wch: 15 }  // Delivery/Pickup
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Orders");
+
+    // Generate Excel file and trigger download
+    XLSX.writeFile(workbook, `Orders_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success('Excel file downloaded successfully');
+  };
 
   // --- Record payment via API ---
   const handleSavePayment = async () => {
@@ -323,8 +386,8 @@ export function OrdersRecord() {
                   style={{ width: "150px", flexShrink: 0 }}
                 >
                 <option value="all">All Sources</option>
-              <option value="manual">Manual Orders</option>
-              <option value="online">Online Orders</option>
+                <option value="manual">Manual Orders</option>
+                <option value="online">Online Orders</option>
             </select>
           </div>
 
@@ -334,7 +397,7 @@ export function OrdersRecord() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs h-8 py-1"
                 >
                   <CalendarDays className="mr-1.5 h-3 w-3" />
                   {dateRange?.from ? (
@@ -362,7 +425,7 @@ export function OrdersRecord() {
               </PopoverContent>
             </Popover>
             {dateRange && (
-              <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)} className="text-xs h-8">
+              <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)} className="text-xs h-8 py-1">
                 Clear
               </Button>
             )}
@@ -377,42 +440,65 @@ export function OrdersRecord() {
                   size="sm"
                   className="text-xs py-1 h-8"
                 >
-                  {status.slice(0, 3)}
+                  {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
                 </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {/* Checkboxes */}
-            <div className="flex items-center space-x-1 border px-2 py-1 rounded text-xs">
+            <button 
+              onClick={() => {
+                setShowAdvanceOnly(!showAdvanceOnly);
+                if(!showAdvanceOnly) setShowUnpaidOnly(false);
+              }}
+              className="flex items-center space-x-2 px-4 py-1.5 rounded bg-gray-50 h-8 cursor-pointer hover:bg-gray-100 transition-colors"
+            >
               <Checkbox 
                 id="advance-filter" 
                 checked={showAdvanceOnly} 
-                onCheckedChange={(c) => {
-                  setShowAdvanceOnly(c);
-                  if(c) setShowUnpaidOnly(false); 
+                onCheckedChange={() => {
+                  setShowAdvanceOnly(!showAdvanceOnly);
+                  if(!showAdvanceOnly) setShowUnpaidOnly(false);
                 }} 
               />
               <Label htmlFor="advance-filter" className="text-xs cursor-pointer">Advance Only</Label>
-            </div>
+            </button>
 
-            <div className="flex items-center space-x-1 border border-red-200 px-2 py-1 rounded bg-red-50 text-xs">
+            <button 
+              onClick={() => {
+                setShowUnpaidOnly(!showUnpaidOnly);
+                if(!showUnpaidOnly) setShowAdvanceOnly(false);
+              }}
+              className="flex items-center space-x-2 px-4 py-1.5 rounded bg-red-50 h-8 cursor-pointer hover:bg-red-100 transition-colors"
+            >
               <Checkbox 
                 id="unpaid-filter" 
                 checked={showUnpaidOnly} 
-                onCheckedChange={(c) => {
-                  setShowUnpaidOnly(c);
-                  if(c) setShowAdvanceOnly(false);
+                onCheckedChange={() => {
+                  setShowUnpaidOnly(!showUnpaidOnly);
+                  if(!showUnpaidOnly) setShowAdvanceOnly(false);
                 }} 
               />
               <Label htmlFor="unpaid-filter" className="text-xs cursor-pointer text-red-700">Unpaid/Due</Label>
-            </div>
+            </button>
 
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-xs h-8 text-green-700 border-green-200 hover:bg-green-50 px-4"
+              disabled={filteredOrders.length === 0}
+              onClick={handleExportCSV}
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Export
+            </Button>
+            
             <Button 
               variant="default" 
               size="sm"
-              className="ml-auto text-xs h-8"
+              className="text-xs h-8 px-4"
               disabled={filteredOrders.length === 0}
               onClick={() => setShowPrintList(true)}
             >
@@ -446,6 +532,7 @@ export function OrdersRecord() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="whitespace-nowrap">Order ID</TableHead>
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
                   <TableHead className="whitespace-nowrap">Customer</TableHead>
                   <TableHead className="whitespace-nowrap">Items</TableHead>
                   <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
@@ -473,6 +560,13 @@ export function OrdersRecord() {
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        <span className="font-medium text-foreground">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        <br />
+                        <span className="text-[10px]">{new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <div className="text-xs">
                         <p className="font-medium">{order.customerName}</p>
                         <p className="text-muted-foreground">{order.phone}</p>
@@ -486,7 +580,10 @@ export function OrdersRecord() {
                         {order.items.length > 1 && <p className="text-muted-foreground">+{order.items.length - 1}</p>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-bold">Rs. {order.total}</TableCell>
+                    <TableCell className="text-right font-bold whitespace-nowrap">
+                      Rs. {order.total}
+                      {order.items.some(i => i.isWeightPending) && <span className="text-primary text-[10px] ml-1">(+ TBD)</span>}
+                    </TableCell>
                     <TableCell>
                       <div className="text-xs">
                         {getPaymentStatusBadge(order.paymentStatus)}

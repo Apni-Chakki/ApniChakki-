@@ -1,5 +1,5 @@
 <?php
-// admin create order api
+// admin se order bana rahe han yahan is api me
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/connect.php';
 
@@ -12,7 +12,7 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
     $phone = isset($data->phone) ? $data->phone : '';
     $address = isset($data->address) ? $data->address : 'Store Pickup';
     
-    // checking if user exists or creating new one
+    // user check kar rahe han ya naya bana rahe han agar nahi mila tou
     $stmt = $conn->prepare("SELECT id FROM users WHERE phone = ? LIMIT 1");
     $stmt->bind_param("s", $phone);
     $stmt->execute();
@@ -37,7 +37,7 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
     $payment_method_input = isset($data->payment_method) ? $data->payment_method : 'cash';
     $amount_paid = isset($data->amount_paid) ? floatval($data->amount_paid) : 0;
     
-    // mapping payment methods
+    // payment methods mapping
     $method_map = [
         'cash' => 'cod',
         'cod' => 'cod', 
@@ -60,6 +60,11 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
         $col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'amount_paid'");
         $has_amount_paid_col = ($col_check && $col_check->num_rows > 0);
         
+        $source_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'source'");
+        if (!$source_check || $source_check->num_rows === 0) {
+            $conn->query("ALTER TABLE orders ADD COLUMN source VARCHAR(50) DEFAULT 'web'");
+        }
+        
         if ($has_amount_paid_col) {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, payment_method, payment_status, amount_paid, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', NOW())");
             $stmt->bind_param("idssssd", $user_id, $total_amount, $status, $address, $db_payment_method, $payment_status, $amount_paid);
@@ -75,21 +80,23 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
         $order_id = $conn->insert_id;
         $stmt->close();
         
-        // adding items and updating stock
-        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)");
+        // items add aur stock update kar rahe han yahan par
+        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, is_cleaning, is_grinding) VALUES (?, ?, ?, ?, ?, ?)");
         $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?");
         
         foreach($data->items as $item) {
             $prod_id = intval($item->id);
             $qty = floatval($item->quantity);
             $price = floatval($item->price);
+            $is_cleaning = isset($item->is_cleaning) ? (int)$item->is_cleaning : 0;
+            $is_grinding = isset($item->is_grinding) ? (int)$item->is_grinding : 0;
             
-            $item_stmt->bind_param("iidd", $order_id, $prod_id, $qty, $price);
+            $item_stmt->bind_param("iiddii", $order_id, $prod_id, $qty, $price, $is_cleaning, $is_grinding);
             if (!$item_stmt->execute()) {
                 throw new Exception("Failed to add Item");
             }
             
-            // Check if unit is trip before deducting stock
+            // trip items ka stock nahi katna chahiye
             $unit_check = $conn->query("SELECT unit FROM products WHERE id = " . $prod_id);
             $unit_row = $unit_check->fetch_assoc();
             if ($unit_row && strtolower(trim($unit_row['unit'])) === 'trip') {
@@ -102,7 +109,7 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
             }
         }
         
-        // recording payment if any
+        // payment entry kar rahe han agar kuch pay kiya hai tou
         if ($amount_paid > 0) {
             $pay_stmt = $conn->prepare("INSERT INTO payments (order_id, amount, payment_method) VALUES (?, ?, ?)");
             $pay_stmt->bind_param("ids", $order_id, $amount_paid, $db_payment_method);
@@ -111,7 +118,7 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
         
         $conn->commit();
         
-        // auto-schedule this order (calculate ETA and assign to today/tomorrow)
+        // schedule set kar rahe han auto wala is order k liye
         require_once __DIR__ . '/controllers/orders/order_scheduler.php';
         $schedule_result = scheduleOrder($conn, $order_id);
         

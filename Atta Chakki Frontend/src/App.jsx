@@ -54,6 +54,56 @@ const PaymentVerification = lazy(() => import('./pages/admin/PaymentVerification
 const AdminComments = lazy(() => import('./pages/admin/AdminComments').then(module => ({ default: module.AdminComments })));
 const LiveTrackingMap = lazy(() => import('./pages/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
 const ContactMessages = lazy(() => import('./pages/admin/ContactMessages').then(module => ({ default: module.ContactMessages })));
+import wheatLogo from './assets/Wheat and Flour.png';
+
+// layout components
+import { Header } from './components/customer/Header';
+import { Footer } from './components/customer/Footer';
+import { AdminSidebar } from './components/admin/AdminSidebar';
+import { LanguageToggle } from './components/LanguageToggle';
+
+// lazy loading all pages
+
+// customer pages
+const Homepage = lazy(() => import('./components/customer/Homepage').then(module => ({ default: module.Homepage })));
+const Checkout = lazy(() => import('./components/customer/Checkout').then(module => ({ default: module.Checkout })));
+const OrderConfirmation = lazy(() => import('./components/customer/OrderConfirmation').then(module => ({ default: module.OrderConfirmation })));
+const TrackOrder = lazy(() => import('./components/customer/TrackOrder').then(module => ({ default: module.TrackOrder })));
+const Contact = lazy(() => import('./components/customer/Contact').then(module => ({ default: module.Contact })));
+const ReviewsPage = lazy(() => import('./components/customer/ReviewsPage').then(module => ({ default: module.ReviewsPage })));
+const UserAccount = lazy(() => import('./components/customer/UserAccount').then(module => ({ default: module.UserAccount })));
+const LiveTrackingPage = lazy(() => import('./components/customer/LiveTrackingPage').then(module => ({ default: module.LiveTrackingPage })));
+
+// auth pages
+const AdminLogin = lazy(() => import('./components/auth/AdminLogin').then(module => ({ default: module.AdminLogin })));
+const DeliveryLogin = lazy(() => import('./components/auth/DeliveryLogin').then(module => ({ default: module.DeliveryLogin })));
+const CustomerLogin = lazy(() => import('./components/auth/CustomerLogin').then(module => ({ default: module.CustomerLogin })));
+const CustomerSignUp = lazy(() => import('./components/auth/CustomerSignUp').then(module => ({ default: module.CustomerSignUp })));
+
+// delivery panel
+const DeliveryPanel = lazy(() => import('./components/delivery/DeliveryPanel').then(module => ({ default: module.DeliveryPanel })));
+
+// admin pages
+const Dashboard = lazy(() => import('./components/admin/Dashboard').then(module => ({ default: module.Dashboard })));
+const TodaysWork = lazy(() => import('./components/admin/TodaysWork').then(module => ({ default: module.TodaysWork })));
+const TomorrowsList = lazy(() => import('./components/admin/TomorrowsList').then(module => ({ default: module.TomorrowsList })));
+const ReadyOrders = lazy(() => import('./components/admin/ReadyOrders').then(module => ({ default: module.ReadyOrders })));
+const PickupRequests = lazy(() => import('./components/admin/PickupRequests').then(module => ({ default: module.PickupRequests })));
+const CompletedOrders = lazy(() => import('./components/admin/CompletedOrders').then(module => ({ default: module.CompletedOrders })));
+const OrdersRecord = lazy(() => import('./components/admin/OrdersRecord').then(module => ({ default: module.OrdersRecord })));
+const InventoryManagement = lazy(() => import('./components/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement })));
+const ManageCategories = lazy(() => import('./components/admin/ManageCategories').then(module => ({ default: module.ManageCategories })));
+const ManageServices = lazy(() => import('./components/admin/ManageServices').then(module => ({ default: module.ManageServices })));
+const ManageDelivery = lazy(() => import('./components/admin/ManageDelivery').then(module => ({ default: module.ManageDelivery })));
+const Settings = lazy(() => import('./components/admin/Settings').then(module => ({ default: module.Settings })));
+const HeroSettings = lazy(() => import('./components/admin/HeroSettings').then(module => ({ default: module.HeroSettings })));
+const AddManualOrder = lazy(() => import('./components/admin/AddManualOrder').then(module => ({ default: module.AddManualOrder })));
+const DigitalKhata = lazy(() => import('./components/admin/DigitalKhata').then(module => ({ default: module.DigitalKhata })));
+const UdhaarKhata = lazy(() => import('./components/admin/UdhaarKhata').then(module => ({ default: module.UdhaarKhata })));
+const FinancialAnalytics = lazy(() => import('./components/admin/FinancialAnalytics').then(module => ({ default: module.FinancialAnalytics })));
+const PaymentVerification = lazy(() => import('./components/admin/PaymentVerification').then(module => ({ default: module.PaymentVerification })));
+const AdminComments = lazy(() => import('./components/admin/AdminComments').then(module => ({ default: module.AdminComments })));
+const LiveTrackingMap = lazy(() => import('./components/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
 
 function PageLoader() {
   return (
@@ -64,6 +114,67 @@ function PageLoader() {
 }
 
 // admin ki routes ko lock kar rahe han
+// customer page layout
+function CustomerLayout({ children }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col relative">
+      <Header />
+      <main className="flex-1 mt-16 pb-20 md:pb-24">
+        <Suspense fallback={<PageLoader />}>
+          {children}
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function AdminLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const initial = user?.name?.charAt(0)?.toUpperCase() || 'A';
+  return (
+    <div className="flex bg-background" style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
+      {/* Mobile overlay */}
+      <div
+        className={`admin-sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
+      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="admin-main-content">
+        {/* Top header bar */}
+        <div className="admin-topbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+              className="admin-mobile-menu-btn"
+              style={{ padding: '0.5rem', borderRadius: '0.375rem', display: 'none', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--foreground)' }}
+            >
+              <Menu style={{ width: '1.25rem', height: '1.25rem' }} />
+            </button>
+            <span className="admin-topbar-title">Admin</span>
+          </div>
+          <div className="admin-topbar-actions">
+            <LanguageToggle />
+            <div className="admin-topbar-avatar" title={user?.name || 'Admin'}>{initial}</div>
+          </div>
+        </div>
+
+        <main className="admin-main-inner">
+          <Suspense fallback={<PageLoader />}>
+            {children}
+          </Suspense>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// protecting admin routes
 function ProtectedAdminRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();

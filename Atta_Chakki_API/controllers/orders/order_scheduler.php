@@ -1,17 +1,14 @@
 <?php
-// order scheduling algorithm - auto assigns orders to today/tomorrow with ETA calculation
-// processing speed: 2 minutes per kg
-// includes buffer time check and max daily order capacity
+// orders ko aaj ya kal pe schedule kar rahe han yahan logic k sath
+// 2 min per kg speed hai shop ki
+// isme buffer time aur max orders bhi check hoty hain
 
 // Timezone safety net — ensure we always use Pakistan time for scheduling
 if (date_default_timezone_get() === 'UTC') {
     date_default_timezone_set('Asia/Karachi');
 }
 
-/**
- * fetches shop operational hours + scheduling config from store_settings table
- * returns: opening, closing, processing_time_per_kg, buffer_time_minutes, max_daily_orders
- */
+// shop ki timings aur setting nikal rahe han db se yahan par
 function getOperationalHours($conn) {
     $opening = '09:00';
     $closing = '20:00';
@@ -55,9 +52,7 @@ function getOperationalHours($conn) {
     ];
 }
 
-/**
- * calculates total weight of an order from its items
- */
+// order ka total weight calculate kar rahe han items k hisab se
 function calculateOrderWeight($conn, $order_id) {
     $total_weight = 0;
     
@@ -92,10 +87,7 @@ function calculateOrderWeight($conn, $order_id) {
     return $total_weight;
 }
 
-/**
- * gets the last scheduled order's completion time for a given date
- * this tells us when the next order can start
- */
+// pichla order kab khatam ho raha wo dekh rahe han yahan
 function getLastCompletionTime($conn, $date) {
     $sql = "SELECT estimated_completion_time FROM orders 
             WHERE assigned_date = ? 
@@ -115,9 +107,7 @@ function getLastCompletionTime($conn, $date) {
     return null;
 }
 
-/**
- * gets the next queue position for a given date
- */
+// queue me agla number kya hai wo nikal rahe han hum yahan
 function getNextQueuePosition($conn, $date) {
     $sql = "SELECT MAX(queue_position) as max_pos FROM orders 
             WHERE assigned_date = ? 
@@ -135,9 +125,7 @@ function getNextQueuePosition($conn, $date) {
     return 1;
 }
 
-/**
- * counts active orders for a specific date (excludes cancelled/completed)
- */
+// aaj ya kal kitne orders hain total wo count kar rahe han hum
 function getActiveOrderCount($conn, $date) {
     $sql = "SELECT COUNT(*) as order_count FROM orders 
             WHERE assigned_date = ? 
@@ -151,18 +139,8 @@ function getActiveOrderCount($conn, $date) {
     return intval($row['order_count']);
 }
 
-/**
- * PRE-CHECK FUNCTION: determines if a new order can be placed today or must go to tomorrow
- * called from frontend BEFORE order is placed to show the user expected date
- * 
- * Decision logic:
- *   Step 1 (Time Check):  current_time > closingTime - bufferTime  → TOMORROW
- *   Step 2 (Load Check):  today_order_count >= maxDailyOrders       → TOMORROW
- *   Step 3 (Capacity):    order ETA exceeds closing time            → TOMORROW
- *   Otherwise:            → TODAY
- * 
- * Returns: assigned_date, reason, schedule_info
- */
+// check kar rahe han k aaj order le sakte hain ya kal pe dalna hai hum ne
+// front end pe dikhane k liye k kab tak delivery hogi
 function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
@@ -277,11 +255,7 @@ function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     ];
 }
 
-/**
- * MAIN SCHEDULING FUNCTION
- * called after an order is placed to calculate ETA and assign date
- * Now incorporates buffer time and max daily order checks
- */
+// main scheduling logic - orders ko aaj ya kal assign kar rahe han hum yahan
 function scheduleOrder($conn, $order_id) {
     // step 1: get operational hours + scheduling config from db
     $hours = getOperationalHours($conn);
@@ -408,10 +382,7 @@ function scheduleOrder($conn, $order_id) {
     ];
 }
 
-/**
- * recalculates ETAs for all pending orders on a specific date
- * called after an override to fix the queue
- */
+// sari ETAs ko dobara set kar rahe han (jab koi override karta hai tab)
 function recalculateSchedule($conn, $date) {
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
@@ -464,10 +435,7 @@ function recalculateSchedule($conn, $date) {
     return count($orders);
 }
 
-/**
- * gets capacity info for a specific date
- * returns total minutes used, remaining, percentage, and order count info
- */
+// shop ki capacity check kar rahe han kisi bhi date k liye hum log
 function getCapacityInfo($conn, $date) {
     $hours = getOperationalHours($conn);
     

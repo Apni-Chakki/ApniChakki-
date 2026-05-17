@@ -28,6 +28,7 @@ export function DigitalKhata() {
   const [customCategory, setCustomCategory] = useState('');
   const [productCategories, setProductCategories] = useState([]);
   const [description, setDescription] = useState('');
+  const [expenseDate, setExpenseDate] = useState(new Date());
   const [isAdding, setIsAdding] = useState(false);
 
   const [dateRange, setDateRange] = useState({
@@ -101,10 +102,18 @@ export function DigitalKhata() {
 
     setIsSaving(true);
     try {
-      // Format local time for MySQL (YYYY-MM-DD HH:MM:SS)
+      // Use the selected expenseDate but keep current time of day if it's today
+      let finalDate = expenseDate;
       const now = new Date();
-      const offset = now.getTimezoneOffset() * 60000;
-      const localISOTime = (new Date(now - offset)).toISOString().slice(0, 19).replace('T', ' ');
+      if (expenseDate.toDateString() === now.toDateString()) {
+        finalDate = now;
+      } else {
+        // For a past date, just use noon as a default time, or current hour/minute
+        finalDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+      }
+      
+      const offset = finalDate.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(finalDate - offset)).toISOString().slice(0, 19).replace('T', ' ');
 
       const finalCategory = category === "Other" ? customCategory.trim() : category;
 
@@ -130,6 +139,7 @@ export function DigitalKhata() {
         setCategory('');
         setCustomCategory('');
         setDescription('');
+        setExpenseDate(new Date());
         setIsAdding(false);
         fetchExpenses(); // Reload to get fresh totals and data
       } else {
@@ -194,17 +204,19 @@ export function DigitalKhata() {
 
   const filteredExpenses = expenses.filter(e => {
     if (!dateRange || !dateRange.from) return true;
-    const expenseDate = new Date(e.date);
+    
+    // Replace space with T to fix Safari/iOS Invalid Date bug with MySQL timestamps
+    const safeDateStr = typeof e.date === 'string' ? e.date.replace(' ', 'T') : e.date;
+    const expenseDate = new Date(safeDateStr);
+    
     const fromDate = new Date(dateRange.from);
     fromDate.setHours(0, 0, 0, 0);
     
     if (expenseDate < fromDate) return false;
     
-    if (dateRange.to) {
-      const toDate = new Date(dateRange.to);
-      toDate.setHours(23, 59, 59, 999);
-      if (expenseDate > toDate) return false;
-    }
+    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+    toDate.setHours(23, 59, 59, 999);
+    if (expenseDate > toDate) return false;
     
     return true;
   });
@@ -317,16 +329,49 @@ export function DigitalKhata() {
               )}
             </div>
             
-            <div>
-              <Label htmlFor="amount">Amount (Rs)</Label>
-              <Input 
-                id="amount" 
-                type="number" 
-                placeholder="0.00" 
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                disabled={isSaving}
-              />
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="amount">Amount (Rs)</Label>
+                <Input 
+                  id="amount" 
+                  type="number" 
+                  className="mt-1"
+                  placeholder="0.00" 
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+
+              <div>
+                <Label>Expense Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal mt-1",
+                        !expenseDate && "text-muted-foreground"
+                      )}
+                      disabled={isSaving}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {expenseDate ? format(expenseDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={expenseDate}
+                      onSelect={(date) => {
+                        if (date) setExpenseDate(date);
+                      }}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -356,6 +401,29 @@ export function DigitalKhata() {
           <h3 className="font-semibold">Expense Records</h3>
           
           <div className="flex items-center gap-2">
+            <Select 
+              onValueChange={(value) => {
+                const now = new Date();
+                if (value === 'current') {
+                  setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+                } else if (value === 'last') {
+                  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                  setDateRange({ from: startOfMonth(d), to: endOfMonth(d) });
+                } else if (value === 'all') {
+                  setDateRange(undefined);
+                }
+              }}
+            >
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="Quick Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">This Month</SelectItem>
+                <SelectItem value="last">Last Month</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -389,7 +457,7 @@ export function DigitalKhata() {
                   defaultMonth={dateRange?.from}
                   selected={dateRange}
                   onSelect={setDateRange}
-                  numberOfMonths={2}
+                  numberOfMonths={1}
                 />
               </PopoverContent>
             </Popover>
@@ -441,12 +509,12 @@ export function DigitalKhata() {
                     </TableCell>
                     <TableCell>
                       <Button 
-                        variant="ghost" 
+                        variant="destructive" 
                         size="icon" 
-                        className="text-destructive hover:bg-destructive/10"
+                        className="h-8 w-8 px-0 flex items-center justify-center"
                         onClick={() => handleDelete(expense.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-white" />
                       </Button>
                     </TableCell>
                   </TableRow>

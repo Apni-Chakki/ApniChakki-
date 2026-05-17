@@ -11,10 +11,12 @@ try {
     $today = date('Y-m-d');
     
     // get orders that are processing/pending for today (by assigned_date or by status for backward compat)
+    // Exclude split_parent orders (they are logical containers, not real work items)
     $sql = "SELECT * FROM orders 
             WHERE (
                 (assigned_date IS NULL OR assigned_date = '' OR assigned_date <= ?)
                 AND TRIM(LOWER(status)) IN ('pending', 'processing')
+                AND TRIM(LOWER(status)) != 'split_parent'
             )
             ORDER BY queue_position ASC, created_at ASC";
     $stmt = $conn->prepare($sql);
@@ -42,7 +44,7 @@ try {
         $order_id = $row['id'];
         $items = [];
         $has_trip_item = false;
-        $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase FROM order_items WHERE order_id = '$order_id'");
+        $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = '$order_id'");
         while($i = $item_res->fetch_assoc()) {
              $pid = $i['product_id'];
              $prod_res = $conn->query("SELECT name, unit FROM products WHERE id = '$pid'");
@@ -80,7 +82,39 @@ try {
         // Flag carried-forward orders (created before today)
         $created_date = date('Y-m-d', strtotime($row['created_at']));
         $row['is_carried_forward'] = ($created_date < $today) ? true : false;
-        
+
+        // ── Split batch info ────────────────────────────────────────────────
+        // Check if this order is part of a split (has a parent_order_id)
+        $row['is_split_batch']    = false;
+        $row['all_siblings_ready'] = false;
+        $row['siblings']           = [];
+
+        $parentColChk = $conn->query("SHOW COLUMNS FROM orders LIKE 'parent_order_id'");
+        if ($parentColChk && $parentColChk->num_rows > 0) {
+            $parentId = intval($row['parent_order_id'] ?? 0);
+            if ($parentId > 0) {
+                $row['is_split_batch'] = true;
+                // Fetch all siblings (same parent)
+                $sibStmt = $conn->prepare(
+                    "SELECT id, status, batch_index, assigned_date, total_weight_kg FROM orders WHERE parent_order_id = ? ORDER BY batch_index ASC"
+                );
+                $sibStmt->bind_param("i", $parentId);
+                $sibStmt->execute();
+                $sibRes = $sibStmt->get_result();
+                $siblings = [];
+                while ($sib = $sibRes->fetch_assoc()) {
+                    $siblings[] = $sib;
+                }
+                $sibStmt->close();
+                $row['siblings'] = $siblings;
+
+                // all_siblings_ready = all OTHER children have status 'ready' or 'batch_ready'
+                $notReady = array_filter($siblings, fn($s) => $s['id'] != $row['id'] && !in_array($s['status'], ['ready', 'batch_ready']));
+                $row['all_siblings_ready'] = (count($siblings) > 0 && count($notReady) === 0);
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         $orders[] = $row;
     }
     $stmt->close();

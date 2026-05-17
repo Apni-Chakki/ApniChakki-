@@ -27,8 +27,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Truck, UserPlus, Trash2 } from 'lucide-react';
+import { Truck, UserPlus, Trash2, Calendar, SplitSquareHorizontal } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -46,6 +56,11 @@ export function TomorrowsList() {
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+
+  const [splitOrder, setSplitOrder] = useState(null);
+  const [splitBatches, setSplitBatches] = useState([]);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [heavyThreshold, setHeavyThreshold] = useState(100);
 
   const fetchPersonnel = async () => {
     try {
@@ -79,7 +94,20 @@ export function TomorrowsList() {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
+      const data = await res.json();
+      if (data.success && data.settings?.heavyOrderThreshold) {
+        setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
+    }
+  };
+
   useEffect(() => {
+    fetchSettings();
     fetchPersonnel();
     loadOrders();
     const interval = setInterval(loadOrders, 8000);
@@ -170,6 +198,81 @@ export function TomorrowsList() {
       toast.error('Network error');
     } finally {
       setOverriding(null);
+    }
+  };
+
+  const openSplitModal = (order) => {
+    const totalKg = parseFloat(order.total_weight_kg || 0);
+    const suggested = totalKg > 0 ? Math.floor(totalKg / 2) : '';
+    
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    setSplitBatches([
+      { id: Date.now() + 1, date: today.toISOString().slice(0, 10), weight: suggested.toString() },
+      { id: Date.now() + 2, date: tomorrow.toISOString().slice(0, 10), weight: totalKg > 0 ? (totalKg - suggested).toString() : '' }
+    ]);
+    setSplitOrder(order);
+  };
+
+  const closeSplitModal = () => {
+    setSplitOrder(null);
+    setSplitBatches([]);
+  };
+
+  const handleSplitOrder = async () => {
+    if (!splitOrder) return;
+    const totalKg = parseFloat(splitOrder.total_weight_kg || 0);
+
+    let sum = 0;
+    const validBatches = [];
+    
+    for (let i = 0; i < splitBatches.length; i++) {
+      const b = splitBatches[i];
+      const w = parseFloat(b.weight);
+      if (isNaN(w) || w <= 0) {
+        toast.error(`Batch ${i + 1} weight must be > 0`);
+        return;
+      }
+      if (!b.date) {
+        toast.error(`Batch ${i + 1} date is missing`);
+        return;
+      }
+      sum += w;
+      validBatches.push({ weight: w, date: b.date });
+    }
+
+    if (totalKg > 0) {
+      const diff = Math.abs(sum - totalKg);
+      if (diff > 0.5) {
+        toast.error(`Batches sum (${sum.toFixed(1)}kg) does not match total ${totalKg}kg.`);
+        return;
+      }
+    }
+
+    setIsSplitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: splitOrder.id,
+          batches: validBatches
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`✅ Order #${splitOrder.id} split successfully!`);
+        closeSplitModal();
+        loadOrders();
+      } else {
+        toast.error(result.message || "Failed to split order");
+      }
+    } catch (error) {
+      toast.error("Network error — could not split order");
+    } finally {
+      setIsSplitting(false);
     }
   };
 
@@ -306,7 +409,11 @@ export function TomorrowsList() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {orders.map((order) => (
+          {orders.map((order) => {
+            const isSplitBatch = order.is_split_batch === true;
+            const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+            
+            return (
             <Card key={order.id} className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all rounded-xl bg-white ${
               order.is_manually_overridden === '1' || order.is_manually_overridden === 1 
                 ? 'border-l-amber-500' 
@@ -472,11 +579,23 @@ export function TomorrowsList() {
                         Cancel
                       </Button>
                     </div>
+
+                    {/* Split Button below the flex row */}
+                    {isHeavy && !isSplitBatch && (
+                      <Button
+                        variant="outline"
+                        className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium animate-pulse"
+                        onClick={() => openSplitModal(order)}
+                      >
+                        <SplitSquareHorizontal className="h-4 w-4 mr-2" />
+                        Split Order
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
 
@@ -513,6 +632,130 @@ export function TomorrowsList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Split Order Modal ───────────────────────────────────────── */}
+      <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SplitSquareHorizontal className="h-5 w-5" />
+              Heavy Order Split — #{splitOrder?.id}
+            </DialogTitle>
+            <DialogDescription>
+              This order is <strong>{parseFloat(splitOrder?.total_weight_kg || 0).toFixed(1)} kg</strong> — exceeding the limit ({heavyThreshold} kg).
+              Split it into <em>Today</em> and <em>Tomorrow</em> batches.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Warning Banner */}
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <p>
+              After splitting, <strong>Bill and Mark as Ready</strong> will only be available when
+              <strong> all batches are complete</strong>.
+            </p>
+          </div>
+
+          <div className="space-y-3 mt-4 max-h-[350px] overflow-y-auto pr-2">
+            {splitBatches.map((batch, idx) => (
+              <div key={batch.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-md border border-slate-200">
+                <div className="font-semibold text-slate-500 w-6">{idx + 1}.</div>
+                <div className="flex-1">
+                  <Label className="text-xs mb-1 block text-slate-600">Date</Label>
+                  <Input 
+                    type="date" 
+                    value={batch.date}
+                    onChange={(e) => {
+                      const newB = [...splitBatches];
+                      newB[idx].date = e.target.value;
+                      setSplitBatches(newB);
+                    }}
+                  />
+                </div>
+                <div className="w-24">
+                  <Label className="text-xs mb-1 block text-slate-600">Weight (kg)</Label>
+                  <Input 
+                    type="number" 
+                    min="0.1" step="0.5" 
+                    value={batch.weight}
+                    onChange={(e) => {
+                      const newB = [...splitBatches];
+                      newB[idx].weight = e.target.value;
+                      setSplitBatches(newB);
+                    }}
+                  />
+                </div>
+                <div className="pt-5">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    disabled={splitBatches.length <= 2}
+                    onClick={() => {
+                      if (splitBatches.length > 2) {
+                        setSplitBatches(splitBatches.filter(b => b.id !== batch.id));
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-2 text-right">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+              onClick={() => {
+                const lastDate = new Date(splitBatches[splitBatches.length - 1].date);
+                lastDate.setDate(lastDate.getDate() + 1);
+                setSplitBatches([...splitBatches, { 
+                  id: Date.now(), 
+                  date: lastDate.toISOString().slice(0, 10), 
+                  weight: '' 
+                }]);
+              }}
+            >
+              + Add Batch
+            </Button>
+          </div>
+
+          {/* Live total check */}
+          {splitOrder && (() => {
+            const total = parseFloat(splitOrder.total_weight_kg || 0);
+            const sum = splitBatches.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
+            const diff = Math.abs(sum - total);
+            const ok = diff <= 0.5;
+            return total > 0 ? (
+              <div className={`text-xs font-medium rounded px-3 py-2 mt-4 ${ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                {ok
+                  ? `✅ Total: ${sum.toFixed(1)} kg — Valid!`
+                  : `⚠️ Total: ${sum.toFixed(1)} kg (Expected ~${total} kg) — Mismatch`}
+              </div>
+            ) : null;
+          })()}
+
+          <DialogFooter className="gap-2">
+            <Button onClick={closeSplitModal} disabled={isSplitting} className="hover:opacity-90">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSplitOrder}
+              disabled={isSplitting}
+              className="hover:opacity-90"
+            >
+              {isSplitting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Splitting...</>
+              ) : (
+                <><SplitSquareHorizontal className="h-4 w-4 mr-2" /> Split Order</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </TooltipProvider>
   );

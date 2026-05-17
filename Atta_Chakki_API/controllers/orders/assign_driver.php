@@ -47,8 +47,6 @@ if ($driver_name !== '') {
     // Determine new status when assigning driver
     if ($current_status === 'pickup_pending') {
         $new_status = 'pickup_assigned';
-    } else if (in_array($current_status, ['pending', 'processing', 'ready'])) {
-        $new_status = 'out-for-delivery';
     }
 }
 

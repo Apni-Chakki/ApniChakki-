@@ -1,5 +1,5 @@
 <?php
-// place order api
+// order place karne wali api
 require_once __DIR__ . '/config/cors.php';
 include __DIR__ . '/config/connect.php';
 
@@ -20,7 +20,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     $is_kg_order = isset($data->is_kg_order) ? filter_var($data->is_kg_order, FILTER_VALIDATE_BOOLEAN) : false;
     $order_type = isset($data->order_type) ? $data->order_type : 'delivery';
     
-    // mapping payment methods to db values
+    // payment methods set ho rahe hain yahan
     $method_map = [
         'cash' => 'cod',
         'cod' => 'cod', 
@@ -34,50 +34,76 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     $total_amount = 0;
     $valid_items = [];
     $has_trip_item = false;
+    $has_pending_weight_item = false;
     $non_trip_total = 0.0;
 
-    // calculating total from db prices and detecting 'trip' unit items
+    // total calculate ho raha hai products ka
     foreach($cart_items as $item) {
         $pid = $item->id;
-        $query = $conn->prepare("SELECT price, unit FROM products WHERE id = ?");
+        $query = $conn->prepare("SELECT price, unit, is_grinding_service, cleaning_price, grinding_price FROM products WHERE id = ?");
         $query->bind_param("i", $pid);
         $query->execute();
         $res = $query->get_result();
         
         if ($row = $res->fetch_assoc()) {
-            $price = floatval($row['price']);
             $unit = isset($row['unit']) ? strtolower(trim($row['unit'])) : '';
             $qty = floatval($item->qty);
+            $is_grinding_service = (int)$row['is_grinding_service'];
+            $is_cleaning = isset($item->is_cleaning) ? (int)$item->is_cleaning : 0;
+            $is_grinding = isset($item->is_grinding) ? (int)$item->is_grinding : 0;
+            $item_is_pending = isset($item->is_weight_pending) ? (int)$item->is_weight_pending : 0;
+
+            if ($item_is_pending) $has_pending_weight_item = true;
+
+            if ($is_grinding_service) {
+                $price = 0;
+                if ($is_cleaning) $price += floatval($row['cleaning_price']);
+                if ($is_grinding) $price += floatval($row['grinding_price']);
+                // If both are 0, fallback to default price
+                if ($price <= 0 && !$is_cleaning && !$is_grinding) $price = floatval($row['price']);
+            } else {
+                $price = floatval($row['price']);
+            }
 
             if ($unit === 'trip') {
                 $has_trip_item = true;
-                // for trip items price is TBD — do not include in order total until admin confirms weight
+                $has_pending_weight_item = true;
                 $valid_items[] = [
                     "product_id" => $pid,
                     "quantity" => $qty,
                     "price" => $price,
-                    "unit" => $unit
+                    "unit" => $unit,
+                    "is_cleaning" => $is_cleaning,
+                    "is_grinding" => $is_grinding,
+                    "is_weight_pending" => 1
                 ];
             } else {
-                $non_trip_total += ($price * $qty);
+                if (!$item_is_pending) {
+                    $non_trip_total += ($price * $qty);
+                }
                 $valid_items[] = [
                     "product_id" => $pid,
                     "quantity" => $qty,
                     "price" => $price,
-                    "unit" => $unit
+                    "unit" => $unit,
+                    "is_cleaning" => $is_cleaning,
+                    "is_grinding" => $is_grinding,
+                    "is_weight_pending" => $item_is_pending
                 ];
             }
         }
         $query->close();
     }
 
-    // For orders that include Trip items, we keep only non-trip sum in DB total (or 0 if none)
+    // trip items k liye logic
     $total_amount = $non_trip_total;
 
-    // For orders that include Trip items → pickup flow (TBD pricing, admin weighs later)
-    // For Kg orders → immediate pricing, bypass admin weight step
+    // trip ya pickup flow check ho raha hai
     if ($has_trip_item) {
-        $total_amount = 0;
+        $total_amount = $non_trip_total; // keep what we have
+        $is_pickup_request = true;
+        $is_kg_order = false;
+    } else if ($has_pending_weight_item) {
         $is_pickup_request = true;
         $is_kg_order = false;
     } else if ($is_kg_order || !$is_pickup_request) {
@@ -92,14 +118,15 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         exit();
     }
 
-    // figuring out payment status based on computed total (non-trip total)
-    if ($total_amount <= 0) {
-        // when total is zero (e.g., all items are trip/TBD), keep payment pending
+    // payment status kya hoga wo dekh rahe han yahan
+    if ($total_amount <= 0 && $has_pending_weight_item) {
+        // when total is zero but items are pending, it stays pending until weight is added
         $final_payment_status = 'pending';
         $amount_paid_input = 0;
     } else {
         if ($amount_paid_input >= $total_amount) {
-            $final_payment_status = 'paid';
+            // If there are pending items, even paying full "current" total makes it partial
+            $final_payment_status = $has_pending_weight_item ? 'partial' : 'paid';
             $amount_paid_input = $total_amount;
         } elseif ($amount_paid_input > 0 && $amount_paid_input < $total_amount) {
             $final_payment_status = 'partial';
@@ -112,9 +139,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     $conn->begin_transaction();
 
     try {
-        // inserting into orders table
-        // If the order is a pickup request (trip items), mark as pickup_pending for admin weight confirmation
-        // If it's a Kg order, go straight to 'pending' for immediate scheduling
+        // order table me entry ho rahi hai
         if ($is_pickup_request) {
             $status = 'pickup_pending';
         } else {
@@ -135,18 +160,18 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         $order_id = $conn->insert_id;
         $stmt->close();
 
-        // adding order items
-        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)");
+        // items add kar rahe han order me
+        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, is_cleaning, is_grinding, is_weight_pending) VALUES (?, ?, ?, ?, ?, ?, ?)");
         
         foreach($valid_items as $v_item) {
-            $item_stmt->bind_param("iidd", $order_id, $v_item['product_id'], $v_item['quantity'], $v_item['price']);
+            $item_stmt->bind_param("iiddiii", $order_id, $v_item['product_id'], $v_item['quantity'], $v_item['price'], $v_item['is_cleaning'], $v_item['is_grinding'], $v_item['is_weight_pending']);
             if (!$item_stmt->execute()) {
                 throw new Exception("Failed to add item to order: " . $item_stmt->error);
             }
         }
         $item_stmt->close();
 
-        // deducting stock (skip trip-unit products — they are services, not physical inventory)
+        // stock kam kar rahe han (sirf physical items ka)
         $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?");
         foreach($valid_items as $v_item) {
             if (strtolower(trim($v_item['unit'])) === 'trip') continue; // skip services
@@ -157,7 +182,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         }
         $inv_stmt->close();
 
-        // recording payment if paid
+        // payment record kar rahe han agar paise diye hain
         if ($amount_paid_input > 0) {
             $pay_stmt = $conn->prepare("INSERT INTO payments (order_id, amount, transaction_id, payment_status) VALUES (?, ?, ?, 'completed')");
             $pay_stmt->bind_param("ids", $order_id, $amount_paid_input, $transaction_id);
@@ -167,9 +192,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
 
         $conn->commit();
         
-        // auto-schedule:
-        // - Kg orders: always schedule immediately (weight and price are known)
-        // - Pickup requests (trip items): do NOT schedule until admin confirms weight
+        // auto scheduling wala kaam kar rahe han
         $schedule_result = null;
         if (!$is_pickup_request) {
             require_once __DIR__ . '/controllers/orders/order_scheduler.php';

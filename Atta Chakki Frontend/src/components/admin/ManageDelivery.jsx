@@ -204,7 +204,8 @@ export function ManageDelivery() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-foreground">Manage Delivery Personnel</h2>
+          <h1 className="text-foreground font-bold
+">Manage Delivery Personnel</h1>
           <p className="text-sm text-muted-foreground">
             Add and manage delivery team members
           </p>
@@ -281,11 +282,12 @@ export function ManageDelivery() {
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="destructive"
                           size="icon"
+                          className="h-8 w-8 px-0 flex items-center justify-center"
                           onClick={() => handleDelete(personnel.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4 text-white" />
                         </Button>
                       </div>
                     </TableCell>

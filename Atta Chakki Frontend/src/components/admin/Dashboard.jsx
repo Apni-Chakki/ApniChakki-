@@ -266,29 +266,31 @@ export function Dashboard() {
   };
 
   const statCards = [
-    { title: "Today's Revenue", value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, color: 'text-green-600', bgColor: 'bg-green-50' },
-    { title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
-    { title: 'Pending (New)', value: stats.pendingOrders, icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-50' },
-    { title: 'In Progress', value: stats.processingOrders, icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-50' },
-    { title: 'Tomorrow Scheduled', value: stats.tomorrowScheduled, icon: TrendingUp, color: 'text-indigo-600', bgColor: 'bg-indigo-50' }
+    { id: 'revenue', title: "Today's Revenue",
+ value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
+    { id: 'orders', title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, iconBg: '#FEF3C7', iconColor: '#B45309' },
+    { id: 'completed', title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, iconBg: '#F0FDFA', iconColor: '#0D9488' },
+    { id: 'pending', title: 'Pending (New)', value: stats.pendingOrders, icon: Clock, iconBg: '#FFFFFF', iconColor: '#BE123C' },
+    { id: 'progress', title: 'In Progress', value: stats.processingOrders, icon: Package, iconBg: '#F5F3FF', iconColor: '#7C3AED' },
+    { id: 'tomorrow', title: 'Tomorrow Scheduled', value: stats.tomorrowScheduled, icon: TrendingUp, iconBg: '#EFF6FF', iconColor: '#2563EB' }
   ];
 
   const allTimeCards = [
-    { title: "Total Revenue", value: `Rs. ${(allTimeStats.totalRevenue).toLocaleString()}`, icon: DollarSign, color: 'text-green-700', bgColor: 'bg-green-100' },
-    { title: "Total Orders All-Time", value: allTimeStats.totalOrders, icon: ShoppingBag, color: 'text-blue-700', bgColor: 'bg-blue-100' },
-    { title: 'Total Registered Customers', value: allTimeStats.totalCustomers, icon: Users, color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
-    { title: 'Total Completed Orders', value: allTimeStats.completedOrders, icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-100' }
+    { title: 'Total Revenue', value: `Rs. ${(allTimeStats.totalRevenue).toLocaleString()}`, subtitle: 'Lifetime cumulative', featured: true },
+    { title: 'Total Orders All-Time', value: allTimeStats.totalOrders, subtitle: '↑ 12% growth', subtitleClass: 'text-emerald-600 font-semibold' },
+    { title: 'Total Registered Customers', value: allTimeStats.totalCustomers, subtitle: 'Verified profiles' },
+    { title: 'Total Completed Orders', value: allTimeStats.completedOrders, subtitle: 'Successful fulfillment' }
   ];
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-10 pb-16">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('Dashboard')} Overview</h1>
-          <p className="text-muted-foreground text-sm">Real-time store metrics and alerts</p>
+          <h1 className="text-2xl font-bold
+           sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} Overview</h1>
+          <p className="text-gray-500 text-sm mt-2">Real-time store metrics and alerts</p>
         </div>
-        <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" disabled={isLoading}>
+        <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" style={{ borderColor: '#8b6f47', color: '#8b6f47' }} disabled={isLoading}>
           <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh Stats
         </Button>
@@ -357,24 +359,71 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* TODAY'S OVERVIEW */}
-      <div className="pt-2">
-        <h2 className="text-lg font-bold text-gray-800 mb-4 px-1 border-b border-gray-200 pb-2">Today's Pulse</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* TODAY'S PULSE */}
+      <div>
+        <div className="flex items-center gap-3 mb-7">
+          <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
+          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">Today's Pulse</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
+            const isPending = stat.id === 'pending';
+            const showUrgent = isPending && stats.pendingOrders > 0;
             return (
-              <Card key={index} className="p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200 border-transparent bg-white">
+              <Card
+                key={index}
+                className={`relative overflow-hidden border transition-all duration-200 rounded-xl ${
+                  showUrgent
+                    ? 'border-rose-200 shadow-sm'
+                    : 'border-gray-200/70 bg-white shadow-sm hover:shadow-md'
+                }`}
+                style={showUrgent ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' } : {}}
+              >
                 {isLoading ? (
-                  <Skeleton className="h-12 w-full" />
+                  <div className="p-6"><Skeleton className="h-16 w-full" /></div>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 text-sm font-medium mb-1">{t(stat.title)}</p>
-                      <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{stat.value}</h2>
-                    </div>
-                    <div className={`${stat.bgColor} ${stat.color} p-3 sm:p-4 rounded-xl shadow-inner`}>
-                      <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.5} />
+                  <div className="p-6">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-5 ${showUrgent ? 'text-rose-800' : 'text-gray-500'}`}>
+                      {t(stat.title)}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="shrink-0 flex items-center justify-center"
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          backgroundColor: stat.iconBg,
+                          borderRadius: '12px',
+                          border: '1px solid rgba(0, 0, 0, 0.06)',
+                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <Icon style={{ height: '22px', width: '22px', color: stat.iconColor }} strokeWidth={2.25} />
+                      </div>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-none">{stat.value}</h2>
+                        {showUrgent && (
+                          <span
+                            style={{
+                              backgroundColor: '#dc2626',
+                              color: '#ffffff',
+                              fontSize: '10px',
+                              fontWeight: 800,
+                              letterSpacing: '0.08em',
+                              padding: '4px 9px',
+                              borderRadius: '9999px',
+                              textTransform: 'uppercase',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              boxShadow: '0 1px 3px rgba(220, 38, 38, 0.4)',
+                              lineHeight: 1
+                            }}
+                          >
+                            Urgent
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -384,25 +433,36 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* ALL-TIME STATS OVERVIEW */}
-      <div className="pt-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-4 px-1 border-b border-gray-200 pb-2">All-Time Statistics</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ALL-TIME STATISTICS */}
+      <div className="pt-2">
+        <div className="flex items-center gap-3 mb-7">
+          <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
+          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">All-Time Statistics</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {allTimeCards.map((stat, index) => {
-            const Icon = stat.icon;
+            const isFeatured = stat.featured;
             return (
-              <Card key={index} className="p-4 shadow-sm border border-gray-100 bg-gray-50/50">
+              <Card
+                key={index}
+                className={`relative overflow-hidden transition-all duration-200 rounded-xl ${
+                  isFeatured ? 'border-0 text-white' : 'border border-gray-100 bg-white hover:shadow-md'
+                }`}
+                style={isFeatured ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' } : {}}
+              >
                 {isLoading ? (
-                  <Skeleton className="h-10 w-full" />
+                  <div className="p-6"><Skeleton className={`h-16 w-full ${isFeatured ? 'bg-white/20' : ''}`} /></div>
                 ) : (
-                  <div className="flex items-center gap-4">
-                    <div className={`${stat.bgColor} ${stat.color} p-2.5 rounded-lg border border-white/50 shadow-sm`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">{t(stat.title)}</p>
-                      <h2 className="text-xl font-bold text-gray-900">{stat.value}</h2>
-                    </div>
+                  <div className="p-6">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-5 ${isFeatured ? 'text-white/80' : 'text-gray-500'}`}>
+                      {t(stat.title)}
+                    </p>
+                    <h2 className={`text-3xl font-black tracking-tight leading-none mb-3 ${isFeatured ? 'text-white' : 'text-gray-900'}`}>
+                      {stat.value}
+                    </h2>
+                    <p className={`text-xs ${stat.subtitleClass || (isFeatured ? 'text-white/70 font-medium' : 'text-gray-400 font-medium')}`}>
+                      {stat.subtitle}
+                    </p>
                   </div>
                 )}
               </Card>
@@ -419,149 +479,139 @@ export function Dashboard() {
            setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="text-2xl font-bold text-orange-600 flex items-center gap-2">
-              <AlertCircle className="h-6 w-6" />
-              End of Day (EOD) — Previous Day Review
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden !border-orange-200 !bg-white">
+          <DialogHeader className="shrink-0 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 px-4 py-3">
+            <DialogTitle className="text-lg font-bold text-orange-700 flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Pending Orders
             </DialogTitle>
-            <DialogDescription className="text-base text-gray-700 mt-2">
-              You have <strong>{eodData?.leftover_count || yesterdayOrders.length} pending order(s)</strong> from previous days 
-              (Total Weight: <strong>{eodData?.leftover_total_weight_kg || 0} kg</strong>, Est. Processing: <strong>{eodData?.leftover_total_minutes || 0} mins</strong>).
+            <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
+              {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
             </DialogDescription>
           </DialogHeader>
 
           {/* Step: Loading */}
           {eodStep === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="h-10 w-10 animate-spin text-orange-500 mb-4" />
-              <p className="text-gray-500 font-medium">Loading yesterday's pending orders...</p>
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="bg-orange-100 rounded-full p-4 mb-4">
+                <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+              </div>
+              <p className="text-gray-900 font-semibold text-base">Loading orders...</p>
             </div>
           )}
 
           {/* Step: Select completed orders */}
           {eodStep === 'select' && (
-            <div className="flex flex-col gap-4 min-h-0 flex-1">
-              {/* Instruction banner */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
-                <h3 className="font-bold text-amber-900 text-base flex items-center gap-2">
-                  <History className="h-5 w-5 text-amber-600" />
-                  Which of these orders from yesterday have been completed?
-                </h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Select the orders that were finished. Unselected orders will be carried forward to the <strong>top of Today's Work List</strong>.
-                </p>
-              </div>
-
-              {/* Select All / Summary bar */}
-              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2.5 border">
-                <div className="flex items-center gap-3">
-                  <Checkbox 
-                    id="select-all-eod" 
-                    checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
-                    onCheckedChange={toggleSelectAll}
-                    className="h-5 w-5"
-                  />
-                  <label htmlFor="select-all-eod" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
-                    Select All ({yesterdayOrders.length})
+            <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
+              {/* Info header bar */}
+              <div className="shrink-0 bg-orange-50 px-4 py-2 border-b border-orange-200">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="select-all-eod" className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox 
+                      id="select-all-eod" 
+                      checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
+                      onCheckedChange={toggleSelectAll}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-xs font-bold text-orange-900">Select All</span>
                   </label>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                    {selectedCompleted.size} Completed
-                  </Badge>
-                  <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100">
-                    <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                    {yesterdayOrders.length - selectedCompleted.size} Carry Forward
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <div className="eod-badge-completed">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      Completed: {selectedCompleted.size}
+                    </div>
+                    <div className="eod-badge-pending">
+                      Pending: {yesterdayOrders.length - selectedCompleted.size}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Orders list with checkboxes */}
-              <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: 'calc(90vh - 380px)' }}>
-                <div className="space-y-3 pr-4 pb-2">
+              {/* Scrollable orders list */}
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="space-y-1.5 p-3">
                   {yesterdayOrders.map((order) => {
                     const isChecked = selectedCompleted.has(order.id);
                     return (
                       <div
                         key={order.id}
                         onClick={() => toggleOrderCompleted(order.id)}
-                        className={`relative border rounded-xl p-4 cursor-pointer transition-all duration-200 select-none ${
+                        className={`relative border rounded-lg p-2.5 cursor-pointer transition-all duration-200 select-none ${
                           isChecked 
-                            ? 'bg-green-50/80 border-green-300 shadow-sm ring-1 ring-green-200' 
-                            : 'bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm'
+                            ? 'bg-green-50 border-green-300 shadow-sm' 
+                            : 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-sm'
                         }`}
                       >
-                        {/* Completed overlay badge */}
                         {isChecked && (
-                          <div className="absolute top-3 right-3">
-                            <Badge className="bg-green-600 text-white text-[10px] px-2 py-0.5">
-                              <CheckCircle className="h-3 w-3 mr-1" /> COMPLETED
+                          <div className="absolute top-1.5 right-1.5">
+                            <Badge className="bg-green-600 text-white text-[8px] px-1.5 py-0 font-bold">
+                              ✓
                             </Badge>
                           </div>
                         )}
 
-                        <div className="flex items-start gap-4">
-                          {/* Checkbox */}
-                          <div className="pt-1">
+                        <div className="flex items-start gap-2.5 justify-between">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
                             <Checkbox
                               checked={isChecked}
                               onCheckedChange={() => toggleOrderCompleted(order.id)}
                               onClick={(e) => e.stopPropagation()}
-                              className="h-5 w-5"
+                              className="h-4 w-4 mt-0.5 flex-shrink-0"
                             />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5 mb-1">
+                                <h4 className="font-bold text-sm text-gray-900">#{order.id}</h4>
+                                {!isChecked && (
+                                  <span className="text-xs font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded text-nowrap">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
+                                )}
+                              </div>
+
+                              <div className="text-xs space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <User className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                                  <span className="font-medium truncate">{order.customer_name}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-gray-600 flex-wrap">
+                                  <span className="eod-tag-weight">
+                                    ⚖️ {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg
+                                  </span>
+                                  <span className="eod-tag-time">
+                                    ⏱️ {order.processing_time_minutes || '~'} min
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Order details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-bold text-base text-gray-900">Order #{order.id}</h4>
-                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-5 border-gray-300 text-gray-600">
-                                  {order.assigned_date || new Date(order.created_at).toLocaleDateString()}
-                                </Badge>
-                              </div>
-                              {!isChecked && (
-                                <span className="text-lg font-bold text-gray-800">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
-                              )}
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <User className="h-3.5 w-3.5 text-gray-400" />
-                                <span className="font-medium">{order.customer_name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                <span>{order.customer_phone}</span>
-                              </div>
-                            </div>
-
-                            {/* Items summary */}
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {order.items?.map((item, idx) => (
-                                <span key={idx} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full">
-                                  {item.name} × {item.quantity}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Weight & time chips */}
-                            <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Weight className="h-3 w-3" />
-                                {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Timer className="h-3 w-3" />
-                                {order.processing_time_minutes || '~'} mins
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                <span className="truncate max-w-[180px]">{order.shipping_address || 'N/A'}</span>
-                              </span>
-                            </div>
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {!isChecked && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleOrderCompleted(order.id);
+                                }}
+                                className="eod-btn-done"
+                                title="Mark as completed"
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Done
+                              </button>
+                            )}
+                            {isChecked && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleOrderCompleted(order.id);
+                                }}
+                                className="eod-btn-undo"
+                                title="Mark as pending"
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                                Undo
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -570,42 +620,28 @@ export function Dashboard() {
 
                   {yesterdayOrders.length === 0 && (
                     <div className="text-center py-12 text-gray-400">
-                      <CheckCircle className="h-10 w-10 mx-auto mb-3 text-green-400" />
-                      <p className="font-medium">No pending orders from previous days!</p>
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-400" />
+                      <p className="font-bold text-sm">All Clear!</p>
                     </div>
                   )}
                 </div>
               </ScrollArea>
 
               {/* Action footer */}
-              <div className="shrink-0 border-t pt-4 space-y-3">
-                {/* Visual summary of what will happen */}
-                <div className="grid grid-cols-2 gap-3 text-center">
-                  <div className="bg-green-50 border border-green-200 rounded-lg py-2.5 px-3">
-                    <p className="text-2xl font-bold text-green-700">{selectedCompleted.size}</p>
-                    <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Will be Completed</p>
-                  </div>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg py-2.5 px-3">
-                    <p className="text-2xl font-bold text-orange-700">{yesterdayOrders.length - selectedCompleted.size}</p>
-                    <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Carry Forward to Today</p>
-                  </div>
-                </div>
-
-                <Button 
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-base h-12 shadow-md" 
+              <div className="shrink-0 border-t border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3 space-y-2.5">
+                <button 
+                  className="eod-btn-confirm" 
                   onClick={handleProcessEodSelection}
                   disabled={isProcessingEod}
                 >
                   {isProcessingEod ? (
-                    <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Processing...</>
+                    <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Processing...</>
                   ) : (
-                    <><ArrowRight className="h-5 w-5 mr-2" /> Confirm & Start Today's Work</>
+                    <><ArrowRight className="h-4 w-4 mr-1.5" /> Confirm & Process</>
                   )}
-                </Button>
-
-                <p className="text-xs text-gray-500 text-center">
-                  * Unchecked orders will be placed at the <strong>top</strong> of today's processing queue with priority.
-                  Capacity: {eodData?.opening_time || '08:00'} to {eodData?.closing_time || '21:00'}.
+                </button>
+                <p className="text-[11px] text-gray-700 text-center font-semibold">
+                  ✓ {selectedCompleted.size} done • {yesterdayOrders.length - selectedCompleted.size} to queue
                 </p>
               </div>
             </div>
@@ -613,21 +649,21 @@ export function Dashboard() {
 
           {/* Step: Processing */}
           {eodStep === 'processing' && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="h-10 w-10 animate-spin text-orange-500 mb-4" />
-              <p className="text-gray-700 font-semibold text-lg">Processing your selections...</p>
-              <p className="text-gray-500 text-sm mt-1">Updating order statuses and recalculating today's schedule.</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="bg-orange-100 rounded-full p-3 mb-3">
+                <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+              </div>
+              <p className="text-gray-900 font-semibold text-sm">Processing...</p>
             </div>
           )}
 
           {/* Step: Done */}
           {eodStep === 'done' && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="rounded-full bg-green-100 p-4 mb-4">
-                <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="bg-green-100 rounded-full p-3 mb-3">
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-gray-900 font-bold text-xl">All Set!</p>
-              <p className="text-gray-500 text-sm mt-1">Today's work list has been updated. Redirecting...</p>
+              <p className="text-gray-900 font-semibold text-sm">Done! Redirecting...</p>
             </div>
           )}
         </DialogContent>

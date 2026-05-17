@@ -100,7 +100,7 @@ export function UserAccount() {
             type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
             items: order.items ? order.items.map(item => ({
                quantity: item.quantity,
-               isWeightPending: false, 
+               isWeightPending: item.is_weight_pending == 1, 
                service: {
                  name: item.name,
                  price: item.price_at_purchase || 0
@@ -131,11 +131,11 @@ export function UserAccount() {
   // --- NEW: API Connected Save Function ---
   const handleSave = async () => {
     if (!tempProfile.name.trim()) {
-      toast.error('Name is required');
+      toast.error(t('Name is required'));
       return;
     }
     if (!tempProfile.phone.trim()) {
-      toast.error('Phone number is required');
+      toast.error(t('Phone number is required'));
       return;
     }
 
@@ -267,7 +267,7 @@ export function UserAccount() {
                   </div>
                 </div>
                 {!editMode && (
-                  <Button onClick={handleEdit} variant="outline" className="w-full">
+                  <Button onClick={handleEdit}>
                     <Edit className="h-4 w-4 mr-2" />
                     {t('Edit Details')}
                   </Button>
@@ -358,6 +358,7 @@ export function UserAccount() {
                 </Card>
               ) : (
                 orders.map((order) => {
+                  const hasPending = order.items.some(i => i.isWeightPending);
                   return (
                   <Card key={order.id} className="p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
@@ -369,8 +370,8 @@ export function UserAccount() {
                           </span>
                         </div>                          {order.status === 'cancelled' && order.cancelReason && (
                             <p className="text-sm text-red-600 font-medium mt-1">
-                              Reason: {order.cancelReason} 
-                              {order.cancelledBy && ` (by ${order.cancelledBy})`}
+                              {t('Reason:')} {order.cancelReason}
+                              {order.cancelledBy && ` (${t('by')} ${order.cancelledBy})`}
                             </p>
                           )}                        <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
                       </div>
@@ -378,6 +379,7 @@ export function UserAccount() {
                         <p className="text-sm text-muted-foreground">{t('Total Amount')}</p>
                         <p className="text-primary font-bold">
                           Rs. {order.total.toLocaleString()}
+                          {hasPending && <span className="text-xs ml-1">(+ TBD)</span>}
                         </p>
                       </div>
                     </div>
@@ -391,7 +393,11 @@ export function UserAccount() {
                               {item.service.name} <span className="text-foreground">x {item.quantity}</span>
                             </span>
                             <span className="text-foreground">
-                              Rs. {(item.service.price * item.quantity).toLocaleString()}
+                              {item.isWeightPending ? (
+                                <span className="text-primary font-medium">{t('Pending Wt.')}</span>
+                              ) : (
+                                `Rs. ${(item.service.price * item.quantity).toLocaleString()}`
+                              )}
                             </span>
                           </div>
                         ))}
@@ -425,7 +431,7 @@ export function UserAccount() {
                           </span>
                           {order.amountPaid > 0 && order.paymentStatus !== 'paid' && (
                             <p className="text-xs text-green-600 mt-0.5">
-                              Paid: Rs. {order.amountPaid.toLocaleString()}
+                              {t('Paid:')} Rs. {order.amountPaid.toLocaleString()}
                             </p>
                           )}
                         </div>

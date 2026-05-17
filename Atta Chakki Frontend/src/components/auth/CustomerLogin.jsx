@@ -226,7 +226,7 @@ export function CustomerLogin() {
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('Phone Number')}</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="phone"
                       type="tel"
@@ -235,7 +235,8 @@ export function CustomerLogin() {
                       onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                       maxLength={11}
                       inputMode="numeric"
-                      className="pl-10"
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
                       required
                     />
                   </div>
@@ -245,7 +246,7 @@ export function CustomerLogin() {
                 <div className="space-y-2">
                   <Label htmlFor="password">{t('Password')}</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
@@ -253,7 +254,8 @@ export function CustomerLogin() {
                       value={password}
                       onChange={e => setPassword(e.target.value.replace(/\s/g, ''))}
                       maxLength={50}
-                      className="pl-10 pr-10"
+                      className="ps-12 pe-10"
+                      style={{ paddingInlineStart: '3rem', paddingInlineEnd: '2.5rem' }}
                       required
                     />
                     <button
@@ -262,7 +264,7 @@ export function CustomerLogin() {
                       tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       style={{
-                        position: 'absolute', right: '0.625rem', top: '50%',
+                        position: 'absolute', insetInlineEnd: '0.625rem', top: '50%',
                         transform: 'translateY(-50%)',
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: 'var(--muted-foreground)',

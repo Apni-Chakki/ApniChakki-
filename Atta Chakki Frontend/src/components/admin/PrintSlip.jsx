@@ -70,10 +70,15 @@ export function PrintSlip({ order, open, onClose }) {
     return `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px dashed #ccc;padding:6px 0;">
         <div style="flex:1;padding-right:8px;">
-          <div style="font-weight:600;font-size:12px;">${item.service.name}</div>
-          <div style="color:#555;font-size:10px;">${item.quantity} ${item.service.unit} × Rs.${Number(item.service.price).toLocaleString()}</div>
+          <div style="font-weight:600;font-size:12px;">${item.name || item.service?.name}</div>
+          ${(item.is_cleaning || item.is_grinding) ? `
+            <div style="color:#666;font-size:9px;font-style:italic;margin-bottom:2px;">
+              (${item.is_cleaning ? 'Cleaning' : ''}${item.is_cleaning && item.is_grinding ? ' + ' : ''}${item.is_grinding ? 'Grinding' : ''})
+            </div>
+          ` : ''}
+          <div style="color:#555;font-size:10px;">${item.quantity} ${item.service?.unit || item.unit || 'unit'} × Rs.${Number(item.price_at_purchase || item.service?.price).toLocaleString()}</div>
         </div>
-        <div style="font-weight:700;white-space:nowrap;font-size:12px;">Rs.${(item.quantity * item.service.price).toLocaleString()}</div>
+        <div style="font-weight:700;white-space:nowrap;font-size:12px;">Rs.${(item.quantity * (item.price_at_purchase || item.service?.price)).toLocaleString()}</div>
       </div>`;
   }).join('');
 
@@ -203,8 +208,14 @@ export function PrintSlip({ order, open, onClose }) {
         message += `▫️ *${item.service.name}*${lineBreak}`;
         message += `    _Weight to be confirmed at shop_${lineBreak}`;
       } else {
-        message += `▫️ *${item.service.name}*${lineBreak}`;
-        message += `    ${item.quantity} ${item.service.unit} x Rs.${item.service.price} = *Rs.${(item.quantity * item.service.price).toLocaleString()}*${lineBreak}`;
+        const itemPrice = item.price_at_purchase || item.service?.price;
+        const itemUnit = item.unit || item.service?.unit;
+        const itemName = item.name || item.service?.name;
+        message += `▫️ *${itemName}*${lineBreak}`;
+        if (item.is_cleaning || item.is_grinding) {
+           message += `    _(${item.is_cleaning ? 'Cleaning' : ''}${item.is_cleaning && item.is_grinding ? ' + ' : ''}${item.is_grinding ? 'Grinding' : ''})_${lineBreak}`;
+        }
+        message += `    ${item.quantity} ${itemUnit} x Rs.${itemPrice} = *Rs.${(item.quantity * itemPrice).toLocaleString()}*${lineBreak}`;
       }
     });
     message += `─────────────────────────${lineBreak}`;
@@ -312,16 +323,21 @@ export function PrintSlip({ order, open, onClose }) {
                 {order.items.map((item, idx) => (
                   <div key={idx} className="text-[11px] border-b border-dashed border-border/50 pb-2 last:border-0">
                     <div className="flex justify-between items-start">
-                      <p className="font-semibold flex-1 pr-2 whitespace-normal break-words">{item.service.name}</p>
+                      <p className="font-semibold flex-1 pr-2 whitespace-normal break-words">{item.name || item.service?.name}</p>
                       {!item.isWeightPending && (
-                        <p className="font-bold whitespace-nowrap">Rs.{(item.quantity * item.service.price).toLocaleString()}</p>
+                        <p className="font-bold whitespace-nowrap">Rs.{(item.quantity * (item.price_at_purchase || item.service?.price)).toLocaleString()}</p>
                       )}
                     </div>
+                    {(item.is_cleaning || item.is_grinding) && (
+                      <p className="text-[9px] text-muted-foreground italic mb-1">
+                         ({item.is_cleaning ? 'Cleaning' : ''}{item.is_cleaning && item.is_grinding ? ' + ' : ''}{item.is_grinding ? 'Grinding' : ''})
+                      </p>
+                    )}
                     {item.isWeightPending ? (
                       <p className="text-orange-600 font-bold text-[10px] mt-0.5">⚠ WEIGHT TO BE CONFIRMED</p>
                     ) : (
                       <p className="text-muted-foreground text-[10px] mt-0.5">
-                        {item.quantity} {item.service.unit} × Rs.{Number(item.service.price).toLocaleString()}
+                        {item.quantity} {item.unit || item.service?.unit || 'unit'} × Rs.{Number(item.price_at_purchase || item.service?.price).toLocaleString()}
                       </p>
                     )}
                   </div>

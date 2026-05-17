@@ -147,8 +147,9 @@ export function AdminComments() {
                       variant="destructive" 
                       size="sm" 
                       onClick={() => handleDelete(comment.id)}
+                      className="px-4"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-4 h-4 mr-2 text-white" />
                       Delete
                     </Button>
                   </td>

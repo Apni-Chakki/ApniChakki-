@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Save, Clock, MapPin, Phone, Mail, Megaphone } from 'lucide-react';
+import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal } from 'lucide-react';
+import { Save, Clock, MapPin, Phone, Mail, Megaphone, Map } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -16,14 +17,21 @@ export function Settings() {
     address: 'Lahore, Pakistan',
     openingTime: '08:00',
     closingTime: '20:00',
-    deliveryAreas: 'Sorrunding of Thokar Niaz Baig',
-    deliveryCharge: '50',
-    minOrderForFreeDelivery: '500',
+    deliveryAreas: 'Lahore City Limits', // Updated default
     announcement: 'Special Offer: Get 10% off on your first order of fresh stone-ground flour!',
-    processingTimePerKg: '2'
+    processingTimePerKg: '2',
+    heavyOrderThreshold: '100'
+  });
+
+  // NEW: State for our Dynamic Distance Math
+  const [deliveryConfig, setDeliveryConfig] = useState({
+    base_fare: 50,
+    base_distance: 10,
+    per_km_rate: 10
   });
 
   useEffect(() => {
+    // 1. Fetch General Store Settings
     const fetchSettings = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/get_store_settings.php`);
@@ -32,27 +40,54 @@ export function Settings() {
           setSettings(prev => ({ ...prev, ...data.settings }));
         }
       } catch (error) {
-        console.error("Error fetching settings:", error);
-        // Keep defaults if API is unavailable
+        console.error("Error fetching store settings:", error);
       }
     };
+
+    // 2. Fetch Dynamic Delivery Settings
+    const fetchDeliverySettings = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/get_delivery_settings.php`);
+        const data = await response.json();
+        if (data.success && data.settings) {
+          setDeliveryConfig({
+            base_fare: data.settings.base_fare,
+            base_distance: data.settings.base_distance,
+            per_km_rate: data.settings.per_km_rate
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching delivery settings:", error);
+      }
+    };
+
     fetchSettings();
+    fetchDeliverySettings();
   }, []);
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/update_store_settings.php`, {
+      // 1. Save Store Settings
+      const storeResponse = await fetch(`${API_BASE_URL}/update_store_settings.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings }),
       });
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Settings saved successfully!');
-        // Emit event to notify Footer and Header to refresh settings
+      const storeData = await storeResponse.json();
+
+      // 2. Save Delivery Math Settings
+      const deliveryResponse = await fetch(`${API_BASE_URL}/update_delivery_settings.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deliveryConfig),
+      });
+      const deliveryData = await deliveryResponse.json();
+
+      if (storeData.success && deliveryData.success) {
+        toast.success('All settings saved successfully!');
         window.dispatchEvent(new Event('settingsUpdated'));
       } else {
-        toast.error(data.message || 'Failed to save settings');
+        toast.error('Partial failure: ' + (storeData.message || deliveryData.message));
       }
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -144,7 +179,7 @@ export function Settings() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="mb-6 font-semibold"> Business Hours</h2>
+        <h2 className="mb-6 font-semibold">Business Hours</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="openingTime">Opening Time</Label>
@@ -182,40 +217,59 @@ export function Settings() {
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h2 className="mb-6 font-semibold">Delivery Settings</h2>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="deliveryAreas">Delivery Areas (comma separated)</Label>
-            <Textarea
-              id="deliveryAreas"
-              placeholder="e.g., Sector 15, Green Park, Hauz Khas"
-              value={settings.deliveryAreas}
-              onChange={(e) => setSettings({ ...settings, deliveryAreas: e.target.value })}
-              rows={3}
-            />
+      {/* NEW: Dynamic Delivery Fare UI */}
+      <Card className="p-6 border-blue-200 bg-blue-50/30">
+        <h2 className="mb-6 flex items-center gap-2 font-semibold text-blue-900">
+          <Map className="h-5 w-5" />
+          Dynamic Delivery Geofencing
+        </h2>
+        <div className="space-y-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="base_fare" className="font-bold">Base Fare (Rs.)</Label>
+              <Input
+                id="base_fare"
+                type="number"
+                value={deliveryConfig.base_fare}
+                onChange={(e) => setDeliveryConfig({ ...deliveryConfig, base_fare: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Starting price for nearby deliveries.</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="base_distance" className="font-bold">Base Distance (km)</Label>
+              <Input
+                id="base_distance"
+                type="number"
+                value={deliveryConfig.base_distance}
+                onChange={(e) => setDeliveryConfig({ ...deliveryConfig, base_distance: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Distance covered by the Base Fare.</p>
+            </div>
+
+            <div>
+              <Label htmlFor="per_km_rate" className="font-bold">Per Extra KM Rate (Rs.)</Label>
+              <Input
+                id="per_km_rate"
+                type="number"
+                value={deliveryConfig.per_km_rate}
+                onChange={(e) => setDeliveryConfig({ ...deliveryConfig, per_km_rate: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Fee added for every kilometer past the base distance.</p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="deliveryCharge">Delivery Charge (₹)</Label>
-              <Input
-                id="deliveryCharge"
-                type="number"
-                value={settings.deliveryCharge}
-                onChange={(e) => setSettings({ ...settings, deliveryCharge: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="minOrderForFreeDelivery">Minimum Order for Free Delivery (₹)</Label>
-              <Input
-                id="minOrderForFreeDelivery"
-                type="number"
-                value={settings.minOrderForFreeDelivery}
-                onChange={(e) => setSettings({ ...settings, minOrderForFreeDelivery: e.target.value })}
-              />
-            </div>
+          <div className="bg-white p-4 rounded-lg border border-blue-100 text-sm">
+            <p className="font-semibold text-blue-800 mb-1">How it works on the Checkout Page:</p>
+            <ul className="list-disc list-inside text-muted-foreground text-xs space-y-1">
+              <li>Customer enters area, system maps it to GPS coordinates.</li>
+              <li>System draws a straight line from store GPS to customer GPS.</li>
+              <li>If distance is &le; {deliveryConfig.base_distance}km, fee is Rs. {deliveryConfig.base_fare}.</li>
+              <li>If distance is 15km, fee is: {deliveryConfig.base_fare} + (5km x {deliveryConfig.per_km_rate}) = Rs. {Number(deliveryConfig.base_fare) + (5 * Number(deliveryConfig.per_km_rate))}.</li>
+            </ul>
           </div>
+          
         </div>
       </Card>
 
