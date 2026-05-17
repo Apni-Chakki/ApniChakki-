@@ -360,7 +360,7 @@ export function DeliveryPanel() {
 
   // --- 3. Update Status to Completed + Stop Tracking ---
   const handleCompleteDelivery = async (order) => {
-    if (confirm(`Mark order #${order.id} for ${order.customerName} as delivered?`)) {
+    const doCompleteDelivery = async () => {
       try {
         // Send final "completed" GPS ping
         try {
@@ -441,7 +441,33 @@ export function DeliveryPanel() {
       } catch (error) {
         toast.error('Network error completing delivery');
       }
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Mark order #{order.id} for {order.customerName} as delivered?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              doCompleteDelivery();
+            }} 
+            size="sm"
+            className="bg-green-600 text-white hover:bg-green-700 border-transparent"
+          >
+            Confirm
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   const handleLogout = () => {
@@ -526,7 +552,7 @@ export function DeliveryPanel() {
   };
 
   const handleArrivedAtShopForPickup = async (order) => {
-    if (confirm(`Mark order #${order.id} as Arrived at Shop (Pickup Complete)?`)) {
+    const doArrive = async () => {
       try {
         // GPS tracking band karo
         stopGpsTracking(order.id);
@@ -546,7 +572,33 @@ export function DeliveryPanel() {
       } catch (error) {
         toast.error('Network error');
       }
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Mark order #{order.id} as Arrived at Shop (Pickup Complete)?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              doArrive();
+            }} 
+            size="sm"
+            className="bg-green-600 text-white hover:bg-green-700 border-transparent"
+          >
+            Confirm
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   const handleImComing = async (order) => {

@@ -500,3 +500,34 @@ html, body {
   border-color: #6b7280;
 }
 
+/* ---- Checkbox checked state ---- */
+/* Tailwind JIT nahi chal raha, to data-[state=checked] classes kaam nahi karti.
+   Yahan plain CSS se checkbox ka checked style handle kar rahe han. */
+[data-slot="checkbox"][data-state="checked"] {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* Service card ke orange checkbox — white background + orange tick dikhana hai */
+[data-slot="checkbox"].checkbox-orange[data-state="checked"] {
+  background-color: #ffffff !important;
+  border-color: #c2702a !important;
+}
+
+/* Default checkbox ka tick white hoga (dark background pe) */
+[data-slot="checkbox"][data-state="checked"] [data-slot="checkbox-indicator"] {
+  color: #ffffff;
+}
+
+/* Orange checkbox ka tick orange color me dikhana hai */
+[data-slot="checkbox"].checkbox-orange[data-state="checked"] [data-slot="checkbox-indicator"] {
+  color: #c2702a;
+}
+
+/* Checkbox indicator — tick icon properly dikhane ke liye */
+[data-slot="checkbox-indicator"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+

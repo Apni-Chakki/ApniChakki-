@@ -33,8 +33,7 @@ import {
 import { Textarea } from '../ui/textarea';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Badge } from '../ui/badge';
-import { Truck, UserPlus, Loader2, CalendarClock, Trash2, SplitSquareHorizontal, Weight, AlertTriangle, Calendar } from 'lucide-react';
+import { Truck, UserPlus, Loader2, CalendarClock, Trash2, SplitSquareHorizontal } from 'lucide-react'; 
 import {
   Tooltip,
   TooltipContent,
@@ -50,6 +49,11 @@ export function NewOrders() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Split Order State
+  const [splitOrderModal, setSplitOrderModal] = useState(null);
+  const [todayWeight, setTodayWeight] = useState('');
+  const [tomorrowWeight, setTomorrowWeight] = useState('');
+  const [isSplitting, setIsSplitting] = useState(false);
   // ─── Heavy Order Split ───────────────────────────────────────────────────────
   const [splitOrder, setSplitOrder] = useState(null);      // order being split
   const [splitBatches, setSplitBatches] = useState([]);
@@ -215,6 +219,16 @@ export function NewOrders() {
     }
   };
 
+  // --- 6. SPLIT LARGE ORDER ---
+  const handleSplitOrder = async () => {
+    if (!splitOrderModal) return;
+    
+    const tWeight = parseFloat(todayWeight);
+    const tmWeight = parseFloat(tomorrowWeight);
+
+    if (isNaN(tWeight) || isNaN(tmWeight) || tWeight <= 0 || tmWeight <= 0) {
+      toast.error("Please enter valid weights for today and tomorrow.");
+      return;
   // ─── Open Split Modal ─────────────────────────────────────────────────────
   const openSplitModal = (order) => {
     const totalKg = parseFloat(order.total_weight_kg || order.weightKg || 0);
@@ -269,6 +283,28 @@ export function NewOrders() {
 
     setIsSplitting(true);
     try {
+      const response = await fetch(`${API_BASE_URL}/split_large_order.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: splitOrderModal.id,
+          today_weight: tWeight,
+          tomorrow_weight: tmWeight
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        loadOrders();
+        setSplitOrderModal(null);
+        setTodayWeight('');
+        setTomorrowWeight('');
+      } else {
+        toast.error(result.message || 'Failed to split order');
+      }
+    } catch (error) {
+      toast.error('Network error while splitting order');
       const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -317,6 +353,80 @@ export function NewOrders() {
         <OrdersTable
           orders={orders}
           actions={(order) => {
+            const totalOrderWeight = order.items ? order.items.reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0) : 0;
+
+            return (
+            <div className="flex items-center gap-1 flex-wrap">
+              {totalOrderWeight >= 100 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-purple-200 text-purple-700 hover:bg-purple-50 text-xs h-8"
+                  onClick={() => {
+                    setSplitOrderModal(order);
+                    const half = totalOrderWeight / 2;
+                    setTodayWeight(half.toString());
+                    setTomorrowWeight(half.toString());
+                  }}
+                >
+                  <SplitSquareHorizontal className="h-3 w-3 mr-1" />
+                  Split ({totalOrderWeight}kg)
+                </Button>
+              )}
+
+              {order.type === 'delivery' ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={`text-xs h-8 ${order.deliveryPersonnel ? "border-blue-500 text-blue-600 bg-blue-50 hover:bg-blue-100" : ""}`}
+                    >
+                      <Truck className="h-3 w-3 mr-1" />
+                      {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    
+                    {activePersonnel.length > 0 ? (
+                      activePersonnel.map(person => (
+                        <DropdownMenuItem
+                          key={person.id}
+                          onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
+                          className="cursor-pointer text-xs"
+                        >
+                          <span>{person.name}</span>
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <>
+                        <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onSelect={() => navigate('/admin/delivery')}
+                          className="text-primary cursor-pointer font-medium text-xs"
+                        >
+                          <UserPlus className="h-3 w-3 mr-1" />
+                          Add Staff
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => handleAssignPersonnel(order.id, '')}
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
+                    >
+                      Clear
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0} className="inline-block"> 
+                      <Button size="sm" variant="outline" disabled className="opacity-50 text-xs h-8">
             const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
 
             return (
@@ -426,7 +536,7 @@ export function NewOrders() {
                 Cancel
               </Button>
             </div>
-          )}
+          )}}
         />
 
         {/* ─── Cancel Order Dialog ─────────────────────────────────────── */}
@@ -457,6 +567,59 @@ export function NewOrders() {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Split Order Modal */}
+        <AlertDialog open={!!splitOrderModal} onOpenChange={(open) => {
+          if (!open) {
+            setSplitOrderModal(null);
+          }
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Split Large Order #{splitOrderModal?.id}</AlertDialogTitle>
+              <AlertDialogDescription>
+                This order has a total weight of {splitOrderModal?.items ? splitOrderModal.items.reduce((s, i) => s + parseFloat(i.quantity || 0), 0) : 0} kg. 
+                You can split it to manage part of it today and the rest tomorrow.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="todayWeight">Weight for Today (kg)</Label>
+                <Input
+                  id="todayWeight"
+                  type="number"
+                  value={todayWeight}
+                  onChange={(e) => {
+                    setTodayWeight(e.target.value);
+                    const total = splitOrderModal?.items ? splitOrderModal.items.reduce((s, i) => s + parseFloat(i.quantity || 0), 0) : 0;
+                    const val = parseFloat(e.target.value) || 0;
+                    if (val <= total) {
+                      setTomorrowWeight((total - val).toString());
+                    }
+                  }}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tomorrowWeight">Weight for Tomorrow (kg)</Label>
+                <Input
+                  id="tomorrowWeight"
+                  type="number"
+                  value={tomorrowWeight}
+                  onChange={(e) => setTomorrowWeight(e.target.value)}
+                />
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={handleSplitOrder}
+                disabled={isSplitting}
+              >
+                {isSplitting ? 'Splitting...' : 'Split Order'}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {/* ─── Split Order Modal ───────────────────────────────────────── */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
           <DialogContent className="max-w-md">

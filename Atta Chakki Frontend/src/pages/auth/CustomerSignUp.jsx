@@ -1,0 +1,354 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { User, Lock, Phone, ArrowLeft, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Button } from '../../components/common/button';
+import { Input } from '../../components/common/input';
+import { Label } from '../../components/common/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/common/card';
+import { useAuth } from '../../store/AuthContext';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import { useGoogleLogin } from '@react-oauth/google';
+import loginBg from '../../assets/login-page bg.jpg';
+
+const BG_IMAGES = [
+  loginBg,
+  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1400&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1400&auto=format&fit=crop&q=80",
+];
+
+export function CustomerSignUp() {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentBg, setCurrentBg] = useState(0);
+  const navigate = useNavigate();
+  const { signup, googleLogin } = useAuth();
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      try {
+        const success = await googleLogin(tokenResponse.access_token);
+        if (success) {
+          toast.success(t('Account created successfully! You are now logged in.'));
+          navigate('/');
+        } else {
+          toast.error(t('Google signup failed.'));
+        }
+      } catch (err) {
+        toast.error(t('Google signup failed.'));
+      }
+      setIsLoading(false);
+    },
+    onError: () => toast.error(t('Google Sign Up Failed')),
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBg(prev => (prev + 1) % BG_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const validate = () => {
+    if (name.trim().length < 2) {
+      toast.error(t('Full name must be at least 2 characters.'));
+      return false;
+    }
+    if (name.trim().length > 50) {
+      toast.error(t('Full name must not exceed 50 characters.'));
+      return false;
+    }
+    const cleanPhone = phone.replace(/\s/g, '');
+    if (!/^\d{11}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
+      return false;
+    }
+    if (address && address.trim().length > 150) {
+      toast.error(t('Delivery address must not exceed 150 characters.'));
+      return false;
+    }
+    if (/\s/.test(password)) {
+      toast.error(t('Password must not contain spaces.'));
+      return false;
+    }
+    if (password.length < 8) {
+      toast.error(t('Password must be at least 8 characters.'));
+      return false;
+    }
+    if (password.length > 50) {
+      toast.error(t('Password must not exceed 50 characters.'));
+      return false;
+    }
+    if (!/^[A-Z]/.test(password)) {
+      toast.error(t('Password must start with a capital letter.'));
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      toast.error(t('Password must contain at least one number.'));
+      return false;
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      toast.error(t('Password must contain at least one special character.'));
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setIsLoading(true);
+    try {
+      const success = await signup(name.trim(), phone, password, address.trim());
+      if (success) {
+        toast.success(t('Account created successfully! You are now logged in.'));
+        navigate('/');
+      } else {
+        toast.error(t('An account with this phone number may already exist or registration failed.'));
+      }
+    } catch (error) {
+      toast.error(t('An error occurred. Please try again.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* Background image slider */}
+      {BG_IMAGES.map((img, i) => (
+        <div key={i} style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `url(${img})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: i === currentBg ? 1 : 0,
+          transition: 'opacity 1.5s ease-in-out',
+          zIndex: 0,
+        }} />
+      ))}
+
+      {/* Dark overlay */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(135deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.42) 100%)',
+        zIndex: 1,
+      }} />
+
+      {/* Top bar */}
+      <div style={{ position: 'relative', zIndex: 3, padding: '0.875rem 1rem', flexShrink: 0 }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+            color: 'white',
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '0.5rem',
+            padding: '0.45rem 0.875rem',
+            fontSize: '0.875rem', fontWeight: 500,
+            cursor: 'pointer',
+            backdropFilter: 'blur(6px)',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+        >
+          <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
+          {t('Back to Home')}
+        </button>
+      </div>
+
+      {/* Center — card */}
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0.5rem 1rem', position: 'relative', zIndex: 2,
+      }}>
+        <div style={{ width: '100%', maxWidth: '420px' }}>
+          <Card style={{
+            background: 'rgba(255,255,255,0.93)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.4)',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+            borderRadius: '1rem',
+          }}>
+            <CardHeader className="space-y-1 text-center" style={{ paddingBottom: '0.75rem' }}>
+              <div style={{
+                margin: '0 auto 0.5rem',
+                height: '3.25rem', width: '3.25rem',
+                borderRadius: '50%',
+                background: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.22)',
+                flexShrink: 0,
+              }}>
+                <User style={{ width: '1.6rem', height: '1.6rem', color: 'white' }} />
+              </div>
+              <CardTitle className="text-2xl">{t('Create Customer Account')}</CardTitle>
+              <CardDescription>
+                {t('Sign up to track your orders and save your preferences')}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">{t('Full Name')}</Label>
+                  <div className="relative">
+                    <User className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder={t('e.g., Ahmed Ali')}
+                      value={name}
+                      onChange={e => setName(e.target.value.replace(/^ /, '').replace(/  +/g, ' '))}
+                      maxLength={50}
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone">{t('Phone Number')}</Label>
+                  <div className="relative">
+                    <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="03001234567"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+                      maxLength={11}
+                      inputMode="numeric"
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="space-y-2">
+                  <Label htmlFor="address">{t('Delivery Address')} <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>{t('(Optional)')}</span></Label>
+                  <div className="relative">
+                    <MapPin className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Input
+                      id="address"
+                      type="text"
+                      placeholder={t('Enter your street address')}
+                      value={address}
+                      onChange={e => setAddress(e.target.value.replace(/^ /, '').replace(/  +/g, ' '))}
+                      maxLength={150}
+                      className="ps-12"
+                      style={{ paddingInlineStart: '3rem' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t('Password')}</Label>
+                  <div className="relative">
+                    <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder={t('Create a password')}
+                      value={password}
+                      onChange={e => setPassword(e.target.value.replace(/\s/g, ''))}
+                      maxLength={50}
+                      className="ps-12 pe-10"
+                      style={{ paddingInlineStart: '3rem', paddingInlineEnd: '2.5rem' }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      style={{
+                        position: 'absolute', insetInlineEnd: '0.625rem', top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--muted-foreground)',
+                        display: 'flex', alignItems: 'center', padding: '0.125rem',
+                      }}
+                    >
+                      {showPassword
+                        ? <Eye style={{ width: '1rem', height: '1rem' }} />
+                        : <EyeOff style={{ width: '1rem', height: '1rem' }} />
+                      }
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: '0.25rem' }}>
+                    {t('8–50 chars · starts with capital · must include a number & special character')}
+                  </p>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? t('Creating Account...') : t('Sign Up')}
+                </Button>
+              </form>
+
+              {/* Divider */}
+              <div style={{ position: 'relative', margin: '1rem 0' }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+                  <span style={{ width: '100%', borderTop: '1px solid var(--border)' }} />
+                </div>
+                <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                  <span style={{ background: 'rgba(255,255,255,0.93)', padding: '0 0.5rem', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                    {t('Or')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Google SignUp Button */}
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full"
+                onClick={() => handleGoogleLogin()}
+                disabled={isLoading}
+                style={{ height: '44px', fontSize: '0.9375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20">
+                  <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                  <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                  <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                  <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                </svg>
+                {t('Continue with Google')}
+              </Button>
+
+              <div className="text-center text-sm" style={{ marginTop: '1rem' }}>
+                <p className="text-muted-foreground">
+                  {t('Already have an account?')}{' '}
+                  <Link to="/login/customer" className="text-primary hover:underline font-medium">
+                    {t('Log In')}
+                  </Link>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+

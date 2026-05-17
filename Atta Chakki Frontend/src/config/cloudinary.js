@@ -1,7 +1,7 @@
 // cloudinary config for frontend
 export const CLOUDINARY_CLOUD_NAME = 'dufhxkm7e';
 export const CLOUDINARY_UPLOAD_PRESET = 'apni_chakki';
-export const UPLOAD_ENDPOINT = 'http://localhost/atta_chakki_api/upload_image.php';
+export const UPLOAD_ENDPOINT = 'http://localhost/atta_chakki_api/products/upload_image.php';
 
 // file restrictions
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -21,3 +21,7 @@ export const IMAGE_TRANSFORMS = {
   large: 'w_800,h_800,c_fit,q_auto,f_auto',
   fullWidth: 'w_1200,h_auto,q_auto,f_auto'
 };
+
+
+
+
