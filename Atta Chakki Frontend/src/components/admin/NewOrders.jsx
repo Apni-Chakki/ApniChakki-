@@ -34,7 +34,7 @@ import { Textarea } from '../ui/textarea';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
-import { Truck, UserPlus, Loader2, CalendarClock, Trash2, SplitSquareHorizontal, Weight, AlertTriangle, Calendar } from 'lucide-react';
+import { Truck, UserPlus, Loader2, CalendarClock, Trash2, SplitSquareHorizontal, Weight, AlertTriangle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -121,26 +121,6 @@ export function NewOrders() {
     const interval = setInterval(loadOrders, 5000);
     return () => clearInterval(interval);
   }, [fetchSettings, fetchPersonnel, loadOrders]);
-
-  // Update order status
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, status: newStatus })
-      });
-      const result = await response.json();
-      if (result.success) {
-        toast.success(`Order moved to ${newStatus === 'scheduled-tomorrow' ? "Tomorrow's List" : newStatus}`);
-        loadOrders();
-      } else {
-        toast.error("Failed to update status");
-      }
-    } catch (error) {
-      toast.error("Network error");
-    }
-  };
 
   const overrideOrderSchedule = async (orderId, targetDate) => {
     try {
@@ -416,16 +396,16 @@ export function NewOrders() {
                   Tomorrow
                 </Button>
 
-              <Button
-                size="sm"
-                variant="destructive"
-                className="text-xs h-8 px-4"
-                onClick={() => setCancelOrder(order)}
-              >
-                <Trash2 className="h-3 w-3 mr-1 text-white" />
-                Cancel
-              </Button>
-            </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="text-xs h-8 px-4"
+                  onClick={() => setCancelOrder(order)}
+                >
+                  <Trash2 className="h-3 w-3 mr-1 text-white" />
+                  Cancel
+                </Button>
+              </div>
           )}
         />
 
@@ -490,9 +470,7 @@ export function NewOrders() {
                       type="date" 
                       value={batch.date}
                       onChange={(e) => {
-                        const newB = [...splitBatches];
-                        newB[idx].date = e.target.value;
-                        setSplitBatches(newB);
+                        setSplitBatches(splitBatches.map((b, i) => i === idx ? { ...b, date: e.target.value } : b));
                       }}
                     />
                   </div>
@@ -503,9 +481,7 @@ export function NewOrders() {
                       min="0.1" step="0.5" 
                       value={batch.weight}
                       onChange={(e) => {
-                        const newB = [...splitBatches];
-                        newB[idx].weight = e.target.value;
-                        setSplitBatches(newB);
+                        setSplitBatches(splitBatches.map((b, i) => i === idx ? { ...b, weight: e.target.value } : b));
                       }}
                     />
                   </div>
@@ -563,7 +539,7 @@ export function NewOrders() {
             })()}
 
             <DialogFooter className="gap-2">
-              <Button onClick={closeSplitModal} disabled={isSplitting} className="hover:opacity-90">
+              <Button onClick={closeSplitModal} disabled={isSplitting} variant="outline" className="hover:opacity-90">
                 Cancel
               </Button>
               <Button

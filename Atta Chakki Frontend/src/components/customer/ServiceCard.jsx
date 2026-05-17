@@ -117,6 +117,7 @@ export function ServiceCard({ service }) {
             )}
             <p className="text-primary font-bold text-lg">
               Rs. {currentPrice} / {t(service.unit || 'unit')}
+            </p>
             <p className="text-primary">
               Rs. {service.price} / {tDynamic(service.unit || 'unit')}
             </p>

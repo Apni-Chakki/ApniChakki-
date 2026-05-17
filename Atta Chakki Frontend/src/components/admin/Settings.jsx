@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal } from 'lucide-react';
-import { Save, Clock, MapPin, Phone, Mail, Megaphone, Map } from 'lucide-react';
+import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal, Map } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
