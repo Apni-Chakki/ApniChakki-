@@ -1,0 +1,119 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Truck, Lock, Phone, ArrowLeft } from 'lucide-react';
+import { Button } from '../../components/common/button';
+import { Input } from '../../components/common/input';
+import { Label } from '../../components/common/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/common/card';
+import { useAuth } from '../../store/AuthContext';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+
+export function DeliveryLogin() {
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const { t } = useTranslation();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!phone || !password) {
+      toast.error(t('Please enter phone number and password'));
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const success = await login(phone, password, 'delivery');
+      if (success) {
+        toast.success(t('Welcome back!'));
+        navigate('/delivery');
+      } else {
+        toast.error(t('Invalid credentials. Please check your phone number and password.'));
+      }
+    } catch (error) {
+      console.error("Delivery Login Error:", error);
+      toast.error(t('An error occurred. Please try again.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <Button
+          variant="ghost"
+          className="mb-4"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {t('Back to Home')}
+        </Button>
+        
+        <Card>
+          <CardHeader className="space-y-1 text-center">
+            <div className="mx-auto h-12 w-12 rounded-full bg-success flex items-center justify-center mb-2">
+              <Truck className="h-6 w-6 text-success-foreground" />
+            </div>
+            <CardTitle className="text-2xl">{t('Delivery Login')}</CardTitle>
+            <CardDescription>
+              {t('Enter your phone number and password to access the delivery panel')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">{t('Phone Number')}</Label>
+                <div className="relative">
+                  <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="03XX XXXXXXX"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="ps-12"
+                    style={{ paddingInlineStart: '3rem' }}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">{t('Password')}</Label>
+                <div className="relative">
+                  <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder={t('Enter your password')}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="ps-12"
+                    style={{ paddingInlineStart: '3rem' }}
+                    required
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? t('Signing in...') : t('Sign In')}
+              </Button>
+              <div className="text-xs text-center text-muted-foreground mt-4">
+                <p>{t('Contact admin if you forgot your password')}</p>
+                <p className="mt-1 text-primary/80">{t('Default password: 123456')}</p>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+
+
+

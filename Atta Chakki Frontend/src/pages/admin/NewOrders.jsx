@@ -1,0 +1,610 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { OrdersTable } from './OrdersTable';
+import { Button } from '../../components/common/button';
+import { toast } from 'sonner';
+import { API_BASE_URL } from '../../config';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '../../components/common/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/common/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../../components/common/dialog';
+import { Textarea } from '../../components/common/textarea';
+import { Input } from '../../components/common/input';
+import { Label } from '../../components/common/label';
+import { Badge } from '../../components/common/badge';
+import { Truck, UserPlus, Loader2, CalendarClock, Trash2, SplitSquareHorizontal, Weight, AlertTriangle, Calendar } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "../../components/common/tooltip";
+
+export function NewOrders() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activePersonnel, setActivePersonnel] = useState([]);
+  const [cancelOrder, setCancelOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // ─── Heavy Order Split ───────────────────────────────────────────────────────
+  const [splitOrder, setSplitOrder] = useState(null);      // order being split
+  const [splitBatches, setSplitBatches] = useState([]);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [heavyThreshold, setHeavyThreshold] = useState(100); // default, fetched from settings
+  // ────────────────────────────────────────────────────────────────────────────
+
+  const navigate = useNavigate();
+
+  // Fetch heavy order threshold from store settings
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
+      const data = await res.json();
+      if (data.success && data.settings?.heavyOrderThreshold) {
+        setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
+    }
+  }, []);
+
+  // Fetch active delivery personnel
+  const fetchPersonnel = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/manage_delivery.php`);
+      const data = await response.json();
+      if (data.success) {
+        setActivePersonnel(data.personnel.filter(p => p.isActive));
+      }
+    } catch (error) {
+      console.error("Error fetching personnel:", error);
+    }
+  }, []);
+
+  // Load pending orders
+  const loadOrders = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin_orders.php?status=pending`);
+      const data = await response.json();
+
+      if (data.success) {
+        const mappedOrders = data.orders.map(order => ({
+          ...order,
+          id: order.id,
+          customerName: order.customer_name,
+          phone: order.customer_phone,
+          total: parseFloat(order.total_amount),
+          createdAt: order.created_at,
+          paymentMethod: order.payment_method,
+          type: order.shipping_address && order.shipping_address.toLowerCase().includes('pickup') ? 'pickup' : 'delivery',
+          deliveryAddress: order.shipping_address,
+          deliveryPersonnel: order.driver_name,
+          weightKg: parseFloat(order.total_weight_kg || 0),
+        }));
+        setOrders(mappedOrders);
+      }
+    } catch (error) {
+      console.error("Error loading orders:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+    fetchPersonnel();
+    loadOrders();
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
+  }, [fetchSettings, fetchPersonnel, loadOrders]);
+
+  // Update order status
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: newStatus })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`Order moved to ${newStatus === 'scheduled-tomorrow' ? "Tomorrow's List" : newStatus}`);
+        loadOrders();
+      } else {
+        toast.error("Failed to update status");
+      }
+    } catch (error) {
+      toast.error("Network error");
+    }
+  };
+
+  const overrideOrderSchedule = async (orderId, targetDate) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/override_order_schedule.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, target_date: targetDate })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`Order moved to ${targetDate === 'tomorrow' ? "Tomorrow's List" : "Today's Work"}`);
+        loadOrders();
+      } else {
+        toast.error(result.message || "Failed to move order");
+      }
+    } catch (error) {
+      toast.error("Network error");
+    }
+  };
+
+  const handleAssignPersonnel = async (orderId, personnelName, personnelPhone = null) => {
+    setOrders(orders.map(o => o.id === orderId ? { ...o, deliveryPersonnel: personnelName } : o));
+    try {
+      const response = await fetch(`${API_BASE_URL}/assign_driver.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, driver_name: personnelName, driver_phone: personnelPhone })
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (personnelName === '') {
+          toast.info("Driver assignment cleared.");
+        } else {
+          toast.success(`Assigned to ${personnelName} successfully!`);
+        }
+      } else {
+        toast.error("Failed to assign driver in database");
+        loadOrders();
+      }
+    } catch (error) {
+      toast.error("Network error while assigning driver");
+      loadOrders();
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelOrder) return;
+    setIsCancelling(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: cancelOrder.id,
+          reason: cancelReason || 'No reason provided',
+          cancelled_by: 'Admin'
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Order cancelled successfully');
+        loadOrders();
+      } else {
+        toast.error(result.message || 'Failed to cancel order');
+      }
+    } catch (error) {
+      toast.error('Network error while cancelling order');
+    } finally {
+      setIsCancelling(false);
+      setCancelOrder(null);
+      setCancelReason('');
+    }
+  };
+
+  // ─── Open Split Modal ─────────────────────────────────────────────────────
+  const openSplitModal = (order) => {
+    const totalKg = parseFloat(order.total_weight_kg || order.weightKg || 0);
+    const suggested = totalKg > 0 ? Math.floor(totalKg / 2) : '';
+    
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    setSplitBatches([
+      { id: Date.now() + 1, date: today.toISOString().slice(0, 10), weight: suggested.toString() },
+      { id: Date.now() + 2, date: tomorrow.toISOString().slice(0, 10), weight: totalKg > 0 ? (totalKg - suggested).toString() : '' }
+    ]);
+    setSplitOrder(order);
+  };
+
+  const closeSplitModal = () => {
+    setSplitOrder(null);
+    setSplitBatches([]);
+  };
+
+  // ─── Execute Split ────────────────────────────────────────────────────────
+  const handleSplitOrder = async () => {
+    if (!splitOrder) return;
+
+    const totalKg = parseFloat(splitOrder.total_weight_kg || splitOrder.weightKg || 0);
+    let sum = 0;
+    const validBatches = [];
+
+    for (let i = 0; i < splitBatches.length; i++) {
+      const b = splitBatches[i];
+      const w = parseFloat(b.weight);
+      if (isNaN(w) || w <= 0) {
+        toast.error(`Batch ${i + 1} weight must be > 0`);
+        return;
+      }
+      if (!b.date) {
+        toast.error(`Batch ${i + 1} date is missing`);
+        return;
+      }
+      sum += w;
+      validBatches.push({ weight: w, date: b.date });
+    }
+
+    if (totalKg > 0) {
+      const diff = Math.abs(sum - totalKg);
+      if (diff > 0.5) {
+        toast.error(`Batches sum (${sum.toFixed(1)}kg) does not match total ${totalKg}kg.`);
+        return;
+      }
+    }
+
+    setIsSplitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: splitOrder.id,
+          batches: validBatches
+        })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`✅ Order #${splitOrder.id} split successfully!`);
+        closeSplitModal();
+        loadOrders();
+      } else {
+        toast.error(result.message || "Failed to split order");
+      }
+    } catch (error) {
+      toast.error("Network error — could not split order");
+    } finally {
+      setIsSplitting(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if (loading && orders.length === 0) {
+    return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;
+  }
+
+  return (
+    <TooltipProvider>
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">New Orders</h1>
+            <p className="text-sm text-muted-foreground">{orders.length} pending</p>
+          </div>
+          {heavyThreshold && (
+            <Badge variant="outline" className="text-xs text-purple-700 border-purple-300 bg-purple-50">
+              <Weight className="h-3 w-3 mr-1" />
+              Heavy Order Limit: {heavyThreshold} kg
+            </Badge>
+          )}
+        </div>
+
+        <OrdersTable
+          orders={orders}
+          actions={(order) => {
+            const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+
+            return (
+              <div className="flex items-center gap-1 flex-wrap">
+
+                {/* ── Heavy Order Warning + Split Button ── */}
+                {isHeavy && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-purple-400 text-purple-700 bg-purple-50 hover:bg-purple-100 text-xs h-8 font-semibold animate-pulse"
+                        onClick={() => openSplitModal(order)}
+                      >
+                        <SplitSquareHorizontal className="h-3 w-3 mr-1" />
+                        Split Order
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs max-w-[200px]">
+                      <p>⚠️ Heavy Order ({parseFloat(order.total_weight_kg || 0).toFixed(1)}kg &gt; {heavyThreshold}kg)</p>
+                      <p>Can be split into Today + Tomorrow batches</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                {/* Driver Assignment */}
+                {order.type === 'delivery' ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={`text-xs h-8 ${order.deliveryPersonnel ? "border-blue-500 text-blue-600 bg-blue-50 hover:bg-blue-100" : ""}`}
+                      >
+                        <Truck className="h-3 w-3 mr-1" />
+                        {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {activePersonnel.length > 0 ? (
+                        activePersonnel.map(person => (
+                          <DropdownMenuItem
+                            key={person.id}
+                            onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
+                            className="cursor-pointer text-xs"
+                          >
+                            <span>{person.name}</span>
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <>
+                          <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => navigate('/admin/delivery')}
+                            className="text-primary cursor-pointer font-medium text-xs"
+                          >
+                            <UserPlus className="h-3 w-3 mr-1" />
+                            Add Staff
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => handleAssignPersonnel(order.id, '')}
+                        className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
+                      >
+                        Clear
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0} className="inline-block">
+                        <Button size="sm" variant="outline" disabled className="opacity-50 text-xs h-8">
+                          <Truck className="h-3 w-3 mr-1" />
+                          Pickup
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs">
+                      <p>Cannot assign to pickup</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-orange-200 text-orange-600 hover:bg-orange-50 text-xs h-8"
+                  onClick={() => overrideOrderSchedule(order.id, 'tomorrow')}
+                >
+                  <CalendarClock className="h-3 w-3 mr-1" />
+                  Tomorrow
+                </Button>
+
+              <Button
+                size="sm"
+                variant="destructive"
+                className="text-xs h-8 px-4"
+                onClick={() => setCancelOrder(order)}
+              >
+                <Trash2 className="h-3 w-3 mr-1 text-white" />
+                Cancel
+              </Button>
+            </div>
+          )}
+        />
+
+        {/* ─── Cancel Order Dialog ─────────────────────────────────────── */}
+        <AlertDialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Order #{cancelOrder?.id}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to cancel this order? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Textarea
+              placeholder="Optional: Reason for cancellation..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="mt-2"
+            />
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep Order</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive hover:bg-destructive/90"
+                onClick={handleCancelOrder}
+                disabled={isCancelling}
+              >
+                {isCancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* ─── Split Order Modal ───────────────────────────────────────── */}
+        <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
+        <DialogContent className="max-w-md max-h-[95vh] flex flex-col p-0 overflow-hidden">
+          <div className="p-6 pb-2">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <SplitSquareHorizontal className="h-5 w-5 text-blue-600" />
+                Heavy Order Split — #{splitOrder?.id}
+              </DialogTitle>
+              <DialogDescription>
+                Order weight: <strong>{parseFloat(splitOrder?.total_weight_kg || splitOrder?.weightKg || 0).toFixed(1)} kg</strong>.
+                Split into multiple processing batches.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Warning Banner */}
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-800 mt-4">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>
+                <strong>Note:</strong> Bill will be available only after <strong>all batches</strong> are completed.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar" style={{ maxHeight: '400px' }}>
+            <div className="space-y-3">
+              {splitBatches.map((batch, idx) => (
+                <div key={batch.id} className="relative bg-slate-50 p-4 rounded-xl border border-slate-200 transition-all hover:border-blue-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                        {idx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Batch Details</span>
+                    </div>
+                    
+                    {splitBatches.length > 2 && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50"
+                        onClick={() => setSplitBatches(splitBatches.filter(b => b.id !== batch.id))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-slate-500 uppercase">Date</Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input 
+                          type="date" 
+                          value={batch.date}
+                          className="pl-9 h-9 bg-white text-sm"
+                          onChange={(e) => {
+                            const newB = [...splitBatches];
+                            newB[idx].date = e.target.value;
+                            setSplitBatches(newB);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-slate-500 uppercase">Weight (kg)</Label>
+                      <div className="relative">
+                        <Weight className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input 
+                          type="number" 
+                          min="0.1" step="0.5" 
+                          value={batch.weight}
+                          className="pl-9 h-9 bg-white text-sm"
+                          onChange={(e) => {
+                            const newB = [...splitBatches];
+                            newB[idx].weight = e.target.value;
+                            setSplitBatches(newB);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pb-4">
+              <Button 
+                variant="outline" 
+                className="w-full border-dashed border-2 border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-all h-10"
+                onClick={() => {
+                  const lastDate = new Date(splitBatches[splitBatches.length - 1].date);
+                  lastDate.setDate(lastDate.getDate() + 1);
+                  setSplitBatches([...splitBatches, { 
+                    id: Date.now(), 
+                    date: lastDate.toISOString().slice(0, 10), 
+                    weight: '' 
+                  }]);
+                }}
+              >
+                <Package className="h-4 w-4 mr-2" /> Add Another Batch
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-6 pt-2 bg-slate-50/50 border-t">
+            {/* Live total check */}
+            {splitOrder && (() => {
+              const total = parseFloat(splitOrder.total_weight_kg || splitOrder.weightKg || 0);
+              const sum = splitBatches.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
+              const diff = Math.abs(sum - total);
+              const ok = diff <= 0.5;
+              return total > 0 ? (
+                <div className={`text-xs font-medium rounded px-3 py-2 mb-4 ${ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                  {ok
+                    ? `✅ Total: ${sum.toFixed(1)} kg — Valid!`
+                    : `⚠️ Total: ${sum.toFixed(1)} kg (Expected ~${total} kg) — Mismatch`}
+                </div>
+              ) : null;
+            })()}
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={closeSplitModal} disabled={isSplitting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSplitOrder}
+                disabled={isSplitting}
+                className="bg-blue-600 hover:bg-blue-700 font-semibold"
+              >
+                {isSplitting ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Splitting...</>
+                ) : (
+                  <><SplitSquareHorizontal className="h-4 w-4 mr-2" /> Split Order</>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+          </DialogContent>
+        </Dialog>
+
+      </div>
+    </TooltipProvider>
+  );
+}
+
+
+
+

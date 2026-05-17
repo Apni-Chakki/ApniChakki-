@@ -50,16 +50,13 @@ export function NewOrders() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // ─── Heavy Order Split ───────────────────────────────────────────────────────
-  const [splitOrder, setSplitOrder] = useState(null);      // order being split
+  const [splitOrder, setSplitOrder] = useState(null);
   const [splitBatches, setSplitBatches] = useState([]);
   const [isSplitting, setIsSplitting] = useState(false);
-  const [heavyThreshold, setHeavyThreshold] = useState(100); // default, fetched from settings
-  // ────────────────────────────────────────────────────────────────────────────
+  const [heavyThreshold, setHeavyThreshold] = useState(100);
 
   const navigate = useNavigate();
 
-  // Fetch heavy order threshold from store settings
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
@@ -72,7 +69,6 @@ export function NewOrders() {
     }
   }, []);
 
-  // Fetch active delivery personnel
   const fetchPersonnel = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/manage_delivery.php`);
@@ -85,7 +81,6 @@ export function NewOrders() {
     }
   }, []);
 
-  // Load pending orders
   const loadOrders = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/admin_orders.php?status=pending`);
@@ -195,11 +190,10 @@ export function NewOrders() {
     }
   };
 
-  // ─── Open Split Modal ─────────────────────────────────────────────────────
   const openSplitModal = (order) => {
     const totalKg = parseFloat(order.total_weight_kg || order.weightKg || 0);
     const suggested = totalKg > 0 ? Math.floor(totalKg / 2) : '';
-    
+
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
@@ -216,7 +210,6 @@ export function NewOrders() {
     setSplitBatches([]);
   };
 
-  // ─── Execute Split ────────────────────────────────────────────────────────
   const handleSplitOrder = async () => {
     if (!splitOrder) return;
 
@@ -272,7 +265,6 @@ export function NewOrders() {
       setIsSplitting(false);
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────
 
   if (loading && orders.length === 0) {
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;
@@ -302,7 +294,6 @@ export function NewOrders() {
             return (
               <div className="flex items-center gap-1 flex-wrap">
 
-                {/* ── Heavy Order Warning + Split Button ── */}
                 {isHeavy && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -323,7 +314,6 @@ export function NewOrders() {
                   </Tooltip>
                 )}
 
-                {/* Driver Assignment */}
                 {order.type === 'delivery' ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -406,10 +396,11 @@ export function NewOrders() {
                   Cancel
                 </Button>
               </div>
-          )}
+            );
+          }}
         />
 
-        {/* ─── Cancel Order Dialog ─────────────────────────────────────── */}
+        {/* Cancel Order Dialog */}
         <AlertDialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -437,7 +428,7 @@ export function NewOrders() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* ─── Split Order Modal ───────────────────────────────────────── */}
+        {/* Split Order Modal */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -451,7 +442,6 @@ export function NewOrders() {
               </DialogDescription>
             </DialogHeader>
 
-            {/* Warning Banner */}
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
@@ -466,8 +456,8 @@ export function NewOrders() {
                   <div className="font-semibold text-slate-500 w-6">{idx + 1}.</div>
                   <div className="flex-1">
                     <Label className="text-xs mb-1 block text-slate-600">Date</Label>
-                    <Input 
-                      type="date" 
+                    <Input
+                      type="date"
                       value={batch.date}
                       onChange={(e) => {
                         setSplitBatches(splitBatches.map((b, i) => i === idx ? { ...b, date: e.target.value } : b));
@@ -476,9 +466,9 @@ export function NewOrders() {
                   </div>
                   <div className="w-24">
                     <Label className="text-xs mb-1 block text-slate-600">Weight (kg)</Label>
-                    <Input 
-                      type="number" 
-                      min="0.1" step="0.5" 
+                    <Input
+                      type="number"
+                      min="0.1" step="0.5"
                       value={batch.weight}
                       onChange={(e) => {
                         setSplitBatches(splitBatches.map((b, i) => i === idx ? { ...b, weight: e.target.value } : b));
@@ -486,9 +476,9 @@ export function NewOrders() {
                     />
                   </div>
                   <div className="pt-5">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
                       disabled={splitBatches.length <= 2}
                       onClick={() => {
@@ -505,17 +495,17 @@ export function NewOrders() {
             </div>
 
             <div className="mt-2 text-right">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-blue-600 border-blue-200 hover:bg-blue-50"
                 onClick={() => {
                   const lastDate = new Date(splitBatches[splitBatches.length - 1].date);
                   lastDate.setDate(lastDate.getDate() + 1);
-                  setSplitBatches([...splitBatches, { 
-                    id: Date.now(), 
-                    date: lastDate.toISOString().slice(0, 10), 
-                    weight: '' 
+                  setSplitBatches([...splitBatches, {
+                    id: Date.now(),
+                    date: lastDate.toISOString().slice(0, 10),
+                    weight: ''
                   }]);
                 }}
               >
@@ -523,7 +513,6 @@ export function NewOrders() {
               </Button>
             </div>
 
-            {/* Live total check */}
             {splitOrder && (() => {
               const total = parseFloat(splitOrder.total_weight_kg || splitOrder.weightKg || 0);
               const sum = splitBatches.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
