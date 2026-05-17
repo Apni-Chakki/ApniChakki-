@@ -539,11 +539,8 @@ Gristmill's - Fresh Flour Daily
 
     return (
     <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
-      isOverdue 
+      isOverdue
         ? 'border-l-red-600 animate-glow-red relative z-10'
-        : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
-          ? 'border-l-amber-500'
-          : 'border-l-blue-600'
         : isSplitBatch
           ? 'border-l-purple-500'
           : order.is_carried_forward
