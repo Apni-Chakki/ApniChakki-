@@ -61,6 +61,23 @@ try {
         }
         $cust_stmt->close();
 
+        // Fetch mix items for this product
+        $mix_stmt = $conn->prepare("SELECT id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id = ? ORDER BY sort_order ASC");
+        $mix_stmt->bind_param("i", $productId);
+        $mix_stmt->execute();
+        $mix_result = $mix_stmt->get_result();
+        $mix_items = [];
+        while ($mix_row = $mix_result->fetch_assoc()) {
+            $mix_items[] = [
+                'id' => (int)$mix_row['id'],
+                'item_name' => $mix_row['item_name'],
+                'price_per_kg' => floatval($mix_row['price_per_kg']),
+                'default_ratio' => floatval($mix_row['default_ratio']),
+                'sort_order' => (int)$mix_row['sort_order']
+            ];
+        }
+        $mix_stmt->close();
+
         $products[] = [
             'id' => $productId,
             'name' => $row['name'],
@@ -74,9 +91,11 @@ try {
             'stock_quantity' => floatval($row['stock_quantity'] ?? 0),
             'category' => $row['category'] ?? 'Uncategorized',
             'is_grinding_service' => (int)($row['is_grinding_service'] ?? 0),
+            'is_custom_mix' => (int)($row['is_custom_mix'] ?? 0),
             'cleaning_price' => floatval($row['cleaning_price'] ?? 0),
             'grinding_price' => floatval($row['grinding_price'] ?? 0),
             'customizations' => $customizations,
+            'mix_items' => $mix_items,
             'created_at' => $row['created_at'] ?? date('Y-m-d H:i:s')
         ];
     }

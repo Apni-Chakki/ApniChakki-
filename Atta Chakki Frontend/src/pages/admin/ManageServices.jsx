@@ -33,7 +33,9 @@ export function ManageServices() {
     stock_quantity: '100',
     min_stock_level: '10',
     dual_unit: false,
-    weight_options: []
+    weight_options: [],
+    is_custom_mix: false,
+    mix_items: []
   });
   const [weightInput, setWeightInput] = useState('');
 
@@ -146,6 +148,29 @@ export function ManageServices() {
     }));
   };
 
+  // --- Mix Items helpers ---
+  const addMixItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      mix_items: [...prev.mix_items, { item_name: '', price_per_kg: '', default_ratio: '1', sort_order: prev.mix_items.length + 1 }]
+    }));
+  };
+
+  const updateMixItem = (index, field, value) => {
+    setFormData(prev => {
+      const updated = [...prev.mix_items];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, mix_items: updated };
+    });
+  };
+
+  const removeMixItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      mix_items: prev.mix_items.filter((_, i) => i !== index)
+    }));
+  };
+
   // --- Build payload for API ---
   const buildPayload = () => {
     const payload = {
@@ -163,10 +188,19 @@ export function ManageServices() {
       min_stock_level: parseFloat(formData.min_stock_level) || 0,
       dual_unit: formData.dual_unit ? 1 : 0,
       weight_options: formData.weight_options.length > 0 ? formData.weight_options : [],
-      customizations: formData.has_customizations
+      is_custom_mix: formData.is_custom_mix ? 1 : 0,
+      customizations: formData.has_customizations && !formData.is_custom_mix
         ? formData.customizations.map((c, i) => ({
             option_name: c.option_name,
             option_price: parseFloat(c.option_price) || 0,
+            sort_order: i + 1
+          }))
+        : [],
+      mix_items: formData.is_custom_mix
+        ? formData.mix_items.map((m, i) => ({
+            item_name: m.item_name,
+            price_per_kg: parseFloat(m.price_per_kg) || 0,
+            default_ratio: parseFloat(m.default_ratio) || 1,
             sort_order: i + 1
           }))
         : []
@@ -225,21 +259,27 @@ export function ManageServices() {
         ]
       : custs;
 
+    const mixItems = service.mix_items && service.mix_items.length > 0
+      ? service.mix_items.map(m => ({ item_name: m.item_name, price_per_kg: m.price_per_kg.toString(), default_ratio: m.default_ratio.toString(), sort_order: m.sort_order }))
+      : [];
+
     setEditingId(service.id);
     setFormData({
       name: service.name,
       price: service.price.toString(),
       unit: service.unit,
       description: service.description || '',
-      imageUrl: service.image || '',
+      imageUrl: service.image || service.image_url || service.imageUrl || '',
       category: service.category || service.category_name || (categories.length > 0 ? categories[0].name : ''),
-      has_customizations: hasCust,
+      has_customizations: hasCust && !(service.is_custom_mix === 1 || service.is_custom_mix === '1' || service.is_custom_mix === true),
       customizations: fallbackCusts,
       track_inventory: service.track_inventory === 1 || service.track_inventory === true,
       stock_quantity: (service.stock_quantity ?? 100).toString(),
       min_stock_level: (service.min_stock_level ?? 10).toString(),
       dual_unit: service.dual_unit === 1 || service.dual_unit === true,
-      weight_options: Array.isArray(service.weight_options) ? service.weight_options : []
+      weight_options: Array.isArray(service.weight_options) ? service.weight_options : [],
+      is_custom_mix: service.is_custom_mix === 1 || service.is_custom_mix === '1' || service.is_custom_mix === true,
+      mix_items: mixItems
     });
     setWeightInput('');
     setImageFile(null);
@@ -335,7 +375,9 @@ export function ManageServices() {
       stock_quantity: '100',
       min_stock_level: '10',
       dual_unit: false,
-      weight_options: []
+      weight_options: [],
+      is_custom_mix: false,
+      mix_items: []
     });
     setWeightInput('');
     setImageFile(null);
@@ -531,6 +573,7 @@ export function ManageServices() {
                     setFormData(prev => ({
                       ...prev,
                       has_customizations: checked,
+                      is_custom_mix: checked ? false : prev.is_custom_mix,
                       customizations: checked && prev.customizations.length === 0
                         ? [{ option_name: '', option_price: '', sort_order: 1 }]
                         : prev.customizations
@@ -543,7 +586,28 @@ export function ManageServices() {
                 </Label>
               </div>
 
-              {formData.has_customizations && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_custom_mix"
+                  checked={formData.is_custom_mix}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      is_custom_mix: checked,
+                      has_customizations: checked ? false : prev.has_customizations,
+                      mix_items: checked && prev.mix_items.length === 0
+                        ? [{ item_name: '', price_per_kg: '', default_ratio: '1', sort_order: 1 }]
+                        : prev.mix_items
+                    }));
+                  }}
+                  disabled={isSaving}
+                />
+                <Label htmlFor="is_custom_mix" className="font-semibold text-purple-700">
+                  🌾 Custom Mix / Multigrain (Customer chooses proportions)
+                </Label>
+              </div>
+
+              {formData.has_customizations && !formData.is_custom_mix && (
                 <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-primary">Customization Options</p>
@@ -582,6 +646,63 @@ export function ManageServices() {
 
                   <p className="text-xs text-muted-foreground">
                     Total Price (all options selected): Rs. {formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0)}
+                  </p>
+                </div>
+              )}
+
+              {formData.is_custom_mix && (
+                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 animate-in fade-in slide-in-from-top-2 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-purple-800">Mix Ingredients</p>
+                    <Button type="button" size="sm" variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-100" onClick={addMixItem} disabled={isSaving}>
+                      <Plus className="h-3 w-3 mr-1" /> Add Ingredient
+                    </Button>
+                  </div>
+
+                  {formData.mix_items.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
+                      <GripVertical className="h-4 w-4 text-purple-300 shrink-0" />
+                      <div className="flex-1">
+                        <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
+                        <Input
+                          placeholder="e.g. Wheat, Chana, Bajra"
+                          value={item.item_name}
+                          onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
+                          disabled={isSaving}
+                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                        />
+                      </div>
+                      <div className="w-24">
+                        <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
+                        <Input
+                          type="number"
+                          placeholder="Rs."
+                          value={item.price_per_kg}
+                          onChange={(e) => updateMixItem(idx, 'price_per_kg', e.target.value)}
+                          disabled={isSaving}
+                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                        />
+                      </div>
+                      <div className="w-24">
+                        <Label className="text-[10px] text-purple-600 mb-1 block">Default Ratio</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="e.g. 1"
+                          value={item.default_ratio}
+                          onChange={(e) => updateMixItem(idx, 'default_ratio', e.target.value)}
+                          disabled={isSaving}
+                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                        />
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMixItem(idx)} disabled={isSaving} className="shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 mt-4">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <p className="text-[10px] text-purple-600 italic">
+                    Note: Price is automatically calculated on the frontend based on user's selected proportions.
                   </p>
                 </div>
               )}
@@ -674,6 +795,10 @@ export function ManageServices() {
                       {hasCusts ? (
                         <span className="bg-amber-500/10 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20">
                           ⚙️ {custs.length > 0 ? custs.map(c => `${c.option_name}: Rs.${c.option_price}`).join(' + ') : `Cleaning: ${service.cleaning_price} + Grinding: ${service.grinding_price}`}
+                        </span>
+                      ) : service.is_custom_mix ? (
+                        <span className="bg-purple-500/10 text-purple-700 px-3 py-1 rounded-full text-xs font-bold border border-purple-300">
+                          🌾 Custom Mix: {(service.mix_items || []).map(m => m.item_name).join(', ')}
                         </span>
                       ) : (
                         <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium">

@@ -54,6 +54,7 @@ const PaymentVerification = lazy(() => import('./pages/admin/PaymentVerification
 const AdminComments = lazy(() => import('./pages/admin/AdminComments').then(module => ({ default: module.AdminComments })));
 const LiveTrackingMap = lazy(() => import('./pages/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
 const ContactMessages = lazy(() => import('./pages/admin/ContactMessages').then(module => ({ default: module.ContactMessages })));
+const CustomMixRequests = lazy(() => import('./pages/admin/CustomMixRequests').then(module => ({ default: module.default })));
 
 function PageLoader() {
   return (
@@ -200,6 +201,7 @@ export default function App() {
             <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/contact-messages" element={<ProtectedAdminRoute><AdminLayout><ContactMessages /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/custom-mix-requests" element={<ProtectedAdminRoute><AdminLayout><CustomMixRequests /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
             

@@ -28,24 +28,49 @@ $original_subject = $original['subject'];
 $sql_update = "UPDATE contact_messages SET status = 'replied', reply_message = '$reply_content' WHERE id = $id";
 
 if ($conn->query($sql_update)) {
-    // 2. Try to send email (Best effort)
-    $subject = "Re: " . ($original_subject ?: "Contact Inquiry") . " - Apni Chakki";
-    $headers = "From: no-reply@apnichakki.com\r\n";
-    $headers .= "Reply-To: support@apnichakki.com\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    
-    $email_body = "Hello $customer_name,\n\n";
-    $email_body .= "Thank you for contacting us. Here is our reply to your message:\n\n";
-    $email_body .= "$data[reply_message]\n\n";
-    $email_body .= "---\nBest Regards,\nApni Chakki Team";
-    
-    // mail() might not work on localhost, but we return success because DB updated
-    $mail_sent = @mail($to, $subject, $email_body, $headers);
-    
+    // 2. Send email via Node.js nodemailer server
+    $emailServerUrl = 'http://localhost:3002/send-contact-reply';
+
+    $emailData = [
+        'customerEmail'    => $to,
+        'customerName'     => $customer_name,
+        'originalSubject'  => $original_subject,
+        'originalMessage'  => $original['message'],
+        'replyMessage'     => $data['reply_message']
+    ];
+
+    $mail_sent = false;
+    $mail_error = null;
+
+    $ch = curl_init($emailServerUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+    $emailResponse = curl_exec($ch);
+    $emailHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    if ($emailHttpCode === 200 && $emailResponse) {
+        $decoded = json_decode($emailResponse, true);
+        $mail_sent = !empty($decoded['success']);
+        if (!$mail_sent && isset($decoded['message'])) {
+            $mail_error = $decoded['message'];
+        }
+    } else {
+        $mail_error = $curlErr ?: ("Email server returned HTTP $emailHttpCode");
+    }
+
     echo json_encode([
-        "success" => true, 
-        "message" => "Reply saved and status updated to 'Replied'." . ($mail_sent ? "" : " (Note: Email sending might require server configuration)"),
-        "mail_sent" => $mail_sent
+        "success"    => true,
+        "message"    => $mail_sent
+            ? "Reply sent and customer notified via email."
+            : "Reply saved, but email could not be sent. (" . ($mail_error ?: 'email server unreachable') . ")",
+        "mail_sent"  => $mail_sent,
+        "mail_error" => $mail_error
     ]);
 } else {
     echo json_encode(["success" => false, "message" => "Error updating record: " . $conn->error]);

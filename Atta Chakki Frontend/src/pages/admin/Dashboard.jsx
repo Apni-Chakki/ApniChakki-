@@ -479,9 +479,9 @@ export function Dashboard() {
            setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden !border-orange-200 !bg-white">
-          <DialogHeader className="shrink-0 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 px-4 py-3">
-            <DialogTitle className="text-lg font-bold text-orange-700 flex items-center gap-2">
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden !bg-white" style={{ borderColor: '#d9c9b3' }}>
+          <DialogHeader className="shrink-0 border-b px-4 py-3" style={{ background: 'linear-gradient(to right, #faf6f0, #f5ede3)', borderColor: '#e5d9c4' }}>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: '#6f5535' }}>
               <History className="h-5 w-5" />
               Pending Orders
             </DialogTitle>
@@ -493,8 +493,8 @@ export function Dashboard() {
           {/* Step: Loading */}
           {eodStep === 'loading' && (
             <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="bg-orange-100 rounded-full p-4 mb-4">
-                <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+              <div className="rounded-full p-4 mb-4" style={{ backgroundColor: '#f5ede3' }}>
+                <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#8b6f47' }} />
               </div>
               <p className="text-gray-900 font-semibold text-base">Loading orders...</p>
             </div>
@@ -504,7 +504,7 @@ export function Dashboard() {
           {eodStep === 'select' && (
             <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
               {/* Info header bar */}
-              <div className="shrink-0 bg-orange-50 px-4 py-2 border-b border-orange-200">
+              <div className="shrink-0 px-4 py-2 border-b" style={{ backgroundColor: '#faf6f0', borderColor: '#e5d9c4' }}>
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor="select-all-eod" className="flex items-center gap-2 cursor-pointer">
                     <Checkbox 
@@ -513,7 +513,7 @@ export function Dashboard() {
                       onCheckedChange={toggleSelectAll}
                       className="h-4 w-4"
                     />
-                    <span className="text-xs font-bold text-orange-900">Select All</span>
+                    <span className="text-xs font-bold" style={{ color: '#6f5535' }}>Select All</span>
                   </label>
                   <div className="flex items-center gap-2">
                     <div className="eod-badge-completed">
@@ -539,17 +539,9 @@ export function Dashboard() {
                         className={`relative border rounded-lg p-2.5 cursor-pointer transition-all duration-200 select-none ${
                           isChecked 
                             ? 'bg-green-50 border-green-300 shadow-sm' 
-                            : 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-sm'
+                            : 'bg-white hover:shadow-sm eod-row-pending'
                         }`}
                       >
-                        {isChecked && (
-                          <div className="absolute top-1.5 right-1.5">
-                            <Badge className="bg-green-600 text-white text-[8px] px-1.5 py-0 font-bold">
-                              ✓
-                            </Badge>
-                          </div>
-                        )}
-
                         <div className="flex items-start gap-2.5 justify-between">
                           <div className="flex items-start gap-2 flex-1 min-w-0">
                             <Checkbox
@@ -560,16 +552,13 @@ export function Dashboard() {
                             />
 
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1.5 mb-1">
+                              <div className="flex items-center gap-1.5 mb-1">
                                 <h4 className="font-bold text-sm text-gray-900">#{order.id}</h4>
-                                {!isChecked && (
-                                  <span className="text-xs font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded text-nowrap">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
-                                )}
                               </div>
 
                               <div className="text-xs space-y-0.5">
                                 <div className="flex items-center gap-1.5">
-                                  <User className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                                  <User className="h-3 w-3 flex-shrink-0" style={{ color: '#8b6f47' }} />
                                   <span className="font-medium truncate">{order.customer_name}</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-gray-600 flex-wrap">
@@ -579,6 +568,11 @@ export function Dashboard() {
                                   <span className="eod-tag-time">
                                     ⏱️ {order.processing_time_minutes || '~'} min
                                   </span>
+                                  {!isChecked && (
+                                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-nowrap" style={{ color: '#6f5535', backgroundColor: '#faf6f0' }}>
+                                      Rs. {parseInt(order.total_amount || 0).toLocaleString()}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -628,7 +622,7 @@ export function Dashboard() {
               </ScrollArea>
 
               {/* Action footer */}
-              <div className="shrink-0 border-t border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3 space-y-2.5">
+              <div className="shrink-0 border-t p-3 space-y-2.5" style={{ borderColor: '#e5d9c4', background: 'linear-gradient(to right, #faf6f0, #f5ede3)' }}>
                 <button 
                   className="eod-btn-confirm" 
                   onClick={handleProcessEodSelection}
@@ -650,8 +644,8 @@ export function Dashboard() {
           {/* Step: Processing */}
           {eodStep === 'processing' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="bg-orange-100 rounded-full p-3 mb-3">
-                <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+              <div className="rounded-full p-3 mb-3" style={{ backgroundColor: '#f5ede3' }}>
+                <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#8b6f47' }} />
               </div>
               <p className="text-gray-900 font-semibold text-sm">Processing...</p>
             </div>

@@ -56,7 +56,7 @@ try {
     
     // Send welcome email via Node.js Email Server (optional)
     if (!empty($userEmail)) {
-        $emailServerUrl = 'http://localhost:3001/send-welcome-email';
+        $emailServerUrl = 'http://localhost:3002/send-welcome-email';
         
         $emailData = [
             'email' => $userEmail,

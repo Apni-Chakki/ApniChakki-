@@ -44,8 +44,17 @@ try {
         $order_id = $row['id'];
         $items = [];
         $has_trip_item = false;
-        $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = '$order_id'");
+        $item_res = $conn->query("SELECT id, quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = '$order_id'");
         while($i = $item_res->fetch_assoc()) {
+             $order_item_id = $i['id'];
+             // Fetch customizations for custom mixes / custom options
+             $cust_res = $conn->query("SELECT option_name, option_price FROM order_item_customizations WHERE order_item_id = '$order_item_id'");
+             $customizations = [];
+             while ($cust_row = $cust_res->fetch_assoc()) {
+                 $customizations[] = $cust_row;
+             }
+             $i['customizations'] = $customizations;
+
              $pid = $i['product_id'];
              $prod_res = $conn->query("SELECT name, unit FROM products WHERE id = '$pid'");
              if ($p = $prod_res->fetch_assoc()) {

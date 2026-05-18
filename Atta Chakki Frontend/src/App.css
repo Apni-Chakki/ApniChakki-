@@ -389,8 +389,15 @@ html, body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+.eod-row-pending {
+  border-color: #e5d9c4;
+}
+.eod-row-pending:hover {
+  border-color: #b8987a;
+}
+
 .eod-badge-pending {
-  background-color: #f59e0b;
+  background-color: #8b6f47;
   color: #fff;
   border-radius: 9999px;
   padding: 0.25rem 0.625rem;

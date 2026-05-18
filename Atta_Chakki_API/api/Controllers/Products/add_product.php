@@ -64,6 +64,10 @@ try {
     $cleaning_price = isset($data['cleaning_price']) ? floatval($data['cleaning_price']) : 0.00;
     $grinding_price = isset($data['grinding_price']) ? floatval($data['grinding_price']) : 0.00;
 
+    // Custom mix fields
+    $is_custom_mix = isset($data['is_custom_mix']) ? (int)$data['is_custom_mix'] : 0;
+    $mix_items = isset($data['mix_items']) ? $data['mix_items'] : [];
+
     // Dynamic customizations array from frontend
     $customizations = isset($data['customizations']) ? $data['customizations'] : [];
 
@@ -94,20 +98,20 @@ try {
     $dual_unit = isset($data['dual_unit']) ? (int)$data['dual_unit'] : 0;
     $weight_options = isset($data['weight_options']) && is_array($data['weight_options']) ? json_encode($data['weight_options']) : null;
     
-    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, dual_unit, weight_options, category_id, description, image_url, stock_quantity, min_stock_level, is_grinding_service, cleaning_price, grinding_price, track_inventory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, dual_unit, weight_options, category_id, description, image_url, stock_quantity, min_stock_level, is_grinding_service, cleaning_price, grinding_price, track_inventory, is_custom_mix) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsisissddiddi", $name, $price, $unit, $dual_unit, $weight_options, $category_id, $description, $image, $stock_quantity, $min_stock_level, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory);
+    $stmt->bind_param("sdsisissddiddii", $name, $price, $unit, $dual_unit, $weight_options, $category_id, $description, $image, $stock_quantity, $min_stock_level, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory, $is_custom_mix);
 
     if ($stmt->execute()) {
         $product_id = $stmt->insert_id;
         $stmt->close();
 
         // Insert dynamic customizations into product_customizations table
-        if (!empty($customizations)) {
+        if (!empty($customizations) && !$is_custom_mix) {
             $cust_stmt = $conn->prepare("INSERT INTO product_customizations (product_id, option_name, option_price, sort_order) VALUES (?, ?, ?, ?)");
             if (!$cust_stmt) {
                 throw new Exception("Customization INSERT prepare failed: " . $conn->error);
@@ -123,6 +127,26 @@ try {
                 }
             }
             $cust_stmt->close();
+        }
+
+        // Insert mix items into product_mix_items table
+        if ($is_custom_mix && !empty($mix_items)) {
+            $mix_stmt = $conn->prepare("INSERT INTO product_mix_items (product_id, item_name, price_per_kg, default_ratio, sort_order) VALUES (?, ?, ?, ?, ?)");
+            if (!$mix_stmt) {
+                throw new Exception("Mix items INSERT prepare failed: " . $conn->error);
+            }
+
+            foreach ($mix_items as $index => $item) {
+                $item_name = $item['item_name'] ?? '';
+                $price_per_kg = floatval($item['price_per_kg'] ?? 0);
+                $default_ratio = floatval($item['default_ratio'] ?? 1.00);
+                $sort = isset($item['sort_order']) ? (int)$item['sort_order'] : $index + 1;
+                $mix_stmt->bind_param("isddi", $product_id, $item_name, $price_per_kg, $default_ratio, $sort);
+                if (!$mix_stmt->execute()) {
+                    error_log("Failed to insert mix item: " . $mix_stmt->error);
+                }
+            }
+            $mix_stmt->close();
         }
 
         http_response_code(201);

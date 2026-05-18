@@ -72,7 +72,7 @@ try {
     $insert->close();
 
     // Send OTP via Node.js Email Server
-    $emailServerUrl = 'http://localhost:3001/send-password-reset';
+    $emailServerUrl = 'http://localhost:3002/send-password-reset';
     $resetLink = 'http://localhost:5173/reset-password?email=' . urlencode($email) . '&otp=' . $otp;
     
     $data = [

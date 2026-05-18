@@ -6,13 +6,14 @@ date_default_timezone_set('Asia/Karachi');
 
 $old_report = mysqli_report(MYSQLI_REPORT_OFF);
 
-$servername = "localhost";
+$servername = "127.0.0.1";
 $username = "root";
 $password = "";
 $dbname = "atta_chakki";
+$port = 3308;
 
 try {
-    $conn = new mysqli($servername, $username, $password, $dbname);
+    $conn = new mysqli($servername, $username, $password, $dbname, $port);
     
     if ($conn->connect_error) {
         throw new Exception("Database Connection Failed: " . $conn->connect_error);

@@ -485,15 +485,42 @@ export function TomorrowsList() {
                 {/* order items */}
                 <div>
                   <h4 className="font-semibold mb-1.5 flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4" /> Items:
+                    <Package className="h-4 w-4" /> Items to Prepare:
                   </h4>
                   <ul className="divide-y border rounded-md">
                     {order.items.map((item, idx) => (
-                      <li key={idx} className="p-2 text-sm flex justify-between items-center bg-white">
-                        <span>{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">x {item.quantity}</Badge>
-                          {item.unit && <span className="text-xs text-muted-foreground">{item.unit}</span>}
+                      <li key={idx} className="p-3 text-sm flex justify-between items-start bg-white hover:bg-slate-50 transition-colors">
+                        <div className="flex-1 min-w-0 pr-4">
+                          <p className="font-bold text-slate-800 break-words">{item.name}</p>
+                          {/* Dynamic customizations display */}
+                          {(item.customizations?.length > 0 || item.is_cleaning || item.is_grinding) && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {item.customizations?.length > 0 ? (
+                                item.customizations.map((cust, cIdx) => (
+                                  <span key={cIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                    ✓ {cust.option_name}
+                                  </span>
+                                ))
+                              ) : (
+                                <>
+                                  {item.is_cleaning == 1 && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                      ✓ Cleaning
+                                    </span>
+                                  )}
+                                  {item.is_grinding == 1 && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                      ✓ Grinding
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                          {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
                         </div>
                       </li>
                     ))}
@@ -634,7 +661,10 @@ export function TomorrowsList() {
       </AlertDialog>
 
       <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
-        <DialogContent className="max-w-md max-h-[95vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent
+          style={{ maxHeight: '90vh', overflowY: 'auto', display: 'block' }}
+          className="max-w-md p-0 custom-scrollbar gap-0"
+        >
           <div className="p-6 pb-2">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -656,7 +686,7 @@ export function TomorrowsList() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar" style={{ maxHeight: '400px' }}>
+          <div className="px-6 py-2">
             <div className="space-y-3">
               {splitBatches.map((batch, idx) => (
                 <div key={batch.id} className="relative bg-slate-50 p-4 rounded-xl border border-slate-200 transition-all hover:border-blue-300">
@@ -739,7 +769,7 @@ export function TomorrowsList() {
             </div>
           </div>
 
-          <div className="p-6 pt-2 bg-slate-50/50 border-t">
+          <div className="p-6 pt-4 bg-slate-50/50 border-t">
             {/* Live total check */}
             {splitOrder && (() => {
               const total = parseFloat(splitOrder.total_weight_kg || 0);

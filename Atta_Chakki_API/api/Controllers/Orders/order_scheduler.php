@@ -70,6 +70,12 @@ function calculateOrderWeight($conn, $order_id) {
             $total_weight += $qty;
         } else if ($unit === 'g') {
             $total_weight += ($qty / 1000); // convert grams to kg
+        } else if (in_array($unit, ['l', 'ltr', 'liter', 'litre', 'liters', 'litres'], true)) {
+            // Liter ko bhi processing time k liye 1L = 1kg treat kar rahe hain
+            $total_weight += $qty;
+        } else if (in_array($unit, ['ml', 'milliliter', 'millilitre'], true)) {
+            // ml ko liter me convert kar k kg equivalent
+            $total_weight += ($qty / 1000);
         } else if ($unit === 'trip' && floatval($row['price_at_purchase']) > 0) {
             // Trip item jiska weight admin ne confirm kar diya — quantity ab kg mein hai
             $total_weight += $qty;

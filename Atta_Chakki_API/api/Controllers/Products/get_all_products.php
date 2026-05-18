@@ -31,6 +31,8 @@ try {
         $row['cleaning_price'] = floatval($row['cleaning_price'] ?? 0);
         $row['grinding_price'] = floatval($row['grinding_price'] ?? 0);
 
+        $row['is_custom_mix'] = (int)($row['is_custom_mix'] ?? 0);
+
         // Fetch dynamic customizations for this product
         $cust_stmt = $conn->prepare("SELECT id, option_name, option_price, sort_order FROM product_customizations WHERE product_id = ? ORDER BY sort_order ASC");
         $cust_stmt->bind_param("i", $row['id']);
@@ -47,6 +49,24 @@ try {
         }
         $cust_stmt->close();
         $row['customizations'] = $customizations;
+
+        // Fetch mix items for this product
+        $mix_stmt = $conn->prepare("SELECT id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id = ? ORDER BY sort_order ASC");
+        $mix_stmt->bind_param("i", $row['id']);
+        $mix_stmt->execute();
+        $mix_result = $mix_stmt->get_result();
+        $mix_items = [];
+        while ($mix_row = $mix_result->fetch_assoc()) {
+            $mix_items[] = [
+                'id' => (int)$mix_row['id'],
+                'item_name' => $mix_row['item_name'],
+                'price_per_kg' => floatval($mix_row['price_per_kg']),
+                'default_ratio' => floatval($mix_row['default_ratio']),
+                'sort_order' => (int)$mix_row['sort_order']
+            ];
+        }
+        $mix_stmt->close();
+        $row['mix_items'] = $mix_items;
 
         // Decode weight_options JSON for frontend
         $row['weight_options'] = !empty($row['weight_options']) ? json_decode($row['weight_options'], true) : [];

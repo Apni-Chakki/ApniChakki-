@@ -29,7 +29,7 @@ $stmt->bind_param("sssss", $name, $email, $phone, $subject, $message);
 
 if ($stmt->execute()) {
     // Send email via Node.js Email Server
-    $emailServerUrl = 'http://localhost:3001/send-contact-email';
+    $emailServerUrl = 'http://localhost:3002/send-contact-email';
     
     $emailData = [
         'name' => $name,

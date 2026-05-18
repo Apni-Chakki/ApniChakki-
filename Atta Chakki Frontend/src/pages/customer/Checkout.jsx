@@ -614,7 +614,10 @@ export function Checkout() {
           price: item.service.price,
           unit: item.service.unit || 'kg',
           is_weight_pending: item.isWeightPending ? 1 : 0,
-          selected_customizations: item.service.selected_customizations || []
+          selected_customizations: item.service.is_custom_mix 
+            ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
+            : (item.service.selected_customizations || []),
+          is_custom_mix: item.service.is_custom_mix ? 1 : 0
         })),
         total: isTbdOrder ? 0 : grandTotal,
         address: fullDeliveryAddress,
@@ -690,7 +693,10 @@ export function Checkout() {
         price: item.service.price,
         unit: item.service.unit || 'kg',
         is_weight_pending: item.isWeightPending ? 1 : 0,
-        selected_customizations: item.service.selected_customizations || []
+        selected_customizations: item.service.is_custom_mix 
+          ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
+          : (item.service.selected_customizations || []),
+        is_custom_mix: item.service.is_custom_mix ? 1 : 0
       })),
       total: isTbdOrder ? 0 : grandTotal,
       delivery_fee: deliveryFee,
@@ -777,13 +783,22 @@ export function Checkout() {
             <div key={`${item.service.id}-${item.isWeightPending ? 'pending' : 'regular'}-${index}`} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
               <div className="flex-1">
                 <h4 className="text-foreground">{item.service.name}</h4>
-                {(item.service.selected_customizations?.length > 0 || item.service.is_grinding_service) && (
+                {(item.service.selected_customizations?.length > 0 || item.service.is_grinding_service) && !item.service.is_custom_mix && (
                   <p className="text-xs text-muted-foreground font-medium">
                     ({item.service.selected_customizations?.length > 0
                       ? item.service.selected_customizations.map(c => t(c.option_name)).join(' + ')
                       : [item.service.is_cleaning && t('Cleaning'), item.service.is_grinding && t('Grinding')].filter(Boolean).join(' + ')
                     })
                   </p>
+                )}
+                {item.service.is_custom_mix && item.service.selected_mix_items?.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {item.service.selected_mix_items.map((m, idx) => (
+                      <span key={idx} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">
+                        {m.item_name} ({m.ratio})
+                      </span>
+                    ))}
+                  </div>
                 )}
                 {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
                   <p className="text-sm text-primary font-medium">
@@ -805,7 +820,7 @@ export function Checkout() {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8 ml-2 bg-red-500 hover:bg-red-600 border-red-600 shadow flex items-center justify-center px-0 py-0"
-                  onClick={() => removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding, item.service.selected_customizations)}
+                  onClick={() => removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding, item.service.selected_customizations, item.service.is_custom_mix, item.service.selected_mix_items)}
                   title={t('Remove Item')}
                 >
                   <Trash2 className="h-4 w-4 text-white" strokeWidth={3} />

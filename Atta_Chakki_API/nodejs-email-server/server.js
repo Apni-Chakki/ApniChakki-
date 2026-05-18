@@ -372,6 +372,82 @@ app.post('/send-welcome-email', async (req, res) => {
   }
 });
 
+// 5. Contact Form Reply Email
+app.post('/send-contact-reply', async (req, res) => {
+  try {
+    const { customerEmail, customerName, originalSubject, originalMessage, replyMessage } = req.body;
+
+    if (!customerEmail || !replyMessage) {
+      return res.status(400).json({ success: false, message: 'Missing required fields (customerEmail, replyMessage)' });
+    }
+
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; }
+          .header { background-color: #8B7355; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background-color: white; padding: 25px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+          .quote-box { background-color: #f5f0eb; border-left: 4px solid #8B7355; padding: 15px; margin: 15px 0; border-radius: 4px; font-style: italic; }
+          .reply-box { background-color: #fcf8f2; border: 1px solid #e8d8c8; padding: 20px; margin: 20px 0; border-radius: 6px; }
+          .footer { text-align: center; color: #888; font-size: 12px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 24px;">🌾 Atta Chakki</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Response to Your Inquiry</p>
+          </div>
+          
+          <div class="content">
+            <p>السلام علیکم <strong>${customerName || 'Customer'}</strong>,</p>
+            <p>Thank you for reaching out to us. Here is the response to your message regarding <strong>"${originalSubject || 'Contact Inquiry'}"</strong>:</p>
+            
+            <div class="reply-box">
+              <h4 style="margin-top: 0; color: #8B7355; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Our Reply:</h4>
+              <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${replyMessage}</p>
+            </div>
+
+            ${originalMessage ? `
+              <h4 style="margin-bottom: 5px; color: #666; font-size: 13px;">Your Original Message:</h4>
+              <div class="quote-box">
+                <p style="margin: 0; font-size: 14px; color: #555; white-space: pre-wrap;">${originalMessage}</p>
+              </div>
+            ` : ''}
+            
+            <p style="margin-top: 25px;">If you have any further questions or need additional assistance, feel free to reply directly to this email.</p>
+            <p style="margin-bottom: 0;">Best regards,<br><strong>Atta Chakki Team</strong></p>
+            
+            <div class="footer">
+              <p style="margin: 5px 0;">Thank you for choosing Atta Chakki!</p>
+              <p style="margin: 5px 0;">📞 Contact: +92-XXX-XXXXXXX</p>
+              <p style="margin: 5px 0;">&copy; 2026 Atta Chakki. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: customerEmail,
+      subject: `RE: ${originalSubject || 'Your Inquiry to Atta Chakki'}`,
+      html: htmlTemplate,
+    });
+
+    console.log('✅ Contact reply email sent to:', customerEmail);
+    res.json({ success: true, message: 'Reply email sent successfully' });
+
+  } catch (error) {
+    console.error('❌ Error sending contact reply email:', error);
+    res.status(500).json({ success: false, message: 'Failed to send reply email', error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('🔴 Server Error:', err);
@@ -379,7 +455,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════╗

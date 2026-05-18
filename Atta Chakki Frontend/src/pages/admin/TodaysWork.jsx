@@ -691,7 +691,7 @@ Gristmill's - Fresh Flour Daily
                       {item.customizations?.length > 0 ? (
                         item.customizations.map((cust, cIdx) => (
                           <span key={cIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                            ✓ {cust.option_name} <span className="ml-1 text-[8px] opacity-70">Rs.{cust.option_price}</span>
+                            ✓ {cust.option_name}
                           </span>
                         ))
                       ) : (
@@ -1002,8 +1002,11 @@ Gristmill's - Fresh Flour Daily
 
         {/* ─── Split Order Modal ───────────────────────────────────────── */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
-        <DialogContent className="max-w-md max-h-[95vh] flex flex-col p-0 overflow-hidden">
-          <div className="p-6 pb-2">
+        <DialogContent
+          className="max-w-md p-0 gap-0 [&>button]:top-5 [&>button]:right-5"
+        >
+          {/* Header */}
+          <div className="p-6 pb-3">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <SplitSquareHorizontal className="h-5 w-5 text-blue-600" />
@@ -1024,7 +1027,8 @@ Gristmill's - Fresh Flour Daily
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar" style={{ maxHeight: '400px' }}>
+          {/* Scrollable Batches Area */}
+          <div className="px-6 py-2 overflow-y-auto" style={{ maxHeight: '45vh' }}>
             <div className="space-y-3">
               {splitBatches.map((batch, idx) => (
                 <div key={batch.id} className="relative bg-slate-50 p-4 rounded-xl border border-slate-200 transition-all hover:border-blue-300">
@@ -1040,7 +1044,7 @@ Gristmill's - Fresh Flour Daily
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50"
+                        className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50 hover:text-red-600"
                         onClick={() => setSplitBatches(splitBatches.filter(b => b.id !== batch.id))}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1052,7 +1056,7 @@ Gristmill's - Fresh Flour Daily
                     <div className="space-y-1">
                       <Label className="text-[10px] font-bold text-slate-500 uppercase">Date</Label>
                       <div className="relative">
-                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                         <Input 
                           type="date" 
                           value={batch.date}
@@ -1069,7 +1073,7 @@ Gristmill's - Fresh Flour Daily
                     <div className="space-y-1">
                       <Label className="text-[10px] font-bold text-slate-500 uppercase">Weight (kg)</Label>
                       <div className="relative">
-                        <Weight className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Weight className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                         <Input 
                           type="number" 
                           min="0.1" step="0.5" 
@@ -1088,7 +1092,7 @@ Gristmill's - Fresh Flour Daily
               ))}
             </div>
 
-            <div className="mt-4 pb-4">
+            <div className="mt-4 pb-2">
               <Button 
                 variant="outline" 
                 className="w-full border-dashed border-2 border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-all h-10"
@@ -1107,7 +1111,8 @@ Gristmill's - Fresh Flour Daily
             </div>
           </div>
 
-          <div className="p-6 pt-2 bg-slate-50/50 border-t">
+          {/* Footer */}
+          <div className="p-6 pt-4 bg-slate-50/50 border-t">
             {/* Live total check */}
             {splitOrder && (() => {
               const total = parseFloat(splitOrder.total_weight_kg || 0);
@@ -1123,7 +1128,7 @@ Gristmill's - Fresh Flour Daily
               ) : null;
             })()}
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" onClick={closeSplitModal} disabled={isSplitting}>
                 Cancel
               </Button>

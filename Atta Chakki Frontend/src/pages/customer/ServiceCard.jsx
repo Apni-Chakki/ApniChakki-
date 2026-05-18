@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Checkbox } from '../../components/common/checkbox';
 import { Label } from '../../components/common/label';
 import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
+import { API_BASE_URL } from '../../config';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -27,10 +28,33 @@ export function ServiceCard({ service }) {
   const customizations = service.customizations || [];
   const hasCustomizations = customizations.length > 0 || service.is_grinding_service == 1;
 
+  // Add states for Custom Mix
+  const isCustomMix = service.is_custom_mix === 1 || service.is_custom_mix === true;
+  const mixItems = service.mix_items || [];
+  
+  // Custom Mix states
+  const [mixRatios, setMixRatios] = useState(() => {
+    if (!isCustomMix) return {};
+    const ratios = {};
+    mixItems.forEach((item, idx) => {
+      ratios[idx] = parseFloat(item.default_ratio) || 0;
+    });
+    return ratios;
+  });
+  
+  const [showCustomRequest, setShowCustomRequest] = useState(false);
+  const [customRequestData, setCustomRequestData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    message: ''
+  });
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+
   // Fallback to old cleaning/grinding if no dynamic customizations exist
   const effectiveCustomizations = customizations.length > 0
     ? customizations
-    : (service.is_grinding_service == 1
+    : (service.is_grinding_service == 1 && !isCustomMix
       ? [
           { id: 'legacy-clean', option_name: 'Cleaning', option_price: service.cleaning_price || 0 },
           { id: 'legacy-grind', option_name: 'Grinding', option_price: service.grinding_price || 0 }
@@ -46,10 +70,34 @@ export function ServiceCard({ service }) {
     setSelectedOptions(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // Calculate current price based on selected customizations
-  const currentPrice = hasCustomizations
-    ? effectiveCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0), 0)
-    : service.price;
+  const handleRatioChange = (index, value) => {
+    const newRatio = parseFloat(value) || 0;
+    setMixRatios(prev => ({ ...prev, [index]: newRatio }));
+  };
+
+  // Calculate current price
+  let currentPrice = service.price;
+  
+  if (isCustomMix) {
+    // Weighted average price per kg for Custom Mix
+    let totalPrice = 0;
+    let totalRatio = 0;
+    
+    mixItems.forEach((item, idx) => {
+      const ratio = mixRatios[idx] || 0;
+      totalPrice += ratio * parseFloat(item.price_per_kg || 0);
+      totalRatio += ratio;
+    });
+    
+    // Scale price to 1 unit (1kg) if total ratio > 0
+    if (totalRatio > 0) {
+      currentPrice = Math.round(totalPrice / totalRatio);
+    } else {
+      currentPrice = 0;
+    }
+  } else if (hasCustomizations) {
+    currentPrice = effectiveCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0), 0);
+  }
 
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
   const displayUnit = service.unit || 'unit';
@@ -72,12 +120,47 @@ export function ServiceCard({ service }) {
       .filter((_, i) => selectedOptions[i])
       .map(c => ({ option_name: c.option_name, option_price: parseFloat(c.option_price) || 0 }));
   };
+  
+  const getSelectedMixItems = () => {
+    if (!isCustomMix) return null;
+    return mixItems.map((item, idx) => ({
+      item_name: item.item_name,
+      price_per_kg: item.price_per_kg,
+      ratio: mixRatios[idx] || 0
+    })).filter(m => m.ratio > 0);
+  };
 
   const handleAddToCart = () => {
     if (isOutOfStock) {
       toast.error(t("This item is out of stock."));
       return;
     }
+    
+    if (isCustomMix) {
+      const selectedMix = getSelectedMixItems();
+      if (selectedMix.length === 0) {
+        toast.error(t("Please select at least one ingredient ratio"));
+        return;
+      }
+      
+      const unitLabel = isDualUnit ? 'kg' : displayUnit;
+      addToCart({
+        ...service,
+        price: parseFloat(currentPrice),
+        unit: isDualUnit ? 'kg' : service.unit,
+        is_cleaning: false,
+        is_grinding: false,
+        selected_customizations: [],
+        selected_mix_items: selectedMix,
+        is_custom_mix: true
+      }, quantity, false); 
+      
+      toast.success(t(`Added ${quantity} ${unitLabel} of Custom Mix to cart`));
+      setQuantity(1);
+      setIsAddedToCart(true);
+      return;
+    }
+
     const selected = getSelectedCustomizations();
     if (hasCustomizations && selected.length === 0) {
       toast.error(t("Please select at least one service option"));
@@ -109,6 +192,31 @@ export function ServiceCard({ service }) {
       toast.error(t("This item is out of stock."));
       return;
     }
+    
+    if (isCustomMix) {
+      const selectedMix = getSelectedMixItems();
+      if (selectedMix.length === 0) {
+        toast.error(t("Please select at least one ingredient ratio"));
+        return;
+      }
+      
+      const unitLabel = isDualUnit ? 'kg' : displayUnit;
+      addToCart({
+        ...service,
+        price: parseFloat(currentPrice),
+        unit: isDualUnit ? 'kg' : service.unit,
+        is_cleaning: false,
+        is_grinding: false,
+        selected_customizations: [],
+        selected_mix_items: selectedMix,
+        is_custom_mix: true
+      }, presetQty, false); 
+      
+      toast.success(t(`Added ${presetQty} ${unitLabel} of Custom Mix to cart`));
+      setIsAddedToCart(true);
+      return;
+    }
+    
     const selected = getSelectedCustomizations();
     if (hasCustomizations && selected.length === 0) {
       toast.error(t("Please select at least one service option"));
@@ -134,6 +242,11 @@ export function ServiceCard({ service }) {
   };
 
   const handleAddPickupRequest = () => {
+    if (isCustomMix) {
+      toast.error(t("Pickup request is not available for custom mixes directly."));
+      return;
+    }
+    
     const selected = getSelectedCustomizations();
     if (hasCustomizations && selected.length === 0) {
       toast.error(t("Please select at least one service option"));
@@ -154,6 +267,47 @@ export function ServiceCard({ service }) {
     toast.success(t('Pickup request added to cart.'));
     setIsPickupRequested(true);
     setIsAddedToCart(false);
+  };
+  
+  const submitCustomRequest = async () => {
+    if (!customRequestData.name || !customRequestData.phone) {
+      toast.error(t("Please enter your name and phone number."));
+      return;
+    }
+    
+    setIsSubmittingRequest(true);
+    try {
+      const payload = {
+        product_id: service.id,
+        product_name: service.name,
+        customer_name: customRequestData.name,
+        customer_phone: customRequestData.phone,
+        customer_email: customRequestData.email,
+        selected_items: getSelectedMixItems(),
+        custom_items: customRequestData.message,
+        total_quantity: quantity,
+        estimated_price: currentPrice
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/api/Controllers/Products/submit_custom_mix_request.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success(t(data.message));
+        setShowCustomRequest(false);
+        setCustomRequestData({ name: '', phone: '', email: '', message: '' });
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      toast.error(err.message || t("Failed to submit request"));
+    } finally {
+      setIsSubmittingRequest(false);
+    }
   };
 
   // Quick-select chips + manual +/- quantity combined
@@ -190,7 +344,7 @@ export function ServiceCard({ service }) {
               <Plus className="h-4 w-4" strokeWidth={3} />
             </Button>
           </div>
-          <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-sm sm:text-base" onClick={handleAddToCart} disabled={isOutOfStock || disabled}>
+          <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-sm sm:text-base" onClick={handleAddToCart} disabled={isOutOfStock || disabled || (isCustomMix && currentPrice == 0)}>
             {isOutOfStock ? t("Out of Stock") : isAddedToCart ? t("Added ✓") : t("Add to Cart")}
           </Button>
         </div>
@@ -204,7 +358,7 @@ export function ServiceCard({ service }) {
       whileHover={{ y: -5 }} 
       className="h-full"
     >
-      <Card className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow h-full">
+      <Card className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow h-full relative">
         {service.image_url || service.imageUrl ? (
           <div className="relative w-full h-48 sm:h-52 md:h-56 overflow-hidden bg-muted">
             <ImageWithFallback
@@ -236,16 +390,122 @@ export function ServiceCard({ service }) {
         
         <div className="p-4 flex flex-col gap-3 flex-1">
           <div className="flex-1">
-            <h3 className="text-foreground mb-1">{tDynamic(service.name)}</h3>
+            <h3 className="text-foreground mb-1 font-bold">{tDynamic(service.name)}</h3>
             {service.description && (
               <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
+            
             <p className="text-primary font-bold text-lg">
-              Rs. {currentPrice} / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
+              Rs. {Math.round(parseFloat(currentPrice) || 0)} / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
             </p>
 
-            {/* Dynamic Customization Options */}
-            {hasCustomizations && effectiveCustomizations.length > 0 && (
+            {/* Custom Mix Options */}
+            {isCustomMix && mixItems.length > 0 && (
+              <div className="mt-3 p-3.5 bg-[#fcfaf7] border border-primary/20 rounded-2xl space-y-3 shadow-sm animate-in fade-in zoom-in-95 duration-300">
+                <div className="border-b border-primary/10 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[11px] font-black text-primary uppercase tracking-wider">{t("Create Your Mix")}</span>
+                  </div>
+                  <p className="text-[9px] text-slate-500 mt-0.5 leading-none">
+                    {t("Price updates automatically")}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  {mixItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-primary/10 shadow-sm gap-2">
+                      <div className="flex flex-col min-w-0 text-left items-start">
+                         <span className="text-xs text-slate-900 truncate leading-tight text-left" style={{ fontWeight: '800' }}>{tDynamic(item.item_name)}</span>
+                         <span className="text-[10px] text-slate-500 mt-1 leading-none text-left" style={{ fontWeight: '400' }}>Rs. {item.price_per_kg}/kg</span>
+                      </div>
+                      
+                      <div className="flex items-center border border-primary/20 rounded-lg overflow-hidden bg-white shadow-sm h-7 shrink-0">
+                         <button 
+                           type="button"
+                           className="w-7 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors select-none" 
+                           onClick={() => {
+                             const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
+                             const newVal = Math.max(0, currentVal - 0.1).toFixed(1);
+                             handleRatioChange(idx, parseFloat(newVal));
+                           }}
+                         >
+                           -
+                         </button>
+                         <span className="w-9 text-center text-xs font-black text-slate-800 select-none">
+                           {mixRatios[idx] !== undefined ? parseFloat(mixRatios[idx]).toFixed(1) : '0.0'}
+                         </span>
+                         <button 
+                           type="button"
+                           className="w-7 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors select-none" 
+                           onClick={() => {
+                             const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
+                             const newVal = (currentVal + 0.1).toFixed(1);
+                             handleRatioChange(idx, parseFloat(newVal));
+                           }}
+                         >
+                           +
+                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="pt-1 flex justify-center w-full">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-white font-bold rounded-xl transition-all shadow-sm"
+                    onClick={() => setShowCustomRequest(!showCustomRequest)}
+                  >
+                    {showCustomRequest ? t("Cancel Custom Request") : t("Want something else? Custom Request")}
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {/* Custom Request Form Dropdown */}
+            {showCustomRequest && isCustomMix && (
+              <div className="mt-3 p-3.5 bg-[#fcfaf7] border border-primary/20 rounded-2xl space-y-3.5 shadow-sm animate-in slide-in-from-top-2 fade-in duration-300">
+                <div className="border-b border-primary/10 pb-1.5">
+                  <p className="text-xs font-extrabold text-primary uppercase tracking-wider">{t("Send a Custom Request")}</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5 leading-normal">{t("Tell us what ingredients and proportions you want, and we'll contact you!")}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <input 
+                    type="text" 
+                    placeholder={t("Your Name")} 
+                    className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" 
+                    value={customRequestData.name} 
+                    onChange={e => setCustomRequestData({...customRequestData, name: e.target.value})} 
+                  />
+                  <input 
+                    type="text" 
+                    placeholder={t("Phone Number")} 
+                    className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" 
+                    value={customRequestData.phone} 
+                    onChange={e => setCustomRequestData({...customRequestData, phone: e.target.value})} 
+                  />
+                  <textarea 
+                    placeholder={t("Describe your custom mix (e.g., 50% Wheat, 30% Chana, 20% Oats)")} 
+                    className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all min-h-[60px]" 
+                    value={customRequestData.message} 
+                    onChange={e => setCustomRequestData({...customRequestData, message: e.target.value})} 
+                  />
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] h-8 text-xs text-white font-bold rounded-xl transition-all shadow-md" 
+                    onClick={submitCustomRequest}
+                    disabled={isSubmittingRequest}
+                  >
+                    {isSubmittingRequest ? t("Sending...") : t("Send Request")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic Customization Options (Legacy) */}
+            {hasCustomizations && effectiveCustomizations.length > 0 && !isCustomMix && (
                <div className="mt-3 p-4 bg-orange-50/40 border border-orange-100 rounded-xl space-y-3 shadow-sm animate-in fade-in zoom-in-95 duration-300">
                   <div className="flex items-center gap-2 border-b border-orange-100/50 pb-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
@@ -279,14 +539,14 @@ export function ServiceCard({ service }) {
             )}
           </div>
           
-          {isOnlyPickup ? (
+          {isOnlyPickup && !isCustomMix ? (
             /* Trip-only products: just show pickup button */
             <div className="flex flex-col gap-2">
               <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isAddedToCart}>
                 {isPickupRequested ? t('Pickup Request Added ✓') : t('Add Pickup Request')}
               </Button>
             </div>
-          ) : isDualUnit ? (
+          ) : isDualUnit && !isCustomMix ? (
             /* Dual Unit products: pickup + quantity selector with quick chips */
             <div className="flex flex-col gap-2">
               <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isPickupRequested}>
