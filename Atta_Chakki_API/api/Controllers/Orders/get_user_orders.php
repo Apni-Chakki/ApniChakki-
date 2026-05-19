@@ -31,7 +31,7 @@ try {
             // getting items
             $order_id = $row['id'];
             $items = [];
-            $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding, is_weight_pending FROM order_items WHERE order_id = '$order_id'");
+            $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending FROM order_items WHERE order_id = '$order_id'");
             while($i = $item_res->fetch_assoc()) {
                  $pid = $i['product_id'];
                  $prod_res = $conn->query("SELECT name FROM products WHERE id = '$pid'");

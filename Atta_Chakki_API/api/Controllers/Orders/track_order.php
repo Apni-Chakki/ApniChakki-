@@ -49,25 +49,31 @@ try {
                 // getting items
                 $order_id_fetched = $row['id'];
                 $items = [];
-                $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
+                $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending FROM order_items WHERE order_id = ?");
                 $item_stmt->bind_param("i", $order_id_fetched);
                 $item_stmt->execute();
                 $item_res = $item_stmt->get_result();
                 while($i = $item_res->fetch_assoc()) {
                      $pid = $i['product_id'];
-                     $prod_stmt = $conn->prepare("SELECT name FROM products WHERE id = ?");
+                     $prod_stmt = $conn->prepare("SELECT name, discount_type, discount_value FROM products WHERE id = ?");
                      $prod_stmt->bind_param("i", $pid);
                      $prod_stmt->execute();
                      $prod_res = $prod_stmt->get_result();
                      if ($p = $prod_res->fetch_assoc()) {
                          $i['name'] = $p['name'];
+                         $i['discount_type'] = $p['discount_type'] ?? 'none';
+                         $i['discount_value'] = floatval($p['discount_value'] ?? 0);
                      } else {
                          $i['name'] = "Item #$pid";
+                         $i['discount_type'] = 'none';
+                         $i['discount_value'] = 0;
                      }
                      $items[] = $i;
                 }
                 $row['items'] = $items;
                 $row['total'] = $row['total_amount'];
+                $row['coupon_code'] = $row['coupon_code'] ?? null;
+                $row['coupon_discount'] = floatval($row['coupon_discount'] ?? 0);
                 $orders[] = $row;
             }
         }
@@ -106,26 +112,32 @@ try {
                         // getting items
                         $order_id_fetched = $row['id'];
                         $items = [];
-                        $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
+                        $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending FROM order_items WHERE order_id = ?");
                         $item_stmt->bind_param("i", $order_id_fetched);
                         $item_stmt->execute();
                         $item_res = $item_stmt->get_result();
                         while($i = $item_res->fetch_assoc()) {
                              $pid = $i['product_id'];
-                             $prod_stmt = $conn->prepare("SELECT name FROM products WHERE id = ?");
+                             $prod_stmt = $conn->prepare("SELECT name, discount_type, discount_value FROM products WHERE id = ?");
                              $prod_stmt->bind_param("i", $pid);
                              $prod_stmt->execute();
                              $prod_res = $prod_stmt->get_result();
                              if ($p = $prod_res->fetch_assoc()) {
                                  $i['name'] = $p['name'];
+                                 $i['discount_type'] = $p['discount_type'] ?? 'none';
+                                 $i['discount_value'] = floatval($p['discount_value'] ?? 0);
                              } else {
                                  $i['name'] = "Item #$pid";
+                                 $i['discount_type'] = 'none';
+                                 $i['discount_value'] = 0;
                              }
                              $items[] = $i;
                         }
                         $row['items'] = $items;
                         $row['total'] = $row['total_amount'];
-                        
+                        $row['coupon_code'] = $row['coupon_code'] ?? null;
+                        $row['coupon_discount'] = floatval($row['coupon_discount'] ?? 0);
+
                         $orders[] = $row;
                     }
                 }

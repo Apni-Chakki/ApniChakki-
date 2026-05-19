@@ -15,6 +15,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     $payment_status = isset($data->payment_status) ? $data->payment_status : 'pending';
     $transaction_id = isset($data->transaction_id) ? $data->transaction_id : null;
     $amount_paid_input = isset($data->amount_paid) ? floatval($data->amount_paid) : 0;
+    $coupon_code = isset($data->coupon_code) ? strtoupper(trim($data->coupon_code)) : null;
     
     $is_pickup_request = isset($data->is_pickup_request) ? filter_var($data->is_pickup_request, FILTER_VALIDATE_BOOLEAN) : false;
     $is_kg_order = isset($data->is_kg_order) ? filter_var($data->is_kg_order, FILTER_VALIDATE_BOOLEAN) : false;
@@ -41,7 +42,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
     // total calculate ho raha hai products ka
     foreach($cart_items as $item) {
         $pid = $item->id;
-        $query = $conn->prepare("SELECT price, unit, is_grinding_service, cleaning_price, grinding_price FROM products WHERE id = ?");
+        $query = $conn->prepare("SELECT price, discount_type, discount_value, unit, is_grinding_service, cleaning_price, grinding_price FROM products WHERE id = ?");
         $query->bind_param("i", $pid);
         $query->execute();
         $res = $query->get_result();
@@ -61,19 +62,30 @@ if(isset($data->user_id) && isset($data->cart_items)) {
 
             if (!empty($selected_customizations)) {
                 // Dynamic pricing: sum only selected customization prices
-                $price = 0;
+                $base_price = 0;
                 foreach ($selected_customizations as $sc) {
-                    $price += floatval($sc->option_price ?? 0);
+                    $base_price += floatval($sc->option_price ?? 0);
                 }
-                if ($price <= 0) $price = floatval($row['price']);
+                if ($base_price <= 0) $base_price = floatval($row['price']);
             } else if ($is_grinding_service) {
                 // Backward compatible: hardcoded cleaning/grinding
-                $price = 0;
-                if ($is_cleaning) $price += floatval($row['cleaning_price']);
-                if ($is_grinding) $price += floatval($row['grinding_price']);
-                if ($price <= 0 && !$is_cleaning && !$is_grinding) $price = floatval($row['price']);
+                $base_price = 0;
+                if ($is_cleaning) $base_price += floatval($row['cleaning_price']);
+                if ($is_grinding) $base_price += floatval($row['grinding_price']);
+                if ($base_price <= 0 && !$is_cleaning && !$is_grinding) $base_price = floatval($row['price']);
             } else {
-                $price = floatval($row['price']);
+                $base_price = floatval($row['price']);
+            }
+
+            // Apply product-level discount
+            $discount_type = isset($row['discount_type']) ? $row['discount_type'] : 'none';
+            $discount_value = isset($row['discount_value']) ? floatval($row['discount_value']) : 0;
+            
+            $price = $base_price;
+            if ($discount_type === 'percentage') {
+                $price = $base_price - ($base_price * ($discount_value / 100));
+            } elseif ($discount_type === 'fixed') {
+                $price = max(0, $base_price - $discount_value);
             }
 
             if ($unit === 'trip') {
@@ -83,6 +95,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
                     "product_id" => $pid,
                     "quantity" => $qty,
                     "price" => $price,
+                    "original_price" => $base_price,
                     "unit" => $unit,
                     "is_cleaning" => $is_cleaning,
                     "is_grinding" => $is_grinding,
@@ -97,6 +110,7 @@ if(isset($data->user_id) && isset($data->cart_items)) {
                     "product_id" => $pid,
                     "quantity" => $qty,
                     "price" => $price,
+                    "original_price" => $base_price,
                     "unit" => $unit,
                     "is_cleaning" => $is_cleaning,
                     "is_grinding" => $is_grinding,
@@ -110,6 +124,53 @@ if(isset($data->user_id) && isset($data->cart_items)) {
 
     // trip items k liye logic
     $total_amount = $non_trip_total;
+
+    // Coupon validation and discount application
+    $coupon_discount = 0;
+    $coupon_id = null;
+    if ($coupon_code && $total_amount > 0) {
+        $coupon_stmt = $conn->prepare("SELECT id, discount_type, discount_value, min_order_amount, usage_limit, used_count, expiry_date, is_active FROM coupons WHERE code = ?");
+        $coupon_stmt->bind_param("s", $coupon_code);
+        $coupon_stmt->execute();
+        $coupon_res = $coupon_stmt->get_result();
+
+        if ($coupon_res->num_rows > 0) {
+            $coupon = $coupon_res->fetch_assoc();
+            $coupon_stmt->close();
+
+            // Validate coupon
+            $valid = true;
+            $error_msg = "";
+
+            if (!$coupon['is_active']) {
+                $valid = false;
+                $error_msg = "Coupon is inactive";
+            } elseif ($coupon['expiry_date'] && new DateTime($coupon['expiry_date']) < new DateTime()) {
+                $valid = false;
+                $error_msg = "Coupon has expired";
+            } elseif ($coupon['usage_limit'] && $coupon['used_count'] >= $coupon['usage_limit']) {
+                $valid = false;
+                $error_msg = "Coupon usage limit reached";
+            } elseif ($coupon['min_order_amount'] > 0 && $total_amount < $coupon['min_order_amount']) {
+                $valid = false;
+                $error_msg = "Minimum order amount Rs. " . $coupon['min_order_amount'] . " required";
+            }
+
+            if ($valid) {
+                $coupon_id = $coupon['id'];
+                $discount_value = floatval($coupon['discount_value']);
+                if ($coupon['discount_type'] === 'percentage') {
+                    $coupon_discount = $total_amount * ($discount_value / 100);
+                } else {
+                    $coupon_discount = $discount_value;
+                }
+                $coupon_discount = min($coupon_discount, $total_amount);
+                $total_amount = $total_amount - $coupon_discount;
+            }
+        } else {
+            $coupon_stmt->close();
+        }
+    }
 
     // trip ya pickup flow check ho raha hai
     if ($has_trip_item) {
@@ -159,9 +220,19 @@ if(isset($data->user_id) && isset($data->cart_items)) {
             $status = 'pending'; // Kg order → immediate scheduling
         }
         $col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'amount_paid'");
-        $has_amount_paid_col = ($col_check && $col_check->num_rows > 0);if ($has_amount_paid_col) {
+        $has_amount_paid_col = ($col_check && $col_check->num_rows > 0);
+        $coupon_col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'coupon_code'");
+        $has_coupon_cols = ($coupon_col_check && $coupon_col_check->num_rows > 0);
+
+        if ($has_amount_paid_col && $has_coupon_cols) {
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("iddssdsss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
+        } elseif ($has_amount_paid_col) {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param("iddssss", $user_id, $total_amount, $amount_paid_input, $status, $address, $db_payment_method, $final_payment_status);
+        } elseif ($has_coupon_cols) {
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("iddsssss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
         } else {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param("idssss", $user_id, $total_amount, $status, $address, $db_payment_method, $final_payment_status);
@@ -173,14 +244,20 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         $order_id = $conn->insert_id;
         $stmt->close();
 
+        // Check if original_price column exists
+        $orig_check = $conn->query("SHOW COLUMNS FROM order_items LIKE 'original_price'");
+        if (!$orig_check || $orig_check->num_rows === 0) {
+            $conn->query("ALTER TABLE order_items ADD COLUMN original_price DECIMAL(10,2) DEFAULT NULL");
+        }
+
         // items add aur stock update kar rahe han yahan par
         // stock can never be negative logic: using GREATEST(0, stock - qty)
-        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, is_cleaning, is_grinding, is_weight_pending) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ?");
         $cust_stmt = $conn->prepare("INSERT INTO order_item_customizations (order_item_id, option_name, option_price) VALUES (?, ?, ?)");
         
         foreach($valid_items as $v_item) {
-            $item_stmt->bind_param("iiddiii", $order_id, $v_item['product_id'], $v_item['quantity'], $v_item['price'], $v_item['is_cleaning'], $v_item['is_grinding'], $v_item['is_weight_pending']);
+            $item_stmt->bind_param("iiddiiii", $order_id, $v_item['product_id'], $v_item['quantity'], $v_item['price'], $v_item['original_price'], $v_item['is_cleaning'], $v_item['is_grinding'], $v_item['is_weight_pending']);
             if (!$item_stmt->execute()) {
                 throw new Exception("Failed to add item to order: " . $item_stmt->error);
             }
@@ -214,6 +291,20 @@ if(isset($data->user_id) && isset($data->cart_items)) {
             $pay_stmt->bind_param("ids", $order_id, $amount_paid_input, $transaction_id);
             $pay_stmt->execute();
             $pay_stmt->close();
+        }
+
+        // coupon usage record kar rahe han agar coupon apply kiya
+        if ($coupon_id && $coupon_discount > 0) {
+            $usage_stmt = $conn->prepare("INSERT INTO coupon_usage (coupon_id, user_id, order_id, discount_amount) VALUES (?, ?, ?, ?)");
+            $usage_stmt->bind_param("iiid", $coupon_id, $user_id, $order_id, $coupon_discount);
+            $usage_stmt->execute();
+            $usage_stmt->close();
+
+            // increment coupon used_count
+            $update_coupon_stmt = $conn->prepare("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?");
+            $update_coupon_stmt->bind_param("i", $coupon_id);
+            $update_coupon_stmt->execute();
+            $update_coupon_stmt->close();
         }
 
         $conn->commit();

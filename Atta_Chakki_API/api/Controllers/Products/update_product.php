@@ -78,15 +78,23 @@ try {
     $dual_unit = isset($data['dual_unit']) ? (int)$data['dual_unit'] : 0;
     $weight_options = isset($data['weight_options']) && is_array($data['weight_options']) ? json_encode($data['weight_options']) : null;
 
+    // Discount & badge
+    $allowed_discount_types = ['none', 'percentage', 'fixed'];
+    $discount_type = isset($data['discount_type']) && in_array($data['discount_type'], $allowed_discount_types, true) ? $data['discount_type'] : 'none';
+    $discount_value = isset($data['discount_value']) ? floatval($data['discount_value']) : 0.00;
+    if ($discount_type === 'none' || $discount_value < 0) { $discount_value = 0.00; }
+    if ($discount_type === 'percentage' && $discount_value > 100) { $discount_value = 100; }
+    $badge_text = isset($data['badge_text']) && trim($data['badge_text']) !== '' ? substr(trim($data['badge_text']), 0, 50) : null;
+
     // updating product
-    $sql = "UPDATE products SET name=?, price=?, unit=?, dual_unit=?, weight_options=?, category_id=?, description=?, image_url=?, is_grinding_service=?, cleaning_price=?, grinding_price=?, track_inventory=?, is_custom_mix=? WHERE id=?";
+    $sql = "UPDATE products SET name=?, price=?, unit=?, dual_unit=?, weight_options=?, category_id=?, description=?, image_url=?, is_grinding_service=?, cleaning_price=?, grinding_price=?, track_inventory=?, is_custom_mix=?, discount_type=?, discount_value=?, badge_text=? WHERE id=?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsisissiddiii", $name, $price, $unit, $dual_unit, $weight_options, $category_id, $description, $image, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory, $is_custom_mix, $id);
+    $stmt->bind_param("sdsisissiddiisdsi", $name, $price, $unit, $dual_unit, $weight_options, $category_id, $description, $image, $is_grinding_service, $cleaning_price, $grinding_price, $track_inventory, $is_custom_mix, $discount_type, $discount_value, $badge_text, $id);
 
     if ($stmt->execute()) {
         $stmt->close();

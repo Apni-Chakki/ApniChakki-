@@ -33,6 +33,11 @@ try {
 
         $row['is_custom_mix'] = (int)($row['is_custom_mix'] ?? 0);
 
+        // Discount & badge normalization
+        $row['discount_type'] = $row['discount_type'] ?? 'none';
+        $row['discount_value'] = floatval($row['discount_value'] ?? 0);
+        $row['badge_text'] = $row['badge_text'] ?? null;
+
         // Fetch dynamic customizations for this product
         $cust_stmt = $conn->prepare("SELECT id, option_name, option_price, sort_order FROM product_customizations WHERE product_id = ? ORDER BY sort_order ASC");
         $cust_stmt->bind_param("i", $row['id']);

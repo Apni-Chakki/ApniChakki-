@@ -80,8 +80,13 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
         $order_id = $conn->insert_id;
         $stmt->close();
         
+        $orig_check = $conn->query("SHOW COLUMNS FROM order_items LIKE 'original_price'");
+        if (!$orig_check || $orig_check->num_rows === 0) {
+            $conn->query("ALTER TABLE order_items ADD COLUMN original_price DECIMAL(10,2) DEFAULT NULL");
+        }
+
         // items add aur stock update kar rahe han yahan par
-        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, is_cleaning, is_grinding) VALUES (?, ?, ?, ?, ?, ?)");
+        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ?");
         $cust_stmt = $conn->prepare("INSERT INTO order_item_customizations (order_item_id, option_name, option_price) VALUES (?, ?, ?)");
         
@@ -110,7 +115,8 @@ if(isset($data->name) && isset($data->items) && count($data->items) > 0) {
             }
 
             // 2. Add to order_items
-            $item_stmt->bind_param("iiddii", $order_id, $prod_id, $qty, $price, $is_cleaning, $is_grinding);
+            $original_price = isset($item->original_price) ? floatval($item->original_price) : $price;
+            $item_stmt->bind_param("iiddiii", $order_id, $prod_id, $qty, $price, $original_price, $is_cleaning, $is_grinding);
             if (!$item_stmt->execute()) {
                 throw new Exception("Failed to add Item");
             }

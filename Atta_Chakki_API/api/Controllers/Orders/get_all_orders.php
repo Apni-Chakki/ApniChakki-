@@ -32,7 +32,7 @@ try {
 
             $order_id = $row['id'];
             $items = [];
-            $item_stmt = $conn->prepare("SELECT id, quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
+            $item_stmt = $conn->prepare("SELECT id, quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
             $item_stmt->bind_param("i", $order_id);
             $item_stmt->execute();
             $item_res = $item_stmt->get_result();

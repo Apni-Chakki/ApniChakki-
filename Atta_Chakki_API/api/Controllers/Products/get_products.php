@@ -96,6 +96,9 @@ try {
             'grinding_price' => floatval($row['grinding_price'] ?? 0),
             'customizations' => $customizations,
             'mix_items' => $mix_items,
+            'discount_type' => $row['discount_type'] ?? 'none',
+            'discount_value' => floatval($row['discount_value'] ?? 0),
+            'badge_text' => $row['badge_text'] ?? null,
             'created_at' => $row['created_at'] ?? date('Y-m-d H:i:s')
         ];
     }

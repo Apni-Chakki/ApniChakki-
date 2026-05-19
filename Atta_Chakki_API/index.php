@@ -51,7 +51,7 @@ if (strpos($path, 'utils/') === 0) {
 }
 
 // domain folders me file dhund rahay hain
-$domains = ['Admin', 'Auth', 'Orders', 'Delivery', 'Products', 'Reviews', 'Expenses', 'Inventory', 'Payments', 'Cart', 'Users'];
+$domains = ['Admin', 'Auth', 'Orders', 'Delivery', 'Products', 'Reviews', 'Expenses', 'Inventory', 'Payments', 'Cart', 'Users', 'Coupons'];
 
 // Pehle check karo agar path me domain prefix hai (e.g. "products/upload_image.php")
 foreach ($domains as $domain) {
