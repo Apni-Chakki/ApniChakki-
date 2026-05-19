@@ -95,6 +95,8 @@ export function OrdersRecord() {
             deliveryAddress: order.shipping_address,
             source: (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
             deliveryPersonnel: order.driver_name || null,
+            couponCode: order.coupon_code || '',
+            couponDiscount: parseFloat(order.coupon_discount || 0),
 
             items: order.items ? order.items.map(item => ({
               quantity: item.quantity,

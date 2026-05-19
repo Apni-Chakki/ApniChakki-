@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Trash2, Building2, Smartphone, Banknote, Loader2, WalletCards, CreditCard, Shield, CheckCircle2, AlertCircle, TestTube2, Crosshair, Navigation, Calendar, Clock, Sun, Sunrise } from 'lucide-react';
+import { MapPin, Trash2, Building2, Smartphone, Banknote, Loader2, WalletCards, CreditCard, Shield, CheckCircle2, AlertCircle, TestTube2, Crosshair, Navigation, Calendar, Clock, Sun, Sunrise, Tag, X, Check } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
@@ -135,8 +135,6 @@ export function Checkout() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [partialPayment, setPartialPayment] = useState(false);
-  const [amountPaid, setAmountPaid] = useState('');
   
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -154,7 +152,26 @@ export function Checkout() {
     pay_method_bank_enabled: '1',
   });
 
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [hasActiveCoupons, setHasActiveCoupons] = useState(false);
+
   const total = getTotalPrice();
+  const originalTotal = cart.reduce((sum, item) => {
+    const basePrice = item.service?.price || 0;
+    return sum + (basePrice * item.quantity);
+  }, 0);
+  const productDiscount = originalTotal - total;
+
+  // Calculate subtotal for coupon (exclude items with product discounts)
+  const couponEligibleSubtotal = cart.reduce((sum, item) => {
+    const hasProductDiscount = item.service?.discount_type && item.service.discount_type !== 'none' && item.service.discount_value > 0;
+    if (hasProductDiscount) return sum;
+    const basePrice = item.service?.price || 0;
+    return sum + (basePrice * item.quantity);
+  }, 0);
   const hasPendingWeightItem = cart.some(item => item.isWeightPending);
   const hasTripItem = cart.some(item => item.service?.unit?.toLowerCase() === 'trip');
   const hasKgItem = cart.some(item => item.service?.unit?.toLowerCase() !== 'trip' && !item.isWeightPending);
@@ -170,7 +187,11 @@ export function Checkout() {
   const [distanceKm, setDistanceKm] = useState(0);
   const [isOutOfLahore, setIsOutOfLahore] = useState(false);
 
-  const grandTotal = total + deliveryFee;
+  const couponDiscount = appliedCoupon ? appliedCoupon.discount_amount : 0;
+  const grandTotal = total + deliveryFee - couponDiscount;
+
+  // Show warning if coupon is applied to items with product discounts
+  const hasMixedDiscounts = couponDiscount > 0 && productDiscount > 0;
 
   // delivery k rates db se nikal rahe han hum yahan
   const [deliveryConfig, setDeliveryConfig] = useState({ 
@@ -218,6 +239,28 @@ export function Checkout() {
       }
     };
     fetchPaySettings();
+
+    const fetchActiveCouponsStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/coupons/get_coupons.php`);
+        const data = await res.json();
+        if (data.success && data.coupons) {
+          const now = new Date();
+          const hasActive = data.coupons.some(c => {
+            if (c.is_active !== 1) return false;
+            // expiry_date can be skipped if it's null or empty
+            if (c.expiry_date && new Date(c.expiry_date) < now) return false;
+            // check usage limit if applicable
+            if (c.usage_limit && c.used_count >= c.usage_limit) return false;
+            return true;
+          });
+          setHasActiveCoupons(hasActive);
+        }
+      } catch(err) {
+        console.warn('Failed to fetch coupons status');
+      }
+    };
+    fetchActiveCouponsStatus();
   }, []);
 
   // maths ka sara kaam yahan ho raha hai (fees wagera)
@@ -563,21 +606,11 @@ export function Checkout() {
     
     if (cart.length === 0) return;
 
-    if (partialPayment && paymentMethod === 'cash' && total > 0) {
-      const paidAmount = parseFloat(amountPaid);
-      if (isNaN(paidAmount) || paidAmount <= 0) return toast.error(t('Please enter a valid payment amount'));
-      if (paidAmount >= total) return toast.error(t('Partial payment cannot be equal or greater than total amount'));
-    }
-
     if (paymentMethod !== 'cash' && (!hasPendingWeightItem || total > 0) && !isTbdOrder) {
       setPaymentResult(null);
       setShowPaymentDialog(true);
     } else {
-      if (partialPayment && total > 0 && !isTbdOrder) {
-        completeOrder('partial', null, parseFloat(amountPaid));
-      } else {
-        completeOrder('pending');
-      }
+      completeOrder('pending');
     }
   };
 
@@ -614,7 +647,7 @@ export function Checkout() {
           price: item.service.price,
           unit: item.service.unit || 'kg',
           is_weight_pending: item.isWeightPending ? 1 : 0,
-          selected_customizations: item.service.is_custom_mix 
+          selected_customizations: item.service.is_custom_mix
             ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
             : (item.service.selected_customizations || []),
           is_custom_mix: item.service.is_custom_mix ? 1 : 0
@@ -626,7 +659,8 @@ export function Checkout() {
         amount_paid: 0,
         order_type: orderType,
         is_pickup_request: hasTripItem,
-        is_kg_order: isKgOrder
+        is_kg_order: isKgOrder,
+        coupon_code: appliedCoupon ? appliedCoupon.code : null
       };
 
       const orderResponse = await fetch(`${API_BASE_URL}/place_order.php`, {
@@ -693,7 +727,7 @@ export function Checkout() {
         price: item.service.price,
         unit: item.service.unit || 'kg',
         is_weight_pending: item.isWeightPending ? 1 : 0,
-        selected_customizations: item.service.is_custom_mix 
+        selected_customizations: item.service.is_custom_mix
           ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
           : (item.service.selected_customizations || []),
         is_custom_mix: item.service.is_custom_mix ? 1 : 0
@@ -708,7 +742,8 @@ export function Checkout() {
       amount_paid: paidAmount,
       order_type: orderType,
       is_pickup_request: hasTripItem,
-      is_kg_order: isKgOrder
+      is_kg_order: isKgOrder,
+      coupon_code: appliedCoupon ? appliedCoupon.code : null
     };
 
     try {
@@ -756,6 +791,52 @@ export function Checkout() {
     toast.info(t('Test phone number filled'));
   };
 
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError(t('Please enter a coupon code'));
+      return;
+    }
+
+    if (couponEligibleSubtotal === 0) {
+      setCouponError(t('Coupon cannot be applied - all items have product discounts'));
+      return;
+    }
+
+    setValidatingCoupon(true);
+    setCouponError('');
+    setAppliedCoupon(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/coupons/validate_coupon.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode,
+          subtotal: couponEligibleSubtotal,
+          user_id: user?.id
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAppliedCoupon(data.coupon);
+        toast.success(t('Coupon applied successfully!'));
+      } else {
+        setCouponError(data.message || t('Invalid coupon'));
+      }
+    } catch (err) {
+      setCouponError(t('Failed to validate coupon'));
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setCouponError('');
+  };
+
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
@@ -766,7 +847,6 @@ export function Checkout() {
     );
   }
 
-  const remainingAmount = partialPayment ? Math.max(0, total - (parseFloat(amountPaid) || 0)) : 0;
   const cardType = getCardType(cardNumber);
 
   const isCartEmpty = total === 0 && !hasPendingWeightItem && !isTbdOrder;
@@ -828,10 +908,22 @@ export function Checkout() {
               </div>
             </div>
           ))}
-          
+
           <div className="flex justify-between pt-4 border-t border-border">
+            <span className="text-foreground">{t('Original Subtotal')}</span>
+            <span className="text-foreground font-bold">{isTbdOrder ? 'TBD' : `Rs. ${originalTotal.toFixed(2)}`}</span>
+          </div>
+
+          {productDiscount > 0 && (
+            <div className="flex justify-between pt-2 text-blue-600 dark:text-blue-400">
+              <span className="text-sm font-medium">{t('Product Discount')}</span>
+              <span className="text-sm font-medium">-Rs. {productDiscount.toFixed(2)}</span>
+            </div>
+          )}
+
+          <div className="flex justify-between pt-2 border-t border-border">
             <span className="text-foreground">{t('Cart Subtotal')}</span>
-            <span className="text-foreground font-bold">{isTbdOrder ? 'TBD' : `Rs. ${total}`}</span>
+            <span className="text-foreground font-bold">{isTbdOrder ? 'TBD' : `Rs. ${total.toFixed(2)}`}</span>
           </div>
 
           {orderType === 'delivery' && deliveryFee > 0 && !isOutOfLahore && (
@@ -840,6 +932,66 @@ export function Checkout() {
                 {t('Delivery Fee')} ({distanceKm.toFixed(1)} km)
               </span>
               <span className="text-muted-foreground text-sm">Rs. {deliveryFee}</span>
+            </div>
+          )}
+
+          {!isTbdOrder && hasActiveCoupons && (
+            <div className="pt-4 border-t border-border">
+              <Label className="text-foreground">{t('Coupon Code')}</Label>
+              {appliedCoupon ? (
+                <div className="mt-2 flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <div>
+                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{appliedCoupon.code}</span>
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 ml-2">
+                        {appliedCoupon.discount_type === 'percentage'
+                          ? `${appliedCoupon.discount_value}% OFF`
+                          : `Rs. ${appliedCoupon.discount_value} OFF`}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    onClick={removeCoupon}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder={t('Enter coupon code')}
+                    className="flex-1"
+                    disabled={validatingCoupon}
+                  />
+                  <Button
+                    onClick={validateCoupon}
+                    disabled={validatingCoupon || !couponCode.trim()}
+                    className="whitespace-nowrap"
+                  >
+                    {validatingCoupon ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      t('Apply')
+                    )}
+                  </Button>
+                </div>
+              )}
+              {couponError && (
+                <p className="mt-1 text-sm text-destructive">{couponError}</p>
+              )}
+            </div>
+          )}
+
+          {couponDiscount > 0 && (
+            <div className="flex justify-between pt-2 text-emerald-600 dark:text-emerald-400">
+              <span className="text-sm font-medium">{t('Coupon Discount')}</span>
+              <span className="text-sm font-medium">-Rs. {couponDiscount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between pt-2 border-t border-border font-bold">
@@ -1140,57 +1292,9 @@ export function Checkout() {
           )}
 
           {paymentMethod === 'cash' && (!hasPendingWeightItem || total > 0) && !isTbdOrder && (
-          <div className="mt-6 p-4 border border-border rounded-lg bg-secondary/20">
-            <div className="flex items-center gap-3 mb-4">
-              <input
-                type="checkbox"
-                id="partialPayment"
-                checked={partialPayment}
-                onChange={(e) => {
-                  setPartialPayment(e.target.checked);
-                  if (!e.target.checked) setAmountPaid('');
-                }}
-                className="h-5 w-5 rounded border border-border cursor-pointer"
-              />
-              <Label htmlFor="partialPayment" className="cursor-pointer flex items-center gap-2 mb-0 font-semibold">
-                {t('Partial Payment')} ({t('Udhaar')})
-              </Label>
+            <div className="mt-6 p-4 border border-border rounded-lg bg-secondary/20">
+              <p className="text-sm text-muted-foreground">{t('Payment will be collected at the time of delivery or pickup.')}</p>
             </div>
-            
-            {partialPayment && (
-              <div className="space-y-4 pl-8">
-                <div>
-                  <Label htmlFor="amountPaid">{t('Amount Paying Now')}</Label>
-                  <Input
-                    id="amountPaid"
-                    type="number"
-                    min="1"
-                    max={total - 1}
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(e.target.value)}
-                    placeholder={`${t('Enter amount')} (Rs. 1 - ${total - 1})`}
-                    className="mt-1"
-                  />
-                </div>
-                {amountPaid && parseFloat(amountPaid) > 0 && (
-                  <div className="bg-background border border-border rounded-lg p-4 space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">{t('Total Amount')}:</span>
-                      <span className="font-semibold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm border-t border-border pt-2">
-                      <span className="text-primary font-medium">{t('Paying Now')}:</span>
-                      <span className="font-bold text-primary">Rs. {parseFloat(amountPaid) || 0}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm border-t border-border pt-2 mt-2">
-                      <span className="text-destructive font-bold">{t('Udhaar (Remaining)')}:</span>
-                      <span className="font-bold text-destructive">Rs. {remainingAmount}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
           )}
       </Card>
 

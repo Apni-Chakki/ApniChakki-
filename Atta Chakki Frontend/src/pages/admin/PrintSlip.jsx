@@ -67,6 +67,10 @@ export function PrintSlip({ order, open, onClose }) {
           <div style="color:#d97706;font-size:10px;font-weight:700;">⚠ WEIGHT TO BE CONFIRMED</div>
         </div>`;
     }
+    const itemPrice = item.price_at_purchase || item.service?.price || 0;
+    const origPrice = item.original_price || null;
+    const hasItemDiscount = origPrice && origPrice > itemPrice;
+    const lineTotal = item.quantity * itemPrice;
     return `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px dashed #ccc;padding:6px 0;">
         <div style="flex:1;padding-right:8px;">
@@ -79,9 +83,18 @@ export function PrintSlip({ order, open, onClose }) {
               })
             </div>
           ` : ''}
-          <div style="color:#555;font-size:10px;">${item.quantity} ${item.service?.unit || item.unit || 'unit'} × Rs.${Number(item.price_at_purchase || item.service?.price).toLocaleString()}</div>
+          <div style="font-size:10px;">
+            ${item.quantity} ${item.service?.unit || item.unit || 'unit'} ×
+            ${hasItemDiscount
+              ? `<span style="text-decoration:line-through;color:#999;">Rs.${Number(origPrice).toLocaleString()}</span> <span style="color:#15803d;font-weight:700;">Rs.${Number(itemPrice).toLocaleString()}</span>`
+              : `<span style="color:#555;">Rs.${Number(itemPrice).toLocaleString()}</span>`
+            }
+          </div>
         </div>
-        <div style="font-weight:700;white-space:nowrap;font-size:12px;">Rs.${(item.quantity * (item.price_at_purchase || item.service?.price)).toLocaleString()}</div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;white-space:nowrap;font-size:12px;">Rs.${Number(lineTotal).toLocaleString()}</div>
+          ${hasItemDiscount ? `<div style="font-size:8px;color:#15803d;font-weight:700;">🏷 Disc.</div>` : ''}
+        </div>
       </div>`;
   }).join('');
 
@@ -158,8 +171,10 @@ export function PrintSlip({ order, open, onClose }) {
       ${itemsHTML}
 
       <div class="divider-heavy"></div>
-      <div class="total-row"><span>SUBTOTAL</span><span>Rs.${Number(slipTotal).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}</span></div>
-      ${order.advancePayment && order.advancePayment > 0 ? `<div class="row advance-row"><span>ADVANCE PAID</span><span>- Rs.${Number(order.advancePayment).toLocaleString()}</span></div>` : ''}
+      <div class="total-row"><span>SUBTOTAL</span><span>Rs.${Number((slipTotal || 0) + (order.couponDiscount || 0)).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}</span></div>
+      ${order.couponDiscount > 0 ? `<div class="row" style="color:#15803d;margin-top:4px;font-weight:700;"><span>DISCOUNT (${order.couponCode || 'PROMO'})</span><span>- Rs.${Number(order.couponDiscount).toLocaleString()}</span></div>
+      <div class="total-row due-row" style="border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;font-size:13px;color:#111;"><span>GRAND TOTAL</span><span>Rs.${Number(slipTotal).toLocaleString()}</span></div>` : ''}
+      ${order.advancePayment && order.advancePayment > 0 ? `<div class="row advance-row" style="margin-top:4px;"><span>ADVANCE PAID</span><span>- Rs.${Number(order.advancePayment).toLocaleString()}</span></div>` : ''}
       ${remainingBalance > 0 ? `<div class="total-row due-row"><span>DUE</span><span>Rs.${Number(remainingBalance).toLocaleString()}</span></div>` : ''}
 
       <div class="section-title" style="margin-top:10px;">Payment</div>
@@ -343,11 +358,25 @@ export function PrintSlip({ order, open, onClose }) {
                     )}
                     {item.isWeightPending ? (
                       <p className="text-orange-600 font-bold text-[10px] mt-0.5">⚠ WEIGHT TO BE CONFIRMED</p>
-                    ) : (
-                      <p className="text-muted-foreground text-[10px] mt-0.5">
-                        {item.quantity} {item.unit || item.service?.unit || 'unit'} × Rs.{Number(item.price_at_purchase || item.service?.price).toLocaleString()}
-                      </p>
-                    )}
+                    ) : (() => {
+                      const iPrice = item.price_at_purchase || item.service?.price || 0;
+                      const oPrice = item.original_price || null;
+                      const hasDisc = oPrice && oPrice > iPrice;
+                      return (
+                        <p className="text-muted-foreground text-[10px] mt-0.5 flex items-center gap-1 flex-wrap">
+                          <span>{item.quantity} {item.unit || item.service?.unit || 'unit'} ×</span>
+                          {hasDisc ? (
+                            <>
+                              <span className="line-through text-muted-foreground">Rs.{Number(oPrice).toLocaleString()}</span>
+                              <span className="text-green-600 font-bold">Rs.{Number(iPrice).toLocaleString()}</span>
+                              <span className="text-green-600 text-[8px] font-bold bg-green-50 border border-green-200 px-0.5 rounded">DISC</span>
+                            </>
+                          ) : (
+                            <span>Rs.{Number(iPrice).toLocaleString()}</span>
+                          )}
+                        </p>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
@@ -357,9 +386,21 @@ export function PrintSlip({ order, open, onClose }) {
             <div className="pt-1 space-y-1.5 border-t-2 border-dashed border-border">
               <div className="flex justify-between text-[12px] font-bold pt-1.5">
                 <span>SUBTOTAL</span>
-                <span className="whitespace-nowrap">Rs.{Number(slipTotal).toLocaleString()}{hasPendingItems && ' + TBD'}</span>
+                <span className="whitespace-nowrap">Rs.{Number((slipTotal || 0) + (order.couponDiscount || 0)).toLocaleString()}{hasPendingItems && ' + TBD'}</span>
               </div>
-              {order.advancePayment && order.advancePayment > 0 && (
+              {order.couponDiscount > 0 && (
+                <>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-green-600 font-bold uppercase">DISCOUNT ({order.couponCode || 'PROMO'})</span>
+                    <span className="text-green-600 font-bold whitespace-nowrap">- Rs.{Number(order.couponDiscount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[13px] font-black pt-1 border-t border-dashed border-border">
+                    <span>GRAND TOTAL</span>
+                    <span className="whitespace-nowrap">Rs.{Number(slipTotal).toLocaleString()}</span>
+                  </div>
+                </>
+              )}
+              {parseFloat(order.advancePayment) > 0 && (
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">ADVANCE PAID</span>
                   <span className="text-green-600 font-semibold whitespace-nowrap">- Rs.{Number(order.advancePayment).toLocaleString()}</span>

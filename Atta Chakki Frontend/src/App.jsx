@@ -43,6 +43,7 @@ const OrdersRecord = lazy(() => import('./pages/admin/OrdersRecord').then(module
 const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement })));
 const ManageCategories = lazy(() => import('./pages/admin/ManageCategories').then(module => ({ default: module.ManageCategories })));
 const ManageServices = lazy(() => import('./pages/admin/ManageServices').then(module => ({ default: module.ManageServices })));
+const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons').then(module => ({ default: module.ManageCoupons })));
 const ManageDelivery = lazy(() => import('./pages/admin/ManageDelivery').then(module => ({ default: module.ManageDelivery })));
 const Settings = lazy(() => import('./pages/admin/Settings').then(module => ({ default: module.Settings })));
 const HeroSettings = lazy(() => import('./pages/admin/HeroSettings').then(module => ({ default: module.HeroSettings })));
@@ -197,6 +198,7 @@ export default function App() {
             <Route path="/admin/inventory" element={<ProtectedAdminRoute><AdminLayout><InventoryManagement /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminLayout><ManageCategories /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/services" element={<ProtectedAdminRoute><AdminLayout><ManageServices /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminLayout><ManageCoupons /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/delivery" element={<ProtectedAdminRoute><AdminLayout><ManageDelivery /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />

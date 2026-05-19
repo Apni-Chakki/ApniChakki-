@@ -262,12 +262,33 @@ export async function generateBillPDF(order) {
   const total = Number(order.total || 0);
   const advance = Number(order.advancePayment || 0);
   const remainingDue = total - advance;
+  const couponDiscount = Number(order.couponDiscount || 0);
 
   doc.setFont('courier', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
   doc.text('SUBTOTAL', margin, y);
-  doc.text(`Rs.${total.toLocaleString()}${hasPendingItems ? ' + TBD' : ''}`, pageW - margin, y, { align: 'right' });
+  doc.text(`Rs.${(total + couponDiscount).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}`, pageW - margin, y, { align: 'right' });
+
+  if (couponDiscount > 0) {
+    y += 6;
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(21, 128, 61);
+    doc.text(`DISCOUNT (${order.couponCode || 'PROMO'})`, margin, y);
+    doc.text(`- Rs.${couponDiscount.toLocaleString()}`, pageW - margin, y, { align: 'right' });
+
+    y += 5;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.2);
+    doc.line(margin, y, pageW - margin, y);
+    
+    y += 6;
+    doc.setFontSize(13);
+    doc.setTextColor(40, 40, 40);
+    doc.text('GRAND TOTAL', margin, y);
+    doc.text(`Rs.${total.toLocaleString()}`, pageW - margin, y, { align: 'right' });
+  }
 
   if (advance > 0) {
     y += 7;

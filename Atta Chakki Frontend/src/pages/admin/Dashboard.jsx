@@ -10,7 +10,6 @@ import { API_BASE_URL } from '../../config';
 import { Alert, AlertDescription, AlertTitle } from '../../components/common/alert';
 import { toast } from 'sonner';
 import { Checkbox } from '../../components/common/checkbox';
-import { ScrollArea } from '../../components/common/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -479,16 +478,18 @@ export function Dashboard() {
            setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden !bg-white" style={{ borderColor: '#d9c9b3' }}>
-          <DialogHeader className="shrink-0 border-b px-4 py-3" style={{ background: 'linear-gradient(to right, #faf6f0, #f5ede3)', borderColor: '#e5d9c4' }}>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: '#6f5535' }}>
-              <History className="h-5 w-5" />
-              Pending Orders
-            </DialogTitle>
-            <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
-              {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden !bg-white" style={{ borderColor: '#d9c9b3' }}>
+          <div className="shrink-0">
+            <DialogHeader className="border-b px-4 py-3" style={{ background: 'linear-gradient(to right, #faf6f0, #f5ede3)', borderColor: '#e5d9c4' }}>
+              <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: '#6f5535' }}>
+                <History className="h-5 w-5" />
+                Pending Orders
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
+                {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
           {/* Step: Loading */}
           {eodStep === 'loading' && (
@@ -528,8 +529,8 @@ export function Dashboard() {
               </div>
 
               {/* Scrollable orders list */}
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="space-y-1.5 p-3">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3" style={{ maxHeight: '400px' }}>
+                <div className="space-y-1.5">
                   {yesterdayOrders.map((order) => {
                     const isChecked = selectedCompleted.has(order.id);
                     return (
@@ -541,6 +542,7 @@ export function Dashboard() {
                             ? 'bg-green-50 border-green-300 shadow-sm' 
                             : 'bg-white hover:shadow-sm eod-row-pending'
                         }`}
+                        style={{ backgroundColor: isChecked ? '#f0fdf4' : '#ffffff' }}
                       >
                         <div className="flex items-start gap-2.5 justify-between">
                           <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -619,7 +621,7 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
 
               {/* Action footer */}
               <div className="shrink-0 border-t p-3 space-y-2.5" style={{ borderColor: '#e5d9c4', background: 'linear-gradient(to right, #faf6f0, #f5ede3)' }}>

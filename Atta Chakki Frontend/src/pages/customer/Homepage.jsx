@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { ServiceCard } from './ServiceCard';
 import { UserReviews } from './UserReviews';
 import { Card } from '../../components/common/card'; 
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Tag, Copy } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 import { useCart } from '../../store/CartContext';
+import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 
 const DEFAULT_HERO_SLIDES = [
@@ -33,6 +34,7 @@ export function Homepage() {
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlides, setHeroSlides] = useState(DEFAULT_HERO_SLIDES);
+  const [featuredCoupons, setFeaturedCoupons] = useState([]);
   const { t, tDynamic, translateBatch, language } = useDynamicTranslation();
   const { addToCart } = useCart();
 
@@ -47,10 +49,11 @@ export function Homepage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes, settingsRes] = await Promise.all([
+        const [productsRes, categoriesRes, settingsRes, couponsRes] = await Promise.all([
           fetch(`${API_BASE_URL}/get_products.php`),
           fetch(`${API_BASE_URL}/get_categories.php`),
-          fetch(`${API_BASE_URL}/get_store_settings.php`)
+          fetch(`${API_BASE_URL}/get_store_settings.php`),
+          fetch(`${API_BASE_URL}/coupons/get_featured_coupons.php`)
         ]);
         
         const data = await productsRes.json();
@@ -82,6 +85,13 @@ export function Homepage() {
           setServices(data.products);
         } else {
           console.error("No products found or backend error");
+        }
+
+        if (couponsRes.ok) {
+          const couponsData = await couponsRes.json();
+          if (couponsData.success) {
+            setFeaturedCoupons(couponsData.coupons);
+          }
         }
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -144,10 +154,15 @@ export function Homepage() {
     addToCart(product);
   };
 
+  const copyCouponCode = (code) => {
+    navigator.clipboard.writeText(code);
+    toast.success(t('Coupon code copied!'));
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden">
+      <section className="relative overflow-hidden w-full" style={{ height: '65vh', minHeight: '400px' }}>
         {heroSlides.map((slide, i) => (
           <div
             key={i}
@@ -170,6 +185,29 @@ export function Homepage() {
           </p>
         </div>
       </section>
+
+      {/* Auto-sliding Coupon Bar Below Hero */}
+      {featuredCoupons.length > 0 && (
+        <div className="bg-primary text-primary-foreground py-2.5 px-4 flex items-center w-full overflow-hidden shadow-sm border-b border-primary-foreground/10 group">
+           <div className="flex w-max">
+             {[...Array(6)].map((_, i) => (
+               <div key={i} className="animate-marquee flex shrink-0 items-center whitespace-nowrap" style={{ paddingRight: '4rem' }} aria-hidden={i > 0 ? "true" : "false"}>
+                 {featuredCoupons.map((coupon, j) => (
+                   <div key={`${i}-${j}`} className="flex items-center mr-10 bg-black/10 border border-primary-foreground/20 px-4 py-1.5 rounded-full">
+                     <Tag className="h-4 w-4 mr-2 text-accent animate-pulse"/>
+                     <span className="text-sm font-medium tracking-wide">
+                       {t('Code')}: <span className="font-bold text-accent tracking-wider px-1">{coupon.code}</span> | {t('Get')} <span className="font-bold">{coupon.discount_value}{coupon.discount_type === 'percentage' ? '%' : ' Rs.'}</span> {t('OFF')}
+                       {coupon.description && <span className="opacity-80 ml-2 text-xs">({coupon.description})</span>}
+                     </span>
+                   </div>
+                 ))}
+               </div>
+             ))}
+           </div>
+        </div>
+      )}
+
+
 
       <section className="py-8 sm:py-12 md:py-16 px-4 bg-background">
         <div className="container mx-auto max-w-6xl">
@@ -194,19 +232,21 @@ export function Homepage() {
                   {allCategories.map((category) => (
                     <Card
                       key={category.id}
-                      className="category-card-responsive cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 group relative overflow-hidden w-full"
+                      className="category-card-responsive cursor-pointer rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 group relative overflow-hidden w-full border-2 border-transparent hover:border-primary"
                       onClick={() => setSelectedCategory(category.id)}
                     >
                       <div 
-                        className="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition-transform duration-500"
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
                         style={{ backgroundImage: `url(${category.imageUrl})` }}
                       />
-                      <div className={`absolute inset-0 ${category.overlayColor} group-hover:opacity-70 transition-opacity duration-300`} />
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors duration-300" />
-                      <div className="relative h-full flex items-center justify-center px-6">
-                        <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-2xl leading-tight">
+                      <div className={`absolute inset-0 ${category.overlayColor} opacity-50 group-hover:opacity-70 transition-opacity duration-300`} />
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors duration-300" />
+                      
+                      <div className="relative h-full flex flex-col items-center justify-center px-6 transition-transform duration-300 group-hover:-translate-y-1">
+                        <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-md group-hover:scale-110 transition-transform duration-300">
                           {tDynamic(category.labelKey)}
                         </h3>
+                        <div className="h-1 w-10 bg-primary mt-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </div>
                     </Card>
                   ))}

@@ -15,7 +15,7 @@ export default function CustomerLayout({ children }) {
   return (
     <div className="min-h-screen bg-background flex flex-col relative">
       <Header />
-      <main className="flex-1 mt-16 pb-20 md:pb-24">
+      <main className="flex-1 pb-20 md:pb-24" style={{ marginTop: '100px' }}>
         <Suspense fallback={<PageLoader />}>
           {children}
         </Suspense>

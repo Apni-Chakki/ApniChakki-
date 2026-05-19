@@ -436,6 +436,8 @@ Gristmill's - Fresh Flour Daily
           deliveryAddress: order.shipping_address || '',
           paymentMethod: order.payment_method || 'cash',
           paymentStatus: amountPaid >= totalAmount && totalAmount > 0 ? 'paid' : amountPaid > 0 ? 'partial' : 'pending',
+          couponCode: order.coupon_code || '',
+          couponDiscount: parseFloat(order.coupon_discount || 0),
           items: (order.items || []).map(item => ({
             quantity: item.quantity,
             isWeightPending: false,
@@ -490,6 +492,8 @@ Gristmill's - Fresh Flour Daily
       deliveryAddress: order.shipping_address,
       cancellationReason: null,
       cancelledBy: null,
+      couponCode: order.coupon_code || '',
+      couponDiscount: parseFloat(order.coupon_discount || 0),
       items: order.items ? order.items.map(item => ({
         quantity: item.quantity,
         isWeightPending: false,
@@ -572,11 +576,18 @@ Gristmill's - Fresh Flour Daily
             </p>
           </div>
           <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
-            <span className="text-xl font-bold text-slate-800">
-              Rs. {parseInt(order.total_amount).toLocaleString()}
-              {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
-            </span>
-            <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
+            <div className="flex flex-col items-end">
+              <span className="text-xl font-bold text-slate-800">
+                Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
+                {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
+              </span>
+              {parseFloat(order.coupon_discount || 0) > 0 && (
+                <div className="text-xs text-emerald-600 font-medium mt-1">
+                  -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
+                </div>
+              )}
+              <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
+            </div>
           </div>
         </div>
       </CardHeader>

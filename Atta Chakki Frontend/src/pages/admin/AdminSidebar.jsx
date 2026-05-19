@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, Calendar, CheckCircle, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X, Store, ShoppingBag, Mail, Box } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X, Store, ShoppingBag, Mail, Box, Tag } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { useAuth } from '../../store/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,7 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
     { path: '/admin/inventory', label: 'Inventory', icon: Archive },
     { path: '/admin/categories', label: 'Manage Categories', icon: Package },
     { path: '/admin/services', label: 'Manage Products', icon: ShoppingBag },
+    { path: '/admin/coupons', label: 'Manage Coupons', icon: Tag },
     { path: '/admin/delivery', label: 'Delivery Team', icon: Truck },
     { path: '/admin/live-tracking', label: 'Live Tracking', icon: Radio },
     { path: '/admin/comments', label: 'Manage Comments', icon: MessageSquare },

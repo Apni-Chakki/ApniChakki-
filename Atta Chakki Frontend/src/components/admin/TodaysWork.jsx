@@ -436,6 +436,8 @@ Gristmill's - Fresh Flour Daily
           deliveryAddress: order.shipping_address || '',
           paymentMethod: order.payment_method || 'cash',
           paymentStatus: amountPaid >= totalAmount && totalAmount > 0 ? 'paid' : amountPaid > 0 ? 'partial' : 'pending',
+          couponCode: order.coupon_code || '',
+          couponDiscount: parseFloat(order.coupon_discount || 0),
           items: (order.items || []).map(item => ({
             quantity: item.quantity,
             isWeightPending: false,
@@ -490,6 +492,8 @@ Gristmill's - Fresh Flour Daily
       deliveryAddress: order.shipping_address,
       cancellationReason: null,
       cancelledBy: null,
+      couponCode: order.coupon_code || '',
+      couponDiscount: parseFloat(order.coupon_discount || 0),
       items: order.items ? order.items.map(item => ({
         quantity: item.quantity,
         isWeightPending: false,

@@ -99,6 +99,22 @@ export function ServiceCard({ service }) {
     currentPrice = effectiveCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0), 0);
   }
 
+  // Apply discount on top of computed price
+  const discountType = service.discount_type || 'none';
+  const discountValue = parseFloat(service.discount_value) || 0;
+  const hasDiscount = discountType !== 'none' && discountValue > 0;
+  const baseForDiscount = parseFloat(currentPrice) || 0;
+  let discountedPrice = baseForDiscount;
+  if (hasDiscount) {
+    if (discountType === 'percentage') {
+      discountedPrice = Math.max(0, baseForDiscount - (baseForDiscount * Math.min(discountValue, 100) / 100));
+    } else if (discountType === 'fixed') {
+      discountedPrice = Math.max(0, baseForDiscount - discountValue);
+    }
+  }
+  const effectivePrice = hasDiscount ? discountedPrice : baseForDiscount;
+  const badgeText = (service.badge_text || '').trim();
+
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
   const displayUnit = service.unit || 'unit';
   // Only treat as "trip-only" if unit is trip AND dual_unit is NOT enabled
@@ -146,7 +162,10 @@ export function ServiceCard({ service }) {
       const unitLabel = isDualUnit ? 'kg' : displayUnit;
       addToCart({
         ...service,
-        price: parseFloat(currentPrice),
+        price: parseFloat(effectivePrice),
+        original_price: baseForDiscount,
+        discount_type: discountType,
+        discount_value: discountValue,
         unit: isDualUnit ? 'kg' : service.unit,
         is_cleaning: false,
         is_grinding: false,
@@ -174,7 +193,10 @@ export function ServiceCard({ service }) {
 
     addToCart({
       ...service,
-      price: currentPrice,
+      price: effectivePrice,
+      original_price: baseForDiscount,
+      discount_type: discountType,
+      discount_value: discountValue,
       unit: isDualUnit ? 'kg' : service.unit,
       is_cleaning: isCleaning,
       is_grinding: isGrinding,
@@ -203,7 +225,10 @@ export function ServiceCard({ service }) {
       const unitLabel = isDualUnit ? 'kg' : displayUnit;
       addToCart({
         ...service,
-        price: parseFloat(currentPrice),
+        price: parseFloat(effectivePrice),
+        original_price: baseForDiscount,
+        discount_type: discountType,
+        discount_value: discountValue,
         unit: isDualUnit ? 'kg' : service.unit,
         is_cleaning: false,
         is_grinding: false,
@@ -230,7 +255,10 @@ export function ServiceCard({ service }) {
 
     addToCart({
       ...service,
-      price: currentPrice,
+      price: effectivePrice,
+      original_price: baseForDiscount,
+      discount_type: discountType,
+      discount_value: discountValue,
       unit: isDualUnit ? 'kg' : service.unit,
       is_cleaning: isCleaning,
       is_grinding: isGrinding,
@@ -258,7 +286,10 @@ export function ServiceCard({ service }) {
 
     addToCart({
       ...service,
-      price: currentPrice,
+      price: effectivePrice,
+      original_price: baseForDiscount,
+      discount_type: discountType,
+      discount_value: discountValue,
       unit: 'trip',
       is_cleaning: isCleaning,
       is_grinding: isGrinding,
@@ -359,34 +390,80 @@ export function ServiceCard({ service }) {
       className="h-full"
     >
       <Card className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow h-full relative">
-        {service.image_url || service.imageUrl ? (
-          <div className="relative w-full h-48 sm:h-52 md:h-56 overflow-hidden bg-muted">
+        <div className="relative w-full h-48 sm:h-52 md:h-56 overflow-hidden bg-muted">
+          {service.image_url || service.imageUrl ? (
             <ImageWithFallback
               src={service.image_url || service.imageUrl}
               alt={service.name}
               className="w-full h-full object-cover"
             />
-            {isOutOfStock && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <span className="text-white font-bold">{t('Out of Stock')}</span>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16" />
+                </svg>
+                <p className="text-xs">{t('No image')} </p>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="relative w-full h-48 sm:h-52 md:h-56 overflow-hidden bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16" />
-              </svg>
-              <p className="text-xs">{t('No image')} </p>
             </div>
-            {isOutOfStock && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <span className="text-white font-bold">{t('Out of Stock')}</span>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+
+          {/* Custom Badge (top-left) */}
+          {badgeText && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '8px',
+                left: '8px',
+                zIndex: 50,
+                background: 'linear-gradient(90deg, #e11d48, #db2777)',
+                color: '#fff',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                fontSize: '10px',
+                fontWeight: 800,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                border: '2px solid rgba(255,255,255,0.5)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {tDynamic(badgeText)}
+            </span>
+          )}
+
+          {/* Discount Badge (top-right) */}
+          {hasDiscount && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                zIndex: 50,
+                background: 'linear-gradient(135deg, #10b981, #047857)',
+                color: '#fff',
+                padding: '5px 11px',
+                borderRadius: '999px',
+                fontSize: '12px',
+                fontWeight: 800,
+                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                border: '2px solid rgba(255,255,255,0.5)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {discountType === 'percentage'
+                ? `-${Math.min(discountValue, 100)}%`
+                : `-Rs.${discountValue}`}
+            </span>
+          )}
+
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+              <span className="text-white font-bold">{t('Out of Stock')}</span>
+            </div>
+          )}
+        </div>
         
         <div className="p-4 flex flex-col gap-3 flex-1">
           <div className="flex-1">
@@ -395,9 +472,30 @@ export function ServiceCard({ service }) {
               <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
             
-            <p className="text-primary font-bold text-lg">
-              Rs. {Math.round(parseFloat(currentPrice) || 0)} / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
-            </p>
+            {hasDiscount ? (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <p className="text-rose-700 font-extrabold text-xl leading-none">
+                    Rs. {Math.round(effectivePrice)}
+                  </p>
+                  <span className="text-muted-foreground text-sm font-medium">
+                    / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
+                  </span>
+                  <p className="text-muted-foreground text-sm line-through ml-1">
+                    Rs. {Math.round(baseForDiscount)}
+                  </p>
+                </div>
+                <span className="inline-flex items-center w-fit text-[10px] text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                  🏷️ {discountType === 'percentage'
+                    ? `${Math.min(discountValue, 100)}% OFF`
+                    : `Save Rs. ${discountValue}`}
+                </span>
+              </div>
+            ) : (
+              <p className="text-primary font-bold text-lg">
+                Rs. {Math.round(parseFloat(currentPrice) || 0)} <span className="text-sm font-medium text-muted-foreground">/ {tDynamic(isDualUnit ? 'kg' : displayUnit)}</span>
+              </p>
+            )}
 
             {/* Custom Mix Options */}
             {isCustomMix && mixItems.length > 0 && (

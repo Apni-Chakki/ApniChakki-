@@ -299,7 +299,9 @@ export function TomorrowsList() {
     id: order.id,
     customerName: order.customer_name,
     phone: order.customer_phone,
-    total: parseFloat(order.total_amount),
+    total: parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0),
+    couponCode: order.coupon_code || null,
+    couponDiscount: parseFloat(order.coupon_discount || 0),
     createdAt: order.created_at,
     paymentMethod: order.payment_method,
     type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
@@ -432,8 +434,17 @@ export function TomorrowsList() {
                     </p>
                   </div>
                   <div className="text-right bg-orange-50/80 px-3 py-2 rounded-lg border border-orange-200">
-                    <span className="text-lg font-bold text-slate-800">Rs. {parseInt(order.total_amount).toLocaleString()}</span>
-                    <p className="text-xs font-semibold text-orange-600 uppercase">{order.payment_method}</p>
+                    <div className="flex flex-col items-end">
+                      <span className="text-lg font-bold text-slate-800">
+                        Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
+                      </span>
+                      {parseFloat(order.coupon_discount || 0) > 0 && (
+                        <div className="text-xs text-emerald-600 font-medium mt-1">
+                          -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
+                        </div>
+                      )}
+                      <p className="text-xs font-semibold text-orange-600 uppercase">{order.payment_method}</p>
+                    </div>
                   </div>
                 </div>
               </div>

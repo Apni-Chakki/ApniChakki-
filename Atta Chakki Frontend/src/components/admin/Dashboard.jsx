@@ -479,16 +479,18 @@ export function Dashboard() {
            setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden !border-orange-200 !bg-white">
-          <DialogHeader className="shrink-0 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 px-4 py-3">
-            <DialogTitle className="text-lg font-bold text-orange-700 flex items-center gap-2">
-              <History className="h-5 w-5" />
-              Pending Orders
-            </DialogTitle>
-            <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
-              {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden !border-orange-200 !bg-white">
+          <div className="shrink-0">
+            <DialogHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 px-4 py-3">
+              <DialogTitle className="text-lg font-bold text-orange-700 flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Pending Orders
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
+                {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
           {/* Step: Loading */}
           {eodStep === 'loading' && (
@@ -528,8 +530,8 @@ export function Dashboard() {
               </div>
 
               {/* Scrollable orders list */}
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="space-y-1.5 p-3">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3" style={{ maxHeight: '400px' }}>
+                <div className="space-y-1.5">
                   {yesterdayOrders.map((order) => {
                     const isChecked = selectedCompleted.has(order.id);
                     return (
@@ -541,6 +543,7 @@ export function Dashboard() {
                             ? 'bg-green-50 border-green-300 shadow-sm' 
                             : 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-sm'
                         }`}
+                        style={{ backgroundColor: isChecked ? '#f0fdf4' : '#ffffff' }}
                       >
                         {isChecked && (
                           <div className="absolute top-1.5 right-1.5">
@@ -625,7 +628,7 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
 
               {/* Action footer */}
               <div className="shrink-0 border-t border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3 space-y-2.5">

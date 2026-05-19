@@ -102,18 +102,28 @@ export function AddManualOrder() {
       return;
     }
 
-    let itemPrice = parseFloat(product.price);
+    let originalPrice = parseFloat(product.price);
     const selected = [];
 
     if (hasCustomizations) {
-      itemPrice = 0;
+      originalPrice = 0;
       custs.forEach((c, i) => {
         if (selectedOptions[i]) {
-          itemPrice += parseFloat(c.option_price || 0);
+          originalPrice += parseFloat(c.option_price || 0);
           selected.push({ option_name: c.option_name, option_price: parseFloat(c.option_price || 0) });
         }
       });
-      if (itemPrice === 0 && selected.length === 0) itemPrice = parseFloat(product.price);
+      if (originalPrice === 0 && selected.length === 0) originalPrice = parseFloat(product.price);
+    }
+
+    let itemPrice = originalPrice;
+    const discountType = product.discount_type || 'none';
+    const discountValue = parseFloat(product.discount_value) || 0;
+    
+    if (discountType === 'percentage') {
+      itemPrice = Math.max(0, itemPrice - (itemPrice * discountValue / 100));
+    } else if (discountType === 'fixed') {
+      itemPrice = Math.max(0, itemPrice - discountValue);
     }
 
     // Backward compat
@@ -124,6 +134,7 @@ export function AddManualOrder() {
       id: product.id,
       name: product.name,
       price: itemPrice,
+      original_price: originalPrice,
       quantity: parseInt(qty),
       is_cleaning: hasCustomizations ? isCleaning : 0,
       is_grinding: hasCustomizations ? isGrinding : 0,
@@ -374,7 +385,17 @@ export function AddManualOrder() {
                           </div>
                         )}
                       </td>
-                      <td className="p-3">Rs. {item.price}</td>
+                      <td className="p-3">
+                        {item.original_price && item.original_price > item.price ? (
+                          <div className="flex flex-col">
+                            <span className="line-through text-xs text-muted-foreground">Rs. {item.original_price.toLocaleString()}</span>
+                            <span className="text-green-600 font-bold">Rs. {item.price.toLocaleString()}</span>
+                            <span className="text-[9px] text-green-700 bg-green-50 px-1 py-0.5 rounded border border-green-200 w-max font-bold mt-0.5">🏷 DISC</span>
+                          </div>
+                        ) : (
+                          <span>Rs. {item.price.toLocaleString()}</span>
+                        )}
+                      </td>
                       <td className="p-3">{item.quantity}</td>
                       <td className="p-3">Rs. {(item.price * item.quantity).toLocaleString()}</td>
                       <td className="p-3">
