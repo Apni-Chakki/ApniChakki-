@@ -481,7 +481,10 @@ export function ServiceCard({ service }) {
                   <span className="text-muted-foreground text-sm font-medium">
                     / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
                   </span>
-                  <p className="text-muted-foreground text-sm line-through ml-1">
+                  <p 
+                    className="text-muted-foreground text-sm ml-1.5 font-medium" 
+                    style={{ textDecoration: 'line-through', textDecorationColor: '#ef4444', textDecorationThickness: '2px' }}
+                  >
                     Rs. {Math.round(baseForDiscount)}
                   </p>
                 </div>

@@ -229,10 +229,11 @@ export function Homepage() {
                 </div>
               ) : (
                 <div className="category-grid-responsive">
-                  {allCategories.map((category) => (
+                  {allCategories.map((category, index) => (
                     <Card
                       key={category.id}
-                      className="category-card-responsive cursor-pointer rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 group relative overflow-hidden w-full border-2 border-transparent hover:border-primary"
+                      className="category-card-responsive category-card-animate-in cursor-pointer rounded-2xl shadow-md hover:shadow-2xl group relative overflow-hidden w-full border-2 border-transparent hover:border-primary"
+                      style={{ animationDelay: `${index * 120}ms` }}
                       onClick={() => setSelectedCategory(category.id)}
                     >
                       <div 
@@ -241,6 +242,9 @@ export function Homepage() {
                       />
                       <div className={`absolute inset-0 ${category.overlayColor} opacity-50 group-hover:opacity-70 transition-opacity duration-300`} />
                       <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors duration-300" />
+                      
+                      {/* Premium Shimmer Sweep Overlay */}
+                      <div className="shimmer-sweep-overlay" />
                       
                       <div className="relative h-full flex flex-col items-center justify-center px-6 transition-transform duration-300 group-hover:-translate-y-1">
                         <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-md group-hover:scale-110 transition-transform duration-300">

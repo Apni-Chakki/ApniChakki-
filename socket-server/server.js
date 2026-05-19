@@ -1,25 +1,67 @@
 // live tracking k liye socket server hai ye
 
+/* Express or Nodemailer imports */
+const express = require('express');
+const cors = require('cors');
+const nodemailer = require('nodemailer');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 
 const PORT = process.env.PORT || 3001;
 
-const httpServer = createServer((req, res) => {
-  // server check karne k liye route
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: 'ok',
-      uptime: process.uptime(),
-      activeConnections: io.engine.clientsCount,
-      activeDrivers: Object.keys(activeDrivers).length,
-      timestamp: new Date().toISOString()
-    }));
-    return;
+const app = express();
+app.use(cors()); // Allow requests from any origin
+app.use(express.json()); // Parse JSON body
+
+const httpServer = createServer(app);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📨 Nodemailer Setup
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Note: Yahan apna asli email aur password dalna jab live karo
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com', // agar hostinger ho tou 'smtp.hostinger.com'
+  port: 465,
+  secure: true,
+  auth: {
+    user: 'appkigmail@gmail.com', // TODO: Apna email address
+    pass: 'YOUR_APP_PASSWORD'    // TODO: Gmail app password (ya cPanel password)
   }
-  res.writeHead(404);
-  res.end('Not Found');
+});
+
+// API endpoint for sending emails
+app.post('/send-email', async (req, res) => {
+  const { to, subject, body } = req.body;
+
+  if (!to || !subject || !body) {
+    return res.status(400).json({ success: false, message: 'Missing fields: to, subject, body' });
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: '"Apni Chakki" <appkigmail@gmail.com>', // sender address
+      to: to,
+      subject: subject,
+      html: body
+    });
+
+    console.log(`✉️ Email sent: ${info.messageId}`);
+    res.json({ success: true, message: 'Email sent successfully!' });
+  } catch (error) {
+    console.error('❌ Email Error:', error);
+    res.status(500).json({ success: false, message: 'Error sending email', error: error.message });
+  }
+});
+
+// server check karne k liye route
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    activeConnections: io.engine ? io.engine.clientsCount : 0,
+    activeDrivers: Object.keys(activeDrivers).length,
+    timestamp: new Date().toISOString()
+  });
 });
 
 const io = new Server(httpServer, {
