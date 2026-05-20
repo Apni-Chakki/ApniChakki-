@@ -266,8 +266,7 @@ export function Dashboard() {
   };
 
   const statCards = [
-    { id: 'revenue', title: "Today's Revenue",
- value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
+    { id: 'revenue', title: "Today's Revenue", value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
     { id: 'orders', title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, iconBg: '#FEF3C7', iconColor: '#B45309' },
     { id: 'completed', title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, iconBg: '#F0FDFA', iconColor: '#0D9488' },
     { id: 'pending', title: 'Pending (New)', value: stats.pendingOrders, icon: Clock, iconBg: '#FFFFFF', iconColor: '#BE123C' },
@@ -286,13 +285,12 @@ export function Dashboard() {
     <div className="space-y-10 pb-16">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold
-           sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} Overview</h1>
-          <p className="text-gray-500 text-sm mt-2">Real-time store metrics and alerts</p>
+          <h1 className="text-2xl font-bold sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} {t('Overview')}</h1>
+          <p className="text-gray-500 text-sm mt-2">{t('Real-time store metrics and alerts')}</p>
         </div>
         <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" style={{ borderColor: '#8b6f47', color: '#8b6f47' }} disabled={isLoading}>
           <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh Stats
+          {t('Refresh Stats')}
         </Button>
       </div>
 
@@ -307,14 +305,14 @@ export function Dashboard() {
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-900 text-lg uppercase tracking-tight">Stock Exhaustion Warning</h3>
+                  <h3 className="font-bold text-red-900 text-lg uppercase tracking-tight">{t('Stock Exhaustion Warning')}</h3>
                   <p className="text-red-700 text-sm font-medium mt-1">
-                    {lowStockCount} product(s) have fallen below their minimum safe threshold.
+                    {lowStockCount} {t('product(s) below minimum threshold')}
                   </p>
                 </div>
               </div>
               <Button variant="destructive" className="shrink-0 font-bold tracking-wide w-full md:w-auto shadow-sm" onClick={() => navigate('/admin/inventory')}>
-                Manage Inventory
+                {t('Manage Inventory')}
               </Button>
             </div>
             <div className="p-4 sm:p-6 bg-red-50/10">
@@ -323,7 +321,7 @@ export function Dashboard() {
                   <div key={item.id || i} className="flex justify-between items-center p-3 sm:p-4 bg-white border border-red-100 rounded-xl shadow-[0_2px_10px_-4px_rgba(220,38,38,0.15)] hover:border-red-300 transition-colors">
                     <div className="mr-3 overflow-hidden">
                       <p className="font-bold text-gray-800 text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Min required: {item.min} {item.unit}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{t('Min required')}: {item.min} {item.unit}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-red-700 font-extrabold text-xl leading-none">{item.stock}</p>
@@ -336,8 +334,8 @@ export function Dashboard() {
                     onClick={() => navigate('/admin/inventory')}
                     className="flex flex-col items-center justify-center p-3 bg-red-50/50 border border-red-200 border-dashed rounded-xl text-red-800 font-bold text-sm cursor-pointer hover:bg-red-100 transition-colors h-full min-h-[70px]"
                   >
-                    <span>+{lowStockCount - 7} more items</span>
-                    <span className="text-xs font-normal opacity-80 mt-0.5">Click to view all</span>
+                    <span>+{lowStockCount - 7} {t('more items')}</span>
+                    <span className="text-xs font-normal opacity-80 mt-0.5">{t('Click to view all')}</span>
                   </div>
                 )}
               </div>
@@ -350,10 +348,10 @@ export function Dashboard() {
           <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-900 shadow-sm relative overflow-hidden">
              <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
              <AlertCircle className="h-5 w-5 text-orange-600 mb-0.5" />
-             <AlertTitle className="text-orange-900 font-bold ml-2">Overdue Orders Detection</AlertTitle>
+             <AlertTitle className="text-orange-900 font-bold ml-2">{t('Overdue Orders Detection')}</AlertTitle>
              <AlertDescription className="text-orange-800 ml-2 mt-1">
-               There are <strong>{overdueOrdersCount}</strong> orders that have passed their expected delivery or pickup date. 
-               <Button variant="link" onClick={() => navigate('/admin/orders/pending')} className="text-orange-900 font-bold px-1 h-auto py-0 ml-1 underline underline-offset-2">Process Now</Button>
+               There are <strong>{overdueOrdersCount}</strong> orders that have passed their expected delivery or pickup date.
+               <Button variant="link" onClick={() => navigate('/admin/orders/pending')} className="text-orange-900 font-bold px-1 h-auto py-0 ml-1 underline underline-offset-2">{t('Process Now')}</Button>
              </AlertDescription>
           </Alert>
         )}
@@ -363,7 +361,7 @@ export function Dashboard() {
       <div>
         <div className="flex items-center gap-3 mb-7">
           <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
-          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">Today's Pulse</h2>
+          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">{t("Today's Pulse")}</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
           {statCards.map((stat, index) => {
@@ -378,7 +376,7 @@ export function Dashboard() {
                     ? 'border-rose-200 shadow-sm'
                     : 'border-gray-200/70 bg-white shadow-sm hover:shadow-md'
                 }`}
-                style={showUrgent ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' } : {}}
+                style={showUrgent ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' } : { backgroundColor: '#ffffff' }}
               >
                 {isLoading ? (
                   <div className="p-6"><Skeleton className="h-16 w-full" /></div>
@@ -420,7 +418,7 @@ export function Dashboard() {
                               lineHeight: 1
                             }}
                           >
-                            Urgent
+                            {t('Urgent')}
                           </span>
                         )}
                       </div>
@@ -437,7 +435,7 @@ export function Dashboard() {
       <div className="pt-2">
         <div className="flex items-center gap-3 mb-7">
           <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
-          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">All-Time Statistics</h2>
+          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">{t('All-Time Statistics')}</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {allTimeCards.map((stat, index) => {
@@ -448,7 +446,7 @@ export function Dashboard() {
                 className={`relative overflow-hidden transition-all duration-200 rounded-xl ${
                   isFeatured ? 'border-0 text-white' : 'border border-gray-100 bg-white hover:shadow-md'
                 }`}
-                style={isFeatured ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' } : {}}
+                style={isFeatured ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' } : { backgroundColor: '#ffffff' }}
               >
                 {isLoading ? (
                   <div className="p-6"><Skeleton className={`h-16 w-full ${isFeatured ? 'bg-white/20' : ''}`} /></div>
@@ -461,7 +459,7 @@ export function Dashboard() {
                       {stat.value}
                     </h2>
                     <p className={`text-xs ${stat.subtitleClass || (isFeatured ? 'text-white/70 font-medium' : 'text-gray-400 font-medium')}`}>
-                      {stat.subtitle}
+                      {t(stat.subtitle)}
                     </p>
                   </div>
                 )}

@@ -263,7 +263,7 @@ export function PaymentVerification() {
 
       {/* Wallet Balance Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+        <Card className="p-5 border-green-200" style={{ background: 'linear-gradient(135deg, #dcfce7, #d1fae5)' }}>
           <div className="flex items-center gap-3">
             <div className="p-3 bg-green-200 rounded-full">
               <Wallet className="h-6 w-6 text-green-700" />
@@ -277,7 +277,7 @@ export function PaymentVerification() {
           </div>
         </Card>
 
-        <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="p-5 border-blue-200" style={{ background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)' }}>
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-200 rounded-full">
               <ArrowDownRight className="h-6 w-6 text-blue-700" />
@@ -291,7 +291,7 @@ export function PaymentVerification() {
           </div>
         </Card>
 
-        <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+        <Card className="p-5 border-purple-200" style={{ background: 'linear-gradient(135deg, #f3e8ff, #ede9fe)' }}>
           <div className="flex items-center gap-3">
             <div className="p-3 bg-purple-200 rounded-full">
               <TrendingUp className="h-6 w-6 text-purple-700" />
@@ -305,7 +305,10 @@ export function PaymentVerification() {
           </div>
         </Card>
 
-        <Card className={`p-5 border-yellow-200 ${(walletBalance?.pending_verification_count || 0) > 0 ? 'bg-gradient-to-br from-yellow-50 to-orange-50 animate-pulse' : 'bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200'}`}>
+        <Card
+          className={`p-5 ${(walletBalance?.pending_verification_count || 0) > 0 ? 'border-yellow-200 animate-pulse' : 'border-gray-200'}`}
+          style={{ background: (walletBalance?.pending_verification_count || 0) > 0 ? 'linear-gradient(135deg, #fef9c3, #fed7aa)' : 'linear-gradient(135deg, #f3f4f6, #f1f5f9)' }}
+        >
           <div className="flex items-center gap-3">
             <div className={`p-3 rounded-full ${(walletBalance?.pending_verification_count || 0) > 0 ? 'bg-yellow-200' : 'bg-gray-200'}`}>
               <AlertCircle className={`h-6 w-6 ${(walletBalance?.pending_verification_count || 0) > 0 ? 'text-yellow-700' : 'text-gray-500'}`} />

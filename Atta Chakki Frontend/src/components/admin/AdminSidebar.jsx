@@ -54,8 +54,8 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
         </Button>
 
         <Link to="/admin/dashboard" className="block" onClick={onClose}>
-          <h1 className="admin-brand-title">Admin Panel</h1>
-          <p className="admin-brand-subtitle">Store Management</p>
+          <h1 className="admin-brand-title">{t('Admin Panel')}</h1>
+          <p className="admin-brand-subtitle">{t('Store Management')}</p>
         </Link>
       </div>
 

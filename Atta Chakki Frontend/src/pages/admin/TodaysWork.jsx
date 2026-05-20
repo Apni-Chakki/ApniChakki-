@@ -840,7 +840,7 @@ Gristmill's - Fresh Flour Daily
     <TooltipProvider>
     <div className="space-y-6">
       {/* header with quick stats */}
-      <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-emerald-50/50 p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-100 p-6 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 text-xs font-semibold uppercase tracking-wide mb-3">
@@ -856,25 +856,25 @@ Gristmill's - Fresh Flour Daily
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Total Weight</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalWeight.toFixed(1)} kg</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 mt-6" style={{ gap: '1.25rem' }}>
+          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Total Weight</p>
+            <p className="text-2xl font-black text-gray-900">{totalWeight.toFixed(1)} kg</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Estimated Workload</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalProcessingMinutes} mins</p>
+          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Estimated Workload</p>
+            <p className="text-2xl font-black text-gray-900">{totalProcessingMinutes} mins</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Available Drivers</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{activeDrivers}</p>
+          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Available Drivers</p>
+            <p className="text-2xl font-black text-gray-900">{activeDrivers}</p>
           </div>
         </div>
       </div>
 
       {/* capacity utilization bar */}
       {capacity && (
-        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <Card className="border-blue-200 rounded-xl" style={{ background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)' }}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">

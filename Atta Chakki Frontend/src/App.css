@@ -151,7 +151,7 @@
   flex: 1;
   padding: 2rem;
   overflow: auto;
-  background-color: #FBF6F0;
+  background-color: #f1eeee;
 }
 @media (max-width: 767px) {
   .admin-main-inner { padding: 1rem; }
