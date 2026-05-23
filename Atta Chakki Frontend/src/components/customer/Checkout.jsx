@@ -13,17 +13,12 @@ import { useAuth } from '../../lib/AuthContext';
 import { API_BASE_URL, GOOGLE_MAPS_API_KEY } from "../../config";
 import { useTranslation } from 'react-i18next';
 import { GoogleMapPicker } from './GoogleMapPicker';
-// Leaflet fallback (when no Google Maps API key)
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Flag to decide which map to use
 const USE_GOOGLE_MAPS = !!GOOGLE_MAPS_API_KEY;
 
-// ============================================================
-// LEAFLET SETUP — Explicit custom icon (avoids bundler issues)
-// ============================================================
 const customIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -34,16 +29,11 @@ const customIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-// Fallback: Lahore city center (used when GPS fails so map doesn't show gray)
 const FALLBACK_CENTER = { lat: 31.5204, lng: 74.3587 };
 
-// ============================================================
-// MapInvalidator — Aggressively invalidates size to fix broken/gray tiles
-// ============================================================
 function MapInvalidator() {
   const map = useMap();
   useEffect(() => {
-    // Fire on mount and repeatedly to catch dynamic unhiding
     const timers = [0, 100, 300, 600, 1000].map((delay) =>
       setTimeout(() => {
         if (map) map.invalidateSize({ animate: false });
@@ -54,15 +44,11 @@ function MapInvalidator() {
   return null;
 }
 
-// ============================================================
-// RecenterMap — Programmatically moves the map when center changes
-// ============================================================
 function RecenterMap({ center }) {
   const map = useMap();
   useEffect(() => {
     if (center && map) {
       map.setView(center, 17, { animate: true });
-      // Re-invalidate after the view change settles
       const t1 = setTimeout(() => map.invalidateSize({ animate: false }), 200);
       return () => clearTimeout(t1);
     }
@@ -70,9 +56,6 @@ function RecenterMap({ center }) {
   return null;
 }
 
-// ============================================================
-// DraggableMarker — Marker the user can drag to refine location
-// ============================================================
 function DraggableMarker({ position, onDragEnd }) {
   const markerRef = useRef(null);
   const eventHandlers = useMemo(
@@ -99,7 +82,6 @@ function DraggableMarker({ position, onDragEnd }) {
   );
 }
 
-// Sandbox test card numbers
 const SANDBOX_TEST_CARDS = {
   visa_success: '4242 4242 4242 4242',
   mastercard_success: '5555 5555 5555 4444',
@@ -107,12 +89,28 @@ const SANDBOX_TEST_CARDS = {
   insufficient_funds: '4000 0000 0000 9995',
 };
 
-// Sandbox test phone numbers  
 const SANDBOX_TEST_PHONES = {
   success: '03211234567',
   insufficient: '03000000000',
   invalid: '03111111111',
   timeout: '03999999999',
+};
+
+// ============================================================
+// Shop Location & Distance Calculator
+// ============================================================
+const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 }; 
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; 
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; 
 };
 
 export function Checkout() {
@@ -125,11 +123,15 @@ export function Checkout() {
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [orderType, setOrderType] = useState('pickup');
-  const [address, setAddress] = useState('');
+  
+  // Split Address States
+  const [deliveryArea, setDeliveryArea] = useState(''); 
+  const [houseDetails, setHouseDetails] = useState(''); 
+
   const [locationStatus, setLocationStatus] = useState('');
-  const [gpsCoords, setGpsCoords] = useState(null); // { lat, lng, accuracy }
+  const [gpsCoords, setGpsCoords] = useState(null); 
   const [showMap, setShowMap] = useState(false);
-  const [mapCenter, setMapCenter] = useState(null); // triggers map re-center
+  const [mapCenter, setMapCenter] = useState(null); 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
@@ -138,37 +140,118 @@ export function Checkout() {
   const [partialPayment, setPartialPayment] = useState(false);
   const [amountPaid, setAmountPaid] = useState('');
   
-  // Credit card fields
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
   const [cardName, setCardName] = useState('');
   const [cnicLast6, setCnicLast6] = useState('');
 
-  // Payment processing states
-  const [paymentStep, setPaymentStep] = useState('input'); // 'input', 'processing', 'success', 'failed'
+  const [paymentStep, setPaymentStep] = useState('input'); 
   const [paymentResult, setPaymentResult] = useState(null);
   const [showSandboxHelper, setShowSandboxHelper] = useState(false);
 
   const total = getTotalPrice();
   const hasPendingWeightItem = cart.some(item => item.isWeightPending);
   const hasTripItem = cart.some(item => item.service?.unit?.toLowerCase() === 'trip');
-  // Only trip-based items are TBD — Kg orders always have known weight & price
   const isTbdOrder = hasTripItem;
-  // Determine if this is a Kg order (user knows weight, price is calculated immediately)
   const isKgOrder = !hasTripItem && cart.length > 0;
 
-  // ── Schedule Preview State ──
   const [schedulePreview, setSchedulePreview] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
+  // Delivery & Geofencing States
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [distanceKm, setDistanceKm] = useState(0);
+  const [isOutOfLahore, setIsOutOfLahore] = useState(false);
+
+  const grandTotal = total + deliveryFee;
+
+  // ============================================================
+  // Fetch Dynamic Delivery Rates from PHP
+  // ============================================================
+  const [deliveryConfig, setDeliveryConfig] = useState({ 
+    base_fare: 50, 
+    base_distance: 10, 
+    per_km_rate: 10 
+  }); 
+
   useEffect(() => {
-    if (hasTripItem) {
-      setOrderType('delivery');
+    const fetchDeliverySettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/get_delivery_settings.php`);
+        const data = await res.json();
+        if (data.success && data.settings) {
+          setDeliveryConfig(data.settings);
+        }
+      } catch (err) {
+        console.warn('Failed to load dynamic rates. Using default rates.');
+      }
+    };
+    fetchDeliverySettings();
+  }, []);
+
+  // ============================================================
+  // MATH LOGIC: Now uses Dynamic Admin Rates
+  // ============================================================
+  useEffect(() => {
+    if (orderType !== 'delivery') {
+      setDeliveryFee(0);
+      setIsOutOfLahore(false);
+      return;
     }
+
+    if (gpsCoords && !isOutOfLahore) {
+      const straightDist = calculateDistance(
+        SHOP_LOCATION.lat, SHOP_LOCATION.lng, 
+        gpsCoords.lat, gpsCoords.lng
+      );
+
+      const updateFee = (distVal) => {
+        setDistanceKm(distVal);
+        let fee = deliveryConfig.base_fare;
+        if (distVal > deliveryConfig.base_distance) {
+          fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
+        }
+        setDeliveryFee(fee);
+      };
+
+      if (USE_GOOGLE_MAPS && window.google?.maps?.DistanceMatrixService) {
+        try {
+          const service = new window.google.maps.DistanceMatrixService();
+          service.getDistanceMatrix(
+            {
+              origins: [new window.google.maps.LatLng(SHOP_LOCATION.lat, SHOP_LOCATION.lng)],
+              destinations: [new window.google.maps.LatLng(gpsCoords.lat, gpsCoords.lng)],
+              travelMode: window.google.maps.TravelMode.DRIVING,
+              unitSystem: window.google.maps.UnitSystem.METRIC,
+            },
+            (response, status) => {
+              if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
+                const element = response.rows[0].elements[0];
+                const roadDist = element.distance.value / 1000;
+                updateFee(roadDist);
+              } else {
+                updateFee(straightDist);
+              }
+            }
+          );
+        } catch (e) {
+          console.warn('Distance Matrix failed, using straight-line:', e);
+          updateFee(straightDist);
+        }
+      } else {
+        updateFee(straightDist);
+      }
+    } else {
+      setDeliveryFee(0);
+      setDistanceKm(0);
+    }
+  }, [gpsCoords, isOutOfLahore, orderType, deliveryConfig]);
+
+  useEffect(() => {
+    if (hasTripItem) setOrderType('delivery');
   }, [hasTripItem, cart]);
 
-  // ── Fetch schedule availability when cart changes ──
   useEffect(() => {
     if (cart.length === 0) {
       setSchedulePreview(null);
@@ -188,9 +271,7 @@ export function Checkout() {
       try {
         const res = await fetch(`${API_BASE_URL}/controllers/orders/check_schedule.php?weight=${totalWeight}`);
         const data = await res.json();
-        if (data.success && data.schedule) {
-          setSchedulePreview(data.schedule);
-        }
+        if (data.success && data.schedule) setSchedulePreview(data.schedule);
       } catch (err) {
         console.warn('Schedule check failed:', err);
       } finally {
@@ -198,7 +279,6 @@ export function Checkout() {
       }
     };
 
-    // Debounce: wait 500ms after last cart change
     const timer = setTimeout(fetchSchedule, 500);
     return () => clearTimeout(timer);
   }, [cart]);
@@ -207,27 +287,21 @@ export function Checkout() {
     if (user && user.role === 'customer') {
       setCustomerName(user.full_name || user.name || '');
       setPhone(user.phone || user.username || '');
-      
-      if (user.address) setAddress(user.address);
+      if (user.address) setHouseDetails(user.address);
     }
   }, [user]);
 
-  // Format card number with spaces (XXXX XXXX XXXX XXXX)
   const formatCardNumber = (value) => {
     const digits = value.replace(/\D/g, '').slice(0, 16);
     return digits.replace(/(.{4})/g, '$1 ').trim();
   };
 
-  // Format expiry date (MM/YY)
   const formatExpiry = (value) => {
     const digits = value.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 3) {
-      return digits.slice(0, 2) + '/' + digits.slice(2);
-    }
+    if (digits.length >= 3) return digits.slice(0, 2) + '/' + digits.slice(2);
     return digits;
   };
 
-  // Detect card type from number
   const getCardType = (number) => {
     const digits = number.replace(/\s/g, '');
     if (/^4/.test(digits)) return 'visa';
@@ -236,172 +310,180 @@ export function Checkout() {
     return null;
   };
 
-  // Reverse geocode a lat/lng into a human-readable address
-  // Uses FREE Nominatim (OpenStreetMap) as primary, Google as fallback
   const reverseGeocode = useCallback(async (lat, lng) => {
-      // ── 1. Try Nominatim (FREE — no API key needed) ──
+    let addressText = null;
+    let inLahore = false;
+
+    if (USE_GOOGLE_MAPS) {
       try {
-        const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
-        const response = await fetch(nominatimUrl, {
-          headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.display_name) {
-            // Build a cleaner address from components if available
-            const addr = data.address;
-            if (addr) {
-              const parts = [
-                addr.house_number,
-                addr.road,
-                addr.neighbourhood || addr.suburb,
-                addr.city || addr.town || addr.village,
-                addr.state,
-                addr.country
-              ].filter(Boolean);
-              
-              if (parts.length >= 3) {
-                return parts.join(', ');
-              }
-            }
-            return data.display_name;
-          }
-        }
-      } catch (e) {
-        console.warn('Nominatim reverse geocode failed:', e);
-      }
-
-      // ── 2. Fallback to Google Geocoding API (if key exists) ──
-      try {
-        if (!GOOGLE_MAPS_API_KEY) return null;
-
         const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
         const response = await fetch(apiUrl);
-        
         if (response.ok) {
           const data = await response.json();
           if (data.status === 'OK' && data.results && data.results.length > 0) {
-            const bestResult = data.results.find(r => 
-              !r.types.includes('plus_code') && r.formatted_address
-            ) || data.results[0];
-            return bestResult.formatted_address;
+            const bestResult = data.results.find(r => !r.types.includes('plus_code') && r.formatted_address) || data.results[0];
+            inLahore = bestResult.address_components.some(comp => 
+              comp.long_name.toLowerCase().includes('lahore') || 
+              comp.short_name.toLowerCase().includes('lahore')
+            );
+            return { addressText: bestResult.formatted_address, inLahore };
           }
         }
-      } catch (e) {
-        console.warn('Google reverse geocode fallback failed:', e);
+      } catch (e) { console.warn('Google reverse geocode failed:', e); }
+    }
+
+    try {
+      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
+      const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.display_name) {
+          inLahore = data.display_name.toLowerCase().includes('lahore');
+          const addr = data.address;
+          if (addr) {
+            const parts = [ addr.house_number, addr.road, addr.neighbourhood || addr.suburb, addr.city || addr.town || addr.village, addr.state, addr.country ].filter(Boolean);
+            if (parts.length >= 3) addressText = parts.join(', ');
+          }
+          if (!addressText) addressText = data.display_name;
+          return { addressText, inLahore };
+        }
       }
+    } catch (e) { console.warn('Nominatim failed:', e); }
 
-      return null;
-    }, []);
+    return { addressText: null, inLahore: false };
+  }, []);
 
-  // Handle marker drag on the map
+  const searchTypedAddress = async () => {
+    if (!deliveryArea || deliveryArea.length < 3) return;
+    setLocationStatus(`🔍 ${t('Verifying area on map...')}`);
+
+    let foundLocation = null;
+
+    if (USE_GOOGLE_MAPS) {
+      try {
+        const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(deliveryArea + ', Pakistan')}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (data.status === 'OK' && data.results.length > 0) {
+          const result = data.results[0];
+          const { lat, lng } = result.geometry.location;
+          const isOfficiallyLahore = result.address_components.some(comp =>
+            comp.long_name.toLowerCase().includes('lahore') ||
+            comp.short_name.toLowerCase().includes('lahore')
+          );
+          foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+        }
+      } catch (e) { console.warn('Google forward geocode failed', e); }
+    }
+
+    if (!foundLocation) {
+      try {
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(deliveryArea + ', Pakistan')}&limit=1`;
+        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+          const isOfficiallyLahore = data[0].display_name.toLowerCase().includes('lahore');
+          foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+        }
+      } catch (e) { console.warn('Nominatim forward geocode failed', e); }
+    }
+
+    if (foundLocation) {
+      setGpsCoords({ lat: foundLocation.lat, lng: foundLocation.lng, accuracy: 50 });
+      setMapCenter([foundLocation.lat, foundLocation.lng]);
+      setShowMap(true);
+      
+      setIsOutOfLahore(!foundLocation.isLahore);
+
+      if (foundLocation.isLahore) {
+        setLocationStatus(`✅ ${t('Area verified & mapped!')}`);
+      } else {
+        setLocationStatus(`❌ ${t('Service not available in this city')}`);
+      }
+    } else {
+      // NEW CUSTOM ERROR MESSAGE
+      setLocationStatus(`⚠️ ${t("Can't find your area, select from map or try another nearest area.")}`);
+    }
+  };
+
   const handleMarkerDrag = useCallback(async (newPos) => {
     setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
-    setLocationStatus(`📡 ${t('Fetching address...')}`);
+    setLocationStatus(`📡 ${t('Fetching area...')}`);
     
-    const addr = await reverseGeocode(newPos.lat, newPos.lng);
-    if (addr) {
-      setAddress(addr);
-      setLocationStatus(`✅ ${t('Address updated')}`);
-      toast.success(t('Address updated from new pin location'));
+    const { addressText, inLahore } = await reverseGeocode(newPos.lat, newPos.lng);
+    
+    setIsOutOfLahore(!inLahore);
+
+    if (addressText) {
+      setDeliveryArea(addressText);
+      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
+      if(inLahore) toast.success(t('Area updated from new pin location'));
     } else {
-      setAddress(`Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`);
-      setLocationStatus(`✅ ${t('Location pinned')}`);
-      toast.info(t('Could not fetch address. Please type it manually.'));
+      setDeliveryArea(`Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
     }
   }, [reverseGeocode, t]);
 
-  // Helper: process a successful lat/lng fix (shared by browser GPS & Google fallback)
   const processLocationFix = useCallback(async (lat, lng, accuracy, source) => {
     setGpsCoords({ lat, lng, accuracy });
     setShowMap(true);
     setMapCenter([lat, lng]);
 
-    const isLowAccuracy = accuracy > 200; // Desktop WiFi/IP typically >200m
+    const { addressText, inLahore } = await reverseGeocode(lat, lng);
+    setIsOutOfLahore(!inLahore);
+
+    const isLowAccuracy = accuracy > 200; 
 
     if (isLowAccuracy) {
-      setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
-      toast.info(t('Location is approximate. Use the map search bar or drag the pin to your exact location.'), { duration: 6000 });
+      if (accuracy > 1000) {
+        setLocationStatus(`⚠️ ${t('Approximate location — Please refine by dragging the pin to your exact spot')}`);
+      } else {
+        setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
+      }
+      toast.info(t('Location is approximate. Drag the pin to your exact area.'));
     } else {
-      setLocationStatus(`✅ ${t('Location pinned')} (±${Math.round(accuracy)}m) — ${source}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
     }
 
-    // Reverse-geocode → fill address field automatically
-    const addr = await reverseGeocode(lat, lng);
-    if (addr) {
-      setAddress(addr);
-      if (!isLowAccuracy) {
-        toast.success(t('Location captured! Drag the pin to adjust.'));
-      }
+    if (addressText) {
+      setDeliveryArea(addressText);
     } else {
-      setAddress(`Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-      toast.info(t('GPS pin saved. Please type your full address above.'));
+      setDeliveryArea(`Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     }
   }, [reverseGeocode, t]);
 
-  // Fallback: show the map at a safe default location so the user can search or drag the pin manually.
   const fallbackToManualLocation = useCallback(() => {
     setGpsCoords({ lat: FALLBACK_CENTER.lat, lng: FALLBACK_CENTER.lng, accuracy: 0 });
     setShowMap(true);
     setMapCenter([FALLBACK_CENTER.lat, FALLBACK_CENTER.lng]);
-    setLocationStatus(t('Drag the pin to your location'));
-    toast.info(t('Please search your address or drag the pin to your delivery location.'));
+    setLocationStatus(t('Drag the pin to your general area'));
+    setIsOutOfLahore(false);
   }, [t]);
 
-  // ─── Main handler: "Get My Location" button ───────────────────
   const handleGetLocation = async () => {
     setLocationStatus(t('📡 Getting precise GPS fix...'));
     setGpsCoords(null);
     setShowMap(false);
 
-    // ── 1. Check browser Geolocation API support ──
     if (!navigator.geolocation) {
-      toast.error(t('Your browser does not support GPS. Please search the address or drag the pin.'));
       fallbackToManualLocation();
       return;
     }
 
-    // ── 2. Use browser GPS with high accuracy (real GPS hardware) ──
     try {
       const position = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,   // Uses GPS chip → sub-10 m accuracy
-          timeout: 15000,             // Wait up to 15 s for a GPS fix
-          maximumAge: 0,              // Always get a fresh reading
+          enableHighAccuracy: true, timeout: 15000, maximumAge: 0, 
         });
       });
-
       const { latitude: lat, longitude: lng, accuracy } = position.coords;
       await processLocationFix(lat, lng, accuracy, 'GPS');
-
     } catch (geoError) {
-      // ── 3. Handle specific geolocation errors ──
-      switch (geoError.code) {
-        case geoError.PERMISSION_DENIED:
-          console.warn('User denied Geolocation permission.');
-          toast.error(t('Location permission denied. Please allow location access, or search/drag the pin on the map.'));
-          fallbackToManualLocation();
-          break;
-
-        case geoError.POSITION_UNAVAILABLE:
-          console.warn('Position unavailable (GPS hardware error).');
-          toast.error(t('GPS signal unavailable. Please search the address or drag the pin manually.'));
-          fallbackToManualLocation();
-          break;
-
-        case geoError.TIMEOUT:
-          console.warn('Geolocation timed out.');
-          toast.error(t('GPS took too long. Please search the address or drag the pin manually.'));
-          fallbackToManualLocation();
-          break;
-
-        default:
-          console.error('Unknown geolocation error:', geoError);
-          toast.error(t('Could not get location. Please search the address or drag the pin manually.'));
-          fallbackToManualLocation();
-          break;
-      }
+      fallbackToManualLocation();
     }
   };
 
@@ -411,33 +493,32 @@ export function Checkout() {
       navigate('/login/customer', { state: { from: location } });
       return;
     }
-
     if (!customerName || !phone) {
       toast.error(t('Please fill in your details'));
       return;
     }
-
-    if (orderType === 'delivery' && !address) {
-      toast.error(t('Please provide a delivery address'));
-      return;
+    
+    if (orderType === 'delivery') {
+      if (!deliveryArea || !gpsCoords) {
+        toast.error(t('Please provide your Delivery Area and confirm it on the map.'));
+        return;
+      }
+      if (!houseDetails) {
+        toast.error(t('Please provide your House/Street details for the rider.'));
+        return;
+      }
+      if (isOutOfLahore) {
+        toast.error(t('Service not available in this city'));
+        return;
+      }
     }
+    
+    if (cart.length === 0) return;
 
-    if (cart.length === 0) {
-      toast.error(t('Your cart is empty'));
-      return;
-    }
-
-    // Validate partial payment amount
     if (partialPayment && paymentMethod === 'cash' && total > 0) {
       const paidAmount = parseFloat(amountPaid);
-      if (isNaN(paidAmount) || paidAmount <= 0) {
-        toast.error(t('Please enter a valid payment amount'));
-        return;
-      }
-      if (paidAmount >= total) {
-        toast.error(t('Partial payment cannot be equal or greater than total amount'));
-        return;
-      }
+      if (isNaN(paidAmount) || paidAmount <= 0) return toast.error(t('Please enter a valid payment amount'));
+      if (paidAmount >= total) return toast.error(t('Partial payment cannot be equal or greater than total amount'));
     }
 
     if (paymentMethod !== 'cash' && (!hasPendingWeightItem || total > 0) && !isTbdOrder) {
@@ -445,8 +526,7 @@ export function Checkout() {
       setShowPaymentDialog(true);
     } else {
       if (partialPayment && total > 0 && !isTbdOrder) {
-        const paidAmount = parseFloat(amountPaid);
-        completeOrder('partial', null, paidAmount);
+        completeOrder('partial', null, parseFloat(amountPaid));
       } else {
         completeOrder('pending');
       }
@@ -454,32 +534,45 @@ export function Checkout() {
   };
 
   const processOnlinePayment = async () => {
-    // Validate inputs based on payment method
-    if (paymentMethod === 'jazzcash' && !mobileNumber) {
-      toast.error(t('Please enter mobile number'));
-      return;
-    }
-    if (paymentMethod === 'bank' && !bankAccountNumber) {
-      toast.error(t('Please enter bank account number'));
-      return;
-    }
-    if (paymentMethod === 'card') {
-      if (!cardNumber || !cardExpiry || !cardCvv || !cardName) {
-        toast.error(t('Please fill in all card details'));
+    // ── Payment validation checks ──
+    if (paymentMethod === 'jazzcash') {
+      if (!mobileNumber || mobileNumber.trim() === '') {
+        toast.error(t('Please enter your JazzCash mobile number'));
         return;
       }
-      // Basic validation
-      const cleanCard = cardNumber.replace(/\s/g, '');
-      if (cleanCard.length < 13) {
-        toast.error(t('Invalid card number'));
+      if (mobileNumber.length !== 11 || !mobileNumber.startsWith('03')) {
+        toast.error(t('Please enter a valid 11-digit JazzCash mobile number starting with 03'));
         return;
       }
-      if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
-        toast.error(t('Invalid expiry date. Use MM/YY format'));
+      if (cnicLast6 && cnicLast6.length !== 6) {
+        toast.error(t('CNIC Last 6 digits must be exactly 6 digits if provided'));
         return;
       }
-      if (!/^\d{3,4}$/.test(cardCvv)) {
-        toast.error(t('Invalid CVV'));
+    } else if (paymentMethod === 'bank') {
+      if (!bankAccountNumber || bankAccountNumber.trim() === '') {
+        toast.error(t('Please enter your Bank Account / IBAN Number'));
+        return;
+      }
+      if (bankAccountNumber.trim().length < 8) {
+        toast.error(t('Please enter a valid Bank Account or IBAN Number (minimum 8 characters)'));
+        return;
+      }
+    } else if (paymentMethod === 'card') {
+      const rawCardNum = cardNumber.replace(/\s/g, '');
+      if (!rawCardNum || rawCardNum.length < 12 || rawCardNum.length > 19) {
+        toast.error(t('Please enter a valid Card Number'));
+        return;
+      }
+      if (!cardName || cardName.trim() === '') {
+        toast.error(t('Please enter the Cardholder Name'));
+        return;
+      }
+      if (!cardExpiry || !/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+        toast.error(t('Please enter a valid expiry date (MM/YY)'));
+        return;
+      }
+      if (!cardCvv || cardCvv.length < 3 || cardCvv.length > 4) {
+        toast.error(t('Please enter a valid 3 or 4 digit CVV'));
         return;
       }
     }
@@ -488,7 +581,6 @@ export function Checkout() {
     setPaymentStep('processing');
 
     try {
-      // Build payment data
       const paymentData = {
         order_id: null,
         user_id: user.id,
@@ -503,15 +595,38 @@ export function Checkout() {
         cnic_last6: cnicLast6 || null,
       };
 
-      // First create the order
+      let fullDeliveryAddress = "Pickup From Store";
+      if (orderType === 'delivery') {
+        const h = (houseDetails || '').trim();
+        const a = (deliveryArea || '').trim();
+        if (h && a) {
+          if (h === a) {
+            fullDeliveryAddress = a;
+          } else if (h.toLowerCase().includes(a.toLowerCase())) {
+            fullDeliveryAddress = h;
+          } else {
+            fullDeliveryAddress = `${h}, ${a}`;
+          }
+        } else {
+          fullDeliveryAddress = h || a || "";
+        }
+      }
+
       const orderData = {
         user_id: user.id,
         cart_items: cart.map(item => ({
           id: item.service.id,
-          qty: item.quantity
+          qty: item.quantity,
+          is_cleaning: item.service.is_cleaning ? 1 : 0,
+          is_grinding: item.service.is_grinding ? 1 : 0,
+          price: item.service.price,
+          is_weight_pending: item.isWeightPending ? 1 : 0
         })),
         total: isTbdOrder ? 0 : total,
         address: orderType === 'delivery' ? address : "Pickup From Store",
+        cart_items: cart.map(item => ({ id: item.service.id, qty: item.quantity })),
+        total: isTbdOrder ? 0 : grandTotal,
+        address: fullDeliveryAddress,
         payment_method: isTbdOrder ? 'cash' : paymentMethod,
         payment_status: 'pending',
         amount_paid: 0,
@@ -527,12 +642,8 @@ export function Checkout() {
       });
 
       const orderResult = await orderResponse.json();
+      if (!orderResult.success) throw new Error(orderResult.message || 'Failed to create order');
 
-      if (!orderResult.success) {
-        throw new Error(orderResult.message || 'Failed to create order');
-      }
-
-      // Now process the payment
       paymentData.order_id = orderResult.order_id;
 
       const paymentResponse = await fetch(`${API_BASE_URL}/payments/process_online_payment.php`, {
@@ -547,8 +658,6 @@ export function Checkout() {
         setPaymentStep('success');
         setPaymentResult(result);
         setIsProcessingPayment(false);
-        
-        // Auto navigate after 2 seconds
         setTimeout(() => {
           setShowPaymentDialog(false);
           toast.success(result.message);
@@ -562,30 +671,53 @@ export function Checkout() {
       setIsProcessingPayment(false);
       setPaymentStep('failed');
       setPaymentResult({ message: error.message });
-      console.error('Payment Error:', error);
     }
   };
 
   const completeOrder = async (paymentStatus, transactionId, paidAmount = 0) => {
+    // If there are TBD items, and user is paying the current total, it must be 'partial'
+    // because more weight/price will be added later.
+    let finalStatus = paymentStatus;
+    if (hasPendingWeightItem && paymentStatus === 'paid') {
+      finalStatus = 'partial';
+    }
+
     // Build delivery address with GPS pin link for delivery person
     let deliveryAddress = "Pickup From Store";
     if (orderType === 'delivery') {
-      deliveryAddress = address;
-      if (gpsCoords) {
-        deliveryAddress += ` | 📍 https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
+      const h = (houseDetails || '').trim();
+      const a = (deliveryArea || '').trim();
+      if (h && a) {
+        if (h === a) {
+          deliveryAddress = a;
+        } else if (h.toLowerCase().includes(a.toLowerCase())) {
+          deliveryAddress = h;
+        } else {
+          deliveryAddress = `${h}, ${a}`;
+        }
+      } else {
+        deliveryAddress = h || a || "";
       }
+      if (gpsCoords) deliveryAddress += ` | 📍 https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
     }
 
     const orderData = {
       user_id: user.id,
       cart_items: cart.map(item => ({
         id: item.service.id,
-        qty: item.quantity
+        qty: item.quantity,
+        is_cleaning: item.service.is_cleaning ? 1 : 0,
+        is_grinding: item.service.is_grinding ? 1 : 0,
+        price: item.service.price
       })),
       total: isTbdOrder ? 0 : total,
+      cart_items: cart.map(item => ({ id: item.service.id, qty: item.quantity })),
+      total: isTbdOrder ? 0 : grandTotal,
+      delivery_fee: deliveryFee,
+      distance_km: distanceKm.toFixed(1),
       address: deliveryAddress,
       payment_method: isTbdOrder ? 'cash' : paymentMethod,
-      payment_status: paymentStatus,
+      payment_status: finalStatus,
       transaction_id: transactionId || null,
       amount_paid: paidAmount,
       order_type: orderType,
@@ -607,7 +739,6 @@ export function Checkout() {
       if (result.success) {
         toast.success(result.message || t("Order placed successfully!"));
         clearCart(); 
-
         navigate(`/order-confirmation/${result.order_id}`); 
       } else {
         toast.error(t("Failed to place order") + ": " + result.message);
@@ -618,27 +749,14 @@ export function Checkout() {
     }
   };
 
-  // Fill test data helpers
   const fillTestCard = (type) => {
     switch(type) {
       case 'visa_success':
-        setCardNumber('4242 4242 4242 4242');
-        setCardExpiry('12/28');
-        setCardCvv('123');
-        setCardName('Test Visa User');
-        break;
+        setCardNumber('4242 4242 4242 4242'); setCardExpiry('12/28'); setCardCvv('123'); setCardName('Test Visa User'); break;
       case 'mastercard_success':
-        setCardNumber('5555 5555 5555 4444');
-        setCardExpiry('12/28');
-        setCardCvv('456');
-        setCardName('Test MC User');
-        break;
+        setCardNumber('5555 5555 5555 4444'); setCardExpiry('12/28'); setCardCvv('456'); setCardName('Test MC User'); break;
       case 'decline':
-        setCardNumber('4000 0000 0000 0002');
-        setCardExpiry('12/28');
-        setCardCvv('789');
-        setCardName('Decline Test');
-        break;
+        setCardNumber('4000 0000 0000 0002'); setCardExpiry('12/28'); setCardCvv('789'); setCardName('Decline Test'); break;
     }
     toast.info(t('Test card data filled'));
   };
@@ -663,14 +781,15 @@ export function Checkout() {
   }
 
   const remainingAmount = partialPayment ? Math.max(0, total - (parseFloat(amountPaid) || 0)) : 0;
-
   const cardType = getCardType(cardNumber);
+
+  const isCartEmpty = total === 0 && !hasPendingWeightItem && !isTbdOrder;
+  const isDeliveryInvalid = orderType === 'delivery' && (isOutOfLahore || !gpsCoords || !deliveryArea || !houseDetails);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <h1 className="mb-6 text-foreground">{t('Checkout')}</h1>
 
-      {/* Order Summary */}
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Order Summary')}</h3>
         <div className="space-y-4">
@@ -678,7 +797,14 @@ export function Checkout() {
             <div key={`${item.service.id}-${item.isWeightPending ? 'pending' : 'regular'}-${index}`} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
               <div className="flex-1">
                 <h4 className="text-foreground">{item.service.name}</h4>
-                {item.isWeightPending || isTbdOrder ? (
+                {item.service.is_grinding_service && (
+                  <p className="text-xs text-muted-foreground font-medium">
+                    ({item.service.is_cleaning ? t('Cleaning') : ''} 
+                    {item.service.is_cleaning && item.service.is_grinding ? ' + ' : ''}
+                    {item.service.is_grinding ? t('Grinding') : ''})
+                  </p>
+                )}
+                {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
                   <p className="text-sm text-primary font-medium">
                     {t('Weight to be confirmed (Price TBD)')}
                   </p>
@@ -689,7 +815,7 @@ export function Checkout() {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                {item.isWeightPending || isTbdOrder ? (
+                {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
                   <p className="text-foreground font-semibold">TBD</p>
                 ) : (
                   <p className="text-foreground">Rs. {item.service.price * item.quantity}</p>
@@ -697,17 +823,45 @@ export function Checkout() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeFromCart(item.service.id, item.isWeightPending)}
+                  onClick={() => removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 ml-2 bg-red-500 hover:bg-red-600 border-red-600 shadow flex items-center justify-center px-0 py-0"
+                    onClick={() => removeFromCart(item.service.id, item.isWeightPending)}
+                    title={t('Remove Item')}
+                  >
+                    <Trash2 className="h-4 w-4 text-white" strokeWidth={3} />
+                  </Button>
               </div>
             </div>
           ))}
+          
           <div className="flex justify-between pt-4 border-t border-border">
             <span className="text-foreground">{t('Total')}</span>
+            <span className="text-foreground font-bold">
+              Rs. {total}{hasPendingWeightItem && " + TBD"}
+            </span>
+            <span className="text-foreground">{t('Cart Subtotal')}</span>
             <span className="text-foreground">{isTbdOrder ? 'TBD' : `Rs. ${total}`}</span>
           </div>
+
+          {orderType === 'delivery' && deliveryFee > 0 && !isOutOfLahore && (
+            <div className="flex justify-between pt-2">
+              <span className="text-muted-foreground text-sm">
+                {t('Delivery Fee')} ({distanceKm.toFixed(1)} km)
+              </span>
+              <span className="text-muted-foreground text-sm">Rs. {deliveryFee}</span>
+            </div>
+          )}
+          <div className="flex justify-between pt-2 border-t border-border font-bold">
+            <span className="text-foreground">{t('Grand Total')}</span>
+            <span className="text-foreground">{isTbdOrder ? 'TBD' : `Rs. ${grandTotal}`}</span>
+          </div>
+
           {hasPendingWeightItem && (
             <p className="text-sm text-primary text-right mt-2">
               {t('Total does not include items with pending weight.')}
@@ -716,9 +870,6 @@ export function Checkout() {
         </div>
       </Card>
 
-
-
-      {/* Customer Details */}
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Your Details')}</h3>
         <div className="space-y-4">
@@ -743,15 +894,9 @@ export function Checkout() {
               className="mt-1"
             />
           </div>
-          {user && (
-            <p className="text-xs text-muted-foreground">
-              {t("To change your details permanently, please go to your 'My Account' page.")}
-            </p>
-          )}
         </div>
       </Card>
 
-      {/* Order Type */}
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Order Type')}</h3>
         <RadioGroup value={orderType} onValueChange={(value) => setOrderType(value)}>
@@ -766,11 +911,6 @@ export function Checkout() {
               </Label>
             </div>
           )}
-          {hasTripItem && (
-            <div className="mb-2 text-sm font-medium text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200">
-              {t('Pickup is not available for service-based orders.')}
-            </div>
-          )}
           <div className="flex items-center space-x-2 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
             <RadioGroupItem value="delivery" id="delivery" />
             <Label htmlFor="delivery" className="flex-1 cursor-pointer">
@@ -783,183 +923,128 @@ export function Checkout() {
         </RadioGroup>
       </Card>
 
-      {/* Delivery Section */}
       <Card className={`p-6 mb-6 transition-all duration-300 ${orderType !== 'delivery' ? 'opacity-50 pointer-events-none hidden' : ''}`}>
         <h3 className="mb-4 text-foreground">{t('Delivery Address')}</h3>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="address">{t('Full Address (House/Street/Area)')}</Label>
-            <div className="relative mt-1">
-              <textarea
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={t('House # / Street / Mohalla / Area / City — be specific for delivery!')}
-                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                rows={3}
-              />
-              {/* Inline location button */}
-              <button
-                type="button"
-                title={t('Get My Location')}
-                onClick={handleGetLocation}
-                disabled={locationStatus?.includes('Refining') || locationStatus?.includes('Getting')}
-                className="absolute top-2 right-2 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-              >
-                {locationStatus?.includes('Refining') || locationStatus?.includes('Getting') ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Crosshair className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                )}
-              </button>
+        
+        {isOutOfLahore && (
+          <div className="mb-4 bg-red-50 border-2 border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-800">{t('Delivery Not Available')}</p>
+              <p className="text-xs text-red-700 mt-1">
+                {t('Currently, Apni Chakki only delivers within Lahore. Please change your order type to "Pickup" or update your area.')}
+              </p>
             </div>
           </div>
-          
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={handleGetLocation}
-            disabled={locationStatus?.includes('Refining') || locationStatus?.includes('Getting')}
-          >
-            {locationStatus?.includes('Refining') || locationStatus?.includes('Getting') ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <MapPin className="h-4 w-4" />
-            )}
-            {gpsCoords ? t('📍 Recapture Location') : t('📍 Get My Location')}
-          </Button>
-          
-          {locationStatus && (
-            <p className={`text-sm text-center font-medium ${
-              locationStatus.includes('✅') || locationStatus.includes('updated') ? 'text-green-600' :
-              locationStatus.includes('⚠️') || locationStatus.includes('Approximate') || locationStatus.includes('refine') ? 'text-amber-600' :
-              locationStatus.includes('📡') ? 'text-blue-600' :
-              locationStatus.includes('denied') || locationStatus.includes('error') || locationStatus.includes('unavailable') ? 'text-red-500' :
-              'text-muted-foreground'
-            }`}>
-              {locationStatus}
-            </p>
-          )}
+        )}
 
-          {/* ===== INTERACTIVE MAP ===== */}
-          {showMap && gpsCoords && (
-            <div className="mt-4">
-              {/* Low accuracy warning banner */}
-              {gpsCoords.accuracy > 200 && (
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-t-xl px-4 py-3 flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-800">
-                      {t('Location is approximate')} (±{Math.round(gpsCoords.accuracy)}m)
-                    </p>
-                    <p className="text-xs text-amber-700 mt-0.5">
-                      {USE_GOOGLE_MAPS 
-                        ? t('👆 Use the search bar in the map below to find your exact address, or click/drag the pin.')
-                        : t('👆 Drag the red pin to your exact location on the map below.')
-                      }
-                    </p>
-                  </div>
-                </div>
-              )}
-              {/* Map header */}
-              <div className={`bg-gradient-to-r from-primary/10 to-primary/5 px-3 py-2 flex items-center justify-between ${gpsCoords.accuracy > 200 ? 'border-x-2 border-primary/20' : 'rounded-t-xl border-2 border-b-0 border-primary/20'}`}>
-                <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {USE_GOOGLE_MAPS 
-                    ? t('Search, click, or drag pin to set exact location')
-                    : t('Drag the pin to adjust your location')
-                  }
-                </span>
+        <div className="space-y-6">
+          <div className="p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
+            <Label htmlFor="deliveryArea" className="text-primary font-bold">{t('1. Delivery Area / Landmark')} *</Label>
+            <p className="text-xs text-muted-foreground mb-2">{t('Search your nearest well-known area to calculate fare (e.g. Rasheed Pura, DHA Phase 5)')}</p>
+            
+            {/* NEW: Input with Verify Button next to it */}
+            <div className="flex gap-2 mt-1">
+              <div className="relative flex-1">
+                <Input
+                  id="deliveryArea"
+                  value={deliveryArea}
+                  onChange={(e) => setDeliveryArea(e.target.value)}
+                  placeholder={t('Enter area (e.g. Rasheed Pura)')}
+                  className="pr-12 bg-white"
+                />
                 <button
-                  onClick={() => setShowMap(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded hover:bg-secondary"
+                  type="button"
+                  title={t('Get My Location')}
+                  onClick={handleGetLocation}
+                  disabled={locationStatus?.includes('Refining') || locationStatus?.includes('Getting') || locationStatus?.includes('Verifying')}
+                  className="absolute top-1 right-1 p-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
-                  {t('Hide Map')}
+                  {locationStatus?.includes('Refining') || locationStatus?.includes('Getting') || locationStatus?.includes('Verifying') ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Crosshair className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                  )}
                 </button>
               </div>
-              
-              {/* Google Maps (preferred) or Leaflet fallback */}
-              {USE_GOOGLE_MAPS ? (
-                <GoogleMapPicker
-                  position={{ lat: gpsCoords.lat, lng: gpsCoords.lng }}
-                  onPositionChange={(newPos) => {
-                    setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
-                  }}
-                  onAddressChange={(addr) => {
-                    setAddress(addr);
-                    setLocationStatus(`✅ ${t('Address updated')}`);
-                    toast.success(t('Address updated from map'));
-                  }}
-                  height="350px"
-                />
-              ) : (
-                <div className="rounded-b-xl overflow-hidden border-2 border-t-0 border-primary/20 shadow-lg relative z-0">
-                  <div className="h-[300px] w-full">
+              <Button 
+                type="button" 
+                onClick={searchTypedAddress}
+                disabled={!deliveryArea || deliveryArea.length < 3 || locationStatus?.includes('Verifying')}
+              >
+                {locationStatus?.includes('Verifying') ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {t('Verify')}
+              </Button>
+            </div>
+            
+            {locationStatus && (
+              <p className={`text-sm mt-2 font-medium ${
+                locationStatus.includes('✅') || locationStatus.includes('updated') ? 'text-green-600' :
+                locationStatus.includes('⚠️') || locationStatus.includes('Approximate') || locationStatus.includes('refine') ? 'text-amber-600' :
+                locationStatus.includes('📡') || locationStatus.includes('🔍') ? 'text-blue-600' :
+                locationStatus.includes('denied') || locationStatus.includes('error') || locationStatus.includes('❌') ? 'text-red-500' :
+                'text-muted-foreground'
+              }`}>
+                {locationStatus}
+              </p>
+            )}
+
+            {showMap && gpsCoords && (
+              <div className="mt-4 border-2 border-primary/20 rounded-lg overflow-hidden">
+                {USE_GOOGLE_MAPS ? (
+                  <GoogleMapPicker
+                    position={{ lat: gpsCoords.lat, lng: gpsCoords.lng }}
+                    onPositionChange={(newPos) => {
+                      setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
+                    }}
+                    onAddressChange={(addr) => {
+                      setDeliveryArea(addr);
+                      setLocationStatus(`✅ ${t('Area updated')}`);
+                    }}
+                    height="250px"
+                    showSearch={false}
+                  />
+                ) : (
+                  <div className="h-[250px] w-full relative z-0">
                     <MapContainer
                       key={`map-${gpsCoords.lat}-${gpsCoords.lng}`}
                       center={[gpsCoords.lat, gpsCoords.lng]}
-                      zoom={17}
+                      zoom={16}
                       scrollWheelZoom={true}
                       className="h-full w-full z-0"
                       zoomControl={true}
                     >
                       <MapInvalidator />
                       <RecenterMap center={mapCenter} />
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <DraggableMarker
-                        position={[gpsCoords.lat, gpsCoords.lng]}
-                        onDragEnd={handleMarkerDrag}
-                      />
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      <DraggableMarker position={[gpsCoords.lat, gpsCoords.lng]} onDragEnd={handleMarkerDrag} />
                     </MapContainer>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* GPS Pin Info */}
-          {gpsCoords && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-xs font-semibold text-green-800">
-                  📍 {t('GPS Pin Captured')} {gpsCoords.accuracy ? `(±${Math.round(gpsCoords.accuracy)}m)` : ''}
-                </span>
-                <a
-                  href={`https://www.google.com/maps?q=${gpsCoords.lat},${gpsCoords.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                >
-                  <Navigation className="h-3 w-3" />
-                  {t('View on Google Maps')} ↗
-                </a>
+                )}
               </div>
-              <p className="text-[10px] text-green-700">
-                {t('This exact GPS pin will be shared with the delivery person for precise navigation.')}
-              </p>
-              <p className="text-[10px] text-green-600 font-mono">
-                📌 {gpsCoords.lat.toFixed(6)}, {gpsCoords.lng.toFixed(6)}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="houseDetails" className="font-bold">{t('2. House, Street & Building Details')} *</Label>
+            <p className="text-xs text-muted-foreground mb-2">{t('Provide exact details for the delivery rider')}</p>
+            <textarea
+              id="houseDetails"
+              value={houseDetails}
+              onChange={(e) => setHouseDetails(e.target.value)}
+              placeholder={t('e.g. House # 85, Street # 20, Mohalla Javed Colony')}
+              className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              rows={3}
+            />
+          </div>
           
-          <p className="text-xs text-muted-foreground">
-            💡 {USE_GOOGLE_MAPS 
-              ? t('Tip: Use "Get My Location" for GPS, search in the map, or click/drag the pin. Also type your exact address above.')
-              : t('Tip: Use "Get My Location" then drag the pin on the map to fine-tune. Also type your exact address above.')
-            }
-          </p>
         </div>
       </Card>
 
-      {/* Payment Method */}
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Payment Method')}</h3>
           
-          {(total === 0 && hasPendingWeightItem) || isTbdOrder ? (
+          {total === 0 && (hasPendingWeightItem || isTbdOrder) ? (
             <div className="p-4 border border-border rounded-lg bg-secondary/30">
               <div className="flex items-center gap-3">
                 <Banknote className="h-5 w-5 text-primary" />
@@ -971,7 +1056,6 @@ export function Checkout() {
             </div>
           ) : (
           <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value)}>
-            {/* Cash */}
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
               <RadioGroupItem value="cash" id="cash" />
               <Label htmlFor="cash" className="flex-1 cursor-pointer">
@@ -979,13 +1063,11 @@ export function Checkout() {
                   <Banknote className="h-5 w-5 text-primary" />
                   <div>
                     <p>{t('Cash')} ({orderType === 'delivery' ? t('on Delivery') : t('on Pickup')})</p>
-                    <p className="text-sm text-muted-foreground">{t('Pay when you receive')}</p>
                   </div>
                 </div>
               </Label>
             </div>
-  
-            {/* JazzCash */}
+
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
               <RadioGroupItem value="jazzcash" id="jazzcash" />
               <Label htmlFor="jazzcash" className="flex-1 cursor-pointer">
@@ -1001,8 +1083,7 @@ export function Checkout() {
                 </div>
               </Label>
             </div>
-  
-            {/* Credit / Debit Card */}
+
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
               <RadioGroupItem value="card" id="card" />
               <Label htmlFor="card" className="flex-1 cursor-pointer">
@@ -1018,8 +1099,7 @@ export function Checkout() {
                 </div>
               </Label>
             </div>
-  
-            {/* Bank Transfer */}
+
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
               <RadioGroupItem value="bank" id="bank" />
               <Label htmlFor="bank" className="flex-1 cursor-pointer">
@@ -1034,6 +1114,7 @@ export function Checkout() {
             </div>
           </RadioGroup>
           )}
+
           {paymentMethod === 'cash' && (!hasPendingWeightItem || total > 0) && !isTbdOrder && (
           <div className="mt-6 p-4 border border-border rounded-lg bg-secondary/20">
             <div className="flex items-center gap-3 mb-4">
@@ -1071,7 +1152,7 @@ export function Checkout() {
                   <div className="bg-background border border-border rounded-lg p-4 space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{t('Total Amount')}:</span>
-                      <span className="font-semibold text-foreground">Rs. {total}</span>
+                      <span className="font-semibold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm border-t border-border pt-2">
                       <span className="text-primary font-medium">{t('Paying Now')}:</span>
@@ -1089,19 +1170,20 @@ export function Checkout() {
           )}
       </Card>
 
-      {/* Place Order Button */}
       <Button
-        className="w-full"
+        className="w-full h-12 text-base font-bold shadow-lg"
         size="lg"
         onClick={handlePlaceOrder}
-        disabled={(total === 0 && !hasPendingWeightItem && !isTbdOrder)}
+        disabled={isCartEmpty || isDeliveryInvalid}
       >
-        {paymentMethod === 'cash' || isTbdOrder ? t('Place Order') : t('Proceed to Payment')} {isTbdOrder ? '(TBD)' : `(Rs. ${total})`}{(hasPendingWeightItem && !isTbdOrder) && " + TBD"}
+        {paymentMethod === 'cash' || (total === 0) ? t('Place Order') : t('Proceed to Payment')} 
+        <span className="ml-2">
+          (Rs. {total}{hasPendingWeightItem && " + TBD"})
+        </span>
+        {paymentMethod === 'cash' || isTbdOrder ? t('Place Order') : t('Proceed to Payment')} {isTbdOrder ? '(TBD)' : `(Rs. ${grandTotal})`}{(hasPendingWeightItem && !isTbdOrder) && " + TBD"}
       </Button>
 
-      {/* ========================================= */}
-      {/* PAYMENT DIALOG - Enhanced with all methods */}
-      {/* ========================================= */}
+      {/* PAYMENT DIALOG */}
       <Dialog open={showPaymentDialog} onOpenChange={(open) => {
         if (!isProcessingPayment) {
           setShowPaymentDialog(open);
@@ -1138,7 +1220,6 @@ export function Checkout() {
             </DialogDescription>
           </DialogHeader>
           
-          {/* ---- PROCESSING STATE ---- */}
           {paymentStep === 'processing' && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <div className="relative">
@@ -1157,7 +1238,6 @@ export function Checkout() {
             </div>
           )}
 
-          {/* ---- SUCCESS STATE ---- */}
           {paymentStep === 'success' && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center animate-bounce">
@@ -1167,7 +1247,7 @@ export function Checkout() {
               <div className="w-full bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Amount')}:</span>
-                  <span className="font-bold">Rs. {total}</span>
+                  <span className="font-bold">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Method')}:</span>
@@ -1191,7 +1271,6 @@ export function Checkout() {
             </div>
           )}
 
-          {/* ---- FAILED STATE ---- */}
           {paymentStep === 'failed' && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
@@ -1219,12 +1298,10 @@ export function Checkout() {
             </div>
           )}
 
-          {/* ---- INPUT STATE ---- */}
           {paymentStep === 'input' && (
             <div className="space-y-4">
-              {/* Amount Display */}
               <div className="text-center py-3 bg-secondary/30 rounded-lg">
-                <p className="text-3xl font-bold text-foreground">Rs. {total}</p>
+                <p className="text-3xl font-bold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</p>
                 <p className="text-sm text-muted-foreground">{t('Amount to pay')}</p>
                 {hasPendingWeightItem && (
                   <p className="text-xs text-primary mt-1">
@@ -1233,7 +1310,6 @@ export function Checkout() {
                 )}
               </div>
 
-              {/* Sandbox Helper Toggle */}
               <button
                 onClick={() => setShowSandboxHelper(!showSandboxHelper)}
                 className="w-full flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg py-2 px-3 transition-colors"
@@ -1242,10 +1318,8 @@ export function Checkout() {
                 {showSandboxHelper ? t('Hide Sandbox Test Data') : t('Show Sandbox Test Data')}
               </button>
 
-              {/* ======== JAZZCASH FORM ======== */}
               {paymentMethod === 'jazzcash' && (
                 <div className="space-y-4">
-                  {/* Sandbox Test Helpers */}
                   {showSandboxHelper && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
                       <p className="text-xs font-semibold text-yellow-800 flex items-center gap-1">
@@ -1295,10 +1369,8 @@ export function Checkout() {
                 </div>
               )}
 
-              {/* ======== CREDIT CARD FORM ======== */}
               {paymentMethod === 'card' && (
                 <div className="space-y-4">
-                  {/* Sandbox Test Helpers */}
                   {showSandboxHelper && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
                       <p className="text-xs font-semibold text-yellow-800 flex items-center gap-1">
@@ -1318,7 +1390,6 @@ export function Checkout() {
                     </div>
                   )}
 
-                  {/* Card Number */}
                   <div>
                     <Label htmlFor="cardNumber">{t('Card Number')}</Label>
                     <div className="relative mt-1">
@@ -1331,7 +1402,6 @@ export function Checkout() {
                         className="pl-10 pr-16 font-mono tracking-wider"
                         maxLength={19}
                       />
-                      {/* Card type indicator */}
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold">
                         {cardType === 'visa' && <span className="text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded">VISA</span>}
                         {cardType === 'mastercard' && <span className="text-orange-800 bg-orange-100 px-1.5 py-0.5 rounded">MC</span>}
@@ -1340,7 +1410,6 @@ export function Checkout() {
                     </div>
                   </div>
 
-                  {/* Cardholder Name */}
                   <div>
                     <Label htmlFor="cardName">{t('Cardholder Name')}</Label>
                     <Input
@@ -1352,7 +1421,6 @@ export function Checkout() {
                     />
                   </div>
 
-                  {/* Expiry + CVV row */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="cardExpiry">{t('Expiry Date')}</Label>
@@ -1382,7 +1450,6 @@ export function Checkout() {
                     </div>
                   </div>
 
-                  {/* Security note */}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded-lg p-2.5">
                     <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
                     <span>{t('Your card information is encrypted and secure. Sandbox mode - no real charges.')}</span>
@@ -1390,7 +1457,6 @@ export function Checkout() {
                 </div>
               )}
 
-              {/* ======== BANK TRANSFER FORM ======== */}
               {paymentMethod === 'bank' && (
                 <div className="space-y-4">
                   <div>
@@ -1410,7 +1476,7 @@ export function Checkout() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                     <p className="text-xs font-semibold text-blue-800">{t('Bank Transfer Instructions')}:</p>
                     <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                      <li>{t('Transfer Rs.')} {total} {t('to the account below')}</li>
+                      <li>{t('Transfer Rs.')} {total}{hasPendingWeightItem && " + TBD"} {t('to the account below')}</li>
                       <li>{t('Your order will be confirmed after admin verification')}</li>
                       <li>{t('Please keep the transfer receipt for reference')}</li>
                     </ol>
@@ -1423,7 +1489,6 @@ export function Checkout() {
                 </div>
               )}
 
-              {/* Pay Button */}
               <Button
                 className="w-full"
                 size="lg"

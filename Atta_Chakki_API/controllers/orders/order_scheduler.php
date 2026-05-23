@@ -1,17 +1,14 @@
 <?php
-// order scheduling algorithm - auto assigns orders to today/tomorrow with ETA calculation
-// processing speed: 2 minutes per kg
-// includes buffer time check and max daily order capacity
+// orders ko aaj ya kal pe schedule kar rahe han yahan logic k sath
+// 2 min per kg speed hai shop ki
+// isme buffer time aur max orders bhi check hoty hain
 
 // Timezone safety net — ensure we always use Pakistan time for scheduling
 if (date_default_timezone_get() === 'UTC') {
     date_default_timezone_set('Asia/Karachi');
 }
 
-/**
- * fetches shop operational hours + scheduling config from store_settings table
- * returns: opening, closing, processing_time_per_kg, buffer_time_minutes, max_daily_orders
- */
+// shop ki timings aur setting nikal rahe han db se yahan par
 function getOperationalHours($conn) {
     $opening = '09:00';
     $closing = '20:00';
@@ -55,13 +52,11 @@ function getOperationalHours($conn) {
     ];
 }
 
-/**
- * calculates total weight of an order from its items
- */
+// order ka total weight calculate kar rahe han items k hisab se
 function calculateOrderWeight($conn, $order_id) {
     $total_weight = 0;
     
-    $sql = "SELECT oi.quantity, oi.price_at_purchase, p.unit FROM order_items oi 
+    $sql = "SELECT oi.quantity, oi.price_at_purchase, p.unit, p.is_rental FROM order_items oi 
             JOIN products p ON oi.product_id = p.id 
             WHERE oi.order_id = ?";
     $stmt = $conn->prepare($sql);
@@ -70,6 +65,10 @@ function calculateOrderWeight($conn, $order_id) {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
+        $is_rental = isset($row['is_rental']) ? (int)$row['is_rental'] : 0;
+        if ($is_rental === 1) {
+            continue; // Skip rental weight
+        }
         $unit = strtolower(trim($row['unit']));
         $qty = floatval($row['quantity']);
         
@@ -84,22 +83,17 @@ function calculateOrderWeight($conn, $order_id) {
     }
     $stmt->close();
     
-    // minimum 1 kg if there are items but weight is 0 (for services etc)
-    if ($total_weight == 0) {
-        $total_weight = 1;
-    }
+    // Prepared items (oil, pieces) will result in 0 total_weight, which is expected.
     
     return $total_weight;
 }
 
-/**
- * gets the last scheduled order's completion time for a given date
- * this tells us when the next order can start
- */
+// pichla order kab khatam ho raha wo dekh rahe han yahan
 function getLastCompletionTime($conn, $date) {
     $sql = "SELECT estimated_completion_time FROM orders 
             WHERE assigned_date = ? 
             AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
+            AND total_weight_kg > 0
             ORDER BY estimated_completion_time DESC 
             LIMIT 1";
     $stmt = $conn->prepare($sql);
@@ -115,13 +109,12 @@ function getLastCompletionTime($conn, $date) {
     return null;
 }
 
-/**
- * gets the next queue position for a given date
- */
+// queue me agla number kya hai wo nikal rahe han hum yahan
 function getNextQueuePosition($conn, $date) {
     $sql = "SELECT MAX(queue_position) as max_pos FROM orders 
             WHERE assigned_date = ? 
-            AND status NOT IN ('cancelled', 'completed')";
+            AND status NOT IN ('cancelled', 'completed')
+            AND total_weight_kg > 0";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
     $stmt->execute();
@@ -135,13 +128,12 @@ function getNextQueuePosition($conn, $date) {
     return 1;
 }
 
-/**
- * counts active orders for a specific date (excludes cancelled/completed)
- */
+// aaj ya kal kitne orders hain total wo count kar rahe han hum
 function getActiveOrderCount($conn, $date) {
     $sql = "SELECT COUNT(*) as order_count FROM orders 
             WHERE assigned_date = ? 
-            AND status NOT IN ('cancelled', 'completed')";
+            AND status NOT IN ('cancelled', 'completed')
+            AND total_weight_kg > 0";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
     $stmt->execute();
@@ -151,18 +143,8 @@ function getActiveOrderCount($conn, $date) {
     return intval($row['order_count']);
 }
 
-/**
- * PRE-CHECK FUNCTION: determines if a new order can be placed today or must go to tomorrow
- * called from frontend BEFORE order is placed to show the user expected date
- * 
- * Decision logic:
- *   Step 1 (Time Check):  current_time > closingTime - bufferTime  → TOMORROW
- *   Step 2 (Load Check):  today_order_count >= maxDailyOrders       → TOMORROW
- *   Step 3 (Capacity):    order ETA exceeds closing time            → TOMORROW
- *   Otherwise:            → TODAY
- * 
- * Returns: assigned_date, reason, schedule_info
- */
+// check kar rahe han k aaj order le sakte hain ya kal pe dalna hai hum ne
+// front end pe dikhane k liye k kab tak delivery hogi
 function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
@@ -277,11 +259,7 @@ function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     ];
 }
 
-/**
- * MAIN SCHEDULING FUNCTION
- * called after an order is placed to calculate ETA and assign date
- * Now incorporates buffer time and max daily order checks
- */
+// main scheduling logic - orders ko aaj ya kal assign kar rahe han hum yahan
 function scheduleOrder($conn, $order_id) {
     // step 1: get operational hours + scheduling config from db
     $hours = getOperationalHours($conn);
@@ -306,6 +284,47 @@ function scheduleOrder($conn, $order_id) {
     $cutoff_dt->modify("-{$buffer_minutes} minutes");
     
     $time_blocked = ($now >= $cutoff_dt);
+    
+    if ($total_weight == 0) {
+        $assigned_date = $time_blocked ? $tomorrow : $today;
+        $estimated_completion = $now->format('Y-m-d H:i:s');
+        $status = 'pending';
+        $schedule_reason = 'prepared_order';
+        $queue_position = 0;
+        
+        $sql = "UPDATE orders SET 
+            estimated_completion_time = ?,
+            assigned_date = ?,
+            total_weight_kg = ?,
+            processing_time_minutes = ?,
+            queue_position = ?,
+            status = ?
+            WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssdissi", 
+            $estimated_completion, 
+            $assigned_date, 
+            $total_weight, 
+            $processing_minutes, 
+            $queue_position,
+            $status,
+            $order_id
+        );
+        $stmt->execute();
+        $stmt->close();
+        
+        return [
+            'order_id' => $order_id,
+            'assigned_date' => $assigned_date,
+            'is_today' => ($assigned_date === $today),
+            'estimated_completion_time' => $estimated_completion,
+            'total_weight_kg' => 0,
+            'processing_time_minutes' => 0,
+            'queue_position' => 0,
+            'status' => $status,
+            'schedule_reason' => $schedule_reason
+        ];
+    }
     
     // step 5: CHECK LOAD — has today hit max capacity?
     $today_count = getActiveOrderCount($conn, $today);
@@ -408,10 +427,7 @@ function scheduleOrder($conn, $order_id) {
     ];
 }
 
-/**
- * recalculates ETAs for all pending orders on a specific date
- * called after an override to fix the queue
- */
+// sari ETAs ko dobara set kar rahe han (jab koi override karta hai tab)
 function recalculateSchedule($conn, $date) {
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
@@ -421,6 +437,7 @@ function recalculateSchedule($conn, $date) {
     $sql = "SELECT id, total_weight_kg, processing_time_minutes FROM orders 
             WHERE assigned_date = ? 
             AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
+            AND total_weight_kg > 0
             ORDER BY queue_position ASC";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
@@ -464,10 +481,7 @@ function recalculateSchedule($conn, $date) {
     return count($orders);
 }
 
-/**
- * gets capacity info for a specific date
- * returns total minutes used, remaining, percentage, and order count info
- */
+// shop ki capacity check kar rahe han kisi bhi date k liye hum log
 function getCapacityInfo($conn, $date) {
     $hours = getOperationalHours($conn);
     
@@ -480,7 +494,8 @@ function getCapacityInfo($conn, $date) {
     $sql = "SELECT COALESCE(SUM(processing_time_minutes), 0) as booked 
             FROM orders 
             WHERE assigned_date = ? 
-            AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')";
+            AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
+            AND total_weight_kg > 0";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
     $stmt->execute();

@@ -42,15 +42,27 @@ try {
     }
     $cat_stmt->close();
 
+    $is_grinding_service = isset($data['is_grinding_service']) ? (int)$data['is_grinding_service'] : 0;
+    $cleaning_price = isset($data['cleaning_price']) ? floatval($data['cleaning_price']) : 0.00;
+    $grinding_price = isset($data['grinding_price']) ? floatval($data['grinding_price']) : 0.00;
+
+    // Rental fields
+    $is_rental = isset($data['is_rental']) ? (int)$data['is_rental'] : 0;
+    $rental_price_per_day = isset($data['rental_price_per_day']) ? floatval($data['rental_price_per_day']) : 0.00;
+    $security_deposit = isset($data['security_deposit']) ? floatval($data['security_deposit']) : 0.00;
+    $late_penalty_per_day = isset($data['late_penalty_per_day']) ? floatval($data['late_penalty_per_day']) : 0.00;
+    $rental_available_qty = isset($data['rental_available_qty']) ? intval($data['rental_available_qty']) : 0;
+    $priority = isset($data['priority']) ? intval($data['priority']) : 0;
+
     // updating product
-    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, image_url=? WHERE id=?";
+    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, image_url=?, is_grinding_service=?, cleaning_price=?, grinding_price=?, is_rental=?, rental_price_per_day=?, security_deposit=?, late_penalty_per_day=?, rental_available_qty=?, priority=? WHERE id=?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsissi", $name, $price, $unit, $category_id, $description, $image, $id);
+    $stmt->bind_param("sdsissiddidddiii", $name, $price, $unit, $category_id, $description, $image, $is_grinding_service, $cleaning_price, $grinding_price, $is_rental, $rental_price_per_day, $security_deposit, $late_penalty_per_day, $rental_available_qty, $priority, $id);
 
     if ($stmt->execute()) {
         http_response_code(200);

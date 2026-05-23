@@ -40,25 +40,51 @@ export function AdminComments() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return;
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/delete_comment.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, user_id: user.id, role: user.role })
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success('Comment deleted successfully');
-        fetchComments(search);
-      } else {
-        toast.error(data.message || 'Error deleting comment');
+    const deleteComment = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/delete_comment.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, user_id: user.id, role: user.role })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          toast.success('Comment deleted successfully');
+          fetchComments(search);
+        } else {
+          toast.error(data.message || 'Error deleting comment');
+        }
+      } catch (err) {
+        toast.error('Network error while deleting comment');
       }
-    } catch (err) {
-      toast.error('Network error while deleting comment');
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this comment?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              deleteComment();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   if (loading && comments.length === 0) {
@@ -121,8 +147,9 @@ export function AdminComments() {
                       variant="destructive" 
                       size="sm" 
                       onClick={() => handleDelete(comment.id)}
+                      className="px-4"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-4 h-4 mr-2 text-white" />
                       Delete
                     </Button>
                   </td>

@@ -12,7 +12,7 @@ try {
     // FIXED: Use correct field names from database schema and prefix ambiguous columns
     $sql = "SELECT p.*, p.image_url AS image, c.name as category_name FROM products p 
             LEFT JOIN categories c ON p.category_id = c.id 
-            ORDER BY p.created_at DESC";
+            ORDER BY p.priority DESC, p.created_at DESC";
     
     $result = $conn->query($sql);
     if (!$result) {
@@ -24,8 +24,17 @@ try {
     while ($row = $result->fetch_assoc()) {
         // Map database fields to expected output format
         $row['price'] = floatval($row['price']);
-        $row['stock'] = intval($row['stock_quantity']);  // FIXED: Was trying to access non-existent 'stock' field
-        $row['stock_quantity'] = floatval($row['stock_quantity']);
+        $row['stock'] = intval($row['stock_quantity'] ?? 0);
+        $row['stock_quantity'] = floatval($row['stock_quantity'] ?? 0);
+        $row['is_grinding_service'] = (int)($row['is_grinding_service'] ?? 0);
+        $row['cleaning_price'] = floatval($row['cleaning_price'] ?? 0);
+        $row['grinding_price'] = floatval($row['grinding_price'] ?? 0);
+        // Rental fields
+        $row['is_rental'] = (int)($row['is_rental'] ?? 0);
+        $row['rental_price_per_day'] = floatval($row['rental_price_per_day'] ?? 0);
+        $row['security_deposit'] = floatval($row['security_deposit'] ?? 0);
+        $row['late_penalty_per_day'] = floatval($row['late_penalty_per_day'] ?? 0);
+        $row['rental_available_qty'] = intval($row['rental_available_qty'] ?? 0);
         $products[] = $row;
     }
     

@@ -1,4 +1,4 @@
-import { ShoppingCart, Wheat, Package, User, Menu, X } from 'lucide-react';
+import { ShoppingCart, Wheat, Package, User, Menu, X, Megaphone } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -18,23 +18,26 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [storeName, setStoreName] = useState("Apni Chakki");
+  const [settings, setSettings] = useState({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
 
-  const fetchStoreName = async () => {
+  const fetchSettings = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/get_store_settings.php`);
       const data = await response.json();
-      if (data.success && data.settings && data.settings.storeName) {
-        setStoreName(data.settings.storeName);
+      if (data.success && data.settings) {
+        if (data.settings.storeName) setStoreName(data.settings.storeName);
+        setSettings(data.settings);
       }
     } catch (error) {
-      console.error("Could not load store name:", error);
+      console.error("Could not load store settings:", error);
     }
   };
 
   useEffect(() => {
-    fetchStoreName();
-    const handleSettingsUpdate = () => fetchStoreName();
+    fetchSettings();
+    const handleSettingsUpdate = () => fetchSettings();
     window.addEventListener('settingsUpdated', handleSettingsUpdate);
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
@@ -54,7 +57,7 @@ export function Header() {
 
   const CartIcon = () => (
     <Link to="/checkout" className="relative" onClick={handleCartClick}>
-      <Button variant="ghost" size="icon" className="rounded-full">
+      <Button variant="ghost" size="icon" className="rounded-full px-0 py-0 flex items-center justify-center">
         <ShoppingCart className="h-5 w-5" />
         {itemCount > 0 && (
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-success text-success-foreground text-[10px] font-bold">
@@ -66,8 +69,39 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 bg-card border-b border-border shadow-sm" style={{ position: 'sticky' }}>
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 w-full flex flex-col shadow-sm" style={{ position: 'sticky' }}>
+      {/* Announcement Bar */}
+      {settings.announcement && isAnnouncementVisible && (
+        <div className="bg-primary text-primary-foreground py-1.5 px-4 flex items-center justify-between w-full z-50">
+           <div className="overflow-hidden flex-1 whitespace-nowrap relative flex items-center">
+              <div className="animate-marquee inline-flex items-center">
+                <span className="mx-4 flex items-center text-sm md:text-sm font-medium tracking-wide">
+                  <Megaphone className="h-4 w-4 mr-2 animate-pulse flex-shrink-0"/>
+                  {settings.announcement}
+                </span>
+                <span className="mx-4 flex items-center text-sm md:text-sm font-medium tracking-wide" aria-hidden="true">
+                  <Megaphone className="h-4 w-4 mr-2 animate-pulse flex-shrink-0"/>
+                  {settings.announcement}
+                </span>
+                <span className="mx-4 flex items-center text-sm md:text-sm font-medium tracking-wide" aria-hidden="true">
+                  <Megaphone className="h-4 w-4 mr-2 animate-pulse flex-shrink-0"/>
+                  {settings.announcement}
+                </span>
+              </div>
+           </div>
+           <Button 
+             variant="ghost" 
+             size="icon" 
+             onClick={() => setIsAnnouncementVisible(false)} 
+             className="ml-2 flex-shrink-0 text-primary-foreground hover:bg-primary-foreground/20 h-6 w-6 rounded-full"
+           >
+             <X className="h-3 w-3" />
+           </Button>
+        </div>
+      )}
+
+      <div className="bg-card border-b border-border w-full">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
         <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-90">
           <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
@@ -122,11 +156,13 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full px-0 py-0 flex items-center justify-center"
             onClick={() => setIsMenuOpen(prev => !prev)}
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
+        </div>
         </div>
       </div>
 

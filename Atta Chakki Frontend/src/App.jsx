@@ -1,116 +1,68 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, lazy, Suspense, useState } from 'react';
-import { CartProvider } from './lib/CartContext';
-import { AuthProvider, useAuth } from './lib/AuthContext';
-import { Toaster } from './components/ui/sonner';
+import { useEffect, lazy, Suspense } from 'react';
+import { CartProvider } from './store/CartContext';
+import { AuthProvider, useAuth } from './store/AuthContext';
+import { Toaster } from './components/common/sonner';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Menu } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { API_BASE_URL } from './config';
-import wheatLogo from './assets/Wheat and Flour.png';
 
-// layout components
-import { Header } from './components/customer/Header';
-import { Footer } from './components/customer/Footer';
-import { AdminSidebar } from './components/admin/AdminSidebar';
+// saarey layout components yahan hain
+import CustomerLayout from './layouts/CustomerLayout';
+import AdminLayout from './layouts/AdminLayout';
 
-// lazy loading all pages
+// sari pages ko load kar rahe han yahan se
+// customer ki pages
+const Homepage = lazy(() => import('./pages/customer/Homepage').then(module => ({ default: module.Homepage })));
+const Checkout = lazy(() => import('./pages/customer/Checkout').then(module => ({ default: module.Checkout })));
+const OrderConfirmation = lazy(() => import('./pages/customer/OrderConfirmation').then(module => ({ default: module.OrderConfirmation })));
+const TrackOrder = lazy(() => import('./pages/customer/TrackOrder').then(module => ({ default: module.TrackOrder })));
+const Contact = lazy(() => import('./pages/customer/Contact').then(module => ({ default: module.Contact })));
+const ReviewsPage = lazy(() => import('./pages/customer/ReviewsPage').then(module => ({ default: module.ReviewsPage })));
+const UserAccount = lazy(() => import('./pages/customer/UserAccount').then(module => ({ default: module.UserAccount })));
+const LiveTrackingPage = lazy(() => import('./pages/customer/LiveTrackingPage').then(module => ({ default: module.LiveTrackingPage })));
 
-// customer pages
-const Homepage = lazy(() => import('./components/customer/Homepage').then(module => ({ default: module.Homepage })));
-const Checkout = lazy(() => import('./components/customer/Checkout').then(module => ({ default: module.Checkout })));
-const OrderConfirmation = lazy(() => import('./components/customer/OrderConfirmation').then(module => ({ default: module.OrderConfirmation })));
-const TrackOrder = lazy(() => import('./components/customer/TrackOrder').then(module => ({ default: module.TrackOrder })));
-const Contact = lazy(() => import('./components/customer/Contact').then(module => ({ default: module.Contact })));
-const ReviewsPage = lazy(() => import('./components/customer/ReviewsPage').then(module => ({ default: module.ReviewsPage })));
-const UserAccount = lazy(() => import('./components/customer/UserAccount').then(module => ({ default: module.UserAccount })));
-const LiveTrackingPage = lazy(() => import('./components/customer/LiveTrackingPage').then(module => ({ default: module.LiveTrackingPage })));
+// login wagera ki pages
+const AdminLogin = lazy(() => import('./pages/auth/AdminLogin').then(module => ({ default: module.AdminLogin })));
+const DeliveryLogin = lazy(() => import('./pages/auth/DeliveryLogin').then(module => ({ default: module.DeliveryLogin })));
+const CustomerLogin = lazy(() => import('./pages/auth/CustomerLogin').then(module => ({ default: module.CustomerLogin })));
+const CustomerSignUp = lazy(() => import('./pages/auth/CustomerSignUp').then(module => ({ default: module.CustomerSignUp })));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then(module => ({ default: module.ForgotPassword })));
 
-// auth pages
-const AdminLogin = lazy(() => import('./components/auth/AdminLogin').then(module => ({ default: module.AdminLogin })));
-const DeliveryLogin = lazy(() => import('./components/auth/DeliveryLogin').then(module => ({ default: module.DeliveryLogin })));
-const CustomerLogin = lazy(() => import('./components/auth/CustomerLogin').then(module => ({ default: module.CustomerLogin })));
-const CustomerSignUp = lazy(() => import('./components/auth/CustomerSignUp').then(module => ({ default: module.CustomerSignUp })));
+// delivery wala panel yahan hai
+const DeliveryPanel = lazy(() => import('./pages/delivery/DeliveryPanel').then(module => ({ default: module.DeliveryPanel })));
 
-// delivery panel
-const DeliveryPanel = lazy(() => import('./components/delivery/DeliveryPanel').then(module => ({ default: module.DeliveryPanel })));
+// admin ki sari pages yahan se import ho rahi hain
+const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(module => ({ default: module.Dashboard })));
+const TodaysWork = lazy(() => import('./pages/admin/TodaysWork').then(module => ({ default: module.TodaysWork })));
+const TomorrowsList = lazy(() => import('./pages/admin/TomorrowsList').then(module => ({ default: module.TomorrowsList })));
+const ReadyOrders = lazy(() => import('./pages/admin/ReadyOrders').then(module => ({ default: module.ReadyOrders })));
+const PickupRequests = lazy(() => import('./pages/admin/PickupRequests').then(module => ({ default: module.PickupRequests })));
+const CompletedOrders = lazy(() => import('./pages/admin/CompletedOrders').then(module => ({ default: module.CompletedOrders })));
+const OrdersRecord = lazy(() => import('./pages/admin/OrdersRecord').then(module => ({ default: module.OrdersRecord })));
+const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement })));
+const ManageCategories = lazy(() => import('./pages/admin/ManageCategories').then(module => ({ default: module.ManageCategories })));
+const ManageServices = lazy(() => import('./pages/admin/ManageServices').then(module => ({ default: module.ManageServices })));
+const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons').then(module => ({ default: module.ManageCoupons })));
+const ManageDelivery = lazy(() => import('./pages/admin/ManageDelivery').then(module => ({ default: module.ManageDelivery })));
+const Settings = lazy(() => import('./pages/admin/Settings').then(module => ({ default: module.Settings })));
+const HeroSettings = lazy(() => import('./pages/admin/HeroSettings').then(module => ({ default: module.HeroSettings })));
+const AddManualOrder = lazy(() => import('./pages/admin/AddManualOrder').then(module => ({ default: module.AddManualOrder })));
+const DigitalKhata = lazy(() => import('./pages/admin/DigitalKhata').then(module => ({ default: module.DigitalKhata })));
+const UdhaarKhata = lazy(() => import('./pages/admin/UdhaarKhata').then(module => ({ default: module.UdhaarKhata })));
+const FinancialAnalytics = lazy(() => import('./pages/admin/FinancialAnalytics').then(module => ({ default: module.FinancialAnalytics })));
+const PaymentVerification = lazy(() => import('./pages/admin/PaymentVerification').then(module => ({ default: module.PaymentVerification })));
+const AdminComments = lazy(() => import('./pages/admin/AdminComments').then(module => ({ default: module.AdminComments })));
+const LiveTrackingMap = lazy(() => import('./pages/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
+const ContactMessages = lazy(() => import('./pages/admin/ContactMessages').then(module => ({ default: module.ContactMessages })));
+const CustomMixRequests = lazy(() => import('./pages/admin/CustomMixRequests').then(module => ({ default: module.default })));
+const ActiveRentals = lazy(() => import('./pages/admin/ActiveRentals').then(module => ({ default: module.ActiveRentals })));
 
-// admin pages
-const Dashboard = lazy(() => import('./components/admin/Dashboard').then(module => ({ default: module.Dashboard })));
-const TodaysWork = lazy(() => import('./components/admin/TodaysWork').then(module => ({ default: module.TodaysWork })));
-const TomorrowsList = lazy(() => import('./components/admin/TomorrowsList').then(module => ({ default: module.TomorrowsList })));
-const ReadyOrders = lazy(() => import('./components/admin/ReadyOrders').then(module => ({ default: module.ReadyOrders })));
-const PickupRequests = lazy(() => import('./components/admin/PickupRequests').then(module => ({ default: module.PickupRequests })));
-const CompletedOrders = lazy(() => import('./components/admin/CompletedOrders').then(module => ({ default: module.CompletedOrders })));
-const OrdersRecord = lazy(() => import('./components/admin/OrdersRecord').then(module => ({ default: module.OrdersRecord })));
-const InventoryManagement = lazy(() => import('./components/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement })));
-const ManageCategories = lazy(() => import('./components/admin/ManageCategories').then(module => ({ default: module.ManageCategories })));
-const ManageServices = lazy(() => import('./components/admin/ManageServices').then(module => ({ default: module.ManageServices })));
-const ManageDelivery = lazy(() => import('./components/admin/ManageDelivery').then(module => ({ default: module.ManageDelivery })));
-const Settings = lazy(() => import('./components/admin/Settings').then(module => ({ default: module.Settings })));
-const HeroSettings = lazy(() => import('./components/admin/HeroSettings').then(module => ({ default: module.HeroSettings })));
-const AddManualOrder = lazy(() => import('./components/admin/AddManualOrder').then(module => ({ default: module.AddManualOrder })));
-const DigitalKhata = lazy(() => import('./components/admin/DigitalKhata').then(module => ({ default: module.DigitalKhata })));
-const UdhaarKhata = lazy(() => import('./components/admin/UdhaarKhata').then(module => ({ default: module.UdhaarKhata })));
-const FinancialAnalytics = lazy(() => import('./components/admin/FinancialAnalytics').then(module => ({ default: module.FinancialAnalytics })));
-const PaymentVerification = lazy(() => import('./components/admin/PaymentVerification').then(module => ({ default: module.PaymentVerification })));
-const AdminComments = lazy(() => import('./components/admin/AdminComments').then(module => ({ default: module.AdminComments })));
-const LiveTrackingMap = lazy(() => import('./components/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
 
 function PageLoader() {
   return (
     <div className="flex h-[50vh] w-full items-center justify-center">
       <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-    </div>
-  );
-}
-
-// customer page layout
-function CustomerLayout({ children }) {
-  return (
-    <div className="min-h-screen bg-background flex flex-col relative">
-      <Header />
-      <main className="flex-1 mt-16 pb-20 md:pb-24">
-        <Suspense fallback={<PageLoader />}>
-          {children}
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
-function AdminLayout({ children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  return (
-    <div className="flex bg-background" style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
-      {/* Mobile overlay */}
-      <div
-        className={`admin-sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
-        onClick={() => setSidebarOpen(false)}
-        aria-hidden="true"
-      />
-
-      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="admin-main-content">
-        {/* Mobile top bar — hidden on desktop via CSS */}
-        <div className="admin-mobile-topbar">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open sidebar"
-            style={{ padding: '0.5rem', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--foreground)' }}
-          >
-            <Menu style={{ width: '1.25rem', height: '1.25rem' }} />
-          </button>
-          <span style={{ marginLeft: '0.75rem', fontWeight: 600, fontSize: '1rem' }}>Admin Panel</span>
-        </div>
-
-        <main className="admin-main-inner">
-          <Suspense fallback={<PageLoader />}>
-            {children}
-          </Suspense>
-        </main>
-      </div>
     </div>
   );
 }
@@ -126,21 +78,33 @@ function ProtectedAdminRoute({ children }) {
   else if (storedUser.role && storedUser.role.toLowerCase() !== 'admin') console.warn(`ProtectedRoute: Role mismatch. Expected 'admin', got '${storedUser.role}'`);
 
   if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'admin')) {
-    return <Navigate to="/login/admin" state={{ from: location }} replace />;
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
 }
 
-// protecting delivery routes
+// delivery ki routes ko lock kar rahe han
 function ProtectedDeliveryRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();
 
   const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
 
-  if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'delivery')) {
-    return <Navigate to="/login/delivery" state={{ from: location }} replace />;
+  const role = storedUser?.role ? storedUser.role.toLowerCase() : '';
+  if (!storedUser || (role !== 'delivery' && role !== 'delivery_boy' && role !== 'admin')) {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+// logged in users ko login page se bachane ke liye (Guest Route)
+function GuestRoute({ children, role, redirectTo }) {
+  const { user } = useAuth();
+  const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
+
+  if (storedUser && storedUser.role && storedUser.role.toLowerCase() === role) {
+    return <Navigate to={redirectTo} replace />;
   }
   return <>{children}</>;
 }
@@ -148,7 +112,7 @@ function ProtectedDeliveryRoute({ children }) {
 export default function App() {
   const { i18n } = useTranslation();
 
-  // fetching store settings for title
+  // db se store ki setting nikal rahe han title k liye
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -158,7 +122,7 @@ export default function App() {
           document.title = data.settings.storeName;
         }
         
-        // setting favicon
+        // favicon set ho raha hai yahan
         let link = document.querySelector("link[rel~='icon']");
         if (!link) {
           link = document.createElement('link');
@@ -181,7 +145,7 @@ export default function App() {
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
 
-  // handling language direction
+  // urdu/english language change karne ka logic
   useEffect(() => {
     const isUrdu = i18n.language === 'ur';
     document.documentElement.dir = isUrdu ? 'rtl' : 'ltr';
@@ -198,13 +162,14 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-            {/* auth routes */}
-            <Route path="/login/admin" element={<Suspense fallback={<PageLoader />}><AdminLogin /></Suspense>} />
-            <Route path="/login/delivery" element={<Suspense fallback={<PageLoader />}><DeliveryLogin /></Suspense>} />
-            <Route path="/login/customer" element={<Suspense fallback={<PageLoader />}><CustomerLogin /></Suspense>} />
-            <Route path="/signup/customer" element={<Suspense fallback={<PageLoader />}><CustomerSignUp /></Suspense>} />
+            {/* login wagera ki routes */}
+            <Route path="/login/admin" element={<Navigate to="/" replace />} />
+            <Route path="/login/delivery" element={<Navigate to="/" replace />} />
+            <Route path="/login/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerLogin /></Suspense></GuestRoute>} />
+            <Route path="/signup/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerSignUp /></Suspense></GuestRoute>} />
+            <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
 
-            {/* customer routes */}
+            {/* customer ki routes */}
             <Route path="/" element={<CustomerLayout><Homepage /></CustomerLayout>} />
             <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
             <Route path="/order-confirmation/:orderId" element={<CustomerLayout><OrderConfirmation /></CustomerLayout>} />
@@ -213,16 +178,16 @@ export default function App() {
             <Route path="/reviews" element={<CustomerLayout><Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense></CustomerLayout>} />
             <Route path="/account" element={<CustomerLayout><UserAccount /></CustomerLayout>} />
 
-            {/* live tracking via whatsapp link */}
+            {/* whatsapp wala tracking link */}
             <Route path="/track/:token" element={<Suspense fallback={<PageLoader />}><LiveTrackingPage /></Suspense>} />
 
             {/* delivery panel */}
             <Route path="/delivery" element={<ProtectedDeliveryRoute><Suspense fallback={<PageLoader />}><DeliveryPanel /></Suspense></ProtectedDeliveryRoute>} />
 
-            {/* admin routes */}
+            {/* admin ki sari routes yahan hain */}
             <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/add-order" element={<ProtectedAdminRoute><AdminLayout><AddManualOrder /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin" element={<Navigate to="/admin/today" replace />} />
+            <Route path="/admin" element={<ProtectedAdminRoute><Navigate to="/admin/today" replace /></ProtectedAdminRoute>} />
             <Route path="/admin/today" element={<ProtectedAdminRoute><AdminLayout><TodaysWork /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/tomorrow" element={<ProtectedAdminRoute><AdminLayout><TomorrowsList /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/ready" element={<ProtectedAdminRoute><AdminLayout><ReadyOrders /></AdminLayout></ProtectedAdminRoute>} />
@@ -236,9 +201,13 @@ export default function App() {
             <Route path="/admin/inventory" element={<ProtectedAdminRoute><AdminLayout><InventoryManagement /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminLayout><ManageCategories /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/services" element={<ProtectedAdminRoute><AdminLayout><ManageServices /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminLayout><ManageCoupons /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/delivery" element={<ProtectedAdminRoute><AdminLayout><ManageDelivery /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/contact-messages" element={<ProtectedAdminRoute><AdminLayout><ContactMessages /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/custom-mix-requests" element={<ProtectedAdminRoute><AdminLayout><CustomMixRequests /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/rentals" element={<ProtectedAdminRoute><AdminLayout><ActiveRentals /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
             
@@ -250,3 +219,8 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
+
+
+
+

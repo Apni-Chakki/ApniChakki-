@@ -472,7 +472,12 @@ function rejectBankPayment() {
     $conn->begin_transaction();
     
     try {
-        $payment_stmt = $conn->prepare("SELECT order_id, amount FROM payment_transactions WHERE id = ? AND payment_status = 'pending'");
+        $payment_stmt = $conn->prepare("
+            SELECT pt.order_id, pt.amount, pt.transaction_id, u.phone as customer_phone, u.full_name as customer_name, u.email as customer_email 
+            FROM payment_transactions pt
+            JOIN users u ON pt.user_id = u.id
+            WHERE pt.id = ? AND pt.payment_status = 'pending'
+        ");
         $payment_stmt->bind_param("i", $payment_id);
         $payment_stmt->execute();
         $payment_result = $payment_stmt->get_result();
@@ -492,18 +497,46 @@ function rejectBankPayment() {
         $update_payment->execute();
         $update_payment->close();
         
-        // reverting order to cod
-        $update_order = $conn->prepare("UPDATE orders SET payment_status = 'pending', payment_method = 'cod' WHERE id = ?");
+        // setting order to unpaid and converting to Cash on Delivery (COD)
+        $update_order = $conn->prepare("UPDATE orders SET payment_status = 'unpaid', payment_method = 'cod' WHERE id = ?");
         $update_order->bind_param("i", $order_id);
         $update_order->execute();
         $update_order->close();
         
         $conn->commit();
+
+        // ── cURL to Node.js Email Server ──
+        if (!empty($payment['customer_email'])) {
+            $emailServerUrl = 'http://localhost:3002/send-payment-rejection';
+            $dataToSend = [
+                'customerEmail' => $payment['customer_email'],
+                'customerName' => $payment['customer_name'],
+                'orderId' => $order_id,
+                'amount' => $amount,
+                'transactionId' => $payment['transaction_id'],
+                'reason' => $reason
+            ];
+            
+            $ch = curl_init($emailServerUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToSend));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_exec($ch);
+            curl_close($ch);
+        }
         
         echo json_encode([
             "success" => true,
-            "message" => "Payment rejected. Order #$order_id reverted to cash payment.",
-            "order_id" => $order_id
+            "message" => "Payment rejected. Order #$order_id marked as unpaid.",
+            "order_id" => $order_id,
+            "customer_phone" => $payment['customer_phone'],
+            "customer_name" => $payment['customer_name'],
+            "customer_email" => $payment['customer_email'],
+            "amount" => $amount,
+            "reason" => $reason,
+            "transaction_id" => $payment['transaction_id']
         ]);
         
     } catch (Exception $e) {

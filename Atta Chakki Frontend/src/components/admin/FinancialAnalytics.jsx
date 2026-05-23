@@ -68,7 +68,8 @@ export function FinancialAnalytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-foreground mb-2">Financial Analytics</h1>
+        <h1 className="text-foreground font-bold
+ mb-2">Financial Analytics</h1>
         <p className="text-muted-foreground">Profit & Loss overview for the last 7 days</p>
       </div>
 

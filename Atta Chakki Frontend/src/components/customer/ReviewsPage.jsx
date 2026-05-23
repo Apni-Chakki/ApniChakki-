@@ -120,23 +120,50 @@ export function ReviewsPage() {
   };
 
   const deleteReview = async (id) => {
-    if (!confirm('Are you sure you want to delete this review?')) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/delete_comment.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, user_id: user.id })
-      });
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Review deleted');
-        fetchReviews(filterRating);
-      } else {
-        toast.error(data.message || 'Error deleting review');
+    const doDelete = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/delete_comment.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, user_id: user.id })
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Review deleted');
+          fetchReviews(filterRating);
+        } else {
+          toast.error(data.message || 'Error deleting review');
+        }
+      } catch (err) {
+        toast.error('Network error');
       }
-    } catch (err) {
-      toast.error('Network error');
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this review?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              doDelete();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   return (
@@ -217,8 +244,8 @@ export function ReviewsPage() {
                 />
             </div>
 
-            <div className="flex justify-end mt-4">
-                <Button onClick={handleAddOrEdit} disabled={submitting} size="lg" className="w-full sm:w-auto">
+            <div className="flex justify-end mt-4 post-review">
+                <Button onClick={handleAddOrEdit} disabled={submitting}>
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {editId ? t('Update Review') : t('Post Review')} <Send className="w-4 h-4 ml-2"/>
                 </Button>
@@ -259,8 +286,8 @@ export function ReviewsPage() {
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(review)}>
                        <Edit2 className="w-4 h-4 mr-2" /> Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteReview(review.id)}>
-                       <Trash2 className="w-4 h-4" />
+                    <Button variant="destructive" size="sm" onClick={() => deleteReview(review.id)} className="px-4">
+                       <Trash2 className="w-4 h-4 text-white" />
                     </Button>
                  </div>
                )}

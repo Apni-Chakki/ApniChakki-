@@ -95,10 +95,14 @@ export function OrdersRecord() {
             deliveryAddress: order.shipping_address,
             source: (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
             deliveryPersonnel: order.driver_name || null,
+            couponCode: order.coupon_code || '',
+            couponDiscount: parseFloat(order.coupon_discount || 0),
 
             items: order.items ? order.items.map(item => ({
               quantity: item.quantity,
               isWeightPending: item.is_weight_pending || false,
+              is_cleaning: item.is_cleaning == 1,
+              is_grinding: item.is_grinding == 1,
               service: { name: item.name, price: item.price_at_purchase || 0, unit: item.unit || 'Kg' }
             })) : []
           };
@@ -384,8 +388,8 @@ export function OrdersRecord() {
                   style={{ width: "150px", flexShrink: 0 }}
                 >
                 <option value="all">All Sources</option>
-              <option value="manual">Manual Orders</option>
-              <option value="online">Online Orders</option>
+                <option value="manual">Manual Orders</option>
+                <option value="online">Online Orders</option>
             </select>
           </div>
 
@@ -395,7 +399,7 @@ export function OrdersRecord() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs h-8 py-1"
                 >
                   <CalendarDays className="mr-1.5 h-3 w-3" />
                   {dateRange?.from ? (
@@ -423,7 +427,7 @@ export function OrdersRecord() {
               </PopoverContent>
             </Popover>
             {dateRange && (
-              <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)} className="text-xs h-8">
+              <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)} className="text-xs h-8 py-1">
                 Clear
               </Button>
             )}
@@ -438,42 +442,54 @@ export function OrdersRecord() {
                   size="sm"
                   className="text-xs py-1 h-8"
                 >
-                  {status.slice(0, 3)}
+                  {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
                 </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {/* Checkboxes */}
-            <div className="flex items-center space-x-1 border px-2 py-1 rounded text-xs">
+            <button 
+              onClick={() => {
+                setShowAdvanceOnly(!showAdvanceOnly);
+                if(!showAdvanceOnly) setShowUnpaidOnly(false);
+              }}
+              className="flex items-center space-x-2 px-4 py-1.5 rounded bg-gray-50 h-8 cursor-pointer hover:bg-gray-100 transition-colors"
+            >
               <Checkbox 
                 id="advance-filter" 
                 checked={showAdvanceOnly} 
-                onCheckedChange={(c) => {
-                  setShowAdvanceOnly(c);
-                  if(c) setShowUnpaidOnly(false); 
+                onCheckedChange={() => {
+                  setShowAdvanceOnly(!showAdvanceOnly);
+                  if(!showAdvanceOnly) setShowUnpaidOnly(false);
                 }} 
               />
               <Label htmlFor="advance-filter" className="text-xs cursor-pointer">Advance Only</Label>
-            </div>
+            </button>
 
-            <div className="flex items-center space-x-1 border border-red-200 px-2 py-1 rounded bg-red-50 text-xs">
+            <button 
+              onClick={() => {
+                setShowUnpaidOnly(!showUnpaidOnly);
+                if(!showUnpaidOnly) setShowAdvanceOnly(false);
+              }}
+              className="flex items-center space-x-2 px-4 py-1.5 rounded bg-red-50 h-8 cursor-pointer hover:bg-red-100 transition-colors"
+            >
               <Checkbox 
                 id="unpaid-filter" 
                 checked={showUnpaidOnly} 
-                onCheckedChange={(c) => {
-                  setShowUnpaidOnly(c);
-                  if(c) setShowAdvanceOnly(false);
+                onCheckedChange={() => {
+                  setShowUnpaidOnly(!showUnpaidOnly);
+                  if(!showUnpaidOnly) setShowAdvanceOnly(false);
                 }} 
               />
               <Label htmlFor="unpaid-filter" className="text-xs cursor-pointer text-red-700">Unpaid/Due</Label>
-            </div>
+            </button>
 
             <Button 
               variant="outline" 
               size="sm"
-              className="ml-auto text-xs h-8 text-green-700 border-green-200 hover:bg-green-50"
+              className="text-xs h-8 text-green-700 border-green-200 hover:bg-green-50 px-4"
               disabled={filteredOrders.length === 0}
               onClick={handleExportCSV}
             >
@@ -484,7 +500,7 @@ export function OrdersRecord() {
             <Button 
               variant="default" 
               size="sm"
-              className="text-xs h-8"
+              className="text-xs h-8 px-4"
               disabled={filteredOrders.length === 0}
               onClick={() => setShowPrintList(true)}
             >
@@ -566,7 +582,10 @@ export function OrdersRecord() {
                         {order.items.length > 1 && <p className="text-muted-foreground">+{order.items.length - 1}</p>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-bold">Rs. {order.total}</TableCell>
+                    <TableCell className="text-right font-bold whitespace-nowrap">
+                      Rs. {order.total}
+                      {order.items.some(i => i.isWeightPending) && <span className="text-primary text-[10px] ml-1">(+ TBD)</span>}
+                    </TableCell>
                     <TableCell>
                       <div className="text-xs">
                         {getPaymentStatusBadge(order.paymentStatus)}

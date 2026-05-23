@@ -301,18 +301,18 @@ export function InventoryManagement() {
                           size="sm"
                           variant="outline"
                           onClick={() => openUpdateDialog(item, 'add')}
-                          className="text-green-600 hover:bg-green-50"
+                          className="text-green-600 hover:bg-green-50 flex items-center"
                         >
-                          <Plus className="h-4 w-4 mr-1" />
+                          <Plus className="h-4 w-4 mr-1" strokeWidth={3} />
                           Add
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => openUpdateDialog(item, 'remove')}
-                          className="text-red-600 hover:bg-red-50"
+                          className="text-red-600 hover:bg-red-50 flex items-center"
                         >
-                          <Minus className="h-4 w-4 mr-1" />
+                          <Minus className="h-4 w-4 mr-1" strokeWidth={3} />
                           Remove
                         </Button>
                       </div>

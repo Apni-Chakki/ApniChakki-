@@ -148,32 +148,56 @@ export function ManageCategories() {
   };
 
   const deleteCategory = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) {
-      return;
-    }
+    const performDelete = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/products/delete_category.php`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          }
+        );
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/products/delete_category.php`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
+        const data = await response.json();
+
+        if (data.success) {
+          toast.success('Category deleted successfully!');
+          await fetchCategories();
+        } else {
+          toast.error(data.message || 'Failed to delete category');
         }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success('Category deleted successfully!');
-        await fetchCategories();
-      } else {
-        toast.error(data.message || 'Failed to delete category');
+      } catch (error) {
+        console.error("Delete Error:", error);
+        toast.error('Failed to delete category');
       }
-    } catch (error) {
-      console.error("Delete Error:", error);
-      toast.error('Failed to delete category');
-    }
+    };
+
+    toast.custom((t) => (
+      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
+        <p className="text-primary-foreground font-medium">Are you sure you want to delete this category?</p>
+        <div className="flex gap-2 justify-end">
+          <Button 
+            onClick={() => toast.dismiss(t)} 
+            variant="outline" 
+            size="sm"
+            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              toast.dismiss(t);
+              performDelete();
+            }} 
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ));
   };
 
   if (loading) {
@@ -287,9 +311,9 @@ export function ManageCategories() {
                   variant="destructive"
                   size="sm"
                   onClick={() => deleteCategory(category.id)}
-                  className="flex-1"
+                  className="px-6"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4 mr-2 text-white" />
                   Delete
                 </Button>
               </div>

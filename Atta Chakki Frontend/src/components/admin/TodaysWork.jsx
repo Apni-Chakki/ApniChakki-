@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { deductFromInventory } from '../../lib/inventoryUtils';
@@ -26,8 +26,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Truck, UserPlus, Trash2 } from 'lucide-react';
+import { Truck, UserPlus, Trash2, Calendar } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -47,6 +57,12 @@ export function TodaysWork() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
+  const [splitOrder, setSplitOrder] = useState(null);
+  const [splitBatches, setSplitBatches] = useState([]);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [heavyThreshold, setHeavyThreshold] = useState(100);
+  const [storeName, setStoreName] = useState('Mughal Atta Chakki');
+
   const totalWeight = orders.reduce((sum, order) => sum + parseFloat(order.total_weight_kg || 0), 0);
   const totalProcessingMinutes = orders.reduce((sum, order) => sum + parseInt(order.processing_time_minutes || 0), 0);
   const activeDrivers = activePersonnel.length;
@@ -60,6 +76,23 @@ export function TodaysWork() {
       }
     } catch (error) {
       console.error('Error fetching personnel:', error);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
+      const data = await res.json();
+      if (data.success) {
+        if (data.settings?.heavyOrderThreshold) {
+          setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+        }
+        if (data.settings?.storeName) {
+          setStoreName(data.settings.storeName);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
     }
   };
 
@@ -87,6 +120,7 @@ export function TodaysWork() {
   };
 
   useEffect(() => {
+    fetchSettings();
     fetchPersonnel();
     fetchOrders();
     const interval = setInterval(fetchOrders, 8000);
@@ -215,9 +249,108 @@ export function TodaysWork() {
         toast.error(data.message || 'Failed to move order');
       }
     } catch (error) {
-      toast.error('Network error');
+      toast.error('Network error updating order status');
     } finally {
       setOverriding(null);
+    }
+  };
+
+  const markBatchProcessed = async (order) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, status: 'batch_ready' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        const invResult = await deductFromInventory(order);
+        if (invResult.success) {
+          toast.success(`Batch #${order.id} Processed! Inventory updated.`);
+        } else {
+          toast.warning(`Batch Processed, but inventory issue: ${invResult.message}`);
+        }
+        fetchOrders();
+      } else {
+        toast.error(data.message || 'Failed to update batch status');
+      }
+    } catch (error) {
+      toast.error('Network error updating batch status');
+    }
+  };
+
+  const openSplitModal = (order) => {
+    const totalKg = parseFloat(order.total_weight_kg || 0);
+    const suggested = totalKg > 0 ? Math.floor(totalKg / 2) : '';
+    
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    setSplitBatches([
+      { id: Date.now() + 1, date: today.toISOString().slice(0, 10), weight: suggested.toString() },
+      { id: Date.now() + 2, date: tomorrow.toISOString().slice(0, 10), weight: totalKg > 0 ? (totalKg - suggested).toString() : '' }
+    ]);
+    setSplitOrder(order);
+  };
+
+  const closeSplitModal = () => {
+    setSplitOrder(null);
+    setSplitBatches([]);
+  };
+
+  const handleSplitOrder = async () => {
+    if (!splitOrder) return;
+    const totalKg = parseFloat(splitOrder.total_weight_kg || 0);
+    
+    let sum = 0;
+    const validBatches = [];
+    
+    for (let i = 0; i < splitBatches.length; i++) {
+      const b = splitBatches[i];
+      const w = parseFloat(b.weight);
+      if (isNaN(w) || w <= 0) {
+        toast.error(`Batch ${i + 1} weight must be > 0`);
+        return;
+      }
+      if (!b.date) {
+        toast.error(`Batch ${i + 1} date is missing`);
+        return;
+      }
+      sum += w;
+      validBatches.push({ weight: w, date: b.date });
+    }
+
+    if (totalKg > 0) {
+      const diff = Math.abs(sum - totalKg);
+      if (diff > 0.5) {
+        toast.error(`Batches sum (${sum.toFixed(1)}kg) does not match total ${totalKg}kg.`);
+        return;
+      }
+    }
+
+    setIsSplitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: splitOrder.id,
+          batches: validBatches
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`✅ Order #${splitOrder.id} split successfully!`);
+        closeSplitModal();
+        fetchOrders();
+      } else {
+        toast.error(result.message || "Failed to split order");
+      }
+    } catch (error) {
+      toast.error("Network error — could not split order");
+    } finally {
+      setIsSplitting(false);
     }
   };
 
@@ -228,7 +361,34 @@ export function TodaysWork() {
     
     let itemsText = "";
     order.items.forEach(item => {
-        itemsText += `🔸 ${item.name} × ${item.quantity}\n`;
+        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+        const unit = item.unit || item.service?.unit || 'unit';
+        const name = item.name || item.service?.name || '';
+        
+        let customText = "";
+        if (item.customizations?.length > 0) {
+            customText = item.customizations.map(c => c.option_name).join(' + ');
+        } else {
+            const services = [];
+            if (item.is_cleaning == 1) services.push('Cleaning');
+            if (item.is_grinding == 1) services.push('Grinding');
+            customText = services.join(' + ');
+        }
+        
+        itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+        if (customText) {
+            itemsText += ` (${customText})`;
+        }
+        if (itemPrice > 0) {
+            itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+        }
+        itemsText += `\n`;
+        
+        // Rental details
+        if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
+            itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+            itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
+        }
     });
 
     let phone = (order.customer_phone || '').replace(/\D/g,'');
@@ -238,10 +398,31 @@ export function TodaysWork() {
         phone = '92' + phone; 
     }
 
+    const subtotal = parseFloat(order.total_amount) || 0;
+    const discount = parseFloat(order.coupon_discount) || 0;
+    const grandTotal = subtotal - discount;
+    const advancePaid = parseFloat(order.amount_paid) || 0;
+    const remainingDue = grandTotal - advancePaid;
+
+    let priceBreakdown = `*SUBTOTAL:* Rs. ${subtotal.toLocaleString()}\n`;
+    if (discount > 0) {
+        priceBreakdown += `*COUPON DISCOUNT:* -Rs. ${discount.toLocaleString()}\n`;
+        priceBreakdown += `*GRAND TOTAL:* Rs. ${grandTotal.toLocaleString()}\n`;
+    }
+    if (advancePaid > 0) {
+        priceBreakdown += `*ADVANCE PAID:* Rs. ${advancePaid.toLocaleString()}\n`;
+    }
+    priceBreakdown += `*REMAINING DUE:* Rs. ${remainingDue.toLocaleString()}`;
+
+    let addressSection = "";
+    if (isDelivery && order.shipping_address) {
+        addressSection = `*DELIVERY ADDRESS:* ${order.shipping_address}\n`;
+    }
+
     const message = `
-*GRISTMILL'S* - Fresh Flour Daily 🌾
+*MUGHAL ATTA CHAKKI* - Fresh Flour Daily 🌾
 -----------------------------------
-Hello *${order.customer_name}*! 👋
+Assalam-o-Alaikum / Hello *${order.customer_name}*! 👋
 Your order is now *READY* for ${orderType}.
 
 *ORDER DETAILS*
@@ -249,13 +430,11 @@ Order ID: #${order.id}
 Status: READY
 
 *ORDER ITEMS*
-${itemsText}
------------------------------------
-*SUBTOTAL:* Rs. ${parseInt(order.total_amount).toLocaleString()}
-*REMAINING DUE:* Rs. ${parseInt(order.total_amount).toLocaleString()}
-
+${itemsText}-----------------------------------
+${priceBreakdown}
+${addressSection}-----------------------------------
 Thank you for your business!
-Gristmill's - Fresh Flour Daily
+Mughal Atta Chakki — Pure & Fresh Processing
 `.trim();
     
     const encodedMessage = encodeURIComponent(message);
@@ -281,6 +460,22 @@ Gristmill's - Fresh Flour Daily
           toast.warning(`Order is Ready, but inventory issue: ${invResult.message}`);
         }
 
+        if (order.is_split_batch && order.siblings) {
+          for (const sib of order.siblings) {
+            if (sib.status === 'batch_ready') {
+              try {
+                await fetch(`${API_BASE_URL}/update_order_status.php`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ order_id: sib.id, status: 'ready' })
+                });
+              } catch(e) {
+                console.error("Failed to sync sibling status", e);
+              }
+            }
+          }
+        }
+
         const totalAmount = parseFloat(order.total_amount) || 0;
         const amountPaid = parseFloat(order.amount_paid) || 0;
         const pdfOrder = {
@@ -293,6 +488,8 @@ Gristmill's - Fresh Flour Daily
           deliveryAddress: order.shipping_address || '',
           paymentMethod: order.payment_method || 'cash',
           paymentStatus: amountPaid >= totalAmount && totalAmount > 0 ? 'paid' : amountPaid > 0 ? 'partial' : 'pending',
+          couponCode: order.coupon_code || '',
+          couponDiscount: parseFloat(order.coupon_discount || 0),
           items: (order.items || []).map(item => ({
             quantity: item.quantity,
             isWeightPending: false,
@@ -347,6 +544,8 @@ Gristmill's - Fresh Flour Daily
       deliveryAddress: order.shipping_address,
       cancellationReason: null,
       cancelledBy: null,
+      couponCode: order.coupon_code || '',
+      couponDiscount: parseFloat(order.coupon_discount || 0),
       items: order.items ? order.items.map(item => ({
         quantity: item.quantity,
         isWeightPending: false,
@@ -356,6 +555,203 @@ Gristmill's - Fresh Flour Daily
       })) : []
     };
     setPrintOrder(transformedOrder);
+  };
+
+  const handlePrintAll = () => {
+    const printStyle = document.createElement('style');
+    printStyle.id = 'print-all-work-style';
+    printStyle.innerHTML = `
+      @media print {
+        body * {
+          visibility: hidden !important;
+        }
+        #print-all-work-container, #print-all-work-container * {
+          visibility: visible !important;
+        }
+        #print-all-work-container {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          color: #000 !important;
+          background: #fff !important;
+          font-family: Arial, sans-serif !important;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 3px double #000;
+          padding-bottom: 8px;
+        }
+        .print-header h1 {
+          font-size: 24px;
+          font-weight: bold;
+          margin: 0;
+        }
+        .print-header p {
+          font-size: 12px;
+          color: #444;
+          margin: 4px 0 0 0;
+        }
+        .print-stats {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 15px;
+          font-size: 11px;
+          font-weight: bold;
+          border: 1px solid #000;
+          padding: 6px 10px;
+          background-color: #f9f9f9 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10px;
+        }
+        .print-table th, .print-table td {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: left;
+          vertical-align: top;
+        }
+        .print-table th {
+          background-color: #eee !important;
+          font-weight: bold;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .print-badge {
+          display: inline-block;
+          font-size: 8px;
+          font-weight: bold;
+          padding: 1px 4px;
+          border: 1px solid #000;
+          border-radius: 2px;
+        }
+        .item-row {
+          margin-bottom: 3px;
+          font-weight: bold;
+        }
+        .item-cust {
+          font-size: 8px;
+          color: #444;
+          font-weight: normal;
+          margin-left: 6px;
+          font-style: italic;
+        }
+      }
+    `;
+    document.head.appendChild(printStyle);
+
+    const printContainer = document.createElement('div');
+    printContainer.id = 'print-all-work-container';
+
+    const todayStr = new Date().toLocaleString();
+    const sortedOrders = [...orders].sort((a, b) => (parseInt(a.queue_position) || 999) - (parseInt(b.queue_position) || 999));
+
+    const processingOrders = orders.filter(order =>
+      (order.items || []).some(item => {
+        const unit = (item.unit || '').toLowerCase().trim();
+        return unit === 'kg' || unit === 'g' || unit === 'trip';
+      })
+    );
+
+    const preparedOrders = orders.filter(order =>
+      !(order.items || []).some(item => {
+        const unit = (item.unit || '').toLowerCase().trim();
+        return unit === 'kg' || unit === 'g' || unit === 'trip';
+      })
+    );
+
+    const grindJobsCount = processingOrders.length;
+    const preparedJobsCount = preparedOrders.length;
+
+    let itemsHtml = '';
+    sortedOrders.forEach((order, index) => {
+      const itemsList = (order.items || []).map(item => {
+        const custsText = item.customizations && item.customizations.length > 0
+          ? ` (${item.customizations.map(c => c.option_name).join(' + ')})`
+          : (item.is_cleaning == 1 && item.is_grinding == 1 ? ' (Cleaning + Grinding)' :
+             item.is_cleaning == 1 ? ' (Cleaning)' :
+             item.is_grinding == 1 ? ' (Grinding)' : '');
+        return `<div class="item-row">• ${item.name} x ${item.quantity} ${item.unit || 'kg'}<span class="item-cust">${custsText}</span></div>`;
+      }).join('');
+
+      const orderType = order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup') ? 'DELIVERY' : 'PICKUP';
+      const address = order.shipping_address || 'Self Pickup / Shop';
+      const driver = order.driver_name || order.deliveryPersonnel || 'Not Assigned';
+      const orderWeight = order.total_weight_kg ? `${parseFloat(order.total_weight_kg).toFixed(1)} kg` : '-';
+      const queuePos = order.queue_position ? `#${order.queue_position}` : '-';
+
+      const isGrinding = (order.items || []).some(item => {
+        const unit = (item.unit || '').toLowerCase().trim();
+        return unit === 'kg' || unit === 'g' || unit === 'trip';
+      });
+
+      itemsHtml += `
+        <tr>
+          <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+          <td style="text-align: center; font-weight: bold;">#${order.id}<br/><span style="font-size: 8px; font-weight: normal;">Queue: ${queuePos}</span></td>
+          <td><strong>${order.customer_name}</strong><br/>${order.customer_phone || ''}</td>
+          <td>${itemsList}</td>
+          <td style="text-align: center; font-weight: bold;">${orderWeight}</td>
+          <td>
+            <span class="print-badge" style="border-color: ${orderType === 'DELIVERY' ? '#1e40af' : '#065f46'}; color: ${orderType === 'DELIVERY' ? '#1e40af' : '#065f46'}">${orderType}</span>
+            <br/><span style="font-size: 8px; margin-top: 2px; display: block;">${address}</span>
+          </td>
+          <td><strong>${driver}</strong></td>
+          <td style="text-align: center;">
+            <span class="print-badge" style="border-color: ${isGrinding ? '#d97706' : '#059669'}; color: ${isGrinding ? '#d97706' : '#059669'}">
+              ${isGrinding ? 'Grinding' : 'Prepared'}
+            </span>
+          </td>
+        </tr>
+      `;
+    });
+
+    printContainer.innerHTML = `
+      <div class="print-header">
+        <h1>${storeName}</h1>
+        <p>Today's Production & Grinding Jobs — آج کا کام کی فہرست</p>
+        <p style="font-size: 10px; color: #555; margin-top: 4px;">Printed On: ${todayStr}</p>
+      </div>
+      <div class="print-stats">
+        <div>TOTAL JOBS (کل آرڈرز): ${orders.length}</div>
+        <div>GRINDING JOBS (پیسنے والے): ${grindJobsCount}</div>
+        <div>PREPARED PRODUCTS (تیار مصنوعات): ${preparedJobsCount}</div>
+        <div>TOTAL WEIGHT (کل وزن): ${totalWeight.toFixed(1)} kg</div>
+      </div>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 4%; text-align: center;">S#</th>
+            <th style="width: 10%; text-align: center;">Order ID</th>
+            <th style="width: 18%;">Customer Details</th>
+            <th style="width: 28%;">Items to Prepare</th>
+            <th style="width: 8%; text-align: center;">Weight</th>
+            <th style="width: 18%;">Delivery/Pickup Address</th>
+            <th style="width: 14%;">Assigned Driver</th>
+            <th style="width: 10%; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+      <div style="margin-top: 20px; border-top: 1px dashed #000; padding-top: 6px; font-size: 8px; text-align: center; color: #555;">
+        End of Today's Work List • Mughal Atta Chakki Software System
+      </div>
+    `;
+
+    document.body.appendChild(printContainer);
+    window.print();
+
+    setTimeout(() => {
+      document.head.removeChild(printStyle);
+      document.body.removeChild(printContainer);
+    }, 1000);
   };
 
   // format ETA time nicely
@@ -388,22 +784,36 @@ Gristmill's - Fresh Flour Daily
   // OrderCard inner component
   const OrderCard = ({ order }) => {
     const isOverdue = order.estimated_completion_time ? new Date(order.estimated_completion_time) < new Date() : false;
-    
+    const isSplitBatch = order.is_split_batch === true;
+    const allSiblingsReady = order.all_siblings_ready === true;
+    // If this is a split batch, Mark as Ready is only allowed when ALL siblings are ready
+    const canMarkReady = !isSplitBatch || allSiblingsReady;
+    const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+
     return (
     <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
-      isOverdue 
+      isOverdue
         ? 'border-l-red-600 animate-glow-red relative z-10'
-        : order.is_carried_forward
-          ? 'border-l-orange-500'
-          : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
-            ? 'border-l-amber-500'
-            : 'border-l-blue-600'
+        : isSplitBatch
+          ? 'border-l-purple-500'
+          : order.is_carried_forward
+            ? 'border-l-orange-500'
+            : order.is_manually_overridden === '1' || order.is_manually_overridden === 1
+              ? 'border-l-amber-500'
+              : 'border-l-blue-600'
     }`}>
-      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
+      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : 'bg-slate-50/50'}`}>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
               Order #{order.id}
+              </CardTitle>
+              {isSplitBatch && (
+                <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] px-2 py-0.5 font-bold">
+                  <SplitSquareHorizontal className="h-3 w-3 mr-1" />
+                  BATCH {order.batch_index} OF {order.siblings?.length || '?'}
+                </Badge>
+              )}
               {order.is_carried_forward && (
                 <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-[10px] px-2 py-0.5 font-bold">
                   <History className="h-3 w-3 mr-1" /> CARRIED FORWARD
@@ -416,8 +826,23 @@ Gristmill's - Fresh Flour Daily
             </p>
           </div>
           <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
-            <span className="text-xl font-bold text-slate-800">Rs. {parseInt(order.total_amount).toLocaleString()}</span>
-            <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
+            <span className="text-xl font-bold text-slate-800">
+              Rs. {parseInt(order.total_amount).toLocaleString()}
+              {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
+            </span>
+            <div className="flex items-center gap-1.5 justify-end mt-1">
+              <span className="text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 border border-green-300' :
+                order.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                order.paymentStatus === 'unpaid' ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse' :
+                'bg-yellow-100 text-yellow-800 border border-yellow-300'
+              }`}>
+                {order.paymentStatus === 'paid' ? 'Paid' : 
+                 order.paymentStatus === 'partial' ? 'Partial' : 
+                 order.paymentStatus === 'unpaid' ? 'Unpaid / Rejected' : 'Pending'}
+              </span>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -457,6 +882,43 @@ Gristmill's - Fresh Flour Daily
           </div>
         </div>
 
+        {/* ── Sibling Batch Status (only for split orders) ──────────────── */}
+        {isSplitBatch && order.siblings && order.siblings.length > 0 && (
+          <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <SplitSquareHorizontal className="h-4 w-4 text-purple-600" />
+              <span className="text-xs font-semibold text-purple-800 uppercase">Split Batches Status</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {order.siblings.map((sib) => (
+                <div
+                  key={sib.id}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${
+                    sib.status === 'ready'
+                      ? 'bg-green-100 text-green-800 border-green-300'
+                      : 'bg-slate-100 text-slate-600 border-slate-300'
+                  }`}
+                >
+                  {sib.status === 'ready'
+                    ? <CheckCircle className="h-3 w-3" />
+                    : <Clock className="h-3 w-3" />}
+                  Batch {sib.batch_index} #{sib.id}
+                  <span className="text-[10px] opacity-70">
+                    ({parseFloat(sib.total_weight_kg || 0).toFixed(1)}kg)
+                  </span>
+                  — {sib.assigned_date === new Date().toISOString().slice(0, 10) ? 'Today' : 'Tomorrow'}
+                </div>
+              ))}
+            </div>
+            {!allSiblingsReady && (
+              <p className="mt-2 text-xs text-purple-700 flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Jab tak <strong>tamam batches ready</strong> nahi hote, Final Bill lock rahega. Ap is batch ko 'Process' kar sakte hain.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* customer info */}
         <div className="bg-muted/30 p-3 rounded-md space-y-2 text-sm">
           <div className="flex items-center gap-2">
@@ -486,11 +948,32 @@ Gristmill's - Fresh Flour Daily
           </h4>
           <ul className="divide-y border rounded-md">
             {order.items.map((item, idx) => (
-              <li key={idx} className="p-2 text-sm flex justify-between items-center bg-white">
-                <span>{item.name}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">x {item.quantity}</Badge>
-                  {item.unit && <span className="text-xs text-muted-foreground">{item.unit}</span>}
+              <li key={idx} className="p-3 text-sm flex justify-between items-start bg-white hover:bg-slate-50 transition-colors">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="font-bold text-slate-800 break-words">{item.name}</p>
+                  {(item.is_cleaning || item.is_grinding) && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.is_cleaning == 1 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          Cleaning
+                        </span>
+                      )}
+                      {item.is_grinding == 1 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          Grinding
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {item.is_weight_pending && (
+                    <p className="text-[10px] font-black text-primary mt-1 flex items-center gap-1 uppercase tracking-wider">
+                      <Timer className="h-3 w-3" /> Weight Pending
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                  {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
                 </div>
               </li>
             ))}
@@ -499,17 +982,48 @@ Gristmill's - Fresh Flour Daily
 
         {/* actions */}
         <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          <Button
-            className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
-            onClick={() => markAsReady(order)}
-            disabled={sendingBill === order.id}
-          >
-            {sendingBill === order.id ? (
-              <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
-            ) : (
-              <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
-            )}
-          </Button>
+          {canMarkReady ? (
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
+              onClick={() => markAsReady(order)}
+              disabled={sendingBill === order.id}
+            >
+              {sendingBill === order.id ? (
+                <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
+              ) : (
+                <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
+              )}
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    className="w-full shadow-md font-medium text-[15px] text-white hover:opacity-90"
+                    style={{ backgroundColor: '#4f46e5' }}
+                    onClick={() => markBatchProcessed(order)}
+                  >
+                    <CheckCircle className="h-5 w-5 mr-2" /> Mark Batch Processed
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs max-w-[220px]">
+                <p>Is batch ko process karen. Final Bill aur Delivery tamam batches complete hone par hogi.</p>
+                <p className="mt-1">Remaining: {(order.siblings || []).filter(s => s.status !== 'ready' && s.status !== 'batch_ready').length} batch(es) pending</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {isHeavy && !isSplitBatch && (
+            <Button
+              variant="outline"
+              className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium animate-pulse"
+              onClick={() => openSplitModal(order)}
+            >
+              <SplitSquareHorizontal className="h-4 w-4 mr-2" />
+              Split Order
+            </Button>
+          )}
 
           <Button
             variant="outline"
@@ -561,8 +1075,8 @@ Gristmill's - Fresh Flour Daily
             <Printer className="h-5 w-5 mr-2" /> Print
           </Button>
 
-          <Button variant="destructive" className="w-full shadow-sm font-medium" onClick={() => setCancelOrder(order)}>
-            <Trash2 className="h-5 w-5 mr-2" /> Cancel
+          <Button variant="destructive" className="w-full shadow-sm font-medium px-6" onClick={() => setCancelOrder(order)}>
+            <Trash2 className="h-5 w-5 mr-2 text-white" /> Cancel
           </Button>
         </div>
       </CardContent>
@@ -573,9 +1087,6 @@ Gristmill's - Fresh Flour Daily
   if (loading) {
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" /></div>;
   }
-
-  const carriedForwardOrders = orders.filter(o => o.is_carried_forward);
-  const todayNewOrders = orders.filter(o => !o.is_carried_forward);
 
   return (
     <TooltipProvider>
@@ -592,9 +1103,18 @@ Gristmill's - Fresh Flour Daily
               Orders currently in production, with live capacity, driver assignment, and scheduling actions in one place.
             </p>
           </div>
-          <Badge variant="secondary" className="text-lg px-4 py-2 self-start lg:self-auto">
-            {orders.length} Active Jobs
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+            <Button
+              onClick={handlePrintAll}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md flex items-center gap-2"
+              size="lg"
+            >
+              <Printer className="h-5 w-5 mr-1" /> Print Today's Work List
+            </Button>
+            <Badge variant="secondary" className="text-lg px-4 py-2">
+              {orders.length} Active Jobs
+            </Badge>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
@@ -662,48 +1182,10 @@ Gristmill's - Fresh Flour Daily
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {/* Carried Forward Section */}
-          {carriedForwardOrders.length > 0 && (
-            <>
-              <div className="flex items-center gap-3 px-1">
-                <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-sm font-bold">
-                  <History className="h-4 w-4" />
-                  Carried Forward from Yesterday
-                </div>
-                <div className="flex-1 h-px bg-orange-200" />
-                <span className="text-xs text-orange-600 font-semibold">
-                  {carriedForwardOrders.length} order(s)
-                </span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {carriedForwardOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Today's New Orders Section */}
-          {todayNewOrders.length > 0 && (
-            <>
-              <div className="flex items-center gap-3 px-1">
-                <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-sm font-bold">
-                  <CalendarClock className="h-4 w-4" />
-                  Today's New Orders
-                </div>
-                <div className="flex-1 h-px bg-blue-200" />
-                <span className="text-xs text-blue-600 font-semibold">
-                  {todayNewOrders.length} order(s)
-                </span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {todayNewOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
-              </div>
-            </>
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {orders.map((order) => (
+            <OrderCard key={order.id} order={order} />
+          ))}
         </div>
       )}
 
@@ -740,6 +1222,131 @@ Gristmill's - Fresh Flour Daily
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* ─── Split Order Modal ───────────────────────────────────────── */}
+        <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <SplitSquareHorizontal className="h-5 w-5" />
+                Heavy Order Split — #{splitOrder?.id}
+              </DialogTitle>
+              <DialogDescription>
+                This order is <strong>{parseFloat(splitOrder?.total_weight_kg || 0).toFixed(1)} kg</strong> — exceeding the limit ({heavyThreshold} kg).
+                Split it into <em>Today</em> and <em>Tomorrow</em> batches.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Warning Banner */}
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>
+                After splitting, <strong>Bill and Mark as Ready</strong> will only be available when
+                <strong> all batches are complete</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-3 mt-4 max-h-[350px] overflow-y-auto pr-2">
+              {splitBatches.map((batch, idx) => (
+                <div key={batch.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-md border border-slate-200">
+                  <div className="font-semibold text-slate-500 w-6">{idx + 1}.</div>
+                  <div className="flex-1">
+                    <Label className="text-xs mb-1 block text-slate-600">Date</Label>
+                    <Input 
+                      type="date" 
+                      value={batch.date}
+                      onChange={(e) => {
+                        const newB = [...splitBatches];
+                        newB[idx].date = e.target.value;
+                        setSplitBatches(newB);
+                      }}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Label className="text-xs mb-1 block text-slate-600">Weight (kg)</Label>
+                    <Input 
+                      type="number" 
+                      min="0.1" step="0.5" 
+                      value={batch.weight}
+                      onChange={(e) => {
+                        const newB = [...splitBatches];
+                        newB[idx].weight = e.target.value;
+                        setSplitBatches(newB);
+                      }}
+                    />
+                  </div>
+                  <div className="pt-5">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      disabled={splitBatches.length <= 2}
+                      onClick={() => {
+                        if (splitBatches.length > 2) {
+                          setSplitBatches(splitBatches.filter(b => b.id !== batch.id));
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 text-right">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                onClick={() => {
+                  const lastDate = new Date(splitBatches[splitBatches.length - 1].date);
+                  lastDate.setDate(lastDate.getDate() + 1);
+                  setSplitBatches([...splitBatches, { 
+                    id: Date.now(), 
+                    date: lastDate.toISOString().slice(0, 10), 
+                    weight: '' 
+                  }]);
+                }}
+              >
+                + Add Batch
+              </Button>
+            </div>
+
+            {/* Live total check */}
+            {splitOrder && (() => {
+              const total = parseFloat(splitOrder.total_weight_kg || 0);
+              const sum = splitBatches.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
+              const diff = Math.abs(sum - total);
+              const ok = diff <= 0.5;
+              return total > 0 ? (
+                <div className={`text-xs font-medium rounded px-3 py-2 mt-4 ${ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                  {ok
+                    ? `✅ Total: ${sum.toFixed(1)} kg — Valid!`
+                    : `⚠️ Total: ${sum.toFixed(1)} kg (Expected ~${total} kg) — Mismatch`}
+                </div>
+              ) : null;
+            })()}
+
+            <DialogFooter className="gap-2">
+              <Button onClick={closeSplitModal} disabled={isSplitting} className="hover:opacity-90">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSplitOrder}
+                disabled={isSplitting}
+                className="hover:opacity-90"
+              >
+                {isSplitting ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Splitting...</>
+                ) : (
+                  <><SplitSquareHorizontal className="h-4 w-4 mr-2" /> Split Order</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
     </div>
     </TooltipProvider>
   );

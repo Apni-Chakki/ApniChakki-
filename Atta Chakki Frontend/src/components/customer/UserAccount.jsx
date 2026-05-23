@@ -92,6 +92,7 @@ export function UserAccount() {
             createdAt: order.created_at, 
 			  cancelReason: order.cancellation_reason,
 			  cancelledBy: order.cancelled_by,
+              assignedDate: order.assigned_date || null,
 			  total: totalAmount,
             amountPaid: amountPaid,
             paymentMethod: order.payment_method || 'cod',
@@ -100,7 +101,7 @@ export function UserAccount() {
             type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
             items: order.items ? order.items.map(item => ({
                quantity: item.quantity,
-               isWeightPending: false, 
+               isWeightPending: item.is_weight_pending == 1, 
                service: {
                  name: item.name,
                  price: item.price_at_purchase || 0
@@ -139,6 +140,12 @@ export function UserAccount() {
       return;
     }
 
+    const cleanPhone = tempProfile.phone.replace(/\s/g, '');
+    if (!/^\d{11}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
+      return;
+    }
+
     setIsSaving(true);
     
     try {
@@ -148,7 +155,7 @@ export function UserAccount() {
         body: JSON.stringify({
           user_id: user.id,
           name: tempProfile.name,
-          phone: tempProfile.phone,
+          phone: cleanPhone,
           address: tempProfile.address
         })
       });
@@ -161,12 +168,13 @@ export function UserAccount() {
           ...prev,
           full_name: tempProfile.name,
           name: tempProfile.name,
-          phone: tempProfile.phone,
+          phone: cleanPhone,
           address: tempProfile.address
         }));
 
         // 3. Update UI
-        setProfile(tempProfile);
+        const updatedProfile = { ...tempProfile, phone: cleanPhone };
+        setProfile(updatedProfile);
         setEditMode(false);
         toast.success(t('Profile updated successfully!'));
       } else {
@@ -210,6 +218,15 @@ export function UserAccount() {
   const handleCancelOrder = async () => {
     if (!cancelOrder) return;
 
+    // Direct frontend check: block cancellation if order is assigned to today's date or earlier
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (cancelOrder.assignedDate && cancelOrder.assignedDate <= todayStr) {
+      toast.error(t('Processing has started, it cannot be cancelled now / پروسیسنگ شروع ہو چکی ہے، اب آرڈر کینسل نہیں کیا جا سکتا۔'));
+      setCancelOrder(null);
+      setCancelReason('');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
         method: 'POST',
@@ -225,7 +242,7 @@ export function UserAccount() {
         toast.success(t('Order cancelled successfully'));
         fetchOrders(); 
       } else {
-        toast.error(t('Failed to cancel order'));
+        toast.error(result.message || t('Failed to cancel order'));
       }
     } catch (e) {
       toast.error(t('Network error while cancelling'));
@@ -267,7 +284,7 @@ export function UserAccount() {
                   </div>
                 </div>
                 {!editMode && (
-                  <Button onClick={handleEdit} variant="outline" className="w-full">
+                  <Button onClick={handleEdit}>
                     <Edit className="h-4 w-4 mr-2" />
                     {t('Edit Details')}
                   </Button>
@@ -358,6 +375,7 @@ export function UserAccount() {
                 </Card>
               ) : (
                 orders.map((order) => {
+                  const hasPending = order.items.some(i => i.isWeightPending);
                   return (
                   <Card key={order.id} className="p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
@@ -378,6 +396,7 @@ export function UserAccount() {
                         <p className="text-sm text-muted-foreground">{t('Total Amount')}</p>
                         <p className="text-primary font-bold">
                           Rs. {order.total.toLocaleString()}
+                          {hasPending && <span className="text-xs ml-1">(+ TBD)</span>}
                         </p>
                       </div>
                     </div>
@@ -391,7 +410,11 @@ export function UserAccount() {
                               {item.service.name} <span className="text-foreground">x {item.quantity}</span>
                             </span>
                             <span className="text-foreground">
-                              Rs. {(item.service.price * item.quantity).toLocaleString()}
+                              {item.isWeightPending ? (
+                                <span className="text-primary font-medium">{t('Pending Wt.')}</span>
+                              ) : (
+                                `Rs. ${(item.service.price * item.quantity).toLocaleString()}`
+                              )}
                             </span>
                           </div>
                         ))}

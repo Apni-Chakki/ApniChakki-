@@ -17,13 +17,14 @@ try {
 
     // filtering by status
     if ($status_filter === 'pending') {
-        $sql .= " WHERE TRIM(LOWER(status)) = 'pending'";
+        // Exclude split_parent orders — they are logical containers, not actionable
+        $sql .= " WHERE TRIM(LOWER(status)) = 'pending' AND TRIM(LOWER(status)) != 'split_parent'";
     } elseif ($status_filter === 'ready') {
         $sql .= " WHERE TRIM(LOWER(status)) = 'ready'";
     } elseif ($status_filter === 'active') {
         $sql .= " WHERE TRIM(LOWER(status)) IN ('processing', 'ready', 'shipped')";
     } elseif ($status_filter === 'history') {
-        $sql .= " WHERE TRIM(LOWER(status)) IN ('completed', 'cancelled')";
+        $sql .= " WHERE TRIM(LOWER(status)) IN ('completed', 'cancelled', 'split_parent')";
     }
 
     $sql .= " ORDER BY created_at DESC";

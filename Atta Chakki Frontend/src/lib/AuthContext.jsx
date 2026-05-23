@@ -101,6 +101,29 @@ export function AuthProvider({ children }) {
     return false;
   };
 
+  // google login function
+  const googleLogin = async (credential) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/google_login.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUser(data.user);
+        return data.user;
+      } else {
+        console.error(data.message || "Google login failed");
+        return null;
+      }
+    } catch (error) {
+      console.error("Google Login API Error:", error);
+      return null;
+    }
+  };
+
   // signup function
   const signup = async (name, phone, password, address = '') => {
     try {
@@ -145,6 +168,7 @@ export function AuthProvider({ children }) {
         user,
         setUser,
         login,
+        googleLogin,
         signup, 
         logout,
         isAuthenticated: !!user,

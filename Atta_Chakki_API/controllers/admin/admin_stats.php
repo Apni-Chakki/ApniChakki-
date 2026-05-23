@@ -1,3 +1,3 @@
 <?php
-// Backward-compatible proxy - routes to new location
-require_once __DIR__ . '/admin/admin_stats.php';
+// Proxy - routes to actual admin_stats in dashboard controller
+require_once __DIR__ . '/../dashboard/admin_stats.php';

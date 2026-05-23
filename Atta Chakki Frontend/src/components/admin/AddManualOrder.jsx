@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
+import { Checkbox } from '../ui/checkbox';
 
 export function AddManualOrder() {
   const navigate = useNavigate();
@@ -30,6 +31,18 @@ export function AddManualOrder() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
   const [orderStatus, setOrderStatus] = useState('pending');
+  const [isCleaning, setIsCleaning] = useState(true);
+  const [isGrinding, setIsGrinding] = useState(true);
+
+  useEffect(() => {
+    if (selectedProduct) {
+       const product = products.find(p => p.id.toString() === selectedProduct.toString());
+       if (product && product.is_grinding_service) {
+          setIsCleaning(true);
+          setIsGrinding(true);
+       }
+    }
+  }, [selectedProduct, products]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -58,11 +71,33 @@ export function AddManualOrder() {
     
     if (!product) return;
 
+    let originalPrice = parseFloat(product.price);
+    if (product.is_grinding_service) {
+       originalPrice = 0;
+       if (isCleaning) originalPrice += parseFloat(product.cleaning_price || 0);
+       if (isGrinding) originalPrice += parseFloat(product.grinding_price || 0);
+       if (originalPrice === 0 && !isCleaning && !isGrinding) originalPrice = parseFloat(product.price);
+    }
+
+    let itemPrice = originalPrice;
+    const discountType = product.discount_type || 'none';
+    const discountValue = parseFloat(product.discount_value) || 0;
+    
+    if (discountType === 'percentage') {
+      itemPrice = Math.max(0, itemPrice - (itemPrice * discountValue / 100));
+    } else if (discountType === 'fixed') {
+      itemPrice = Math.max(0, itemPrice - discountValue);
+    }
+
     const newItem = {
       id: product.id,
       name: product.name,
-      price: parseFloat(product.price),
-      quantity: parseInt(qty)
+      price: itemPrice,
+      original_price: originalPrice,
+      quantity: parseInt(qty),
+      is_cleaning: product.is_grinding_service ? (isCleaning ? 1 : 0) : 0,
+      is_grinding: product.is_grinding_service ? (isGrinding ? 1 : 0) : 0,
+      is_grinding_service: product.is_grinding_service
     };
 
     setCart([...cart, newItem]);
@@ -188,18 +223,7 @@ export function AddManualOrder() {
             <CardTitle>{t('Order Settings')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t('Order Status')}</Label>
-                <Select value={orderStatus} onValueChange={setOrderStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">{t('Pending')}</SelectItem>
-                    <SelectItem value="processing">{t('Processing')}</SelectItem>
-                    <SelectItem value="completed">{t('Completed')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label>{t('Payment Status')}</Label>
                 <Select value={paymentStatus} onValueChange={setPaymentStatus}>
@@ -283,8 +307,41 @@ export function AddManualOrder() {
                 onChange={e => setQty(e.target.value)} 
               />
             </div>
+          </div>
+
+          {selectedProduct && products.find(p => p.id.toString() === selectedProduct.toString())?.is_grinding_service && (
+            <div className="flex gap-6 mb-6 p-4 bg-muted rounded-lg border border-border">
+               <div className="flex items-center space-x-2">
+                 <Checkbox 
+                   id="admin-cleaning" 
+                   checked={isCleaning} 
+                   onCheckedChange={(checked) => setIsCleaning(!!checked)} 
+                 />
+                 <Label htmlFor="admin-cleaning" className="text-sm font-medium">{t('Cleaning')}</Label>
+               </div>
+               <div className="flex items-center space-x-2">
+                 <Checkbox 
+                   id="admin-grinding" 
+                   checked={isGrinding} 
+                   onCheckedChange={(checked) => setIsGrinding(!!checked)} 
+                 />
+                 <Label htmlFor="admin-grinding" className="text-sm font-medium">{t('Grinding')}</Label>
+               </div>
+               <p className="text-xs text-muted-foreground ml-auto flex items-center">
+                 {t('Current Price')}: Rs. {(() => {
+                    const p = products.find(prod => prod.id.toString() === selectedProduct.toString());
+                    let pr = 0;
+                    if (isCleaning) pr += parseFloat(p.cleaning_price || 0);
+                    if (isGrinding) pr += parseFloat(p.grinding_price || 0);
+                    return pr;
+                 })()}
+               </p>
+            </div>
+          )}
+
+          <div className="flex justify-end mb-6">
             <Button onClick={addToCart} disabled={!selectedProduct || selectedProduct === "none"}>
-              <Plus className="h-4 w-4 mr-2" /> {t('Add')}
+              <Plus className="h-4 w-4 mr-2" /> {t('Add to Cart')}
             </Button>
           </div>
 
@@ -306,8 +363,25 @@ export function AddManualOrder() {
                 ) : (
                   cart.map((item, idx) => (
                     <tr key={idx} className="border-t">
-                      <td className="p-3">{item.name}</td>
-                      <td className="p-3">Rs. {item.price}</td>
+                      <td className="p-3">
+                        <div>{item.name}</div>
+                        {item.is_grinding_service && (
+                          <div className="text-[10px] text-muted-foreground">
+                            ({item.is_cleaning ? t('Cleaning') : ''}{item.is_cleaning && item.is_grinding ? ' + ' : ''}{item.is_grinding ? t('Grinding') : ''})
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {item.original_price && item.original_price > item.price ? (
+                          <div className="flex flex-col">
+                            <span className="line-through text-xs text-muted-foreground">Rs. {item.original_price.toLocaleString()}</span>
+                            <span className="text-green-600 font-bold">Rs. {item.price.toLocaleString()}</span>
+                            <span className="text-[9px] text-green-700 bg-green-50 px-1 py-0.5 rounded border border-green-200 w-max font-bold mt-0.5">🏷 DISC</span>
+                          </div>
+                        ) : (
+                          <span>Rs. {item.price.toLocaleString()}</span>
+                        )}
+                      </td>
                       <td className="p-3">{item.quantity}</td>
                       <td className="p-3">Rs. {(item.price * item.quantity).toLocaleString()}</td>
                       <td className="p-3">

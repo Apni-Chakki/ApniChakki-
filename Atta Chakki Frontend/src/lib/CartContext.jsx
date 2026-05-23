@@ -23,7 +23,11 @@ function normalizeCart(items) {
     }
 
     const existingItem = normalized.find(
-      currentItem => currentItem.service.id === item.service.id && !currentItem.isWeightPending
+      currentItem => 
+        currentItem.service.id === item.service.id && 
+        !currentItem.isWeightPending &&
+        currentItem.service.is_cleaning === item.service.is_cleaning &&
+        currentItem.service.is_grinding === item.service.is_grinding
     );
 
     if (existingItem) {
@@ -60,12 +64,20 @@ export function CartProvider({ children }) {
           return [...prev, { service, quantity: quantity, isWeightPending: true }];
       }
 
-      const existingItem = prev.find(item => item.service.id === service.id && !item.isWeightPending);
+      const existingItem = prev.find(item => 
+        item.service.id === service.id && 
+        !item.isWeightPending &&
+        item.service.is_cleaning === service.is_cleaning &&
+        item.service.is_grinding === service.is_grinding
+      );
 
       if (existingItem) {
         toast.success(`Updated quantity for ${service.name}`);
         return prev.map(item =>
-          item.service.id === service.id && !item.isWeightPending
+          item.service.id === service.id && 
+          !item.isWeightPending &&
+          item.service.is_cleaning === service.is_cleaning &&
+          item.service.is_grinding === service.is_grinding
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -76,22 +88,40 @@ export function CartProvider({ children }) {
     });
   };
 
-  const updateQuantity = (serviceId, quantity, isWeightPending = false) => {
+  const updateQuantity = (serviceId, quantity, isWeightPending = false, isCleaning = false, isGrinding = false) => {
     setCart(prev => {
-      const itemInCart = prev.find(item => item.service.id === serviceId && item.isWeightPending === isWeightPending);
+      const itemInCart = prev.find(item => 
+        item.service.id === serviceId && 
+        item.isWeightPending === isWeightPending &&
+        item.service.is_cleaning === isCleaning &&
+        item.service.is_grinding === isGrinding
+      );
       if (!itemInCart) return prev;
 
       if (quantity <= 0) {
-        return prev.filter(item => !(item.service.id === serviceId && item.isWeightPending === isWeightPending));
+        return prev.filter(item => !(
+          item.service.id === serviceId && 
+          item.isWeightPending === isWeightPending &&
+          item.service.is_cleaning === isCleaning &&
+          item.service.is_grinding === isGrinding
+        ));
       }
       return prev.map(item =>
-        item.service.id === serviceId && item.isWeightPending === isWeightPending ? { ...item, quantity } : item
+        (item.service.id === serviceId && 
+         item.isWeightPending === isWeightPending &&
+         item.service.is_cleaning === isCleaning &&
+         item.service.is_grinding === isGrinding) ? { ...item, quantity } : item
       );
     });
   };
 
-  const removeFromCart = (serviceId, isWeightPending = false) => {
-    setCart(prev => prev.filter(item => !(item.service.id === serviceId && item.isWeightPending === isWeightPending)));
+  const removeFromCart = (serviceId, isWeightPending = false, isCleaning = false, isGrinding = false) => {
+    setCart(prev => prev.filter(item => !(
+      item.service.id === serviceId && 
+      item.isWeightPending === isWeightPending &&
+      item.service.is_cleaning === isCleaning &&
+      item.service.is_grinding === isGrinding
+    )));
   };
 
   const clearCart = () => {
@@ -121,7 +151,8 @@ export function CartProvider({ children }) {
         removeFromCart,
         clearCart,
         getTotalPrice,
-        getTotalItems
+        getTotalItems,
+        hasTBDItems: () => cart.some(item => item.isWeightPending)
       }}
     >
       {children}
