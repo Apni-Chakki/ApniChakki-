@@ -201,17 +201,47 @@ export function Checkout() {
     }
 
     if (gpsCoords && !isOutOfLahore) {
-      const dist = calculateDistance(
+      const straightDist = calculateDistance(
         SHOP_LOCATION.lat, SHOP_LOCATION.lng, 
         gpsCoords.lat, gpsCoords.lng
       );
-      setDistanceKm(dist);
 
-      let fee = deliveryConfig.base_fare;
-      if (dist > deliveryConfig.base_distance) {
-        fee = deliveryConfig.base_fare + (Math.ceil(dist - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
+      const updateFee = (distVal) => {
+        setDistanceKm(distVal);
+        let fee = deliveryConfig.base_fare;
+        if (distVal > deliveryConfig.base_distance) {
+          fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
+        }
+        setDeliveryFee(fee);
+      };
+
+      if (USE_GOOGLE_MAPS && window.google?.maps?.DistanceMatrixService) {
+        try {
+          const service = new window.google.maps.DistanceMatrixService();
+          service.getDistanceMatrix(
+            {
+              origins: [new window.google.maps.LatLng(SHOP_LOCATION.lat, SHOP_LOCATION.lng)],
+              destinations: [new window.google.maps.LatLng(gpsCoords.lat, gpsCoords.lng)],
+              travelMode: window.google.maps.TravelMode.DRIVING,
+              unitSystem: window.google.maps.UnitSystem.METRIC,
+            },
+            (response, status) => {
+              if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
+                const element = response.rows[0].elements[0];
+                const roadDist = element.distance.value / 1000;
+                updateFee(roadDist);
+              } else {
+                updateFee(straightDist);
+              }
+            }
+          );
+        } catch (e) {
+          console.warn('Distance Matrix failed, using straight-line:', e);
+          updateFee(straightDist);
+        }
+      } else {
+        updateFee(straightDist);
       }
-      setDeliveryFee(fee);
     } else {
       setDeliveryFee(0);
       setDistanceKm(0);
@@ -372,7 +402,7 @@ export function Checkout() {
       if (foundLocation.isLahore) {
         setLocationStatus(`✅ ${t('Area verified & mapped!')}`);
       } else {
-        setLocationStatus(`❌ ${t('This area is officially outside Lahore.')}`);
+        setLocationStatus(`❌ ${t('Service not available in this city')}`);
       }
     } else {
       // NEW CUSTOM ERROR MESSAGE
@@ -390,11 +420,11 @@ export function Checkout() {
 
     if (addressText) {
       setDeliveryArea(addressText);
-      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Pinned location is outside Lahore')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
       if(inLahore) toast.success(t('Area updated from new pin location'));
     } else {
       setDeliveryArea(`Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`);
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Pinned location is outside Lahore')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
     }
   }, [reverseGeocode, t]);
 
@@ -409,10 +439,14 @@ export function Checkout() {
     const isLowAccuracy = accuracy > 200; 
 
     if (isLowAccuracy) {
-      setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
+      if (accuracy > 1000) {
+        setLocationStatus(`⚠️ ${t('Approximate location — Please refine by dragging the pin to your exact spot')}`);
+      } else {
+        setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
+      }
       toast.info(t('Location is approximate. Drag the pin to your exact area.'));
     } else {
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Detected location is outside Lahore')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
     }
 
     if (addressText) {
@@ -474,7 +508,7 @@ export function Checkout() {
         return;
       }
       if (isOutOfLahore) {
-        toast.error(t('Delivery is restricted to Lahore city limits.'));
+        toast.error(t('Service not available in this city'));
         return;
       }
     }
@@ -500,6 +534,49 @@ export function Checkout() {
   };
 
   const processOnlinePayment = async () => {
+    // ── Payment validation checks ──
+    if (paymentMethod === 'jazzcash') {
+      if (!mobileNumber || mobileNumber.trim() === '') {
+        toast.error(t('Please enter your JazzCash mobile number'));
+        return;
+      }
+      if (mobileNumber.length !== 11 || !mobileNumber.startsWith('03')) {
+        toast.error(t('Please enter a valid 11-digit JazzCash mobile number starting with 03'));
+        return;
+      }
+      if (cnicLast6 && cnicLast6.length !== 6) {
+        toast.error(t('CNIC Last 6 digits must be exactly 6 digits if provided'));
+        return;
+      }
+    } else if (paymentMethod === 'bank') {
+      if (!bankAccountNumber || bankAccountNumber.trim() === '') {
+        toast.error(t('Please enter your Bank Account / IBAN Number'));
+        return;
+      }
+      if (bankAccountNumber.trim().length < 8) {
+        toast.error(t('Please enter a valid Bank Account or IBAN Number (minimum 8 characters)'));
+        return;
+      }
+    } else if (paymentMethod === 'card') {
+      const rawCardNum = cardNumber.replace(/\s/g, '');
+      if (!rawCardNum || rawCardNum.length < 12 || rawCardNum.length > 19) {
+        toast.error(t('Please enter a valid Card Number'));
+        return;
+      }
+      if (!cardName || cardName.trim() === '') {
+        toast.error(t('Please enter the Cardholder Name'));
+        return;
+      }
+      if (!cardExpiry || !/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+        toast.error(t('Please enter a valid expiry date (MM/YY)'));
+        return;
+      }
+      if (!cardCvv || cardCvv.length < 3 || cardCvv.length > 4) {
+        toast.error(t('Please enter a valid 3 or 4 digit CVV'));
+        return;
+      }
+    }
+
     setIsProcessingPayment(true);
     setPaymentStep('processing');
 
@@ -518,9 +595,22 @@ export function Checkout() {
         cnic_last6: cnicLast6 || null,
       };
 
-      const fullDeliveryAddress = orderType === 'delivery' 
-        ? `${houseDetails}, ${deliveryArea}`
-        : "Pickup From Store";
+      let fullDeliveryAddress = "Pickup From Store";
+      if (orderType === 'delivery') {
+        const h = (houseDetails || '').trim();
+        const a = (deliveryArea || '').trim();
+        if (h && a) {
+          if (h === a) {
+            fullDeliveryAddress = a;
+          } else if (h.toLowerCase().includes(a.toLowerCase())) {
+            fullDeliveryAddress = h;
+          } else {
+            fullDeliveryAddress = `${h}, ${a}`;
+          }
+        } else {
+          fullDeliveryAddress = h || a || "";
+        }
+      }
 
       const orderData = {
         user_id: user.id,
@@ -595,7 +685,19 @@ export function Checkout() {
     // Build delivery address with GPS pin link for delivery person
     let deliveryAddress = "Pickup From Store";
     if (orderType === 'delivery') {
-      deliveryAddress = `${houseDetails}, ${deliveryArea}`;
+      const h = (houseDetails || '').trim();
+      const a = (deliveryArea || '').trim();
+      if (h && a) {
+        if (h === a) {
+          deliveryAddress = a;
+        } else if (h.toLowerCase().includes(a.toLowerCase())) {
+          deliveryAddress = h;
+        } else {
+          deliveryAddress = `${h}, ${a}`;
+        }
+      } else {
+        deliveryAddress = h || a || "";
+      }
       if (gpsCoords) deliveryAddress += ` | 📍 https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
     }
 
@@ -900,6 +1002,7 @@ export function Checkout() {
                       setLocationStatus(`✅ ${t('Area updated')}`);
                     }}
                     height="250px"
+                    showSearch={false}
                   />
                 ) : (
                   <div className="h-[250px] w-full relative z-0">

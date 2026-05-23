@@ -33,9 +33,20 @@ export function CustomerSignUp() {
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
       try {
-        const success = await googleLogin(tokenResponse.access_token);
-        if (success) {
+        const loggedUser = await googleLogin(tokenResponse.access_token);
+        if (loggedUser) {
           toast.success(t('Account created successfully! You are now logged in.'));
+          const phoneVal = loggedUser.phone || '';
+          const isPlaceholder = phoneVal.startsWith('G-') || phoneVal.startsWith('G') || !/^\d{11}$/.test(phoneVal.replace(/\s/g, ''));
+          if (isPlaceholder) {
+            toast.warning(
+              t('Please update your phone number in account settings to proceed with orders!'),
+              {
+                duration: 9000,
+                description: 'آرڈرز جاری رکھنے کے لیے، برائے مہربانی اکاؤنٹ سیٹنگز میں اپنا فون نمبر درج کریں۔',
+              }
+            );
+          }
           navigate('/');
         } else {
           toast.error(t('Google signup failed.'));

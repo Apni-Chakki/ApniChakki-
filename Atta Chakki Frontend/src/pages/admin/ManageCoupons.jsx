@@ -312,7 +312,7 @@ export function ManageCoupons() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="h-6 w-6 px-0 py-0"
                   onClick={() => copyCode(coupon.code)}
                 >
                   <Copy className="h-3 w-3" />
@@ -321,21 +321,21 @@ export function ManageCoupons() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50"
+                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0"
                   style={{ backgroundColor: '#8b6f47' }}
                   onClick={() => handleEdit(coupon)}
                   disabled={isAdding || editingId !== null}
                 >
-                  <Pencil className="h-4 w-4" color="white" strokeWidth={2.5} />
+                  <Pencil className="h-4 w-4 text-white" strokeWidth={2.5} />
                 </button>
                 <button
                   type="button"
-                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50"
+                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0"
                   style={{ backgroundColor: '#dc2626' }}
                   onClick={() => handleDelete(coupon.id)}
                   disabled={isAdding || editingId !== null}
                 >
-                  <Trash2 className="h-4 w-4" color="white" strokeWidth={2.5} />
+                  <Trash2 className="h-4 w-4 text-white" strokeWidth={2.5} />
                 </button>
               </div>
             </div>

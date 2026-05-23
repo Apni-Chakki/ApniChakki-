@@ -37,7 +37,7 @@ export function DeliveryPanel() {
         (position) => resolve(position),
         () => resolve(null),
         {
-          enableHighAccuracy: false,
+          enableHighAccuracy: true,
           timeout: 15000,
           maximumAge: 0,
           ...options,
@@ -119,7 +119,10 @@ export function DeliveryPanel() {
           phone: order.customer_phone,
           deliveryAddress: order.shipping_address,
           total: parseFloat(order.total_amount || 0),
-          paymentStatus: 'pending' // You can map this if you have it in DB
+          paymentStatus: order.payment_status || 'pending',
+          advancePayment: parseFloat(order.amount_paid || 0),
+          couponDiscount: parseFloat(order.coupon_discount || 0),
+          items: order.items || []
         }));
 
         // Sort: Out for delivery -> Ready -> Coming for Pickup -> Pickup Assigned -> Processing/Pending
@@ -192,7 +195,7 @@ export function DeliveryPanel() {
         }
       },
       {
-        enableHighAccuracy: false,
+        enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 0
       }
@@ -280,12 +283,67 @@ export function DeliveryPanel() {
 
     const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
     const mapsLink = hasCoords ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+    
+    let itemsText = "";
+    if (order.items && order.items.length > 0) {
+      order.items.forEach(item => {
+        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+        const unit = item.unit || item.service?.unit || 'unit';
+        const name = item.name || item.service?.name || '';
+        
+        let customText = "";
+        if (item.customizations?.length > 0) {
+            customText = item.customizations.map(c => c.option_name).join(' + ');
+        } else {
+            const services = [];
+            if (item.is_cleaning == 1) services.push('Cleaning');
+            if (item.is_grinding == 1) services.push('Grinding');
+            customText = services.join(' + ');
+        }
+        
+        itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+        if (customText) {
+            itemsText += ` (${customText})`;
+        }
+        if (itemPrice > 0) {
+            itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+        }
+        itemsText += `\n`;
+        
+        // Rental details
+        if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
+            itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+            itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
+        }
+      });
+    }
+
+    const subtotal = parseFloat(order.total_amount || order.total) || 0;
+    const discount = parseFloat(order.coupon_discount || order.couponDiscount) || 0;
+    const grandTotal = subtotal - discount;
+    const advancePaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
+    const remainingDue = grandTotal - advancePaid;
+
+    let priceBreakdown = `💰 *Subtotal:* Rs. ${subtotal.toLocaleString()}\n`;
+    if (discount > 0) {
+        priceBreakdown += `🏷️ *Discount:* -Rs. ${discount.toLocaleString()}\n`;
+        priceBreakdown += `💰 *Grand Total:* Rs. ${grandTotal.toLocaleString()}\n`;
+    }
+    if (advancePaid > 0) {
+        priceBreakdown += `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n`;
+    }
+    priceBreakdown += `❗ *Remaining Due:* Rs. ${remainingDue.toLocaleString()}`;
+
     const isPickupReq = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
-    const displayTotal = isPickupReq ? 'TBD' : `Rs. ${order.total?.toLocaleString()}`;
+
     const message = encodeURIComponent(
       `🌟 *Apni Chakki — Order On The Way!* 🌟\n\n` +
       `Assalam-o-Alaikum! Your order *#${order.id}* has been dispatched and is on its way. 🚚💨\n\n` +
-      `📦 *Order Amount:* ${displayTotal}\n` +
+      `📦 *ORDER DETAILS:*\n` +
+      `${itemsText}\n` +
+      `-----------------------------------\n` +
+      `${isPickupReq ? `❗ *Amount:* TBD (Pickup Request)\n` : `${priceBreakdown}\n`}` +
+      `🚚 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
       `🧑‍💼 *Rider:* ${user?.name || 'Apni Chakki Driver'}\n\n` +
       `${mapsLink ? `📍 *Driver's Static Location:*\n${mapsLink}\n\n` : ''}` +
       `Please keep your phone nearby so our rider can reach you easily.\n\n` +
@@ -418,20 +476,74 @@ export function DeliveryPanel() {
             { duration: 5000 }
           );
 
-          // Send WhatsApp "Delivered" confirmation to customer
           if (order.phone) {
             const customerPhone = (order.phone || '').replace(/\D/g, '');
             let formattedPhone = customerPhone.startsWith('0') 
               ? '92' + customerPhone.substring(1) 
               : customerPhone.startsWith('92') ? customerPhone : '92' + customerPhone;
 
-            const isPickupReq = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
-            const displayTotal = isPickupReq ? 'TBD' : `Rs. ${order.total?.toLocaleString()}`;
+            let itemsText = "";
+            if (order.items && order.items.length > 0) {
+              order.items.forEach(item => {
+                const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+                const unit = item.unit || item.service?.unit || 'unit';
+                const name = item.name || item.service?.name || '';
+                
+                let customText = "";
+                if (item.customizations?.length > 0) {
+                    customText = item.customizations.map(c => c.option_name).join(' + ');
+                } else {
+                    const services = [];
+                    if (item.is_cleaning == 1) services.push('Cleaning');
+                    if (item.is_grinding == 1) services.push('Grinding');
+                    customText = services.join(' + ');
+                }
+                
+                itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+                if (customText) {
+                    itemsText += ` (${customText})`;
+                }
+                if (itemPrice > 0) {
+                    itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+                }
+                itemsText += `\n`;
+                
+                if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
+                    itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+                    itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
+                }
+              });
+            }
+
+            const subtotal = parseFloat(order.total_amount || order.total) || 0;
+            const discount = parseFloat(order.coupon_discount || order.couponDiscount) || 0;
+            const grandTotal = subtotal - discount;
+            const advancePaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
+            const remainingDue = grandTotal - advancePaid;
+
+            let paymentMessage = "";
+            if (isPickupReq) {
+              paymentMessage = `📦 *Amount Collected:* TBD (Pickup Request)`;
+            } else {
+              paymentMessage = `💰 *Total Amount:* Rs. ${grandTotal.toLocaleString()}\n`;
+              if (advancePaid > 0) {
+                paymentMessage += `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n`;
+              }
+              if (order.paymentStatus === 'paid' || order.payment_status === 'paid') {
+                paymentMessage += `💳 *Payment Status:* PAID (Rs. 0 collected by driver)`;
+              } else {
+                paymentMessage += `💵 *Remaining Balance Collected:* Rs. ${remainingDue.toLocaleString()}`;
+              }
+            }
 
             const deliveredMsg = encodeURIComponent(
               `✅ *Apni Chakki — Order Delivered Successfully!* ✅\n\n` +
               `Assalam-o-Alaikum! Your order *#${order.id}* has been successfully delivered to you. 🎉\n\n` +
-              `📦 *Amount Paid:* ${displayTotal}\n` +
+              `📦 *DELIVERED ITEMS:*\n` +
+              `${itemsText}\n` +
+              `-----------------------------------\n` +
+              `${paymentMessage}\n` +
+              `🚚 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
               `🧑‍💼 *Delivered By:* ${user?.name || 'Apni Chakki Driver'}\n\n` +
               `We hope you are satisfied with our pure and fresh products. 🌾\n` +
               `If you have any feedback or queries, please feel free to reach out to us.\n\n` +
@@ -523,11 +635,37 @@ export function DeliveryPanel() {
           if (trackingData?.whatsapp_url) {
             whatsappUrl = trackingData.whatsapp_url;
           } else {
+            let itemsText = "";
+            if (order.items && order.items.length > 0) {
+              order.items.forEach(item => {
+                const unit = item.unit || item.service?.unit || 'unit';
+                const name = item.name || item.service?.name || '';
+                
+                let customText = "";
+                if (item.customizations?.length > 0) {
+                    customText = item.customizations.map(c => c.option_name).join(' + ');
+                } else {
+                    const services = [];
+                    if (item.is_cleaning == 1) services.push('Cleaning');
+                    if (item.is_grinding == 1) services.push('Grinding');
+                    customText = services.join(' + ');
+                }
+                
+                itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+                if (customText) {
+                    itemsText += ` (${customText})`;
+                }
+                itemsText += `\n`;
+              });
+            }
+
             const msg = encodeURIComponent(
               `🚚 *Apni Chakki — Pickup Update* 🚚\n\n` +
               `Assalam-o-Alaikum ${cName || 'Customer'}!\n\n` +
-              `Our rider is currently on the way to your location to pick up your order *#${order.id}*. 🛵💨\n\n` +
-              `📦 *Amount:* TBD\n\n` +
+              `Our rider *${user?.name || 'Apni Chakki Rider'}* is currently on the way to your location to pick up your items. 🛵💨\n\n` +
+              `📦 *ITEMS TO BE PICKED UP:*\n` +
+              `${itemsText}\n` +
+              `📍 *Pickup Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +
               `Please keep your items ready. If you have any specific instructions, feel free to let us know.\n\n` +
               `JazakAllah! 🙏🌾`
             );

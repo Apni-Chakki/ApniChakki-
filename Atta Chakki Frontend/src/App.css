@@ -106,71 +106,18 @@
   .admin-mobile-menu-btn { display: flex !important; }
 }
 
-/* ---- Category Entrance Animation & Shimmer Sweeps ---- */
-@keyframes categoryEntrance {
-  from {
-    opacity: 0;
-    transform: translateY(28px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes shimmerSweep {
-  0% {
-    left: -150%;
-  }
-  60% {
-    left: 150%;
-  }
-  100% {
-    left: 150%;
-  }
-}
-
-.category-card-animate-in {
-  opacity: 0;
-  animation: categoryEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* ---- Category cards: responsive height & premium animations ---- */
+/* ---- Category cards: responsive height & subtle animations ---- */
 .category-card-responsive {
   height: 180px;
   position: relative;
   overflow: hidden;
-  will-change: transform, box-shadow, border-color;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.shimmer-sweep-overlay {
-  position: absolute;
-  top: 0;
-  left: -150%;
-  width: 70%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.05) 20%,
-    rgba(255, 255, 255, 0.4) 50%,
-    rgba(255, 255, 255, 0.05) 80%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: skewX(-25deg);
-  z-index: 10;
-  pointer-events: none;
-}
-
-.category-card-responsive:hover .shimmer-sweep-overlay {
-  animation: shimmerSweep 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  border-radius: 16px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .category-card-responsive:hover {
-  transform: translateY(-8px) scale(1.015) !important;
-  box-shadow: 0 20px 30px rgba(139, 111, 71, 0.22), 0 10px 15px rgba(0, 0, 0, 0.05) !important;
-  border-color: #8b6f47 !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
 @media (min-width: 480px) {

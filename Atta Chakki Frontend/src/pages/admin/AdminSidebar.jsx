@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, Calendar, CheckCircle, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X, Store, ShoppingBag, Mail, Box, Tag } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X, Store, ShoppingBag, Mail, Box, Tag, RotateCcw } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { useAuth } from '../../store/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
     { path: '/admin/ready', label: 'Ready Orders', icon: PackageCheck },
     { path: '/admin/pickup-requests', label: 'Pickup Requests', icon: Truck },
     { path: '/admin/completed', label: 'Completed Orders', icon: CheckCircle },
+    { path: '/admin/rentals', label: 'Active Rentals', icon: RotateCcw },
     { path: '/admin/records', label: 'Orders Record', icon: FileText },
     { path: '/admin/udhaar', label: 'Udhaar Khata', icon: Users },
     { path: '/admin/khata', label: 'Digital Khata', icon: BookOpen },

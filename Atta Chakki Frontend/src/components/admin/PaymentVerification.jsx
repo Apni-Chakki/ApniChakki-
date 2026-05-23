@@ -40,6 +40,8 @@ export function PaymentVerification() {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [rejectionSuccessData, setRejectionSuccessData] = useState(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // API helper
   const apiCall = useCallback(async (action, extraData = {}) => {
@@ -114,9 +116,48 @@ export function PaymentVerification() {
       if (result.success) {
         toast.success(result.message);
         setShowRejectDialog(false);
-        setSelectedPayment(null);
         setRejectReason('');
+        
+        // ── Formulate WhatsApp redirection message ──
+        let formattedPhone = '';
+        let whatsappMsg = '';
+        if (result.customer_phone) {
+          const customerPhone = result.customer_phone.replace(/\D/g, '');
+          formattedPhone = customerPhone.startsWith('0') 
+            ? '92' + customerPhone.substring(1) 
+            : customerPhone.startsWith('92') ? customerPhone : '92' + customerPhone;
+
+          whatsappMsg = encodeURIComponent(
+            `❌ *Apni Chakki — Payment Rejection & COD Conversion* ❌\n\n` +
+            `Assalam-o-Alaikum ${result.customer_name || 'Customer'}!\n\n` +
+            `We regret to inform you that your Bank Transfer payment of *Rs. ${result.amount?.toLocaleString()}* for *Order #${result.order_id}* (TXN ID: ${result.transaction_id || 'N/A'}) could not be verified and has been rejected.\n\n` +
+            `⚠️ *Reason for Rejection:* ${result.reason || 'Incorrect transaction ID or amount not received'}\n\n` +
+            `🔄 *Convert to COD:* Your order has been converted to *Cash on Delivery (COD)*. / آپ کا آرڈر کیش آن ڈلیوری پر منتقل کر دیا گیا ہے۔\n\n` +
+            `Please pay *Rs. ${result.amount?.toLocaleString()}* in cash upon delivery. Thank you. / برائے مہربانی ڈلیوری کے وقت کیش ادا کریں۔\n\n` +
+            `JazakAllah! 🙏🌾`
+          );
+        }
+
+        // Set rejection success data for the zero-block dialog
+        setRejectionSuccessData({
+          order_id: result.order_id,
+          customer_name: result.customer_name || 'Customer',
+          amount: result.amount,
+          reason: result.reason,
+          phone: formattedPhone,
+          whatsappMsg: whatsappMsg
+        });
+        
+        setSelectedPayment(null);
         fetchData();
+        setShowSuccessDialog(true); // Open the success popup
+        
+        // Open WhatsApp link in new tab (as automatic attempt)
+        if (formattedPhone) {
+          setTimeout(() => {
+            window.open(`https://wa.me/${formattedPhone}?text=${whatsappMsg}`, '_blank');
+          }, 1000);
+        }
       } else {
         toast.error(result.message);
       }
@@ -633,6 +674,68 @@ export function PaymentVerification() {
               {isProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldX className="h-4 w-4 mr-2" />}
               {t('Reject Payment')}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: REJECTION SUCCESS & WHATSAPP NOTIFICATION */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-650 text-lg font-bold">
+              <span>❌</span>
+              {t('Payment Rejected & Marked Unpaid')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('The payment has been marked failed in the database and an automated Gmail notification has been sent directly to the customer.')}
+            </DialogDescription>
+          </DialogHeader>
+          {rejectionSuccessData && (
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2.5 text-sm text-left">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('Customer')}:</span>
+                  <span className="font-semibold text-foreground">{rejectionSuccessData.customer_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('Order')}:</span>
+                  <span className="font-semibold text-foreground">#{rejectionSuccessData.order_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('Amount')}:</span>
+                  <span className="font-bold text-red-700">Rs. {rejectionSuccessData.amount?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-red-100 pt-2">
+                  <span className="text-muted-foreground">{t('Reason')}:</span>
+                  <span className="font-medium text-red-800">{rejectionSuccessData.reason}</span>
+                </div>
+              </div>
+
+              {rejectionSuccessData.phone && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 text-left flex items-start gap-2">
+                  <span>ℹ️</span>
+                  <span>
+                    {t('Browsers block auto-opening tabs. Please click the button below to guarantee WhatsApp opens successfully with the pre-filled notification.')}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowSuccessDialog(false)}>
+              {t('Close')}
+            </Button>
+            {rejectionSuccessData?.phone && (
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto flex items-center justify-center gap-1.5 font-bold" 
+                onClick={() => {
+                  window.open(`https://wa.me/${rejectionSuccessData.phone}?text=${rejectionSuccessData.whatsappMsg}`, '_blank');
+                }}
+              >
+                <span>💬</span>
+                {t('Send WhatsApp Alert')}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

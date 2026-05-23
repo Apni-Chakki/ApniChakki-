@@ -5,6 +5,15 @@ import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/common/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/common/alert-dialog';
 import { useAuth } from '../../store/AuthContext';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +32,7 @@ export function CustomerLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentBg, setCurrentBg] = useState(0);
+  const [showPhoneUpdateModal, setShowPhoneUpdateModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login, googleLogin } = useAuth();
@@ -34,10 +44,16 @@ export function CustomerLogin() {
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
       try {
-        const success = await googleLogin(tokenResponse.access_token);
-        if (success) {
+        const loggedUser = await googleLogin(tokenResponse.access_token);
+        if (loggedUser) {
           toast.success(t('Welcome back!'));
-          navigate(from, { replace: true });
+          const phoneVal = loggedUser.phone || '';
+          const isPlaceholder = phoneVal.startsWith('G-') || phoneVal.startsWith('G') || !/^\d{11}$/.test(phoneVal.replace(/\s/g, ''));
+          if (isPlaceholder) {
+            setShowPhoneUpdateModal(true);
+          } else {
+            navigate(from, { replace: true });
+          }
         } else {
           toast.error(t('Google login failed.'));
         }
@@ -334,6 +350,25 @@ export function CustomerLogin() {
           />
         ))}
       </div> */}
+
+      {/* Phone Update Modal for Google Login */}
+      <AlertDialog open={showPhoneUpdateModal} onOpenChange={setShowPhoneUpdateModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Update Your Phone Number')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('Please update your phone number to proceed with orders!')}
+              <br />
+              <span className="text-xs text-muted-foreground mt-2 block">آرڈرز جاری رکھنے کے لیے، برائے مہربانی اپنا فون نمبر درج کریں۔</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => { setShowPhoneUpdateModal(false); navigate('/account'); }}>
+              {t('Update Now')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

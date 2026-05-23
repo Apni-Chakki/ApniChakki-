@@ -56,7 +56,7 @@ function getOperationalHours($conn) {
 function calculateOrderWeight($conn, $order_id) {
     $total_weight = 0;
     
-    $sql = "SELECT oi.quantity, oi.price_at_purchase, p.unit FROM order_items oi 
+    $sql = "SELECT oi.quantity, oi.price_at_purchase, p.unit, p.is_rental FROM order_items oi 
             JOIN products p ON oi.product_id = p.id 
             WHERE oi.order_id = ?";
     $stmt = $conn->prepare($sql);
@@ -65,6 +65,10 @@ function calculateOrderWeight($conn, $order_id) {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
+        $is_rental = isset($row['is_rental']) ? (int)$row['is_rental'] : 0;
+        if ($is_rental === 1) {
+            continue; // Skip rental weight
+        }
         $unit = strtolower(trim($row['unit']));
         $qty = floatval($row['quantity']);
         
@@ -72,12 +76,6 @@ function calculateOrderWeight($conn, $order_id) {
             $total_weight += $qty;
         } else if ($unit === 'g') {
             $total_weight += ($qty / 1000); // convert grams to kg
-        } else if (in_array($unit, ['l', 'ltr', 'liter', 'litre', 'liters', 'litres'], true)) {
-            // Liter ko bhi processing time k liye 1L = 1kg treat kar rahe hain
-            $total_weight += $qty;
-        } else if (in_array($unit, ['ml', 'milliliter', 'millilitre'], true)) {
-            // ml ko liter me convert kar k kg equivalent
-            $total_weight += ($qty / 1000);
         } else if ($unit === 'trip' && floatval($row['price_at_purchase']) > 0) {
             // Trip item jiska weight admin ne confirm kar diya — quantity ab kg mein hai
             $total_weight += $qty;
@@ -85,10 +83,7 @@ function calculateOrderWeight($conn, $order_id) {
     }
     $stmt->close();
     
-    // minimum 1 kg if there are items but weight is 0 (for services etc)
-    if ($total_weight == 0) {
-        $total_weight = 1;
-    }
+    // Prepared items (oil, pieces) will result in 0 total_weight, which is expected.
     
     return $total_weight;
 }
@@ -98,6 +93,7 @@ function getLastCompletionTime($conn, $date) {
     $sql = "SELECT estimated_completion_time FROM orders 
             WHERE assigned_date = ? 
             AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
+            AND total_weight_kg > 0
             ORDER BY estimated_completion_time DESC 
             LIMIT 1";
     $stmt = $conn->prepare($sql);
@@ -117,7 +113,8 @@ function getLastCompletionTime($conn, $date) {
 function getNextQueuePosition($conn, $date) {
     $sql = "SELECT MAX(queue_position) as max_pos FROM orders 
             WHERE assigned_date = ? 
-            AND status NOT IN ('cancelled', 'completed')";
+            AND status NOT IN ('cancelled', 'completed')
+            AND total_weight_kg > 0";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
     $stmt->execute();
@@ -135,7 +132,8 @@ function getNextQueuePosition($conn, $date) {
 function getActiveOrderCount($conn, $date) {
     $sql = "SELECT COUNT(*) as order_count FROM orders 
             WHERE assigned_date = ? 
-            AND status NOT IN ('cancelled', 'completed')";
+            AND status NOT IN ('cancelled', 'completed')
+            AND total_weight_kg > 0";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
     $stmt->execute();
@@ -287,6 +285,47 @@ function scheduleOrder($conn, $order_id) {
     
     $time_blocked = ($now >= $cutoff_dt);
     
+    if ($total_weight == 0) {
+        $assigned_date = $time_blocked ? $tomorrow : $today;
+        $estimated_completion = $now->format('Y-m-d H:i:s');
+        $status = 'pending';
+        $schedule_reason = 'prepared_order';
+        $queue_position = 0;
+        
+        $sql = "UPDATE orders SET 
+            estimated_completion_time = ?,
+            assigned_date = ?,
+            total_weight_kg = ?,
+            processing_time_minutes = ?,
+            queue_position = ?,
+            status = ?
+            WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssdissi", 
+            $estimated_completion, 
+            $assigned_date, 
+            $total_weight, 
+            $processing_minutes, 
+            $queue_position,
+            $status,
+            $order_id
+        );
+        $stmt->execute();
+        $stmt->close();
+        
+        return [
+            'order_id' => $order_id,
+            'assigned_date' => $assigned_date,
+            'is_today' => ($assigned_date === $today),
+            'estimated_completion_time' => $estimated_completion,
+            'total_weight_kg' => 0,
+            'processing_time_minutes' => 0,
+            'queue_position' => 0,
+            'status' => $status,
+            'schedule_reason' => $schedule_reason
+        ];
+    }
+    
     // step 5: CHECK LOAD — has today hit max capacity?
     $today_count = getActiveOrderCount($conn, $today);
     $load_blocked = ($today_count >= $max_orders);
@@ -398,6 +437,7 @@ function recalculateSchedule($conn, $date) {
     $sql = "SELECT id, total_weight_kg, processing_time_minutes FROM orders 
             WHERE assigned_date = ? 
             AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
+            AND total_weight_kg > 0
             ORDER BY queue_position ASC";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
@@ -454,7 +494,8 @@ function getCapacityInfo($conn, $date) {
     $sql = "SELECT COALESCE(SUM(processing_time_minutes), 0) as booked 
             FROM orders 
             WHERE assigned_date = ? 
-            AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')";
+            AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
+            AND total_weight_kg > 0";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $date);
     $stmt->execute();

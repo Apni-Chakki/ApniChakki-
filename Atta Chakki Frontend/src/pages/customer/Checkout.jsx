@@ -31,6 +31,12 @@ const customIcon = L.icon({
 
 const FALLBACK_CENTER = { lat: 31.5204, lng: 74.3587 };
 
+const CAROUSEL_SLIDES = [
+  "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=1400&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=1400&auto=format&fit=crop&q=80",
+];
+
 function MapInvalidator() {
   const map = useMap();
   useEffect(() => {
@@ -157,6 +163,7 @@ export function Checkout() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [hasActiveCoupons, setHasActiveCoupons] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const total = getTotalPrice();
   const originalTotal = cart.reduce((sum, item) => {
@@ -165,10 +172,15 @@ export function Checkout() {
   }, 0);
   const productDiscount = originalTotal - total;
 
-  // Calculate subtotal for coupon (exclude items with product discounts)
+  // Calculate subtotal for coupon (exclude items with product discounts, and exclude security deposits from rentals)
   const couponEligibleSubtotal = cart.reduce((sum, item) => {
     const hasProductDiscount = item.service?.discount_type && item.service.discount_type !== 'none' && item.service.discount_value > 0;
     if (hasProductDiscount) return sum;
+    const isRental = item.service?.is_rental === 1 || item.service?.is_rental === '1' || item.service?.is_rental === true || item.service?.is_rental === 'true';
+    if (isRental) {
+      const rentalRateSubtotal = (parseFloat(item.service.rental_price_per_day) || 0) * (parseInt(item.service.rental_days) || 1);
+      return sum + (rentalRateSubtotal * item.quantity);
+    }
     const basePrice = item.service?.price || 0;
     return sum + (basePrice * item.quantity);
   }, 0);
@@ -263,6 +275,13 @@ export function Checkout() {
     fetchActiveCouponsStatus();
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % CAROUSEL_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   // maths ka sara kaam yahan ho raha hai (fees wagera)
   useEffect(() => {
     if (orderType !== 'delivery') {
@@ -272,17 +291,47 @@ export function Checkout() {
     }
 
     if (gpsCoords && !isOutOfLahore) {
-      const dist = calculateDistance(
+      const straightDist = calculateDistance(
         SHOP_LOCATION.lat, SHOP_LOCATION.lng, 
         gpsCoords.lat, gpsCoords.lng
       );
-      setDistanceKm(dist);
 
-      let fee = deliveryConfig.base_fare;
-      if (dist > deliveryConfig.base_distance) {
-        fee = deliveryConfig.base_fare + (Math.ceil(dist - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
+      const updateFee = (distVal) => {
+        setDistanceKm(distVal);
+        let fee = deliveryConfig.base_fare;
+        if (distVal > deliveryConfig.base_distance) {
+          fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
+        }
+        setDeliveryFee(fee);
+      };
+
+      if (USE_GOOGLE_MAPS && window.google?.maps?.DistanceMatrixService) {
+        try {
+          const service = new window.google.maps.DistanceMatrixService();
+          service.getDistanceMatrix(
+            {
+              origins: [new window.google.maps.LatLng(SHOP_LOCATION.lat, SHOP_LOCATION.lng)],
+              destinations: [new window.google.maps.LatLng(gpsCoords.lat, gpsCoords.lng)],
+              travelMode: window.google.maps.TravelMode.DRIVING,
+              unitSystem: window.google.maps.UnitSystem.METRIC,
+            },
+            (response, status) => {
+              if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
+                const element = response.rows[0].elements[0];
+                const roadDist = element.distance.value / 1000;
+                updateFee(roadDist);
+              } else {
+                updateFee(straightDist);
+              }
+            }
+          );
+        } catch (e) {
+          console.warn('Distance Matrix failed, using straight-line:', e);
+          updateFee(straightDist);
+        }
+      } else {
+        updateFee(straightDist);
       }
-      setDeliveryFee(fee);
     } else {
       setDeliveryFee(deliveryConfig.base_fare);
       setDistanceKm(0);
@@ -393,20 +442,47 @@ export function Checkout() {
     const { addressText, inLahore } = await reverseGeocode(lat, lng);
     setIsOutOfLahore(!inLahore);
 
+    if (addressText) {
+      setDeliveryArea(addressText);
+      if (!houseDetails || houseDetails.trim() === '') {
+        setHouseDetails(addressText);
+      }
+      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
+      if(inLahore) toast.success(t('Area updated from your current location'));
+    } else {
+      const nearText = `Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setDeliveryArea(nearText);
+      if (!houseDetails || houseDetails.trim() === '') {
+        setHouseDetails(nearText);
+      }
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
+    }
+
     const isLowAccuracy = accuracy > 200; 
 
     if (isLowAccuracy) {
-      setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
+      if (accuracy > 1000) {
+        setLocationStatus(`⚠️ ${t('Approximate location — Please refine by dragging the pin to your exact spot')}`);
+      } else {
+        setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
+      }
     } else {
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Detected location is outside Lahore')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
     }
 
     if (addressText) {
       setDeliveryArea(addressText);
+      if (!houseDetails || houseDetails.trim() === '') {
+        setHouseDetails(addressText);
+      }
     } else {
-      setDeliveryArea(`Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      const nearText = `Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setDeliveryArea(nearText);
+      if (!houseDetails || houseDetails.trim() === '') {
+        setHouseDetails(nearText);
+      }
     }
-  }, [reverseGeocode, t]);
+  }, [reverseGeocode, t, houseDetails]);
 
   // pata khud se bharne k liye logic — pehle GPS try karo, phir fallback
   useEffect(() => {
@@ -435,7 +511,7 @@ export function Checkout() {
         if (addressText) {
           setDeliveryArea(addressText);
           setIsOutOfLahore(!inLahore);
-          setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Pinned location is outside Lahore')}`);
+          setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
         }
       };
       initLocation();
@@ -507,19 +583,33 @@ export function Checkout() {
       setGpsCoords({ lat: foundLocation.lat, lng: foundLocation.lng, accuracy: 50 });
       setMapCenter([foundLocation.lat, foundLocation.lng]);
       setShowMap(true);
+      setDeliveryArea(addressToSearch); // Synchronize deliveryArea state
       
       setIsOutOfLahore(!foundLocation.isLahore);
 
       if (foundLocation.isLahore) {
         setLocationStatus(`✅ ${t('Area verified & mapped!')}`);
       } else {
-        setLocationStatus(`❌ ${t('This area is officially outside Lahore.')}`);
+        setLocationStatus(`❌ ${t('Service not available in this city')}`);
       }
     } else {
       // NEW CUSTOM ERROR MESSAGE
       setLocationStatus(`⚠️ ${t("Can't find your area, select from map or try another nearest area.")}`);
     }
   };
+
+  // Debounce typed address search to automatically map and calculate distance
+  useEffect(() => {
+    if (orderType !== 'delivery') return;
+    if (!houseDetails || houseDetails.trim().length < 6) return;
+    if (houseDetails === deliveryArea) return;
+
+    const delayDebounceFn = setTimeout(() => {
+      searchTypedAddress(houseDetails);
+    }, 1800);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [houseDetails, orderType, deliveryArea]);
 
   const handleMarkerDrag = useCallback(async (newPos) => {
     setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
@@ -531,13 +621,20 @@ export function Checkout() {
 
     if (addressText) {
       setDeliveryArea(addressText);
-      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Pinned location is outside Lahore')}`);
+      if (!houseDetails || houseDetails.trim() === '') {
+        setHouseDetails(addressText);
+      }
+      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
       if(inLahore) toast.success(t('Area updated from new pin location'));
     } else {
-      setDeliveryArea(`Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`);
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Pinned location is outside Lahore')}`);
+      const nearText = `Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`;
+      setDeliveryArea(nearText);
+      if (!houseDetails || houseDetails.trim() === '') {
+        setHouseDetails(nearText);
+      }
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
     }
-  }, [reverseGeocode, t]);
+  }, [reverseGeocode, t, houseDetails]);
 
 
 
@@ -565,7 +662,7 @@ export function Checkout() {
   };
 
   const handleHouseDetailsBlur = () => {
-    if (!gpsCoords && houseDetails && houseDetails.trim().length > 5) {
+    if (houseDetails && houseDetails.trim().length > 5 && houseDetails !== deliveryArea) {
       searchTypedAddress(houseDetails);
     }
   };
@@ -580,6 +677,20 @@ export function Checkout() {
       toast.error(t('Please fill in your details'));
       return;
     }
+
+    const cleanPhone = phone.replace(/\s/g, '');
+    const isPlaceholder = cleanPhone.startsWith('G-') || cleanPhone.startsWith('G') || !/^\d{11}$/.test(cleanPhone);
+    if (isPlaceholder) {
+      toast.error(
+        t('Please update your phone number in account settings to proceed with orders!'),
+        {
+          duration: 9000,
+          description: 'آرڈرز جاری رکھنے کے لیے، برائے مہربانی اکاؤنٹ سیٹنگز میں اپنا فون نمبر درست درج کریں۔',
+        }
+      );
+      navigate('/account');
+      return;
+    }
     
     if (orderType === 'delivery') {
       const hasMap = deliveryArea && gpsCoords;
@@ -591,14 +702,14 @@ export function Checkout() {
       }
 
       if (hasMap && isOutOfLahore) {
-        toast.error(t('Delivery is restricted to Lahore city limits.'));
+        toast.error(t('Service not available in this city'));
         return;
       }
 
       if (!hasMap && hasManual) {
         const manualLower = houseDetails.toLowerCase();
         if (!manualLower.includes('lahore') && !manualLower.includes('lhr')) {
-          toast.error(t('Delivery is restricted to Lahore. Please include "Lahore" in your address.'));
+          toast.error(t('Service not available in this city'));
           return;
         }
       }
@@ -615,6 +726,49 @@ export function Checkout() {
   };
 
   const processOnlinePayment = async () => {
+    // ── Payment validation checks ──
+    if (paymentMethod === 'jazzcash') {
+      if (!mobileNumber || mobileNumber.trim() === '') {
+        toast.error(t('Please enter your JazzCash mobile number'));
+        return;
+      }
+      if (mobileNumber.length !== 11 || !mobileNumber.startsWith('03')) {
+        toast.error(t('Please enter a valid 11-digit JazzCash mobile number starting with 03'));
+        return;
+      }
+      if (cnicLast6 && cnicLast6.length !== 6) {
+        toast.error(t('CNIC Last 6 digits must be exactly 6 digits if provided'));
+        return;
+      }
+    } else if (paymentMethod === 'bank') {
+      if (!bankAccountNumber || bankAccountNumber.trim() === '') {
+        toast.error(t('Please enter your Bank Account / IBAN Number'));
+        return;
+      }
+      if (bankAccountNumber.trim().length < 8) {
+        toast.error(t('Please enter a valid Bank Account or IBAN Number (minimum 8 characters)'));
+        return;
+      }
+    } else if (paymentMethod === 'card') {
+      const rawCardNum = cardNumber.replace(/\s/g, '');
+      if (!rawCardNum || rawCardNum.length < 12 || rawCardNum.length > 19) {
+        toast.error(t('Please enter a valid Card Number'));
+        return;
+      }
+      if (!cardName || cardName.trim() === '') {
+        toast.error(t('Please enter the Cardholder Name'));
+        return;
+      }
+      if (!cardExpiry || !/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+        toast.error(t('Please enter a valid expiry date (MM/YY)'));
+        return;
+      }
+      if (!cardCvv || cardCvv.length < 3 || cardCvv.length > 4) {
+        toast.error(t('Please enter a valid 3 or 4 digit CVV'));
+        return;
+      }
+    }
+
     setIsProcessingPayment(true);
     setPaymentStep('processing');
 
@@ -633,25 +787,49 @@ export function Checkout() {
         cnic_last6: cnicLast6 || null,
       };
 
-      const fullDeliveryAddress = orderType === 'delivery' 
-        ? `${houseDetails}, ${deliveryArea}`
-        : "Pickup From Store";
+      let fullDeliveryAddress = "Pickup From Store";
+      if (orderType === 'delivery') {
+        const h = (houseDetails || '').trim();
+        const a = (deliveryArea || '').trim();
+        if (h && a) {
+          if (h === a) {
+            fullDeliveryAddress = a;
+          } else if (h.toLowerCase().includes(a.toLowerCase())) {
+            fullDeliveryAddress = h;
+          } else {
+            fullDeliveryAddress = `${h}, ${a}`;
+          }
+        } else {
+          fullDeliveryAddress = h || a || "";
+        }
+      }
 
       const orderData = {
         user_id: user.id,
-        cart_items: cart.map(item => ({
-          id: item.service.id,
-          qty: item.quantity,
-          is_cleaning: item.service.is_cleaning ? 1 : 0,
-          is_grinding: item.service.is_grinding ? 1 : 0,
-          price: item.service.price,
-          unit: item.service.unit || 'kg',
-          is_weight_pending: item.isWeightPending ? 1 : 0,
-          selected_customizations: item.service.is_custom_mix
-            ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
-            : (item.service.selected_customizations || []),
-          is_custom_mix: item.service.is_custom_mix ? 1 : 0
-        })),
+        customer_name: customerName,
+        customer_phone: phone,
+        cart_items: cart.map(item => {
+          const isRental = item.service?.is_rental === 1 || item.service?.is_rental === '1' || item.service?.is_rental === true || item.service?.is_rental === 'true';
+          return {
+            id: item.service.id,
+            qty: item.quantity,
+            is_cleaning: item.service.is_cleaning ? 1 : 0,
+            is_grinding: item.service.is_grinding ? 1 : 0,
+            price: item.service.price,
+            unit: item.service.unit || 'kg',
+            is_weight_pending: item.isWeightPending ? 1 : 0,
+            selected_customizations: item.service.is_custom_mix
+              ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
+              : (item.service.selected_customizations || []),
+            is_custom_mix: item.service.is_custom_mix ? 1 : 0,
+            is_rental: isRental ? 1 : 0,
+            rental_start_date: isRental ? item.service.rental_start_date : null,
+            rental_days: isRental ? item.service.rental_days : null,
+            rental_price_per_day: isRental ? item.service.rental_price_per_day : null,
+            security_deposit: isRental ? item.service.security_deposit : null,
+            late_penalty_per_day: isRental ? item.service.late_penalty_per_day : null
+          };
+        }),
         total: isTbdOrder ? 0 : grandTotal,
         address: fullDeliveryAddress,
         payment_method: isTbdOrder ? 'cash' : paymentMethod,
@@ -713,25 +891,48 @@ export function Checkout() {
     // Build delivery address with GPS pin link for delivery person
     let deliveryAddress = "Pickup From Store";
     if (orderType === 'delivery') {
-      deliveryAddress = `${houseDetails}, ${deliveryArea}`;
+      const h = (houseDetails || '').trim();
+      const a = (deliveryArea || '').trim();
+      if (h && a) {
+        if (h === a) {
+          deliveryAddress = a;
+        } else if (h.toLowerCase().includes(a.toLowerCase())) {
+          deliveryAddress = h;
+        } else {
+          deliveryAddress = `${h}, ${a}`;
+        }
+      } else {
+        deliveryAddress = h || a || "";
+      }
       if (gpsCoords) deliveryAddress += ` | 📍 https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
     }
 
     const orderData = {
       user_id: user.id,
-      cart_items: cart.map(item => ({
-        id: item.service.id,
-        qty: item.quantity,
-        is_cleaning: item.service.is_cleaning ? 1 : 0,
-        is_grinding: item.service.is_grinding ? 1 : 0,
-        price: item.service.price,
-        unit: item.service.unit || 'kg',
-        is_weight_pending: item.isWeightPending ? 1 : 0,
-        selected_customizations: item.service.is_custom_mix
-          ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
-          : (item.service.selected_customizations || []),
-        is_custom_mix: item.service.is_custom_mix ? 1 : 0
-      })),
+      customer_name: customerName,
+      customer_phone: phone,
+      cart_items: cart.map(item => {
+        const isRental = item.service?.is_rental === 1 || item.service?.is_rental === '1' || item.service?.is_rental === true || item.service?.is_rental === 'true';
+        return {
+          id: item.service.id,
+          qty: item.quantity,
+          is_cleaning: item.service.is_cleaning ? 1 : 0,
+          is_grinding: item.service.is_grinding ? 1 : 0,
+          price: item.service.price,
+          unit: item.service.unit || 'kg',
+          is_weight_pending: item.isWeightPending ? 1 : 0,
+          selected_customizations: item.service.is_custom_mix
+            ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
+            : (item.service.selected_customizations || []),
+          is_custom_mix: item.service.is_custom_mix ? 1 : 0,
+          is_rental: isRental ? 1 : 0,
+          rental_start_date: isRental ? item.service.rental_start_date : null,
+          rental_days: isRental ? item.service.rental_days : null,
+          rental_price_per_day: isRental ? item.service.rental_price_per_day : null,
+          security_deposit: isRental ? item.service.security_deposit : null,
+          late_penalty_per_day: isRental ? item.service.late_penalty_per_day : null
+        };
+      }),
       total: isTbdOrder ? 0 : grandTotal,
       delivery_fee: deliveryFee,
       distance_km: distanceKm.toFixed(1),
@@ -850,64 +1051,113 @@ export function Checkout() {
   const cardType = getCardType(cardNumber);
 
   const isCartEmpty = total === 0 && !hasPendingWeightItem && !isTbdOrder;
-  const isDeliveryInvalid = orderType === 'delivery' && (isOutOfLahore || !gpsCoords || !deliveryArea || !houseDetails);
+  const isDeliveryInvalid = orderType === 'delivery' && (isOutOfLahore || !gpsCoords || !deliveryArea);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <h1 className="mb-6 text-foreground">{t('Checkout')}</h1>
+    <div style={{ position: 'relative', minHeight: '100vh' }}>
+      {/* Background Carousel */}
+      {CAROUSEL_SLIDES.map((slide, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: `url(${slide})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: i === currentSlide ? 1 : 0,
+            transition: 'opacity 1.5s ease-in-out',
+            zIndex: -2,
+          }}
+        />
+      ))}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.5) 100%)',
+        zIndex: -1,
+      }} />
+      
+      <div className="container mx-auto px-4 py-8 max-w-3xl" style={{ position: 'relative', zIndex: 1 }}>
+      <h1 className="mb-6 text-white">{t('Checkout')}</h1>
 
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Order Summary')}</h3>
         <div className="space-y-4">
-          {cart.map((item, index) => (
-            <div key={`${item.service.id}-${item.isWeightPending ? 'pending' : 'regular'}-${index}`} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
-              <div className="flex-1">
-                <h4 className="text-foreground">{item.service.name}</h4>
-                {(item.service.selected_customizations?.length > 0 || item.service.is_grinding_service) && !item.service.is_custom_mix && (
-                  <p className="text-xs text-muted-foreground font-medium">
-                    ({item.service.selected_customizations?.length > 0
-                      ? item.service.selected_customizations.map(c => t(c.option_name)).join(' + ')
-                      : [item.service.is_cleaning && t('Cleaning'), item.service.is_grinding && t('Grinding')].filter(Boolean).join(' + ')
-                    })
-                  </p>
-                )}
-                {item.service.is_custom_mix && item.service.selected_mix_items?.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {item.service.selected_mix_items.map((m, idx) => (
-                      <span key={idx} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">
-                        {m.item_name} ({m.ratio})
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
-                  <p className="text-sm text-primary font-medium">
-                    {t('Weight to be confirmed (Price TBD)')}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Rs. {item.service.price} × {item.quantity} {item.service.unit}
-                  </p>
-                )}
+          {cart.map((item, index) => {
+            const isRental = item.service?.is_rental === 1 || item.service?.is_rental === '1' || item.service?.is_rental === true || item.service?.is_rental === 'true';
+            return (
+              <div key={`${item.service.id}-${item.isWeightPending ? 'pending' : 'regular'}-${index}`} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
+                <div className="flex-1">
+                  <h4 className="text-foreground">{item.service.name}</h4>
+                  {isRental ? (
+                    <div className="text-xs text-muted-foreground font-medium space-y-0.5 mt-1">
+                      <p>🗓️ {t('Dates')}: {item.service.rental_start_date} ({item.service.rental_days} {t('days')})</p>
+                      <p>💵 {t('Rental Rate')}: Rs. {Math.round(item.service.rental_price_per_day)}/{t('day')} × {item.quantity}</p>
+                      <p>🔒 {t('Refundable Deposit')}: Rs. {Math.round(item.service.security_deposit)} × {item.quantity}</p>
+                    </div>
+                  ) : (
+                    <>
+                      {(item.service.selected_customizations?.length > 0 || item.service.is_grinding_service) && !item.service.is_custom_mix && (
+                        <p className="text-xs text-muted-foreground font-medium">
+                          ({item.service.selected_customizations?.length > 0
+                            ? item.service.selected_customizations.map(c => t(c.option_name)).join(' + ')
+                            : [item.service.is_cleaning && t('Cleaning'), item.service.is_grinding && t('Grinding')].filter(Boolean).join(' + ')
+                          })
+                        </p>
+                      )}
+                      {item.service.is_custom_mix && item.service.selected_mix_items?.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {item.service.selected_mix_items.map((m, idx) => (
+                            <span key={idx} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">
+                              {m.item_name} ({m.ratio})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
+                        <p className="text-sm text-primary font-medium">
+                          {t('Weight to be confirmed (Price TBD)')}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Rs. {item.service.price} × {item.quantity} {item.service.unit}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
+                    <p className="text-foreground font-semibold">TBD</p>
+                  ) : (
+                    <p className="text-foreground">Rs. {item.service.price * item.quantity}</p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 ml-2 bg-red-500 hover:bg-red-600 border-red-600 shadow flex items-center justify-center px-0 py-0"
+                    onClick={() => {
+                      if (isRental) {
+                        removeFromCart(item.service.id, false, false, false, null, false, null, true, item.service.rental_start_date, item.service.rental_days);
+                      } else {
+                        removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding, item.service.selected_customizations, item.service.is_custom_mix, item.service.selected_mix_items);
+                      }
+                    }}
+                    title={t('Remove Item')}
+                  >
+                    <Trash2 className="h-4 w-4 text-white" strokeWidth={3} />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
-                  <p className="text-foreground font-semibold">TBD</p>
-                ) : (
-                  <p className="text-foreground">Rs. {item.service.price * item.quantity}</p>
-                )}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 ml-2 bg-red-500 hover:bg-red-600 border-red-600 shadow flex items-center justify-center px-0 py-0"
-                  onClick={() => removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding, item.service.selected_customizations, item.service.is_custom_mix, item.service.selected_mix_items)}
-                  title={t('Remove Item')}
-                >
-                  <Trash2 className="h-4 w-4 text-white" strokeWidth={3} />
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="flex justify-between pt-4 border-t border-border">
             <span className="text-foreground">{t('Original Subtotal')}</span>
@@ -1148,9 +1398,13 @@ export function Checkout() {
                   }}
                   onAddressChange={(addr) => {
                     setDeliveryArea(addr);
+                    if (!houseDetails || houseDetails.trim() === '') {
+                      setHouseDetails(addr);
+                    }
                     setLocationStatus(`✅ ${t('Area updated')}`);
                   }}
                   height="280px"
+                  showSearch={false}
                 />
               ) : (
                 <div className="h-[280px] w-full relative z-0">
@@ -1192,7 +1446,7 @@ export function Checkout() {
           <div className="p-4 border-2 border-primary/20 rounded-xl bg-primary/5">
             <Label htmlFor="houseDetails" className="text-primary font-bold flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              {t('2. House, Street & Building Details')} *
+              {t('2. House, Street & Building Details')} <span className="text-xs font-normal text-muted-foreground">({t('Optional if location selected')})</span>
             </Label>
             <p className="text-xs text-muted-foreground mb-2 mt-0.5">{t('Provide exact details for the delivery rider')}</p>
             <textarea
@@ -1300,7 +1554,13 @@ export function Checkout() {
 
       {/* order kab mile ga uska preview yahan dikha rahe han */}
       {schedulePreview && (
-        <Card className={`p-4 mb-6 border-l-4 ${schedulePreview.is_today ? 'border-l-green-500 bg-green-50/30' : 'border-l-amber-500 bg-amber-50/30'}`}>
+        <Card 
+          className="p-4 mb-6"
+          style={{
+            borderLeft: `4px solid ${schedulePreview.is_today ? '#22c55e' : '#f97316'}`,
+            backgroundColor: schedulePreview.is_today ? '#f0fdf4' : '#fff7ed'
+          }}
+        >
           <div className="flex items-start gap-3">
             <div className={`p-2 rounded-full ${schedulePreview.is_today ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
               {schedulePreview.is_today ? <Sunrise className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
@@ -1692,6 +1952,7 @@ export function Checkout() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

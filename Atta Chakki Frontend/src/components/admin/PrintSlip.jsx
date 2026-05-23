@@ -212,7 +212,32 @@ export function PrintSlip({ order, open, onClose }) {
 
   const handleWhatsAppShare = () => {
     const lineBreak = "%0A";
-    const remainingBal = order.total - (order.advancePayment || 0);
+    const orderDiscount = parseFloat(order.coupon_discount) || parseFloat(order.couponDiscount) || 0;
+    const slipTotal = parseFloat(order.total) || parseFloat(order.total_amount) || 0;
+    const advancePaid = parseFloat(order.amount_paid) || parseFloat(order.advancePayment) || 0;
+    const remainingBal = slipTotal - advancePaid;
+
+    // Calculate original subtotal and item-level discounts
+    let itemDiscountsTotal = 0;
+    let originalSubtotal = 0;
+    order.items.forEach(item => {
+      if (!item.isWeightPending) {
+        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+        const origPrice = parseFloat(item.original_price) || null;
+        const qty = parseFloat(item.quantity) || 0;
+        const hasItemDiscount = origPrice && origPrice > itemPrice;
+        if (hasItemDiscount) {
+          itemDiscountsTotal += (origPrice - itemPrice) * qty;
+          originalSubtotal += origPrice * qty;
+        } else {
+          originalSubtotal += itemPrice * qty;
+        }
+      }
+    });
+
+    const totalDiscount = itemDiscountsTotal + orderDiscount;
+    const hasDiscount = totalDiscount > 0;
+
     let message = `*🧾 ${storeSettings.name.toUpperCase()} - DIGITAL INVOICE*${lineBreak}`;
     message += `─────────────────────────${lineBreak}`;
     message += `📅 *Date:* ${dateStr}   ⏰ *Time:* ${timeStr}${lineBreak}`;
@@ -229,20 +254,37 @@ export function PrintSlip({ order, open, onClose }) {
         const itemUnit = item.unit || item.service?.unit;
         const itemName = item.name || item.service?.name;
         message += `▫️ *${itemName}*${lineBreak}`;
-        if (item.is_cleaning || item.is_grinding) {
+        if (item.customizations?.length > 0) {
+           message += `    _(${item.customizations.map(c => c.option_name).join(' + ')})_${lineBreak}`;
+        } else if (item.is_cleaning || item.is_grinding) {
            message += `    _(${item.is_cleaning ? 'Cleaning' : ''}${item.is_cleaning && item.is_grinding ? ' + ' : ''}${item.is_grinding ? 'Grinding' : ''})_${lineBreak}`;
         }
         message += `    ${item.quantity} ${itemUnit} x Rs.${itemPrice} = *Rs.${(item.quantity * itemPrice).toLocaleString()}*${lineBreak}`;
+        
+        // Include Rental Details if applicable
+        if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
+           message += `    🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_${lineBreak}`;
+           message += `    💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_${lineBreak}`;
+        }
       }
     });
     message += `─────────────────────────${lineBreak}`;
     if (hasPendingItems) {
       message += `*⚠️ FINAL TOTAL PENDING*${lineBreak}`;
     } else {
-      message += `*💰 GRAND TOTAL: Rs.${order.total.toLocaleString()}*${lineBreak}`;
+      if (hasDiscount) {
+        message += `*Subtotal:* Rs.${originalSubtotal.toLocaleString()}${lineBreak}`;
+        if (itemDiscountsTotal > 0) {
+          message += `🏷️ *Product Discount:* -Rs.${itemDiscountsTotal.toLocaleString()}${lineBreak}`;
+        }
+        if (orderDiscount > 0) {
+          message += `🏷️ *Coupon Discount (${order.coupon_code || order.couponCode || 'PROMO'}):* -Rs.${orderDiscount.toLocaleString()}${lineBreak}`;
+        }
+      }
+      message += `*💰 GRAND TOTAL: Rs.${slipTotal.toLocaleString()}*${lineBreak}`;
     }
-    if (order.advancePayment && order.advancePayment > 0)
-      message += `✅ *Advance Paid: Rs.${order.advancePayment.toLocaleString()}*${lineBreak}`;
+    if (advancePaid > 0)
+      message += `✅ *Advance Paid: Rs.${advancePaid.toLocaleString()}*${lineBreak}`;
     if (remainingBal > 0 && !hasPendingItems)
       message += `❗ *BALANCE DUE: Rs.${remainingBal.toLocaleString()}*${lineBreak}`;
     message += `─────────────────────────${lineBreak}`;
@@ -252,6 +294,7 @@ export function PrintSlip({ order, open, onClose }) {
     message += `🌾 _${storeSettings.tagline}_`;
     let phone = order.phone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '92' + phone.slice(1);
+    else if (!phone.startsWith('92')) phone = '92' + phone;
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     toast.success('Opening WhatsApp invoice...');
   };

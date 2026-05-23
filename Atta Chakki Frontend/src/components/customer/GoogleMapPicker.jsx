@@ -36,7 +36,7 @@ function loadGoogleMapsScript() {
 // GoogleMapPicker Component
 // A draggable marker on Google Maps with Places Autocomplete
 // ============================================================
-export function GoogleMapPicker({ position, onPositionChange, onAddressChange, height = '350px' }) {
+export function GoogleMapPicker({ position, onPositionChange, onAddressChange, height = '350px', showSearch = true }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -294,41 +294,43 @@ export function GoogleMapPicker({ position, onPositionChange, onAddressChange, h
   return (
     <div className="rounded-xl border-2 border-primary/20 shadow-lg relative">
       {/* Search bar overlaid on the map — high z-index to stay above map controls */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', zIndex: 1000 }}>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-            placeholder="Search your address here and press Enter..."
-            style={{
-              width: '100%',
-              padding: '10px 16px',
-              fontSize: '14px',
-              borderRadius: '8px',
-              border: '2px solid #e2e8f0',
-              backgroundColor: 'white',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              outline: 'none',
-            }}
-            onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; }}
-          />
-          <button
-            type="button"
-            onClick={handleSearch}
-            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground shadow-md hover:opacity-90"
-          >
-            Search
-          </button>
+      {showSearch && (
+        <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', zIndex: 1000 }}>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
+              placeholder="Search your address here and press Enter..."
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                fontSize: '14px',
+                borderRadius: '8px',
+                border: '2px solid #e2e8f0',
+                backgroundColor: 'white',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                outline: 'none',
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; }}
+              onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; }}
+            />
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground shadow-md hover:opacity-90"
+            >
+              Search
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Map container */}
       <div 

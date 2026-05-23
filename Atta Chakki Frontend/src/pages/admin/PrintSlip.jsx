@@ -55,6 +55,31 @@ export function PrintSlip({ order, open, onClose }) {
   const slipTotal = order.total;
   const hasPendingItems = order.items.some(i => i.isWeightPending);
   const remainingBalance = slipTotal - (order.advancePayment || 0);
+
+  // Calculate discounts for both print and preview
+  let itemDiscountsTotal = 0;
+  let originalSubtotal = 0;
+  
+  order.items.forEach(item => {
+    if (!item.isWeightPending) {
+      const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+      const origPrice = parseFloat(item.original_price) || null;
+      const qty = parseFloat(item.quantity) || 0;
+      const hasItemDiscount = origPrice && origPrice > itemPrice;
+      
+      if (hasItemDiscount) {
+        itemDiscountsTotal += (origPrice - itemPrice) * qty;
+        originalSubtotal += origPrice * qty;
+      } else {
+        originalSubtotal += itemPrice * qty;
+      }
+    }
+  });
+
+  const couponDiscount = parseFloat(order.couponDiscount) || 0;
+  const totalDiscount = itemDiscountsTotal + couponDiscount;
+  const hasDiscount = totalDiscount > 0;
+
   const dateStr = new Date().toLocaleDateString('en-GB');
   const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
@@ -171,9 +196,14 @@ export function PrintSlip({ order, open, onClose }) {
       ${itemsHTML}
 
       <div class="divider-heavy"></div>
-      <div class="total-row"><span>SUBTOTAL</span><span>Rs.${Number((slipTotal || 0) + (order.couponDiscount || 0)).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}</span></div>
-      ${order.couponDiscount > 0 ? `<div class="row" style="color:#15803d;margin-top:4px;font-weight:700;"><span>DISCOUNT (${order.couponCode || 'PROMO'})</span><span>- Rs.${Number(order.couponDiscount).toLocaleString()}</span></div>
-      <div class="total-row due-row" style="border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;font-size:13px;color:#111;"><span>GRAND TOTAL</span><span>Rs.${Number(slipTotal).toLocaleString()}</span></div>` : ''}
+      ${hasDiscount ? `
+        <div class="total-row"><span>SUBTOTAL (ORIGINAL)</span><span>Rs.${Number(originalSubtotal).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}</span></div>
+        ${itemDiscountsTotal > 0 ? `<div class="row" style="color:#15803d;margin-top:4px;font-weight:700;"><span>PRODUCT DISCOUNT</span><span>- Rs.${Number(itemDiscountsTotal).toLocaleString()}</span></div>` : ''}
+        ${couponDiscount > 0 ? `<div class="row" style="color:#15803d;margin-top:4px;font-weight:700;"><span>COUPON DISCOUNT (${order.couponCode || 'PROMO'})</span><span>- Rs.${Number(couponDiscount).toLocaleString()}</span></div>` : ''}
+        <div class="total-row" style="border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;font-size:13px;color:#15803d;font-weight:900;"><span>GRAND TOTAL</span><span>Rs.${Number(slipTotal).toLocaleString()}</span></div>
+      ` : `
+        <div class="total-row"><span>SUBTOTAL</span><span>Rs.${Number(slipTotal).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}</span></div>
+      `}
       ${order.advancePayment && order.advancePayment > 0 ? `<div class="row advance-row" style="margin-top:4px;"><span>ADVANCE PAID</span><span>- Rs.${Number(order.advancePayment).toLocaleString()}</span></div>` : ''}
       ${remainingBalance > 0 ? `<div class="total-row due-row"><span>DUE</span><span>Rs.${Number(remainingBalance).toLocaleString()}</span></div>` : ''}
 
@@ -236,16 +266,32 @@ export function PrintSlip({ order, open, onClose }) {
            message += `    _(${item.is_cleaning ? 'Cleaning' : ''}${item.is_cleaning && item.is_grinding ? ' + ' : ''}${item.is_grinding ? 'Grinding' : ''})_${lineBreak}`;
         }
         message += `    ${item.quantity} ${itemUnit} x Rs.${itemPrice} = *Rs.${(item.quantity * itemPrice).toLocaleString()}*${lineBreak}`;
+        
+        // Include Rental Details if applicable
+        if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
+           message += `    🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_${lineBreak}`;
+           message += `    💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_${lineBreak}`;
+        }
       }
     });
     message += `─────────────────────────${lineBreak}`;
     if (hasPendingItems) {
       message += `*⚠️ FINAL TOTAL PENDING*${lineBreak}`;
     } else {
+      if (hasDiscount) {
+        message += `*Subtotal:* Rs.${originalSubtotal.toLocaleString()}${lineBreak}`;
+        if (itemDiscountsTotal > 0) {
+          message += `🏷️ *Product Discount:* -Rs.${itemDiscountsTotal.toLocaleString()}${lineBreak}`;
+        }
+        if (couponDiscount > 0) {
+          message += `🏷️ *Coupon Discount (${order.couponCode || 'PROMO'}):* -Rs.${couponDiscount.toLocaleString()}${lineBreak}`;
+        }
+      }
       message += `*💰 GRAND TOTAL: Rs.${order.total.toLocaleString()}*${lineBreak}`;
     }
-    if (order.advancePayment && order.advancePayment > 0)
-      message += `✅ *Advance Paid: Rs.${order.advancePayment.toLocaleString()}*${lineBreak}`;
+    const advancePaid = parseFloat(order.advancePayment || order.amount_paid) || 0;
+    if (advancePaid > 0)
+      message += `✅ *Advance Paid: Rs.${advancePaid.toLocaleString()}*${lineBreak}`;
     if (remainingBal > 0 && !hasPendingItems)
       message += `❗ *BALANCE DUE: Rs.${remainingBal.toLocaleString()}*${lineBreak}`;
     message += `─────────────────────────${lineBreak}`;
@@ -255,6 +301,7 @@ export function PrintSlip({ order, open, onClose }) {
     message += `🌾 _${storeSettings.tagline}_`;
     let phone = order.phone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '92' + phone.slice(1);
+    else if (!phone.startsWith('92')) phone = '92' + phone;
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     toast.success('Opening WhatsApp invoice...');
   };
@@ -384,21 +431,34 @@ export function PrintSlip({ order, open, onClose }) {
 
             {/* Totals */}
             <div className="pt-1 space-y-1.5 border-t-2 border-dashed border-border">
-              <div className="flex justify-between text-[12px] font-bold pt-1.5">
-                <span>SUBTOTAL</span>
-                <span className="whitespace-nowrap">Rs.{Number((slipTotal || 0) + (order.couponDiscount || 0)).toLocaleString()}{hasPendingItems && ' + TBD'}</span>
-              </div>
-              {order.couponDiscount > 0 && (
+              {hasDiscount ? (
                 <>
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-green-600 font-bold uppercase">DISCOUNT ({order.couponCode || 'PROMO'})</span>
-                    <span className="text-green-600 font-bold whitespace-nowrap">- Rs.{Number(order.couponDiscount).toLocaleString()}</span>
+                  <div className="flex justify-between text-[12px] font-bold pt-1.5 text-muted-foreground">
+                    <span>SUBTOTAL (ORIGINAL)</span>
+                    <span className="whitespace-nowrap">Rs.{Number(originalSubtotal).toLocaleString()}{hasPendingItems && ' + TBD'}</span>
                   </div>
-                  <div className="flex justify-between text-[13px] font-black pt-1 border-t border-dashed border-border">
+                  {itemDiscountsTotal > 0 && (
+                    <div className="flex justify-between text-[11px] text-green-600 font-bold">
+                      <span>PRODUCT DISCOUNT</span>
+                      <span className="whitespace-nowrap">- Rs.{Number(itemDiscountsTotal).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-[11px] text-green-600 font-bold">
+                      <span>COUPON DISCOUNT ({order.couponCode || 'PROMO'})</span>
+                      <span className="whitespace-nowrap">- Rs.{Number(couponDiscount).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[13px] font-black pt-1 border-t border-dashed border-border text-green-700">
                     <span>GRAND TOTAL</span>
                     <span className="whitespace-nowrap">Rs.{Number(slipTotal).toLocaleString()}</span>
                   </div>
                 </>
+              ) : (
+                <div className="flex justify-between text-[12px] font-bold pt-1.5">
+                  <span>SUBTOTAL</span>
+                  <span className="whitespace-nowrap">Rs.{Number(slipTotal).toLocaleString()}{hasPendingItems && ' + TBD'}</span>
+                </div>
               )}
               {parseFloat(order.advancePayment) > 0 && (
                 <div className="flex justify-between text-[11px]">

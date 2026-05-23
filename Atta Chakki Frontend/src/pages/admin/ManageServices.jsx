@@ -38,7 +38,13 @@ export function ManageServices() {
     mix_items: [],
     discount_type: 'none',
     discount_value: '',
-    badge_text: ''
+    badge_text: '',
+    is_rental: false,
+    rental_price_per_day: '',
+    security_deposit: '',
+    late_penalty_per_day: '',
+    rental_available_qty: '',
+    priority: '0'
   });
   const [weightInput, setWeightInput] = useState('');
 
@@ -219,7 +225,13 @@ export function ManageServices() {
         : [],
       discount_type: formData.discount_type || 'none',
       discount_value: formData.discount_type === 'none' ? 0 : (parseFloat(formData.discount_value) || 0),
-      badge_text: (formData.badge_text || '').trim()
+      badge_text: (formData.badge_text || '').trim(),
+      is_rental: formData.is_rental ? 1 : 0,
+      rental_price_per_day: parseFloat(formData.rental_price_per_day) || 0,
+      security_deposit: parseFloat(formData.security_deposit) || 0,
+      late_penalty_per_day: parseFloat(formData.late_penalty_per_day) || 0,
+      rental_available_qty: parseInt(formData.rental_available_qty) || 0,
+      priority: parseInt(formData.priority) || 0
     };
     return payload;
   };
@@ -298,7 +310,13 @@ export function ManageServices() {
       mix_items: mixItems,
       discount_type: service.discount_type || 'none',
       discount_value: service.discount_value && parseFloat(service.discount_value) > 0 ? service.discount_value.toString() : '',
-      badge_text: service.badge_text || ''
+      badge_text: service.badge_text || '',
+      is_rental: service.is_rental === 1 || service.is_rental === true,
+      rental_price_per_day: service.rental_price_per_day && parseFloat(service.rental_price_per_day) > 0 ? service.rental_price_per_day.toString() : '',
+      security_deposit: service.security_deposit && parseFloat(service.security_deposit) > 0 ? service.security_deposit.toString() : '',
+      late_penalty_per_day: service.late_penalty_per_day && parseFloat(service.late_penalty_per_day) > 0 ? service.late_penalty_per_day.toString() : '',
+      rental_available_qty: service.rental_available_qty ? service.rental_available_qty.toString() : '',
+      priority: (service.priority ?? 0).toString()
     });
     setWeightInput('');
     setImageFile(null);
@@ -399,7 +417,13 @@ export function ManageServices() {
       mix_items: [],
       discount_type: 'none',
       discount_value: '',
-      badge_text: ''
+      badge_text: '',
+      is_rental: false,
+      rental_price_per_day: '',
+      security_deposit: '',
+      late_penalty_per_day: '',
+      rental_available_qty: '',
+      priority: '0'
     });
     setWeightInput('');
     setImageFile(null);
@@ -419,6 +443,16 @@ export function ManageServices() {
       </div>
     );
   }
+
+  // Grouping services by category
+  const groupedServices = services.reduce((groups, service) => {
+    const category = service.category || service.category_name || 'Uncategorized';
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(service);
+    return groups;
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -452,10 +486,10 @@ export function ManageServices() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="unit">Unit</Label>
-                <select id="unit" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} disabled={isSaving}>
+                <select id="unit" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 text-sm" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} disabled={isSaving}>
                   <option value="kg">kg</option>
                   <option value="bag">bag</option>
                   <option value="liter">liter</option>
@@ -466,15 +500,27 @@ export function ManageServices() {
               <div>
                 <Label htmlFor="category">Category</Label>
                 <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })} disabled={isSaving}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.length > 0 ? categories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                      <SelectItem key={cat.id} value={cat.name} className="text-sm">{cat.name}</SelectItem>
                     )) : (
-                      <SelectItem value="service">Convenience Services</SelectItem>
+                      <SelectItem value="service" className="text-sm">Convenience Services</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="priority">Display Priority</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  placeholder="e.g., 10 (Highest first)"
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  disabled={isSaving}
+                  className="text-sm animate-in fade-in"
+                />
               </div>
             </div>
 
@@ -530,7 +576,7 @@ export function ManageServices() {
                         e.preventDefault();
                         const val = parseFloat(weightInput);
                         if (val > 0 && !formData.weight_options.includes(val)) {
-                          setFormData(prev => ({ ...prev, weight_options: [...prev.weight_options, val].sort((a, b) => a - b) }));
+                           setFormData(prev => ({ ...prev, weight_options: [...prev.weight_options, val].sort((a, b) => a - b) }));
                           setWeightInput('');
                         }
                       }
@@ -769,6 +815,82 @@ export function ManageServices() {
                   </div>
                 </div>
               )}
+
+              {/* ===== RENTAL TOGGLE ===== */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_rental"
+                  checked={formData.is_rental}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_rental: !!checked }))}
+                  disabled={isSaving}
+                />
+                <Label htmlFor="is_rental" className="font-semibold text-teal-700 cursor-pointer">
+                  🔄 Enable Rental (Rent this item to customers per day)
+                </Label>
+              </div>
+
+              {formData.is_rental && (
+                <div className="p-4 bg-teal-50/50 rounded-lg border border-teal-200 animate-in fade-in slide-in-from-top-2 space-y-3">
+                  <p className="text-sm font-bold text-teal-800">🔄 Rental Configuration</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="rental_price_per_day" className="text-xs font-semibold text-teal-700">Rental Price / Day (Rs.) *</Label>
+                      <Input
+                        id="rental_price_per_day"
+                        type="number"
+                        step="1"
+                        placeholder="e.g., 500"
+                        value={formData.rental_price_per_day}
+                        onChange={(e) => setFormData({ ...formData, rental_price_per_day: e.target.value })}
+                        disabled={isSaving}
+                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="security_deposit" className="text-xs font-semibold text-teal-700">Security Deposit (Rs.) *</Label>
+                      <Input
+                        id="security_deposit"
+                        type="number"
+                        step="1"
+                        placeholder="e.g., 5000"
+                        value={formData.security_deposit}
+                        onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
+                        disabled={isSaving}
+                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="late_penalty_per_day" className="text-xs font-semibold text-teal-700">Late Return Penalty / Day (Rs.)</Label>
+                      <Input
+                        id="late_penalty_per_day"
+                        type="number"
+                        step="1"
+                        placeholder="e.g., 200"
+                        value={formData.late_penalty_per_day}
+                        onChange={(e) => setFormData({ ...formData, late_penalty_per_day: e.target.value })}
+                        disabled={isSaving}
+                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rental_available_qty" className="text-xs font-semibold text-teal-700">Available Qty for Rental *</Label>
+                      <Input
+                        id="rental_available_qty"
+                        type="number"
+                        step="1"
+                        placeholder="e.g., 5"
+                        value={formData.rental_available_qty}
+                        onChange={(e) => setFormData({ ...formData, rental_available_qty: e.target.value })}
+                        disabled={isSaving}
+                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-teal-600 italic">
+                    Note: When a customer rents this item, Available Qty will auto-decrement. On return it will increment back.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* ===== DISCOUNT & BADGE ===== */}
@@ -899,86 +1021,110 @@ export function ManageServices() {
         </Card>
       )}
 
-      {/* Services List */}
-      <div className="space-y-4">
+      {/* Services List Grouped by Category */}
+      <div className="space-y-8 animate-in fade-in duration-500">
         {services.length === 0 ? (
           <Card className="p-12 text-center">
             <p className="text-muted-foreground">No services available. Add your first service!</p>
           </Card>
         ) : (
-          services.map((service) => {
-            const custs = service.customizations || [];
-            const hasCusts = custs.length > 0 || service.is_grinding_service;
+          Object.keys(groupedServices).map((categoryName) => {
+            const categoryItems = groupedServices[categoryName];
             return (
-              <Card key={service.id} className="p-6">
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  {service.image && (
-                    <div className="w-full sm:w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                      <img src={service.image} alt={service.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="mb-2 text-lg font-bold">{service.name}</h3>
-                    <p className="text-muted-foreground mb-2 text-sm">{service.description || 'No description provided'}</p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                        Rs. {service.price} per {service.unit}
-                      </span>
-                      <span className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm capitalize">
-                        {service.category || service.category_name || 'Uncategorized'}
-                      </span>
-                      
-                      {hasCusts ? (
-                        <span className="bg-amber-500/10 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20">
-                          ⚙️ {custs.length > 0 ? custs.map(c => `${c.option_name}: Rs.${c.option_price}`).join(' + ') : `Cleaning: ${service.cleaning_price} + Grinding: ${service.grinding_price}`}
-                        </span>
-                      ) : service.is_custom_mix ? (
-                        <span className="bg-purple-500/10 text-purple-700 px-3 py-1 rounded-full text-xs font-bold border border-purple-300">
-                          🌾 Custom Mix: {(service.mix_items || []).map(m => m.item_name).join(', ')}
-                        </span>
-                      ) : (
-                        <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium">
-                          Standard Product
-                        </span>
-                      )}
-
-                      {service.category !== 'service' && service.category_name !== 'service' ? (
-                        <span className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-xs font-medium">✓ Inventory Tracked</span>
-                      ) : (
-                        <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium">Active Service</span>
-                      )}
-
-                      {(service.dual_unit === 1 || service.dual_unit === true) && (
-                        <span className="bg-blue-600/10 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-300/30">
-                          🚚 Dual Mode (Pickup + KG)
-                        </span>
-                      )}
-
-                      {service.discount_type && service.discount_type !== 'none' && parseFloat(service.discount_value) > 0 && (
-                        <span className="bg-emerald-600/10 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-300">
-                          {service.discount_type === 'percentage'
-                            ? `🏷️ ${parseFloat(service.discount_value)}% OFF`
-                            : `🏷️ Rs.${parseFloat(service.discount_value)} OFF`}
-                        </span>
-                      )}
-
-                      {service.badge_text && service.badge_text.trim() && (
-                        <span className="bg-rose-600/10 text-rose-700 px-3 py-1 rounded-full text-xs font-bold border border-rose-300 uppercase">
-                          {service.badge_text.trim()}
-                        </span>
-                      )}
-                    </div>
+              <div key={categoryName} className="space-y-4">
+                <div className="flex items-center gap-3 px-1">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 px-4 py-2 rounded-full text-sm font-bold shadow-sm uppercase tracking-wider">
+                    {categoryName.toLowerCase() === 'service' || categoryName.toLowerCase() === 'services' ? '💼' : '🌾'} {categoryName}
                   </div>
-                  <div className="flex sm:flex-col gap-2 self-start mt-4 sm:mt-0">
-                    <Button onClick={() => handleEdit(service)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={() => handleDelete(service.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="px-4">
-                      <Trash2 className="h-4 w-4 text-white" />
-                    </Button>
-                  </div>
+                  <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-200 to-transparent" />
+                  <span className="text-xs text-slate-500 font-semibold">
+                    {categoryItems.length} Item(s)
+                  </span>
                 </div>
-              </Card>
+
+                <div className="space-y-4">
+                  {categoryItems.map((service) => {
+                    const custs = service.customizations || [];
+                    const hasCusts = custs.length > 0 || service.is_grinding_service === 1 || service.is_grinding_service === true;
+                    return (
+                      <Card key={service.id} className="p-6 transition-all duration-300 hover:shadow-lg border border-border/50 hover:border-primary/20 bg-white relative overflow-hidden group">
+                        {/* Priority Badge */}
+                        <div className="absolute top-0 right-0 bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-1 rounded-bl border-l border-b border-primary/10 transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+                          ⭐ Priority: {service.priority ?? 0}
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row items-start gap-4">
+                          {service.image && (
+                            <div className="w-full sm:w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border shadow-inner">
+                              <img src={service.image} alt={service.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0 pr-4">
+                            <h3 className="mb-2 text-lg font-bold text-slate-800">{service.name}</h3>
+                            <p className="text-muted-foreground mb-3 text-sm line-clamp-2">{service.description || 'No description provided'}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium border border-primary/20">
+                                Rs. {service.price} per {service.unit}
+                              </span>
+                              <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm capitalize border">
+                                {service.category || service.category_name || 'Uncategorized'}
+                              </span>
+                              
+                              {hasCusts ? (
+                                <span className="bg-amber-500/10 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20">
+                                  ⚙️ {custs.length > 0 ? custs.map(c => `${c.option_name}: Rs.${c.option_price}`).join(' + ') : `Cleaning: ${service.cleaning_price} + Grinding: ${service.grinding_price}`}
+                                </span>
+                              ) : service.is_custom_mix ? (
+                                <span className="bg-purple-500/10 text-purple-700 px-3 py-1 rounded-full text-xs font-bold border border-purple-300">
+                                  🌾 Custom Mix: {(service.mix_items || []).map(m => m.item_name).join(', ')}
+                                </span>
+                              ) : (
+                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium border">
+                                  Standard Product
+                                </span>
+                              )}
+
+                              {service.category !== 'service' && service.category_name !== 'service' ? (
+                                <span className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/20">✓ Inventory Tracked</span>
+                              ) : (
+                                <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium border border-green-500/20">Active Service</span>
+                              )}
+
+                              {(service.dual_unit === 1 || service.dual_unit === true) && (
+                                <span className="bg-blue-600/10 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-300/30">
+                                  🚚 Dual Mode (Pickup + KG)
+                                </span>
+                              )}
+
+                              {service.discount_type && service.discount_type !== 'none' && parseFloat(service.discount_value) > 0 && (
+                                <span className="bg-emerald-600/10 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-300">
+                                  {service.discount_type === 'percentage'
+                                    ? `🏷️ ${parseFloat(service.discount_value)}% OFF`
+                                    : `🏷️ Rs.${parseFloat(service.discount_value)} OFF`}
+                                </span>
+                              )}
+
+                              {service.badge_text && service.badge_text.trim() && (
+                                <span className="bg-rose-600/10 text-rose-700 px-3 py-1 rounded-full text-xs font-bold border border-rose-300 uppercase">
+                                  {service.badge_text.trim()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex sm:flex-col gap-2 self-start mt-4 sm:mt-0">
+                            <Button onClick={() => handleEdit(service)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button onClick={() => handleDelete(service.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="px-4">
+                              <Trash2 className="h-4 w-4 text-white" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })
         )}

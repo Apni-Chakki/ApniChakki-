@@ -232,25 +232,20 @@ export function Homepage() {
                   {allCategories.map((category, index) => (
                     <Card
                       key={category.id}
-                      className="category-card-responsive category-card-animate-in cursor-pointer rounded-2xl shadow-md hover:shadow-2xl group relative overflow-hidden w-full border-2 border-transparent hover:border-primary"
-                      style={{ animationDelay: `${index * 120}ms` }}
+                      className="category-card-responsive cursor-pointer rounded-2xl shadow-md hover:shadow-lg group relative overflow-hidden w-full border border-border hover:border-primary/50"
                       onClick={() => setSelectedCategory(category.id)}
                     >
                       <div 
-                        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
                         style={{ backgroundImage: `url(${category.imageUrl})` }}
                       />
-                      <div className={`absolute inset-0 ${category.overlayColor} opacity-50 group-hover:opacity-70 transition-opacity duration-300`} />
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors duration-300" />
+                      <div className={`absolute inset-0 ${category.overlayColor} opacity-60`} />
+                      <div className="absolute inset-0 bg-black/30" />
                       
-                      {/* Premium Shimmer Sweep Overlay */}
-                      <div className="shimmer-sweep-overlay" />
-                      
-                      <div className="relative h-full flex flex-col items-center justify-center px-6 transition-transform duration-300 group-hover:-translate-y-1">
-                        <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-md group-hover:scale-110 transition-transform duration-300">
+                      <div className="relative h-full flex flex-col items-center justify-center px-6">
+                        <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-md">
                           {tDynamic(category.labelKey)}
                         </h3>
-                        <div className="h-1 w-10 bg-primary mt-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </div>
                     </Card>
                   ))}

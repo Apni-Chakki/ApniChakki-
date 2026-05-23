@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Minus, Plus, ShoppingCart } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Minus, Plus, ShoppingCart, Calendar, RotateCcw } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Card } from '../../components/common/card';
 import { useCart } from '../../store/CartContext';
@@ -11,6 +11,17 @@ import { Checkbox } from '../../components/common/checkbox';
 import { Label } from '../../components/common/label';
 import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 import { API_BASE_URL } from '../../config';
+import { useAuth } from '../../store/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../../components/common/dialog';
+import { Input } from '../../components/common/input';
+import { Textarea } from '../../components/common/textarea';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -23,6 +34,56 @@ export function ServiceCard({ service }) {
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const { addToCart } = useCart();
   const { t, tDynamic } = useDynamicTranslation();
+  const { user } = useAuth();
+
+  const isRental = service.is_rental === 1 || service.is_rental === true;
+  
+  const [showRentalModal, setShowRentalModal] = useState(false);
+  const [rentalDays, setRentalDays] = useState(1);
+  const [rentalStartDate, setRentalStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [rentalQty, setRentalQty] = useState(1);
+  const [rentalName, setRentalName] = useState('');
+  const [rentalPhone, setRentalPhone] = useState('');
+  const [rentalAddress, setRentalAddress] = useState('');
+  const [rentalPaymentMethod, setRentalPaymentMethod] = useState('cash');
+  const [isSubmittingRental, setIsSubmittingRental] = useState(false);
+
+  useEffect(() => {
+    if (user && showRentalModal) {
+      setRentalName(user.full_name || user.name || '');
+      setRentalPhone(user.phone || '');
+      setRentalAddress(user.address || '');
+    }
+  }, [user, showRentalModal]);
+
+  const handlePlaceRental = () => {
+    if (!user) {
+      toast.error(t('Please login to rent this item.'));
+      return;
+    }
+    if (rentalQty <= 0) {
+      toast.error(t('Quantity must be greater than 0.'));
+      return;
+    }
+    if (rentalQty > parseFloat(service.rental_available_qty || 0)) {
+      toast.error(t('Insufficient available rental quantity.'));
+      return;
+    }
+    
+    // Construct rental service item to add to cart
+    const rentalItem = {
+      ...service,
+      is_rental: true,
+      rental_start_date: rentalStartDate,
+      rental_days: rentalDays,
+      rental_price_per_day: parseFloat(service.rental_price_per_day) || 0,
+      security_deposit: parseFloat(service.security_deposit) || 0,
+      late_penalty_per_day: parseFloat(service.late_penalty_per_day) || 0
+    };
+
+    addToCart(rentalItem, rentalQty);
+    setShowRentalModal(false);
+  };
 
   // Dynamic customizations from API
   const customizations = service.customizations || [];
@@ -408,8 +469,30 @@ export function ServiceCard({ service }) {
             </div>
           )}
 
-          {/* Custom Badge (top-left) */}
-          {badgeText && (
+          {/* Custom Badge / Rental Badge (top-left) */}
+          {isRental ? (
+            <span
+              style={{
+                position: 'absolute',
+                top: '8px',
+                left: '8px',
+                zIndex: 50,
+                background: 'linear-gradient(90deg, #0d9488, #0891b2)',
+                color: '#fff',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                fontSize: '10px',
+                fontWeight: 800,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                border: '2px solid rgba(255,255,255,0.5)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🔄 FOR RENT
+            </span>
+          ) : badgeText ? (
             <span
               style={{
                 position: 'absolute',
@@ -431,7 +514,7 @@ export function ServiceCard({ service }) {
             >
               {tDynamic(badgeText)}
             </span>
-          )}
+          ) : null}
 
           {/* Discount Badge (top-right) */}
           {hasDiscount && (
@@ -472,7 +555,26 @@ export function ServiceCard({ service }) {
               <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
             
-            {hasDiscount ? (
+            {isRental ? (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <p className="text-teal-700 font-extrabold text-xl leading-none">
+                    Rs. {Math.round(parseFloat(service.rental_price_per_day) || 0)}
+                  </p>
+                  <span className="text-muted-foreground text-sm font-semibold">
+                    / {t('day')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <span className="inline-flex items-center text-[10px] text-teal-800 font-bold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                    🛡️ {t('Deposit')}: Rs. {Math.round(parseFloat(service.security_deposit) || 0)}
+                  </span>
+                  <span className="inline-flex items-center text-[10px] text-amber-800 font-bold bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                    ⚠️ {t('Penalty')}: Rs. {Math.round(parseFloat(service.late_penalty_per_day) || 0)}/{t('day')}
+                  </span>
+                </div>
+              </div>
+            ) : hasDiscount ? (
               <div className="flex flex-col gap-1">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <p className="text-rose-700 font-extrabold text-xl leading-none">
@@ -640,7 +742,21 @@ export function ServiceCard({ service }) {
             )}
           </div>
           
-          {isOnlyPickup && !isCustomMix ? (
+          {isRental ? (
+            /* Rental products: Rent Now button */
+            <div className="flex flex-col gap-2">
+              <Button 
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold" 
+                onClick={() => setShowRentalModal(true)}
+                disabled={parseFloat(service.rental_available_qty || 0) <= 0}
+              >
+                {parseFloat(service.rental_available_qty || 0) <= 0 ? t('No Rental Qty') : t('Rent Now')}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                {t('Available Qty')}: {service.rental_available_qty}
+              </p>
+            </div>
+          ) : isOnlyPickup && !isCustomMix ? (
             /* Trip-only products: just show pickup button */
             <div className="flex flex-col gap-2">
               <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isAddedToCart}>
@@ -662,6 +778,105 @@ export function ServiceCard({ service }) {
           )}
         </div>
       </Card>
+
+      {/* Rental Booking Dialog */}
+      <Dialog open={showRentalModal} onOpenChange={setShowRentalModal}>
+        <DialogContent className="max-w-md bg-white rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700">
+              <RotateCcw className="h-5 w-5 text-teal-600" />
+              {t('Rent Product')} — {tDynamic(service.name)}
+            </DialogTitle>
+            <DialogDescription>
+              {t('Book rental start date and duration')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!user ? (
+            <div className="p-4 text-center space-y-4">
+              <p className="text-muted-foreground text-sm font-semibold">
+                {t('You must be logged in to book a rental.')}
+              </p>
+              <Button 
+                onClick={() => window.location.href = '/login/customer'} 
+                className="bg-primary text-white"
+              >
+                {t('Go to Login')}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2 text-left">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600">{t('Start Date')}</Label>
+                  <Input
+                    type="date"
+                    min={new Date().toISOString().slice(0, 10)}
+                    value={rentalStartDate}
+                    onChange={(e) => setRentalStartDate(e.target.value)}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600">{t('Rental Days')}</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={rentalDays}
+                    onChange={(e) => setRentalDays(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600">{t('Quantity')}</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={parseFloat(service.rental_available_qty || 0)}
+                    value={rentalQty}
+                    onChange={(e) => setRentalQty(Math.min(parseFloat(service.rental_available_qty || 1), Math.max(1, parseInt(e.target.value) || 1)))}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Total calculations */}
+              <div className="bg-slate-50 border rounded-lg p-3 text-xs space-y-1.5 mt-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t('Rental Rate')}</span>
+                  <span className="font-semibold">Rs. {Math.round(parseFloat(service.rental_price_per_day) || 0)}/{t('day')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t('Rental Subtotal')} ({rentalDays} {t('days')} × {rentalQty} {t('qty')})</span>
+                  <span className="font-semibold">Rs. {Math.round((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t('Refundable Deposit')} (Rs. {Math.round(parseFloat(service.security_deposit) || 0)} × {rentalQty})</span>
+                  <span className="font-semibold">Rs. {Math.round((parseFloat(service.security_deposit) || 0) * rentalQty)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-sm text-teal-800 border-t pt-1.5 mt-1.5">
+                  <span>{t('Total Amount')}</span>
+                  <span>Rs. {Math.round(((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty) + ((parseFloat(service.security_deposit) || 0) * rentalQty))}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowRentalModal(false)}>
+              {t('Cancel')}
+            </Button>
+            {user && (
+              <Button
+                onClick={handlePlaceRental}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold"
+              >
+                {t('Add to Cart')}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

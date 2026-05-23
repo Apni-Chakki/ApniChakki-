@@ -46,6 +46,25 @@ try {
             
             // mapping for frontend
             $row['total'] = $row['total_amount'];
+
+            // Get payment rejection details if unpaid
+            $pt_stmt = $conn->prepare("
+                SELECT error_message, updated_at 
+                FROM payment_transactions 
+                WHERE order_id = ? AND payment_status = 'failed' 
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $pt_stmt->bind_param("i", $order_id);
+            $pt_stmt->execute();
+            $pt_res = $pt_stmt->get_result();
+            if ($pt_row = $pt_res->fetch_assoc()) {
+                $row['payment_reject_reason'] = $pt_row['error_message'];
+                $row['payment_reject_date'] = $pt_row['updated_at'];
+            } else {
+                $row['payment_reject_reason'] = null;
+                $row['payment_reject_date'] = null;
+            }
+            $pt_stmt->close();
             
             $orders[] = $row;
         }

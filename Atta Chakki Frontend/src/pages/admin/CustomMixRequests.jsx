@@ -155,7 +155,7 @@ export default function CustomMixRequests() {
 
   const fetchRequests = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/Controllers/Admin/get_custom_mix_requests.php`);
+      const response = await fetch(`${API_BASE_URL}/get_custom_mix_requests.php`);
       const data = await response.json();
       if (data.success) {
         setRequests(data.data);
@@ -175,7 +175,7 @@ export default function CustomMixRequests() {
 
   const updateStatus = async (id, status) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/Controllers/Admin/update_custom_mix_request.php`, {
+      const response = await fetch(`${API_BASE_URL}/update_custom_mix_request.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status })

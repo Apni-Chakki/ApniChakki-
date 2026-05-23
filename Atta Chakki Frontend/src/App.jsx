@@ -56,6 +56,8 @@ const AdminComments = lazy(() => import('./pages/admin/AdminComments').then(modu
 const LiveTrackingMap = lazy(() => import('./pages/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
 const ContactMessages = lazy(() => import('./pages/admin/ContactMessages').then(module => ({ default: module.ContactMessages })));
 const CustomMixRequests = lazy(() => import('./pages/admin/CustomMixRequests').then(module => ({ default: module.default })));
+const ActiveRentals = lazy(() => import('./pages/admin/ActiveRentals').then(module => ({ default: module.ActiveRentals })));
+
 
 function PageLoader() {
   return (
@@ -89,7 +91,8 @@ function ProtectedDeliveryRoute({ children }) {
 
   const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
 
-  if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'delivery')) {
+  const role = storedUser?.role ? storedUser.role.toLowerCase() : '';
+  if (!storedUser || (role !== 'delivery' && role !== 'delivery_boy' && role !== 'admin')) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -204,6 +207,7 @@ export default function App() {
             <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/contact-messages" element={<ProtectedAdminRoute><AdminLayout><ContactMessages /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/custom-mix-requests" element={<ProtectedAdminRoute><AdminLayout><CustomMixRequests /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/rentals" element={<ProtectedAdminRoute><AdminLayout><ActiveRentals /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
             

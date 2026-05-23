@@ -211,7 +211,8 @@ export async function generateBillPDF(order) {
 
   order.items.forEach((item) => {
     y += 2;
-    const name = item.service?.name || item.name || '—';
+    const isRental = item.isRental || item.is_rental === 1 || item.is_rental === '1';
+    const name = (item.service?.name || item.name || '—') + (isRental ? ' (Rental)' : '');
     const nameLines = doc.splitTextToSize(name, contentW * 0.7);
 
     doc.setFont('courier', 'bold');
@@ -227,6 +228,34 @@ export async function generateBillPDF(order) {
       doc.setTextColor(40, 40, 40);
       doc.text('TBD', pageW - margin, y, { align: 'right' });
       y += (nameLines.length - 1) * 4.5 + 8;
+    } else if (isRental) {
+      const rate = Number(item.rental_price_per_day || item.price_at_purchase || 0);
+      const days = Number(item.rental_days || 0);
+      const deposit = Number(item.security_deposit || 0);
+      const runningPenalty = Number(item.runningPenalty || item.late_penalty_total || 0);
+      const lineTotal = rate * days;
+
+      doc.text(`Rs.${lineTotal.toLocaleString()}`, pageW - margin, y, { align: 'right' });
+
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(110, 110, 110);
+
+      const startFormatted = item.rental_start_date ? new Date(item.rental_start_date).toLocaleDateString('en-GB') : '';
+      const endFormatted = item.rental_end_date ? new Date(item.rental_end_date).toLocaleDateString('en-GB') : '';
+
+      const nameHeightOffset = nameLines.length > 1 ? (nameLines.length - 1) * 4.5 : 0;
+      doc.text(`Rental Period: ${days} days (${startFormatted} - ${endFormatted})`, margin, y + nameHeightOffset + 4.5);
+      doc.text(`Rate: Rs.${rate.toLocaleString()}/day  |  Security Deposit: Rs.${deposit.toLocaleString()}`, margin, y + nameHeightOffset + 9);
+
+      if (runningPenalty > 0) {
+        doc.setFont('courier', 'bold');
+        doc.setTextColor(185, 28, 28);
+        doc.text(`Late Penalty: Rs.${runningPenalty.toLocaleString()}`, margin, y + nameHeightOffset + 13.5);
+        y += nameHeightOffset + 18;
+      } else {
+        y += nameHeightOffset + 13.5;
+      }
     } else {
       const price = Number(item.service?.price || item.price_at_purchase || 0);
       const qty = Number(item.quantity || 0);
@@ -244,6 +273,9 @@ export async function generateBillPDF(order) {
       y += 9;
     }
 
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(110, 110, 110);
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.2);
     doc.setLineDashPattern([1, 1], 0);
@@ -391,3 +423,7 @@ export async function generateBillPDFDataUrl(order) {
   const { doc } = await generateBillPDF(order);
   return doc.output('datauristring');
 }
+
+
+
+

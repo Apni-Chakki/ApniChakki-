@@ -61,6 +61,7 @@ export function TodaysWork() {
   const [splitBatches, setSplitBatches] = useState([]);
   const [isSplitting, setIsSplitting] = useState(false);
   const [heavyThreshold, setHeavyThreshold] = useState(100);
+  const [storeName, setStoreName] = useState('Mughal Atta Chakki');
 
   const totalWeight = orders.reduce((sum, order) => sum + parseFloat(order.total_weight_kg || 0), 0);
   const totalProcessingMinutes = orders.reduce((sum, order) => sum + parseInt(order.processing_time_minutes || 0), 0);
@@ -82,8 +83,13 @@ export function TodaysWork() {
     try {
       const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
       const data = await res.json();
-      if (data.success && data.settings?.heavyOrderThreshold) {
-        setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+      if (data.success) {
+        if (data.settings?.heavyOrderThreshold) {
+          setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+        }
+        if (data.settings?.storeName) {
+          setStoreName(data.settings.storeName);
+        }
       }
     } catch (e) {
       console.error('Error fetching settings:', e);
@@ -355,7 +361,34 @@ export function TodaysWork() {
     
     let itemsText = "";
     order.items.forEach(item => {
-        itemsText += `🔸 ${item.name} × ${item.quantity}\n`;
+        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+        const unit = item.unit || item.service?.unit || 'unit';
+        const name = item.name || item.service?.name || '';
+        
+        let customText = "";
+        if (item.customizations?.length > 0) {
+            customText = item.customizations.map(c => c.option_name).join(' + ');
+        } else {
+            const services = [];
+            if (item.is_cleaning == 1) services.push('Cleaning');
+            if (item.is_grinding == 1) services.push('Grinding');
+            customText = services.join(' + ');
+        }
+        
+        itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+        if (customText) {
+            itemsText += ` (${customText})`;
+        }
+        if (itemPrice > 0) {
+            itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+        }
+        itemsText += `\n`;
+        
+        // Rental details
+        if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
+            itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+            itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
+        }
     });
 
     let phone = (order.customer_phone || '').replace(/\D/g,'');
@@ -365,10 +398,31 @@ export function TodaysWork() {
         phone = '92' + phone; 
     }
 
+    const subtotal = parseFloat(order.total_amount) || 0;
+    const discount = parseFloat(order.coupon_discount) || 0;
+    const grandTotal = subtotal - discount;
+    const advancePaid = parseFloat(order.amount_paid) || 0;
+    const remainingDue = grandTotal - advancePaid;
+
+    let priceBreakdown = `*SUBTOTAL:* Rs. ${subtotal.toLocaleString()}\n`;
+    if (discount > 0) {
+        priceBreakdown += `*COUPON DISCOUNT:* -Rs. ${discount.toLocaleString()}\n`;
+        priceBreakdown += `*GRAND TOTAL:* Rs. ${grandTotal.toLocaleString()}\n`;
+    }
+    if (advancePaid > 0) {
+        priceBreakdown += `*ADVANCE PAID:* Rs. ${advancePaid.toLocaleString()}\n`;
+    }
+    priceBreakdown += `*REMAINING DUE:* Rs. ${remainingDue.toLocaleString()}`;
+
+    let addressSection = "";
+    if (isDelivery && order.shipping_address) {
+        addressSection = `*DELIVERY ADDRESS:* ${order.shipping_address}\n`;
+    }
+
     const message = `
-*GRISTMILL'S* - Fresh Flour Daily 🌾
+*MUGHAL ATTA CHAKKI* - Fresh Flour Daily 🌾
 -----------------------------------
-Hello *${order.customer_name}*! 👋
+Assalam-o-Alaikum / Hello *${order.customer_name}*! 👋
 Your order is now *READY* for ${orderType}.
 
 *ORDER DETAILS*
@@ -376,13 +430,11 @@ Order ID: #${order.id}
 Status: READY
 
 *ORDER ITEMS*
-${itemsText}
------------------------------------
-*SUBTOTAL:* Rs. ${parseInt(order.total_amount).toLocaleString()}
-*REMAINING DUE:* Rs. ${parseInt(order.total_amount).toLocaleString()}
-
+${itemsText}-----------------------------------
+${priceBreakdown}
+${addressSection}-----------------------------------
 Thank you for your business!
-Gristmill's - Fresh Flour Daily
+Mughal Atta Chakki — Pure & Fresh Processing
 `.trim();
     
     const encodedMessage = encodeURIComponent(message);
@@ -505,6 +557,203 @@ Gristmill's - Fresh Flour Daily
     setPrintOrder(transformedOrder);
   };
 
+  const handlePrintAll = () => {
+    const printStyle = document.createElement('style');
+    printStyle.id = 'print-all-work-style';
+    printStyle.innerHTML = `
+      @media print {
+        body * {
+          visibility: hidden !important;
+        }
+        #print-all-work-container, #print-all-work-container * {
+          visibility: visible !important;
+        }
+        #print-all-work-container {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          color: #000 !important;
+          background: #fff !important;
+          font-family: Arial, sans-serif !important;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 3px double #000;
+          padding-bottom: 8px;
+        }
+        .print-header h1 {
+          font-size: 24px;
+          font-weight: bold;
+          margin: 0;
+        }
+        .print-header p {
+          font-size: 12px;
+          color: #444;
+          margin: 4px 0 0 0;
+        }
+        .print-stats {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 15px;
+          font-size: 11px;
+          font-weight: bold;
+          border: 1px solid #000;
+          padding: 6px 10px;
+          background-color: #f9f9f9 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10px;
+        }
+        .print-table th, .print-table td {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: left;
+          vertical-align: top;
+        }
+        .print-table th {
+          background-color: #eee !important;
+          font-weight: bold;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .print-badge {
+          display: inline-block;
+          font-size: 8px;
+          font-weight: bold;
+          padding: 1px 4px;
+          border: 1px solid #000;
+          border-radius: 2px;
+        }
+        .item-row {
+          margin-bottom: 3px;
+          font-weight: bold;
+        }
+        .item-cust {
+          font-size: 8px;
+          color: #444;
+          font-weight: normal;
+          margin-left: 6px;
+          font-style: italic;
+        }
+      }
+    `;
+    document.head.appendChild(printStyle);
+
+    const printContainer = document.createElement('div');
+    printContainer.id = 'print-all-work-container';
+
+    const todayStr = new Date().toLocaleString();
+    const sortedOrders = [...orders].sort((a, b) => (parseInt(a.queue_position) || 999) - (parseInt(b.queue_position) || 999));
+
+    const processingOrders = orders.filter(order =>
+      (order.items || []).some(item => {
+        const unit = (item.unit || '').toLowerCase().trim();
+        return unit === 'kg' || unit === 'g' || unit === 'trip';
+      })
+    );
+
+    const preparedOrders = orders.filter(order =>
+      !(order.items || []).some(item => {
+        const unit = (item.unit || '').toLowerCase().trim();
+        return unit === 'kg' || unit === 'g' || unit === 'trip';
+      })
+    );
+
+    const grindJobsCount = processingOrders.length;
+    const preparedJobsCount = preparedOrders.length;
+
+    let itemsHtml = '';
+    sortedOrders.forEach((order, index) => {
+      const itemsList = (order.items || []).map(item => {
+        const custsText = item.customizations && item.customizations.length > 0
+          ? ` (${item.customizations.map(c => c.option_name).join(' + ')})`
+          : (item.is_cleaning == 1 && item.is_grinding == 1 ? ' (Cleaning + Grinding)' :
+             item.is_cleaning == 1 ? ' (Cleaning)' :
+             item.is_grinding == 1 ? ' (Grinding)' : '');
+        return `<div class="item-row">• ${item.name} x ${item.quantity} ${item.unit || 'kg'}<span class="item-cust">${custsText}</span></div>`;
+      }).join('');
+
+      const orderType = order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup') ? 'DELIVERY' : 'PICKUP';
+      const address = order.shipping_address || 'Self Pickup / Shop';
+      const driver = order.driver_name || order.deliveryPersonnel || 'Not Assigned';
+      const orderWeight = order.total_weight_kg ? `${parseFloat(order.total_weight_kg).toFixed(1)} kg` : '-';
+      const queuePos = order.queue_position ? `#${order.queue_position}` : '-';
+
+      const isGrinding = (order.items || []).some(item => {
+        const unit = (item.unit || '').toLowerCase().trim();
+        return unit === 'kg' || unit === 'g' || unit === 'trip';
+      });
+
+      itemsHtml += `
+        <tr>
+          <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+          <td style="text-align: center; font-weight: bold;">#${order.id}<br/><span style="font-size: 8px; font-weight: normal;">Queue: ${queuePos}</span></td>
+          <td><strong>${order.customer_name}</strong><br/>${order.customer_phone || ''}</td>
+          <td>${itemsList}</td>
+          <td style="text-align: center; font-weight: bold;">${orderWeight}</td>
+          <td>
+            <span class="print-badge" style="border-color: ${orderType === 'DELIVERY' ? '#1e40af' : '#065f46'}; color: ${orderType === 'DELIVERY' ? '#1e40af' : '#065f46'}">${orderType}</span>
+            <br/><span style="font-size: 8px; margin-top: 2px; display: block;">${address}</span>
+          </td>
+          <td><strong>${driver}</strong></td>
+          <td style="text-align: center;">
+            <span class="print-badge" style="border-color: ${isGrinding ? '#d97706' : '#059669'}; color: ${isGrinding ? '#d97706' : '#059669'}">
+              ${isGrinding ? 'Grinding' : 'Prepared'}
+            </span>
+          </td>
+        </tr>
+      `;
+    });
+
+    printContainer.innerHTML = `
+      <div class="print-header">
+        <h1>${storeName}</h1>
+        <p>Today's Production & Grinding Jobs — آج کا کام کی فہرست</p>
+        <p style="font-size: 10px; color: #555; margin-top: 4px;">Printed On: ${todayStr}</p>
+      </div>
+      <div class="print-stats">
+        <div>TOTAL JOBS (کل آرڈرز): ${orders.length}</div>
+        <div>GRINDING JOBS (پیسنے والے): ${grindJobsCount}</div>
+        <div>PREPARED PRODUCTS (تیار مصنوعات): ${preparedJobsCount}</div>
+        <div>TOTAL WEIGHT (کل وزن): ${totalWeight.toFixed(1)} kg</div>
+      </div>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 4%; text-align: center;">S#</th>
+            <th style="width: 10%; text-align: center;">Order ID</th>
+            <th style="width: 18%;">Customer Details</th>
+            <th style="width: 28%;">Items to Prepare</th>
+            <th style="width: 8%; text-align: center;">Weight</th>
+            <th style="width: 18%;">Delivery/Pickup Address</th>
+            <th style="width: 14%;">Assigned Driver</th>
+            <th style="width: 10%; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+      <div style="margin-top: 20px; border-top: 1px dashed #000; padding-top: 6px; font-size: 8px; text-align: center; color: #555;">
+        End of Today's Work List • Mughal Atta Chakki Software System
+      </div>
+    `;
+
+    document.body.appendChild(printContainer);
+    window.print();
+
+    setTimeout(() => {
+      document.head.removeChild(printStyle);
+      document.body.removeChild(printContainer);
+    }, 1000);
+  };
+
   // format ETA time nicely
   const formatETA = (eta) => {
     if (!eta) return 'Calculating...';
@@ -581,7 +830,19 @@ Gristmill's - Fresh Flour Daily
               Rs. {parseInt(order.total_amount).toLocaleString()}
               {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
             </span>
-            <p className="text-xs font-semibold text-blue-600 uppercase mt-0.5">{order.payment_method}</p>
+            <div className="flex items-center gap-1.5 justify-end mt-1">
+              <span className="text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 border border-green-300' :
+                order.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                order.paymentStatus === 'unpaid' ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse' :
+                'bg-yellow-100 text-yellow-800 border border-yellow-300'
+              }`}>
+                {order.paymentStatus === 'paid' ? 'Paid' : 
+                 order.paymentStatus === 'partial' ? 'Partial' : 
+                 order.paymentStatus === 'unpaid' ? 'Unpaid / Rejected' : 'Pending'}
+              </span>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -842,9 +1103,18 @@ Gristmill's - Fresh Flour Daily
               Orders currently in production, with live capacity, driver assignment, and scheduling actions in one place.
             </p>
           </div>
-          <Badge variant="secondary" className="text-lg px-4 py-2 self-start lg:self-auto">
-            {orders.length} Active Jobs
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+            <Button
+              onClick={handlePrintAll}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md flex items-center gap-2"
+              size="lg"
+            >
+              <Printer className="h-5 w-5 mr-1" /> Print Today's Work List
+            </Button>
+            <Badge variant="secondary" className="text-lg px-4 py-2">
+              {orders.length} Active Jobs
+            </Badge>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
