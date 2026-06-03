@@ -479,191 +479,146 @@ export function Dashboard() {
            setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden !border-orange-200 !bg-white">
-          <DialogHeader className="shrink-0 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 px-4 py-3">
-            <DialogTitle className="text-lg font-bold text-orange-700 flex items-center gap-2">
-              <History className="h-5 w-5" />
-              Pending Orders
-            </DialogTitle>
-            <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
-              {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
-            </DialogDescription>
+        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-xl border border-gray-200 shadow-2xl !bg-white">
+
+          {/* Header */}
+          <DialogHeader className="flex flex-row items-center gap-3 px-4 py-3 border-b border-gray-100 bg-orange-50">
+            <div className="bg-orange-200 rounded-lg p-1.5 shrink-0">
+              <History className="h-4 w-4 text-orange-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-sm font-bold text-gray-900 leading-none">Pending Orders</DialogTitle>
+              <DialogDescription className="text-[11px] text-gray-500 mt-0.5">
+                {eodData?.leftover_count || yesterdayOrders.length} orders · {eodData?.leftover_total_weight_kg || 0} kg · {eodData?.leftover_total_minutes || 0} mins
+              </DialogDescription>
+            </div>
           </DialogHeader>
 
           {/* Step: Loading */}
           {eodStep === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="bg-orange-100 rounded-full p-4 mb-4">
-                <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
-              </div>
-              <p className="text-gray-900 font-semibold text-base">Loading orders...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-7 w-7 animate-spin text-orange-500 mb-3" />
+              <p className="text-gray-600 text-sm font-medium">Loading orders...</p>
             </div>
           )}
 
-          {/* Step: Select completed orders */}
+          {/* Step: Select */}
           {eodStep === 'select' && (
-            <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
-              {/* Info header bar */}
-              <div className="shrink-0 bg-orange-50 px-4 py-2 border-b border-orange-200">
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="select-all-eod" className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox 
-                      id="select-all-eod" 
-                      checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
-                      onCheckedChange={toggleSelectAll}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-xs font-bold text-orange-900">Select All</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <div className="eod-badge-completed">
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      Completed: {selectedCompleted.size}
-                    </div>
-                    <div className="eod-badge-pending">
-                      Pending: {yesterdayOrders.length - selectedCompleted.size}
-                    </div>
-                  </div>
+            <>
+              {/* Toolbar */}
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <label htmlFor="select-all-eod" className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    id="select-all-eod"
+                    checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
+                    onCheckedChange={toggleSelectAll}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="text-xs font-semibold text-gray-600">Select All</span>
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                    <CheckCircle className="h-3 w-3" />{selectedCompleted.size} Done
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                    <Clock className="h-3 w-3" />{yesterdayOrders.length - selectedCompleted.size} Pending
+                  </span>
                 </div>
               </div>
 
-              {/* Scrollable orders list */}
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="space-y-1.5 p-3">
-                  {yesterdayOrders.map((order) => {
-                    const isChecked = selectedCompleted.has(order.id);
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => toggleOrderCompleted(order.id)}
-                        className={`relative border rounded-lg p-2.5 cursor-pointer transition-all duration-200 select-none ${
-                          isChecked 
-                            ? 'bg-green-50 border-green-300 shadow-sm' 
-                            : 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-sm'
-                        }`}
-                      >
-                        {isChecked && (
-                          <div className="absolute top-1.5 right-1.5">
-                            <Badge className="bg-green-600 text-white text-[8px] px-1.5 py-0 font-bold">
-                              ✓
-                            </Badge>
-                          </div>
-                        )}
-
-                        <div className="flex items-start gap-2.5 justify-between">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <Checkbox
-                              checked={isChecked}
-                              onCheckedChange={() => toggleOrderCompleted(order.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-4 w-4 mt-0.5 flex-shrink-0"
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1.5 mb-1">
-                                <h4 className="font-bold text-sm text-gray-900">#{order.id}</h4>
-                                {!isChecked && (
-                                  <span className="text-xs font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded text-nowrap">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
-                                )}
-                              </div>
-
-                              <div className="text-xs space-y-0.5">
-                                <div className="flex items-center gap-1.5">
-                                  <User className="h-3 w-3 text-orange-600 flex-shrink-0" />
-                                  <span className="font-medium truncate">{order.customer_name}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-gray-600 flex-wrap">
-                                  <span className="eod-tag-weight">
-                                    ⚖️ {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg
-                                  </span>
-                                  <span className="eod-tag-time">
-                                    ⏱️ {order.processing_time_minutes || '~'} min
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {!isChecked && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleOrderCompleted(order.id);
-                                }}
-                                className="eod-btn-done"
-                                title="Mark as completed"
-                              >
-                                <CheckCircle className="h-3.5 w-3.5" />
-                                Done
-                              </button>
-                            )}
-                            {isChecked && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleOrderCompleted(order.id);
-                                }}
-                                className="eod-btn-undo"
-                                title="Mark as pending"
-                              >
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                                Undo
-                              </button>
-                            )}
-                          </div>
+              {/* Orders list */}
+              <div className="px-3 py-2 space-y-1.5" style={{ maxHeight: 'calc(85vh - 190px)', overflowY: 'auto' }}>
+                {yesterdayOrders.map((order) => {
+                  const isChecked = selectedCompleted.has(order.id);
+                  return (
+                    <div
+                      key={order.id}
+                      onClick={() => toggleOrderCompleted(order.id)}
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 cursor-pointer select-none transition-colors border ${
+                        isChecked
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-white border-gray-200 hover:border-orange-300 hover:bg-orange-50/40'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => toggleOrderCompleted(order.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-3.5 w-3.5 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-gray-900">#{order.id}</span>
+                          <span className="text-xs text-gray-600 truncate">{order.customer_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-medium text-blue-600">⚖ {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</span>
+                          <span className="text-[10px] text-gray-300">|</span>
+                          <span className="text-[10px] font-medium text-purple-600">⏱ {order.processing_time_minutes || '~'} min</span>
                         </div>
                       </div>
-                    );
-                  })}
-
-                  {yesterdayOrders.length === 0 && (
-                    <div className="text-center py-12 text-gray-400">
-                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-400" />
-                      <p className="font-bold text-sm">All Clear!</p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs font-bold text-gray-800">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
+                        {!isChecked ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleOrderCompleted(order.id); }}
+                            className="flex items-center gap-1 text-[11px] font-bold bg-green-600 hover:bg-green-700 text-white px-2.5 py-1 rounded-full transition-colors"
+                          >
+                            <CheckCircle className="h-3 w-3" />Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleOrderCompleted(order.id); }}
+                            className="flex items-center gap-1 text-[11px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-600 px-2.5 py-1 rounded-full transition-colors"
+                          >
+                            Undo
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
+                  );
+                })}
+                {yesterdayOrders.length === 0 && (
+                  <div className="flex flex-col items-center py-10 text-gray-400">
+                    <CheckCircle className="h-8 w-8 mb-2 text-green-400" />
+                    <p className="text-sm font-semibold">All Clear!</p>
+                  </div>
+                )}
+              </div>
 
-              {/* Action footer */}
-              <div className="shrink-0 border-t border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3 space-y-2.5">
-                <button 
-                  className="eod-btn-confirm" 
+              {/* Footer */}
+              <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
+                <div className="flex items-center justify-between text-[11px] font-semibold mb-2.5">
+                  <span className="text-green-700">✓ {selectedCompleted.size} marked as done</span>
+                  <span className="text-orange-600">{yesterdayOrders.length - selectedCompleted.size} will go to queue</span>
+                </div>
+                <button
+                  className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold text-sm py-2.5 rounded-lg transition-colors"
                   onClick={handleProcessEodSelection}
                   disabled={isProcessingEod}
                 >
-                  {isProcessingEod ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Processing...</>
-                  ) : (
-                    <><ArrowRight className="h-4 w-4 mr-1.5" /> Confirm & Process</>
-                  )}
+                  {isProcessingEod
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Processing...</>
+                    : <><ArrowRight className="h-4 w-4" />Confirm &amp; Process</>
+                  }
                 </button>
-                <p className="text-[11px] text-gray-700 text-center font-semibold">
-                  ✓ {selectedCompleted.size} done • {yesterdayOrders.length - selectedCompleted.size} to queue
-                </p>
               </div>
-            </div>
+            </>
           )}
 
           {/* Step: Processing */}
           {eodStep === 'processing' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="bg-orange-100 rounded-full p-3 mb-3">
-                <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
-              </div>
-              <p className="text-gray-900 font-semibold text-sm">Processing...</p>
+              <Loader2 className="h-7 w-7 animate-spin text-orange-500 mb-3" />
+              <p className="text-gray-700 text-sm font-semibold">Processing orders...</p>
             </div>
           )}
 
           {/* Step: Done */}
           {eodStep === 'done' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="bg-green-100 rounded-full p-3 mb-3">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <p className="text-gray-900 font-semibold text-sm">Done! Redirecting...</p>
+              <CheckCircle className="h-8 w-8 text-green-500 mb-3" />
+              <p className="text-gray-700 text-sm font-semibold">Done! Redirecting...</p>
             </div>
           )}
         </DialogContent>

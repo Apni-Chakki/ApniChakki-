@@ -604,7 +604,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_cod_enabled', false)}
                     disabled={settingsLoading}
-                    className="w-24"
+                    className="px-4"
                   >
                     <XCircle className="h-4 w-4 mr-1.5" />
                     {t('Disable')}
@@ -615,7 +615,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_cod_enabled', true)}
                     disabled={settingsLoading}
-                    className="w-24 bg-green-600 hover:bg-green-700 text-white border-green-700"
+                    className="px-4 bg-green-600 hover:bg-green-700 text-white border-green-700"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
                     {t('Enable')}
@@ -640,7 +640,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_jazzcash_enabled', false)}
                     disabled={settingsLoading}
-                    className="w-24"
+                    className="px-4"
                   >
                     <XCircle className="h-4 w-4 mr-1.5" />
                     {t('Disable')}
@@ -651,7 +651,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_jazzcash_enabled', true)}
                     disabled={settingsLoading}
-                    className="w-24 bg-green-600 hover:bg-green-700 text-white border-green-700"
+                    className="px-4 bg-green-600 hover:bg-green-700 text-white border-green-700"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
                     {t('Enable')}
@@ -676,7 +676,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_card_enabled', false)}
                     disabled={settingsLoading}
-                    className="w-24"
+                    className="px-4"
                   >
                     <XCircle className="h-4 w-4 mr-1.5" />
                     {t('Disable')}
@@ -687,7 +687,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_card_enabled', true)}
                     disabled={settingsLoading}
-                    className="w-24 bg-green-600 hover:bg-green-700 text-white border-green-700"
+                    className="px-4 bg-green-600 hover:bg-green-700 text-white border-green-700"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
                     {t('Enable')}
@@ -712,7 +712,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_bank_enabled', false)}
                     disabled={settingsLoading}
-                    className="w-24"
+                    className="px-4"
                   >
                     <XCircle className="h-4 w-4 mr-1.5" />
                     {t('Disable')}
@@ -723,7 +723,7 @@ export function PaymentVerification() {
                     size="sm" 
                     onClick={() => handleUpdatePaySettings('pay_method_bank_enabled', true)}
                     disabled={settingsLoading}
-                    className="w-24 bg-green-600 hover:bg-green-700 text-white border-green-700"
+                    className="px-4 bg-green-600 hover:bg-green-700 text-white border-green-700"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
                     {t('Enable')}

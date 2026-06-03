@@ -14,16 +14,6 @@ import {
   DropdownMenuSeparator
 } from '../../components/common/dropdown-menu';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../components/common/alert-dialog';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -229,196 +219,192 @@ export function PickupRequests() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50/50 p-6 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+      {/* Header */}
+      <div className="rounded-xl border border-gray-100 p-6 shadow-sm" style={{ background: '#ffffff' }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-amber-700 text-xs font-semibold uppercase tracking-wide mb-3">
               Pickup Services
             </div>
             <h1 className="text-3xl font-bold text-slate-900">Pickup Requests</h1>
-            <p className="text-slate-600 mt-2 max-w-2xl">
+            <p className="text-slate-500 mt-1 text-sm">
               Manage requests for services where the driver has to pick up items (Trip unit).
             </p>
           </div>
-          <Badge variant="secondary" className="text-lg px-4 py-2 self-start lg:self-auto">
+          <Badge variant="secondary" className="text-base font-bold px-4 py-2 self-start sm:self-auto">
             {orders.length} Active Requests
           </Badge>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Truck className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-lg">No active requests!</h3>
-              <p className="text-muted-foreground">There are currently no pickup requests pending.</p>
+      {/* Table Card */}
+      <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
+        {orders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="rounded-full bg-gray-100 p-4 mb-4">
+              <Truck className="h-8 w-8 text-gray-400" />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order Info</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Service Details</TableHead>
-                    <TableHead>Status / Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell>
-                        <div className="font-medium text-lg">#{order.id}</div>
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', month: 'short', day: 'numeric' })}
-                        </Badge>
-                        <div className="mt-2 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded w-max flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" /> TBD - Weight Update Required
+            <h3 className="font-semibold text-lg text-gray-800">No active requests</h3>
+            <p className="text-gray-400 text-sm mt-1">There are currently no pickup requests pending.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-6 py-4">Order Info</TableHead>
+                  <TableHead className="px-6 py-4">Customer</TableHead>
+                  <TableHead className="px-6 py-4">Address</TableHead>
+                  <TableHead className="px-6 py-4">Service Details</TableHead>
+                  <TableHead className="px-6 py-4">Status / Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id} className="hover:bg-gray-50/60 transition-colors">
+                    <TableCell className="px-6 py-5">
+                      <div className="font-bold text-base text-gray-900">#{order.id}</div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
+                      <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
+                        <AlertCircle className="h-3 w-3" /> TBD – Weight Pending
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="px-6 py-5">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                          <User className="h-3.5 w-3.5 text-gray-400" /> {order.customer_name}
                         </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 text-sm font-medium">
-                            <User className="h-3 w-3 text-muted-foreground" /> {order.customer_name}
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Phone className="h-3.5 w-3.5" /> {order.customer_phone}
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="px-6 py-5 max-w-[220px]">
+                      <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2 leading-snug">{order.shipping_address || 'No address'}</span>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="px-6 py-5">
+                      <div className="space-y-1.5">
+                        {order.items && order.items.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <Package className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="font-medium text-gray-800">{item.name}</span>
+                            <span className="text-xs text-gray-400">({item.quantity} {item.unit})</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" /> {order.customer_phone}
-                          </div>
-                        </div>
-                      </TableCell>
+                        ))}
+                      </div>
+                    </TableCell>
 
-                      <TableCell className="max-w-[200px] truncate" title={order.shipping_address}>
-                        <div className="flex items-start gap-2 text-sm">
-                          <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
-                          <span className="truncate">{order.shipping_address || 'No Address Provided'}</span>
-                        </div>
-                      </TableCell>
+                    <TableCell className="px-6 py-5">
+                      <div className="flex flex-col gap-3 min-w-[180px]">
 
-                      <TableCell>
-                        <div className="space-y-1">
-                          {order.items && order.items.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-sm">
-                              <Package className="h-3 w-3 text-primary" />
-                              <span className="font-medium">{item.name}</span>
-                              <span className="text-muted-foreground text-xs">
-                                ({item.quantity} {item.unit})
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
+                        {/* Status Badge */}
+                        <span style={{ display: 'inline-flex', width: 'fit-content', alignItems: 'center', padding: '3px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em',
+                          backgroundColor: (order.status === 'pending' || order.status === 'pickup_pending') ? '#FEF3C7' : order.status === 'arrived_at_shop' ? '#CCFBF1' : order.status === 'processing' ? '#DBEAFE' : '#DCFCE7',
+                          color: (order.status === 'pending' || order.status === 'pickup_pending') ? '#92400E' : order.status === 'arrived_at_shop' ? '#0F766E' : order.status === 'processing' ? '#1E40AF' : '#166534'
+                        }}>
+                          {order.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </span>
 
-                      <TableCell>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <Badge className={`${
-                              (order.status === 'pending' || order.status === 'pickup_pending') ? 'bg-amber-100 text-amber-800' :
-                              order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                              'bg-green-100 text-green-800'
-                            } capitalize`}>
-                              {order.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-1">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className={`border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.driver_name ? 'bg-blue-50' : ''}`}
-                                >
-                                  <Truck className="h-4 w-4 mr-2" />
-                                  {order.driver_name ? `${order.driver_name.slice(0, 10)}` : 'Assign Driver'}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-48">
-                                <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {activePersonnel.length > 0 ? (
-                                  activePersonnel.map(person => (
-                                    <DropdownMenuItem
-                                      key={person.id}
-                                      onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
-                                      className="cursor-pointer text-xs"
-                                    >
-                                      <span>{person.name}</span>
-                                    </DropdownMenuItem>
-                                  ))
-                                ) : (
-                                  <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onSelect={() => handleAssignPersonnel(order.id, '')}
-                                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
-                                >
-                                  Clear
+                        {/* Assign Driver */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, border: '1.5px solid #BFDBFE', backgroundColor: order.driver_name ? '#EFF6FF' : '#ffffff', color: '#1D4ED8', cursor: 'pointer', transition: 'background 0.15s' }}>
+                              <Truck style={{ width: 13, height: 13 }} />
+                              {order.driver_name ? order.driver_name.slice(0, 12) : 'Assign Driver'}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-48">
+                            <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {activePersonnel.length > 0 ? (
+                              activePersonnel.map(person => (
+                                <DropdownMenuItem key={person.id} onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)} className="cursor-pointer text-xs">
+                                  {person.name}
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => handleAssignPersonnel(order.id, '')} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs">
+                              Clear
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className={`shadow-sm px-2 ${order.status !== 'arrived_at_shop' ? 'opacity-50' : 'bg-teal-100 text-teal-800 hover:bg-teal-200'}`}
-                                onClick={() => handleArrivedAtShop(order)}
-                                disabled={order.status !== 'arrived_at_shop'}
-                                title={order.status === 'arrived_at_shop' ? "Update Weight" : "Waiting for driver to arrive at store"}
-                              >
-                                {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
-                              </Button>
+                        {/* Awaiting Arrival / Update Weight + Delete row */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleArrivedAtShop(order)}
+                            disabled={order.status !== 'arrived_at_shop'}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '5px',
+                              padding: '5px 11px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                              border: order.status === 'arrived_at_shop' ? '1.5px solid #99F6E4' : '1.5px solid #E5E7EB',
+                              backgroundColor: order.status === 'arrived_at_shop' ? '#F0FDFA' : '#F9FAFB',
+                              color: order.status === 'arrived_at_shop' ? '#0F766E' : '#9CA3AF',
+                              cursor: order.status === 'arrived_at_shop' ? 'pointer' : 'not-allowed',
+                              opacity: order.status === 'arrived_at_shop' ? 1 : 0.7
+                            }}
+                          >
+                            {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
+                          </button>
 
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="shadow-sm px-4"
-                                onClick={() => setCancelOrder(order)}
-                                title="Delete/Cancel Request"
-                              >
-                                <Trash2 className="h-4 w-4 text-white" />
-                              </Button>
-                          </div>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8 px-0 flex items-center justify-center"
+                            onClick={() => setCancelOrder(order)}
+                          >
+                            <Trash2 className="h-4 w-4 text-white" />
+                          </Button>
                         </div>
-                      </TableCell>
 
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
-      <AlertDialog open={!!cancelOrder} onOpenChange={(open) => { if(!open) { setCancelOrder(null); setCancelReason(''); } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" /> Cancel/Reject Pickup Request
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Please provide a reason for cancelling this pickup request. This is mandatory and will be saved for records and sent to the user.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      <Dialog open={!!cancelOrder} onOpenChange={(open) => { if (!open) { setCancelOrder(null); setCancelReason(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitleText className="flex items-center gap-2 text-destructive text-base">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Cancel/Reject Pickup Request
+            </DialogTitleText>
+            <DialogDescription>
+              Order <strong>#{cancelOrder?.id}</strong> — Please provide a reason. This is mandatory and will be sent to the customer.
+            </DialogDescription>
+          </DialogHeader>
+
           <Textarea
             placeholder="Cancellation reason (mandatory)..."
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
-            className="mt-2 min-h-[100px]"
+            className="min-h-[100px] resize-none"
           />
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep Request</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
-              onClick={(e) => {
+
+          <DialogFooter className="flex flex-row gap-2">
+            <Button variant="outline" className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300" onClick={() => { setCancelOrder(null); setCancelReason(''); }} disabled={isCancelling}>
+              Keep Request
+            </Button>
+            <Button
+              className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
+              onClick={() => {
                 if (!cancelReason.trim()) {
-                  e.preventDefault();
                   toast.error("Please provide a cancellation reason.");
                   return;
                 }
@@ -426,11 +412,11 @@ export function PickupRequests() {
               }}
               disabled={isCancelling}
             >
-              {isCancelling ? 'Rejecting...' : 'Reject Request'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {isCancelling ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin text-white" />Rejecting...</> : 'Reject Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showWeightModal} onOpenChange={(open) => { if(!open) { setShowWeightModal(false); setSelectedOrder(null); setWeightInputs({}); } }}>
         <DialogContent className="max-w-lg">

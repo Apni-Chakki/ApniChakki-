@@ -263,23 +263,25 @@ export function ManageDelivery() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
+                          className={`h-8 w-8 px-0 flex items-center justify-center ${personnel.isActive ? 'border-orange-300 hover:bg-orange-50' : 'border-green-300 hover:bg-green-50'}`}
                           onClick={() => handleToggleActive(personnel)}
                           title={personnel.isActive ? 'Deactivate' : 'Activate'}
                         >
                           {personnel.isActive ? (
-                            <UserX className="h-4 w-4" />
+                            <UserX className="h-4 w-4 text-orange-500" />
                           ) : (
-                            <UserCheck className="h-4 w-4" />
+                            <UserCheck className="h-4 w-4 text-green-600" />
                           )}
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
+                          className="h-8 w-8 px-0 flex items-center justify-center border-blue-200 hover:bg-blue-50"
                           onClick={() => handleEditClick(personnel)}
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit2 className="h-4 w-4 text-blue-600" />
                         </Button>
                         <Button
                           variant="destructive"

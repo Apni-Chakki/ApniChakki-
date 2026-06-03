@@ -253,17 +253,12 @@ export function PrintOrderDetails({ order, open, onClose }) {
       >
         {/* Dialog Header with Logo */}
         <DialogHeader className="px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <LogoSVG size={40} />
-              <div>
-                <DialogTitle className="text-sm font-black tracking-wide uppercase">{storeSettings.name}</DialogTitle>
-                <p className="text-[10px] text-muted-foreground">Full Order Details</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <LogoSVG size={40} />
+            <div>
+              <DialogTitle className="text-sm font-black tracking-wide uppercase">{storeSettings.name}</DialogTitle>
+              <p className="text-[10px] text-muted-foreground">Full Order Details</p>
             </div>
-            <button onClick={onClose} className="rounded-full p-1.5 hover:bg-muted transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
           </div>
         </DialogHeader>
 
@@ -444,14 +439,14 @@ export function PrintOrderDetails({ order, open, onClose }) {
         </div>
 
         {/* ── Sticky Action Buttons ── */}
-        <div className="flex gap-2.5 px-6 py-4 border-t border-border/50 bg-background">
-          <Button onClick={handlePrint} className="flex-1 bg-primary hover:bg-primary/90 text-sm h-9">
-            <Printer className="h-4 w-4 mr-2" />
+        <div className="flex gap-4 px-6 py-3 border-t border-border/50 bg-background">
+          <button onClick={handlePrint} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', height: '36px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, background: '#8b6f47', color: '#fff', border: '1px solid #7a6240', cursor: 'pointer' }}>
+            <Printer style={{ width: 14, height: 14, color: '#fff' }} />
             Print Details
-          </Button>
-          <Button onClick={onClose} variant="outline" className="flex-1 text-sm h-9">
+          </button>
+          <button onClick={onClose} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '36px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', cursor: 'pointer' }}>
             Close
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>

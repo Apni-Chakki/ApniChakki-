@@ -531,3 +531,10 @@ html, body {
   justify-content: center;
 }
 
+/* ---- Remove focus ring from Dialog X close button ---- */
+[data-slot="dialog-content"] > button:focus,
+[data-slot="dialog-content"] > button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+

@@ -92,7 +92,7 @@ export function ReadyOrders() {
       </div>
 
       {orders.length === 0 && !loading ? (
-        <div className="p-12 text-center border-2 border-dashed rounded-lg bg-muted/30">
+        <div className="p-12 text-center border-2 border-dashed rounded-xl" style={{ background: '#ffffff' }}>
             <PackageCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-lg font-medium text-foreground">No ready orders right now.</p>
             <p className="text-muted-foreground">When you mark an order as 'Ready' in Today's Work, it will appear here.</p>

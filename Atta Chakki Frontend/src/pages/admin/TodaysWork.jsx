@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Badge } from '../../components/common/badge';
-import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, AlertCircle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { deductFromInventory } from '../../utils/inventoryUtils';
@@ -16,16 +16,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from '../../components/common/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../components/common/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -973,32 +963,37 @@ Gristmill's - Fresh Flour Daily
         onClose={() => setPrintOrder(null)}
       />
 
-        <AlertDialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel Order #{cancelOrder?.id}</AlertDialogTitle>
-              <AlertDialogDescription>
+        <Dialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive text-base">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                Cancel Order #{cancelOrder?.id}
+              </DialogTitle>
+              <DialogDescription>
                 Are you sure you want to cancel this order? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+              </DialogDescription>
+            </DialogHeader>
             <Textarea
               placeholder="Optional: Reason for cancellation..."
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              className="mt-2"
+              className="min-h-[100px] resize-none"
             />
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep Order</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
+            <DialogFooter className="flex flex-row gap-2">
+              <Button variant="outline" className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300" onClick={() => { setCancelOrder(null); setCancelReason(''); }} disabled={isCancelling}>
+                Keep Order
+              </Button>
+              <Button
+                className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
                 onClick={handleCancelOrder}
                 disabled={isCancelling}
               >
-                {isCancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                {isCancelling ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin text-white" />Cancelling...</> : 'Yes, Cancel Order'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ─── Split Order Modal ───────────────────────────────────────── */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
