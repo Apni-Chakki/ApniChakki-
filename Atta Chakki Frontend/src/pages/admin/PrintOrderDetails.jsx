@@ -938,8 +938,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
             <MessageCircle className={`h-4 w-4 ${lang === 'ur' ? 'ml-2' : 'mr-2'}`} />
             {lang === 'ur' ? 'واٹس ایپ' : 'WhatsApp'}
           </Button>
-          
-          {/* Language Toggle Button — same style as header LanguageToggle */}
+
           <Button
             variant="outline"
             size="sm"

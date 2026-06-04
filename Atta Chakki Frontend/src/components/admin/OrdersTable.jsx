@@ -18,23 +18,23 @@ export function OrdersTable({ orders, actions }) {
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order ID</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Items</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="px-6 py-4">Order ID</TableHead>
+            <TableHead className="px-6 py-4">Customer</TableHead>
+            <TableHead className="px-6 py-4">Items</TableHead>
+            <TableHead className="px-6 py-4">Total</TableHead>
+            <TableHead className="px-6 py-4">Status</TableHead>
+            <TableHead className="px-6 py-4 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
             <TableRow key={order.id}>
               {/* Order ID & Date */}
-              <TableCell>
+              <TableCell className="px-6 py-4">
                 <div className="font-medium">#{order.id}</div>
                 <div className="text-xs text-muted-foreground">
                   {/* Safely format date */}
@@ -43,11 +43,10 @@ export function OrdersTable({ orders, actions }) {
               </TableCell>
 
               {/* Customer Details */}
-              <TableCell>
+              <TableCell className="px-6 py-4">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1 font-medium">
                     <User className="h-3 w-3 text-muted-foreground" />
-                    {/* Handle both flat 'customerName' and nested 'customer.name' */}
                     {order.customerName || order.customer?.name || "Unknown"}
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -57,7 +56,7 @@ export function OrdersTable({ orders, actions }) {
                   {order.deliveryAddress && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3" />
-                      <span className="truncate max-w-[150px]" title={order.deliveryAddress}>
+                      <span className="truncate max-w-[200px]" title={order.deliveryAddress}>
                         {order.deliveryAddress}
                       </span>
                     </div>
@@ -66,12 +65,11 @@ export function OrdersTable({ orders, actions }) {
               </TableCell>
 
               {/* Order Items */}
-              <TableCell>
+              <TableCell className="px-6 py-4">
                 <div className="flex flex-col gap-1">
                   {order.items && order.items.map((item, index) => (
                     <div key={index} className="text-sm">
                       <span className="font-medium">{item.quantity}x</span>{" "}
-                      {/* Safety Check: Check service.name, or item.name, or fallback */}
                       {item.service?.name || item.name || "Unknown Item"}
                     </div>
                   ))}
@@ -79,7 +77,7 @@ export function OrdersTable({ orders, actions }) {
               </TableCell>
 
               {/* Total Amount */}
-              <TableCell>
+              <TableCell className="px-6 py-4">
                 <div className="font-bold text-primary">
                   Rs. {parseFloat(order.total || 0).toLocaleString()}
                 </div>
@@ -89,7 +87,7 @@ export function OrdersTable({ orders, actions }) {
               </TableCell>
 
               {/* Status Badge */}
-              <TableCell>
+              <TableCell className="px-6 py-4">
                 <Badge
                   variant={
                     order.status === "completed" ? "success" :
@@ -103,7 +101,7 @@ export function OrdersTable({ orders, actions }) {
               </TableCell>
 
               {/* Action Buttons */}
-              <TableCell className="text-right">
+              <TableCell className="px-6 py-4 text-right">
                 {actions ? actions(order) : null}
               </TableCell>
             </TableRow>

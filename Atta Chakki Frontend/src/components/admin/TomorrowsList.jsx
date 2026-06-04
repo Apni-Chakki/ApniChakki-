@@ -364,7 +364,7 @@ export function TomorrowsList() {
 
       {/* capacity bar for tomorrow */}
       {capacity && (
-        <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+        <Card className="border-orange-200" style={{ background: '#ffffff' }}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -398,7 +398,7 @@ export function TomorrowsList() {
 
       {/* orders list */}
       {orders.length === 0 ? (
-        <Card className="bg-muted/50 border-dashed">
+        <Card className="border-dashed" style={{ background: '#ffffff' }}>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="rounded-full bg-background p-4 mb-4">
               <CalendarClock className="h-8 w-8 text-muted-foreground" />

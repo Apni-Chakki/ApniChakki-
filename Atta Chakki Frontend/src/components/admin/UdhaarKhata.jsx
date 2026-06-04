@@ -203,73 +203,72 @@ export function UdhaarKhata() {
           setPaymentAmount('');
         }
       }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{selectedCustomer?.name}'s Ledger</span>
-              <span className="text-red-600 font-bold mr-6">Total Due: Rs. {parseFloat(selectedCustomer?.totalDebt || 0).toLocaleString()}</span>
-            </DialogTitle>
-            <DialogDescription>
-              Phone: {selectedCustomer?.phone}
+        <DialogContent className="max-w-lg w-full flex flex-col" style={{ maxHeight: '85vh', overflow: 'hidden' }}>
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>{selectedCustomer?.name}'s Ledger</DialogTitle>
+            <DialogDescription className="flex items-center justify-between">
+              <span>Phone: {selectedCustomer?.phone}</span>
+              <span className="text-red-600 font-bold text-sm">Due: Rs. {parseFloat(selectedCustomer?.totalDebt || 0).toLocaleString()}</span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-6">
+          <div className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
             {/* Payment Action */}
-            <div className="bg-secondary/30 p-4 rounded-lg border border-border flex items-end gap-4">
-              <div className="flex-1">
-                <Label htmlFor="payAmount">Receive Payment</Label>
-                <Input 
-                  id="payAmount" 
-                  type="number" 
-                  placeholder="Enter amount to settle..." 
+            <div className="bg-secondary/30 p-3 rounded-lg border border-border space-y-2">
+              <Label htmlFor="payAmount" className="text-sm font-semibold">Receive Payment</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="payAmount"
+                  type="number"
+                  placeholder="Enter amount..."
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="mt-1.5"
+                  className="flex-1"
                   disabled={isProcessing}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  This will automatically pay off oldest orders first (FIFO).
-                </p>
+                <Button
+                  onClick={() => setShowPaymentDialog(true)}
+                  disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing}
+                  className="shrink-0"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1.5 text-white" />
+                  Settle
+                </Button>
               </div>
-              <Button 
-                onClick={() => setShowPaymentDialog(true)} 
-                disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Settle Amount
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                This will automatically pay off oldest orders first (FIFO).
+              </p>
             </div>
 
             {/* Order History Table */}
             <div>
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
+              <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
                 <History className="h-4 w-4" /> Outstanding Orders History
               </h4>
-              <div className="border rounded-md max-h-[40vh] overflow-auto">
-                <Table className="min-w-[600px]">
+              <div className="border rounded-md overflow-x-auto" style={{ maxHeight: 'calc(85vh - 280px)', overflowY: 'auto' }}>
+                <Table>
                   <TableHeader className="sticky top-0 z-10 bg-background border-b">
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead>Date</TableHead>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Order Total</TableHead>
-                      <TableHead>Paid</TableHead>
-                      <TableHead>Outstanding</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">Date</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">#ID</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">Total</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">Paid</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">Due</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selectedCustomer?.orders?.map(order => (
                       <TableRow key={order.order_id}>
-                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-mono text-xs">#{order.order_id}</TableCell>
-                        <TableCell>Rs. {order.total?.toLocaleString()}</TableCell>
-                        <TableCell className="text-green-600">Rs. {(order.amount_paid || 0).toLocaleString()}</TableCell>
-                        <TableCell className="text-red-600 font-bold">Rs. {(order.outstanding || order.total)?.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge 
+                        <TableCell className="px-3 py-2 text-xs">{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell className="px-3 py-2 font-mono text-xs">#{order.order_id}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs">Rs. {order.total?.toLocaleString()}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-green-600">Rs. {(order.amount_paid || 0).toLocaleString()}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-red-600 font-bold">Rs. {(order.outstanding || order.total)?.toLocaleString()}</TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Badge
                             variant={order.payment_status === 'pending' ? 'destructive' : 'secondary'}
-                            className="capitalize"
+                            className="capitalize text-xs px-2 py-0.5"
                           >
                             {order.payment_status}
                           </Badge>
@@ -281,8 +280,9 @@ export function UdhaarKhata() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSelectedCustomer(null)}>Close</Button>
+
+          <DialogFooter className="flex-shrink-0 pt-2 border-t">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

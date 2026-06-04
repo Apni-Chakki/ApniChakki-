@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, AlertCircle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { deductFromInventory } from '../../lib/inventoryUtils';
@@ -16,16 +16,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from '../ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -1092,7 +1082,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
     <TooltipProvider>
     <div className="space-y-6">
       {/* header with quick stats */}
-      <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-emerald-50/50 p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-100 p-6 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 text-xs font-semibold uppercase tracking-wide mb-3">
@@ -1117,25 +1107,25 @@ Mughal Atta Chakki — Pure & Fresh Processing
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Total Weight</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalWeight.toFixed(1)} kg</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Total Weight</p>
+            <p className="text-2xl font-black text-gray-900">{totalWeight.toFixed(1)} kg</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Estimated Workload</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalProcessingMinutes} mins</p>
+          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Estimated Workload</p>
+            <p className="text-2xl font-black text-gray-900">{totalProcessingMinutes} mins</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Available Drivers</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{activeDrivers}</p>
+          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Available Drivers</p>
+            <p className="text-2xl font-black text-gray-900">{activeDrivers}</p>
           </div>
         </div>
       </div>
 
       {/* capacity utilization bar */}
       {capacity && (
-        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <Card className="border-blue-200 rounded-xl" style={{ background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)' }}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -1196,32 +1186,37 @@ Mughal Atta Chakki — Pure & Fresh Processing
         onClose={() => setPrintOrder(null)}
       />
 
-        <AlertDialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel Order #{cancelOrder?.id}</AlertDialogTitle>
-              <AlertDialogDescription>
+        <Dialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive text-base">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                Cancel Order #{cancelOrder?.id}
+              </DialogTitle>
+              <DialogDescription>
                 Are you sure you want to cancel this order? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+              </DialogDescription>
+            </DialogHeader>
             <Textarea
               placeholder="Optional: Reason for cancellation..."
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              className="mt-2"
+              className="min-h-[100px] resize-none"
             />
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep Order</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
+            <DialogFooter className="flex flex-row gap-2">
+              <Button variant="outline" className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300" onClick={() => { setCancelOrder(null); setCancelReason(''); }} disabled={isCancelling}>
+                Keep Order
+              </Button>
+              <Button
+                className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
                 onClick={handleCancelOrder}
                 disabled={isCancelling}
               >
-                {isCancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                {isCancelling ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin text-white" />Cancelling...</> : 'Yes, Cancel Order'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ─── Split Order Modal ───────────────────────────────────────── */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>

@@ -7,8 +7,10 @@ import { Card } from '../../components/common/card';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { compressImage } from '../../utils/imageCompressor';
+import { useTranslation } from 'react-i18next';
 
 export function ManageCategories() {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -181,25 +183,25 @@ export function ManageCategories() {
 
     toast.custom((t) => (
       <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
-        <p className="text-primary-foreground font-medium">Are you sure you want to delete this category?</p>
+        <p className="text-primary-foreground font-medium">{t('Delete this category?')}</p>
         <div className="flex gap-2 justify-end">
-          <Button 
-            onClick={() => toast.dismiss(t)} 
-            variant="outline" 
+          <Button
+            onClick={() => toast.dismiss(t)}
+            variant="outline"
             size="sm"
             className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
           >
-            Cancel
+            {t('Cancel')}
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               toast.dismiss(t);
               deleteCategory();
-            }} 
+            }}
             size="sm"
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
           >
-            Delete
+            {t('Delete')}
           </Button>
         </div>
       </div>
@@ -223,7 +225,7 @@ export function ManageCategories() {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading Categories...</p>
+        <p className="text-muted-foreground">{t('Loading Categories...')}</p>
       </div>
     );
   }
@@ -232,23 +234,23 @@ export function ManageCategories() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Manage Categories</h1>
-          <p className="text-muted-foreground">Add, edit, or remove categories</p>
+          <h1 className="text-2xl font-bold">{t('Manage Categories')}</h1>
+          <p className="text-muted-foreground">{t('Add, edit, or remove categories')}</p>
         </div>
         {!isAdding && !editingId && (
           <Button onClick={() => setIsAdding(true)} size="lg">
             <Plus className="h-5 w-5 mr-2" />
-            Add New Category
+            {t('Add New Category')}
           </Button>
         )}
       </div>
 
       {(isAdding || editingId) && (
         <Card className="p-6">
-          <h2 className="mb-4 text-xl font-semibold">{editingId ? 'Edit Category' : 'Add New Category'}</h2>
+          <h2 className="mb-4 text-xl font-semibold">{editingId ? t('Edit Category') : t('Add New Category')}</h2>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Category Name *</Label>
+              <Label htmlFor="name">{t('Category Name *')}</Label>
               <Input
                 id="name"
                 placeholder="e.g., Wheat & Flour"
@@ -259,7 +261,7 @@ export function ManageCategories() {
             </div>
 
             <div>
-              <Label htmlFor="priority">Priority (Lower numbers show first)</Label>
+              <Label htmlFor="priority">{t('Priority (Lower numbers show first)')}</Label>
               <Input
                 id="priority"
                 type="number"
@@ -271,7 +273,7 @@ export function ManageCategories() {
             </div>
             
             <div>
-              <Label>Category Image</Label>
+              <Label>{t('Category Image')}</Label>
               <div className="flex flex-col sm:flex-row gap-4 items-start mt-2">
                 <div className={`relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors ${uploadFailed ? 'border-red-400' : ''}`}>
                   <input 
@@ -285,36 +287,36 @@ export function ManageCategories() {
                   {isUploading ? (
                      <div className="flex flex-col items-center">
                         <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                        <p className="text-sm">Uploading...</p>
+                        <p className="text-sm">{t('Uploading...')}</p>
                      </div>
                   ) : uploadFailed ? (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-red-500 font-medium">⚠ Upload failed</p>
+                      <p className="text-sm text-red-500 font-medium">⚠ {t('Upload failed')}</p>
                       <p className="text-xs text-muted-foreground">{imageFile?.name}</p>
-                      <Button 
+                      <Button
                         type="button"
-                        variant="outline" 
-                        size="sm" 
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); retryUpload(); }}
                         className="relative z-10 mt-1"
                       >
-                        <RefreshCw className="h-4 w-4 mr-1" /> Retry Upload
+                        <RefreshCw className="h-4 w-4 mr-1" /> {t('Retry Upload')}
                       </Button>
-                      <p className="text-xs text-muted-foreground">or click to choose another file</p>
+                      <p className="text-xs text-muted-foreground">{t('or click to choose another file')}</p>
                     </div>
                   ) : formData.imageUrl ? (
                      <img src={formData.imageUrl} alt="Category image" className="h-32 object-contain" />
                   ) : (
                     <div className="flex flex-col items-center">
                       <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                      <p className="font-medium text-sm">Click to upload or drag & drop</p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG, WebP up to 10MB</p>
+                      <p className="font-medium text-sm">{t('Click to upload or drag & drop')}</p>
+                      <p className="text-xs text-muted-foreground">{t('PNG, JPG, WebP up to 10MB')}</p>
                     </div>
                   )}
                 </div>
                 {formData.imageUrl && (
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-success mb-2">✓ Image uploaded successfully</p>
+                    <p className="text-sm font-medium text-success mb-2">✓ {t('Image uploaded successfully')}</p>
                     <Input value={formData.imageUrl} readOnly className="text-xs" />
                   </div>
                 )}
@@ -324,10 +326,10 @@ export function ManageCategories() {
             <div className="flex gap-2 pt-4">
               <Button onClick={saveCategory} size="lg" disabled={isSaving || isUploading}>
                 {isSaving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
-                {editingId ? 'Update Category' : 'Save Category'}
+                {editingId ? t('Update Category') : t('Save Category')}
               </Button>
               <Button onClick={handleCancel} variant="outline" size="lg" disabled={isSaving || isUploading}>
-                <X className="h-5 w-5 mr-2" /> Cancel
+                <X className="h-5 w-5 mr-2" /> {t('Cancel')}
               </Button>
             </div>
           </div>
@@ -337,7 +339,7 @@ export function ManageCategories() {
       <div className="space-y-4">
         {categories.length === 0 ? (
           <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No categories available. Add your first category!</p>
+            <p className="text-muted-foreground">{t('No categories yet')}</p>
           </Card>
         ) : (
           categories.map((cat) => (
@@ -347,14 +349,14 @@ export function ManageCategories() {
                   {cat.image_url ? (
                     <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-muted-foreground text-xs">No image</span>
+                    <span className="text-muted-foreground text-xs">{t('No image')}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="mb-1 text-lg font-bold">{cat.name}</h3>
                   <div className="flex gap-4">
                     <p className="text-xs text-muted-foreground">ID: {cat.id}</p>
-                    <p className="text-xs font-semibold text-primary">Priority: {cat.priority || 0}</p>
+                    <p className="text-xs font-semibold text-primary">{t('Priority')}: {cat.priority || 0}</p>
                   </div>
                 </div>
                 <div className="flex sm:flex-col gap-2">

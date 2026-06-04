@@ -634,9 +634,6 @@ export function PrintOrderDetails({ order, open, onClose }) {
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="rounded-full p-1.5 hover:bg-muted transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
           </div>
         </DialogHeader>
 
@@ -941,8 +938,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
             <MessageCircle className={`h-4 w-4 ${lang === 'ur' ? 'ml-2' : 'mr-2'}`} />
             {lang === 'ur' ? 'واٹس ایپ' : 'WhatsApp'}
           </Button>
-          
-          {/* Language Toggle Button — same style as header LanguageToggle */}
+
           <Button
             variant="outline"
             size="sm"

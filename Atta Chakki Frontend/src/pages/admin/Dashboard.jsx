@@ -265,8 +265,7 @@ export function Dashboard() {
   };
 
   const statCards = [
-    { id: 'revenue', title: "Today's Revenue",
- value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
+    { id: 'revenue', title: "Today's Revenue", value: `Rs. ${(stats.todayRevenue).toLocaleString()}`, icon: DollarSign, iconBg: '#ECFDF5', iconColor: '#059669' },
     { id: 'orders', title: "Today's Orders", value: stats.todayOrders, icon: ShoppingBag, iconBg: '#FEF3C7', iconColor: '#B45309' },
     { id: 'completed', title: 'Completed Today', value: stats.completedToday, icon: CheckCircle, iconBg: '#F0FDFA', iconColor: '#0D9488' },
     { id: 'pending', title: 'Pending (New)', value: stats.pendingOrders, icon: Clock, iconBg: '#FFFFFF', iconColor: '#BE123C' },
@@ -285,13 +284,12 @@ export function Dashboard() {
     <div className="space-y-10 pb-16">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold
-           sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} Overview</h1>
-          <p className="text-gray-500 text-sm mt-2">Real-time store metrics and alerts</p>
+          <h1 className="text-2xl font-bold sm:text-3xl font-black tracking-tight text-gray-900">{t('Dashboard')} {t('Overview')}</h1>
+          <p className="text-gray-500 text-sm mt-2">{t('Real-time store metrics and alerts')}</p>
         </div>
         <Button onClick={fetchStats} variant="outline" size="sm" className="hidden sm:flex" style={{ borderColor: '#8b6f47', color: '#8b6f47' }} disabled={isLoading}>
           <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh Stats
+          {t('Refresh Stats')}
         </Button>
       </div>
 
@@ -306,14 +304,14 @@ export function Dashboard() {
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-900 text-lg uppercase tracking-tight">Stock Exhaustion Warning</h3>
+                  <h3 className="font-bold text-red-900 text-lg uppercase tracking-tight">{t('Stock Exhaustion Warning')}</h3>
                   <p className="text-red-700 text-sm font-medium mt-1">
-                    {lowStockCount} product(s) have fallen below their minimum safe threshold.
+                    {lowStockCount} {t('product(s) below minimum threshold')}
                   </p>
                 </div>
               </div>
               <Button variant="destructive" className="shrink-0 font-bold tracking-wide w-full md:w-auto shadow-sm" onClick={() => navigate('/admin/inventory')}>
-                Manage Inventory
+                {t('Manage Inventory')}
               </Button>
             </div>
             <div className="p-4 sm:p-6 bg-red-50/10">
@@ -322,7 +320,7 @@ export function Dashboard() {
                   <div key={item.id || i} className="flex justify-between items-center p-3 sm:p-4 bg-white border border-red-100 rounded-xl shadow-[0_2px_10px_-4px_rgba(220,38,38,0.15)] hover:border-red-300 transition-colors">
                     <div className="mr-3 overflow-hidden">
                       <p className="font-bold text-gray-800 text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Min required: {item.min} {item.unit}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{t('Min required')}: {item.min} {item.unit}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-red-700 font-extrabold text-xl leading-none">{item.stock}</p>
@@ -335,8 +333,8 @@ export function Dashboard() {
                     onClick={() => navigate('/admin/inventory')}
                     className="flex flex-col items-center justify-center p-3 bg-red-50/50 border border-red-200 border-dashed rounded-xl text-red-800 font-bold text-sm cursor-pointer hover:bg-red-100 transition-colors h-full min-h-[70px]"
                   >
-                    <span>+{lowStockCount - 7} more items</span>
-                    <span className="text-xs font-normal opacity-80 mt-0.5">Click to view all</span>
+                    <span>+{lowStockCount - 7} {t('more items')}</span>
+                    <span className="text-xs font-normal opacity-80 mt-0.5">{t('Click to view all')}</span>
                   </div>
                 )}
               </div>
@@ -349,10 +347,10 @@ export function Dashboard() {
           <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-900 shadow-sm relative overflow-hidden">
              <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
              <AlertCircle className="h-5 w-5 text-orange-600 mb-0.5" />
-             <AlertTitle className="text-orange-900 font-bold ml-2">Overdue Orders Detection</AlertTitle>
+             <AlertTitle className="text-orange-900 font-bold ml-2">{t('Overdue Orders Detection')}</AlertTitle>
              <AlertDescription className="text-orange-800 ml-2 mt-1">
-               There are <strong>{overdueOrdersCount}</strong> orders that have passed their expected delivery or pickup date. 
-               <Button variant="link" onClick={() => navigate('/admin/orders/pending')} className="text-orange-900 font-bold px-1 h-auto py-0 ml-1 underline underline-offset-2">Process Now</Button>
+               There are <strong>{overdueOrdersCount}</strong> orders that have passed their expected delivery or pickup date.
+               <Button variant="link" onClick={() => navigate('/admin/orders/pending')} className="text-orange-900 font-bold px-1 h-auto py-0 ml-1 underline underline-offset-2">{t('Process Now')}</Button>
              </AlertDescription>
           </Alert>
         )}
@@ -362,7 +360,7 @@ export function Dashboard() {
       <div>
         <div className="flex items-center gap-3 mb-7">
           <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
-          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">Today's Pulse</h2>
+          <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">{t("Today's Pulse")}</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
           {statCards.map((stat, index) => {
@@ -377,7 +375,7 @@ export function Dashboard() {
                     ? 'border-rose-200 shadow-sm'
                     : 'border-gray-200/70 bg-white shadow-sm hover:shadow-md'
                 }`}
-                style={showUrgent ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' } : {}}
+                style={showUrgent ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' } : { backgroundColor: '#ffffff' }}
               >
                 {isLoading ? (
                   <div className="p-6"><Skeleton className="h-16 w-full" /></div>
@@ -419,7 +417,7 @@ export function Dashboard() {
                               lineHeight: 1
                             }}
                           >
-                            Urgent
+                            {t('Urgent')}
                           </span>
                         )}
                       </div>
@@ -436,7 +434,7 @@ export function Dashboard() {
       <div className="pt-2">
         <div className="flex items-center gap-3 mb-7">
           <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
-          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">All-Time Statistics</h2>
+          <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">{t('All-Time Statistics')}</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {allTimeCards.map((stat, index) => {
@@ -447,7 +445,7 @@ export function Dashboard() {
                 className={`relative overflow-hidden transition-all duration-200 rounded-xl ${
                   isFeatured ? 'border-0 text-white' : 'border border-gray-100 bg-white hover:shadow-md'
                 }`}
-                style={isFeatured ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' } : {}}
+                style={isFeatured ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' } : { backgroundColor: '#ffffff' }}
               >
                 {isLoading ? (
                   <div className="p-6"><Skeleton className={`h-16 w-full ${isFeatured ? 'bg-white/20' : ''}`} /></div>
@@ -460,7 +458,7 @@ export function Dashboard() {
                       {stat.value}
                     </h2>
                     <p className={`text-xs ${stat.subtitleClass || (isFeatured ? 'text-white/70 font-medium' : 'text-gray-400 font-medium')}`}>
-                      {stat.subtitle}
+                      {t(stat.subtitle)}
                     </p>
                   </div>
                 )}
@@ -478,188 +476,146 @@ export function Dashboard() {
            setSelectedCompleted(new Set());
         }
       }}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden !bg-white" style={{ borderColor: '#d9c9b3' }}>
-          <div className="shrink-0">
-            <DialogHeader className="border-b px-4 py-3" style={{ background: 'linear-gradient(to right, #faf6f0, #f5ede3)', borderColor: '#e5d9c4' }}>
-              <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: '#6f5535' }}>
-                <History className="h-5 w-5" />
-                Pending Orders
-              </DialogTitle>
-              <DialogDescription className="text-xs text-gray-600 mt-2 font-medium">
-                {eodData?.leftover_count || yesterdayOrders.length} orders • {eodData?.leftover_total_weight_kg || 0} kg • {eodData?.leftover_total_minutes || 0} mins
+        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-xl border border-gray-200 shadow-2xl !bg-white">
+
+          {/* Header */}
+          <DialogHeader className="flex flex-row items-center gap-3 px-4 py-3 border-b border-gray-100 bg-orange-50">
+            <div className="bg-orange-200 rounded-lg p-1.5 shrink-0">
+              <History className="h-4 w-4 text-orange-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-sm font-bold text-gray-900 leading-none">Pending Orders</DialogTitle>
+              <DialogDescription className="text-[11px] text-gray-500 mt-0.5">
+                {eodData?.leftover_count || yesterdayOrders.length} orders · {eodData?.leftover_total_weight_kg || 0} kg · {eodData?.leftover_total_minutes || 0} mins
               </DialogDescription>
-            </DialogHeader>
-          </div>
+            </div>
+          </DialogHeader>
 
           {/* Step: Loading */}
           {eodStep === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="rounded-full p-4 mb-4" style={{ backgroundColor: '#f5ede3' }}>
-                <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#8b6f47' }} />
-              </div>
-              <p className="text-gray-900 font-semibold text-base">Loading orders...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-7 w-7 animate-spin text-orange-500 mb-3" />
+              <p className="text-gray-600 text-sm font-medium">Loading orders...</p>
             </div>
           )}
 
-          {/* Step: Select completed orders */}
+          {/* Step: Select */}
           {eodStep === 'select' && (
-            <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
-              {/* Info header bar */}
-              <div className="shrink-0 px-4 py-2 border-b" style={{ backgroundColor: '#faf6f0', borderColor: '#e5d9c4' }}>
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="select-all-eod" className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox 
-                      id="select-all-eod" 
-                      checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
-                      onCheckedChange={toggleSelectAll}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-xs font-bold" style={{ color: '#6f5535' }}>Select All</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <div className="eod-badge-completed">
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      Completed: {selectedCompleted.size}
-                    </div>
-                    <div className="eod-badge-pending">
-                      Pending: {yesterdayOrders.length - selectedCompleted.size}
-                    </div>
-                  </div>
+            <>
+              {/* Toolbar */}
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <label htmlFor="select-all-eod" className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    id="select-all-eod"
+                    checked={yesterdayOrders.length > 0 && selectedCompleted.size === yesterdayOrders.length}
+                    onCheckedChange={toggleSelectAll}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="text-xs font-semibold text-gray-600">Select All</span>
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                    <CheckCircle className="h-3 w-3" />{selectedCompleted.size} Done
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                    <Clock className="h-3 w-3" />{yesterdayOrders.length - selectedCompleted.size} Pending
+                  </span>
                 </div>
               </div>
 
-              {/* Scrollable orders list */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-3" style={{ maxHeight: '400px' }}>
-                <div className="space-y-1.5">
-                  {yesterdayOrders.map((order) => {
-                    const isChecked = selectedCompleted.has(order.id);
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => toggleOrderCompleted(order.id)}
-                        className={`relative border rounded-lg p-2.5 cursor-pointer transition-all duration-200 select-none ${
-                          isChecked 
-                            ? 'bg-green-50 border-green-300 shadow-sm' 
-                            : 'bg-white hover:shadow-sm eod-row-pending'
-                        }`}
-                        style={{ backgroundColor: isChecked ? '#f0fdf4' : '#ffffff' }}
-                      >
-                        <div className="flex items-start gap-2.5 justify-between">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <Checkbox
-                              checked={isChecked}
-                              onCheckedChange={() => toggleOrderCompleted(order.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-4 w-4 mt-0.5 flex-shrink-0"
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <h4 className="font-bold text-sm text-gray-900">#{order.id}</h4>
-                              </div>
-
-                              <div className="text-xs space-y-0.5">
-                                <div className="flex items-center gap-1.5">
-                                  <User className="h-3 w-3 flex-shrink-0" style={{ color: '#8b6f47' }} />
-                                  <span className="font-medium truncate">{order.customer_name}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-gray-600 flex-wrap">
-                                  <span className="eod-tag-weight">
-                                    ⚖️ {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg
-                                  </span>
-                                  <span className="eod-tag-time">
-                                    ⏱️ {order.processing_time_minutes || '~'} min
-                                  </span>
-                                  {!isChecked && (
-                                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-nowrap" style={{ color: '#6f5535', backgroundColor: '#faf6f0' }}>
-                                      Rs. {parseInt(order.total_amount || 0).toLocaleString()}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {!isChecked && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleOrderCompleted(order.id);
-                                }}
-                                className="eod-btn-done"
-                                title="Mark as completed"
-                              >
-                                <CheckCircle className="h-3.5 w-3.5" />
-                                Done
-                              </button>
-                            )}
-                            {isChecked && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleOrderCompleted(order.id);
-                                }}
-                                className="eod-btn-undo"
-                                title="Mark as pending"
-                              >
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                                Undo
-                              </button>
-                            )}
-                          </div>
+              {/* Orders list */}
+              <div className="px-3 py-2 space-y-1.5" style={{ maxHeight: 'calc(85vh - 190px)', overflowY: 'auto' }}>
+                {yesterdayOrders.map((order) => {
+                  const isChecked = selectedCompleted.has(order.id);
+                  return (
+                    <div
+                      key={order.id}
+                      onClick={() => toggleOrderCompleted(order.id)}
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 cursor-pointer select-none transition-colors border ${
+                        isChecked
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-white border-gray-200 hover:border-orange-300 hover:bg-orange-50/40'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => toggleOrderCompleted(order.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-3.5 w-3.5 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-gray-900">#{order.id}</span>
+                          <span className="text-xs text-gray-600 truncate">{order.customer_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-medium text-blue-600">⚖ {parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</span>
+                          <span className="text-[10px] text-gray-300">|</span>
+                          <span className="text-[10px] font-medium text-purple-600">⏱ {order.processing_time_minutes || '~'} min</span>
                         </div>
                       </div>
-                    );
-                  })}
-
-                  {yesterdayOrders.length === 0 && (
-                    <div className="text-center py-12 text-gray-400">
-                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-400" />
-                      <p className="font-bold text-sm">All Clear!</p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs font-bold text-gray-800">Rs. {parseInt(order.total_amount || 0).toLocaleString()}</span>
+                        {!isChecked ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleOrderCompleted(order.id); }}
+                            className="flex items-center gap-1 text-[11px] font-bold bg-green-600 hover:bg-green-700 text-white px-2.5 py-1 rounded-full transition-colors"
+                          >
+                            <CheckCircle className="h-3 w-3" />Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleOrderCompleted(order.id); }}
+                            className="flex items-center gap-1 text-[11px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-600 px-2.5 py-1 rounded-full transition-colors"
+                          >
+                            Undo
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
+                  );
+                })}
+                {yesterdayOrders.length === 0 && (
+                  <div className="flex flex-col items-center py-10 text-gray-400">
+                    <CheckCircle className="h-8 w-8 mb-2 text-green-400" />
+                    <p className="text-sm font-semibold">All Clear!</p>
+                  </div>
+                )}
               </div>
 
-              {/* Action footer */}
-              <div className="shrink-0 border-t p-3 space-y-2.5" style={{ borderColor: '#e5d9c4', background: 'linear-gradient(to right, #faf6f0, #f5ede3)' }}>
-                <button 
-                  className="eod-btn-confirm" 
+              {/* Footer */}
+              <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
+                <div className="flex items-center justify-between text-[11px] font-semibold mb-2.5">
+                  <span className="text-green-700">✓ {selectedCompleted.size} marked as done</span>
+                  <span className="text-orange-600">{yesterdayOrders.length - selectedCompleted.size} will go to queue</span>
+                </div>
+                <button
+                  className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold text-sm py-2.5 rounded-lg transition-colors"
                   onClick={handleProcessEodSelection}
                   disabled={isProcessingEod}
                 >
-                  {isProcessingEod ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Processing...</>
-                  ) : (
-                    <><ArrowRight className="h-4 w-4 mr-1.5" /> Confirm & Process</>
-                  )}
+                  {isProcessingEod
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Processing...</>
+                    : <><ArrowRight className="h-4 w-4" />Confirm &amp; Process</>
+                  }
                 </button>
-                <p className="text-[11px] text-gray-700 text-center font-semibold">
-                  ✓ {selectedCompleted.size} done • {yesterdayOrders.length - selectedCompleted.size} to queue
-                </p>
               </div>
-            </div>
+            </>
           )}
 
           {/* Step: Processing */}
           {eodStep === 'processing' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="rounded-full p-3 mb-3" style={{ backgroundColor: '#f5ede3' }}>
-                <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#8b6f47' }} />
-              </div>
-              <p className="text-gray-900 font-semibold text-sm">Processing...</p>
+              <Loader2 className="h-7 w-7 animate-spin text-orange-500 mb-3" />
+              <p className="text-gray-700 text-sm font-semibold">Processing orders...</p>
             </div>
           )}
 
           {/* Step: Done */}
           {eodStep === 'done' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="bg-green-100 rounded-full p-3 mb-3">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <p className="text-gray-900 font-semibold text-sm">Done! Redirecting...</p>
+              <CheckCircle className="h-8 w-8 text-green-500 mb-3" />
+              <p className="text-gray-700 text-sm font-semibold">Done! Redirecting...</p>
             </div>
           )}
         </DialogContent>

@@ -161,7 +161,7 @@
   flex: 1;
   padding: 2rem;
   overflow: auto;
-  background-color: #FBF6F0;
+  background-color: #f1eeee;
 }
 @media (max-width: 767px) {
   .admin-main-inner { padding: 1rem; }
@@ -546,5 +546,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---- Remove focus ring from Dialog X close button ---- */
+[data-slot="dialog-content"] > button:focus,
+[data-slot="dialog-content"] > button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
