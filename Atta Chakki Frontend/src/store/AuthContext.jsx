@@ -113,14 +113,14 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       if (data.success) {
         setUser(data.user);
-        return true;
+        return data.user;
       } else {
         console.error(data.message || "Google login failed");
-        return false;
+        return null;
       }
     } catch (error) {
       console.error("Google Login API Error:", error);
-      return false;
+      return null;
     }
   };
 

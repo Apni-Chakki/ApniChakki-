@@ -194,17 +194,17 @@ export function Homepage() {
                   {allCategories.map((category) => (
                     <Card
                       key={category.id}
-                      className="category-card-responsive cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 group relative overflow-hidden w-full"
+                      className="category-card-responsive cursor-pointer rounded-2xl shadow-md hover:shadow-lg group relative overflow-hidden w-full border border-border hover:border-primary/50"
                       onClick={() => setSelectedCategory(category.id)}
                     >
                       <div 
-                        className="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition-transform duration-500"
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
                         style={{ backgroundImage: `url(${category.imageUrl})` }}
                       />
-                      <div className={`absolute inset-0 ${category.overlayColor} group-hover:opacity-70 transition-opacity duration-300`} />
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors duration-300" />
+                      <div className={`absolute inset-0 ${category.overlayColor} opacity-60`} />
+                      <div className="absolute inset-0 bg-black/30" />
                       <div className="relative h-full flex items-center justify-center px-6">
-                        <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-2xl leading-tight">
+                        <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-md leading-tight">
                           {tDynamic(category.labelKey)}
                         </h3>
                       </div>

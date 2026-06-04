@@ -43,6 +43,7 @@ const OrdersRecord = lazy(() => import('./pages/admin/OrdersRecord').then(module
 const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement })));
 const ManageCategories = lazy(() => import('./pages/admin/ManageCategories').then(module => ({ default: module.ManageCategories })));
 const ManageServices = lazy(() => import('./pages/admin/ManageServices').then(module => ({ default: module.ManageServices })));
+const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons').then(module => ({ default: module.ManageCoupons })));
 const ManageDelivery = lazy(() => import('./pages/admin/ManageDelivery').then(module => ({ default: module.ManageDelivery })));
 const Settings = lazy(() => import('./pages/admin/Settings').then(module => ({ default: module.Settings })));
 const HeroSettings = lazy(() => import('./pages/admin/HeroSettings').then(module => ({ default: module.HeroSettings })));
@@ -54,6 +55,9 @@ const PaymentVerification = lazy(() => import('./pages/admin/PaymentVerification
 const AdminComments = lazy(() => import('./pages/admin/AdminComments').then(module => ({ default: module.AdminComments })));
 const LiveTrackingMap = lazy(() => import('./pages/admin/LiveTrackingMap').then(module => ({ default: module.LiveTrackingMap })));
 const ContactMessages = lazy(() => import('./pages/admin/ContactMessages').then(module => ({ default: module.ContactMessages })));
+const CustomMixRequests = lazy(() => import('./pages/admin/CustomMixRequests').then(module => ({ default: module.default })));
+const ActiveRentals = lazy(() => import('./pages/admin/ActiveRentals').then(module => ({ default: module.ActiveRentals })));
+
 
 function PageLoader() {
   return (
@@ -87,7 +91,8 @@ function ProtectedDeliveryRoute({ children }) {
 
   const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
 
-  if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'delivery')) {
+  const role = storedUser?.role ? storedUser.role.toLowerCase() : '';
+  if (!storedUser || (role !== 'delivery' && role !== 'delivery_boy' && role !== 'admin')) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -196,10 +201,13 @@ export default function App() {
             <Route path="/admin/inventory" element={<ProtectedAdminRoute><AdminLayout><InventoryManagement /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminLayout><ManageCategories /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/services" element={<ProtectedAdminRoute><AdminLayout><ManageServices /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminLayout><ManageCoupons /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/delivery" element={<ProtectedAdminRoute><AdminLayout><ManageDelivery /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/contact-messages" element={<ProtectedAdminRoute><AdminLayout><ContactMessages /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/custom-mix-requests" element={<ProtectedAdminRoute><AdminLayout><CustomMixRequests /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/rentals" element={<ProtectedAdminRoute><AdminLayout><ActiveRentals /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
             

@@ -25,6 +25,7 @@ try {
     
     $name = trim($data['name']);
     $image_url = isset($data['image_url']) ? trim($data['image_url']) : null;
+    $priority = isset($data['priority']) ? (int)$data['priority'] : 0;
     
     // Check if category already exists
     $checkSql = "SELECT id FROM categories WHERE LOWER(name) = LOWER(?)";
@@ -42,13 +43,13 @@ try {
     }
     
     // Insert new category
-    $sql = "INSERT INTO categories (name, image_url) VALUES (?, ?)";
+    $sql = "INSERT INTO categories (name, image_url, priority) VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
     
-    $stmt->bind_param("ss", $name, $image_url);
+    $stmt->bind_param("ssi", $name, $image_url, $priority);
     $stmt->execute();
     
     $categoryId = $conn->insert_id;
@@ -60,7 +61,8 @@ try {
         'category' => [
             'id' => $categoryId,
             'name' => $name,
-            'image_url' => $image_url
+            'image_url' => $image_url,
+            'priority' => $priority
         ]
     ]);
     

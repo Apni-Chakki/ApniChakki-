@@ -37,6 +37,50 @@ $result = $stmt->get_result();
 
 $orders = [];
 while ($row = $result->fetch_assoc()) {
+    $order_id = $row['id'];
+    $items = [];
+    $item_res = $conn->query("SELECT id, quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding FROM order_items WHERE order_id = '$order_id'");
+    while($i = $item_res->fetch_assoc()) {
+         $order_item_id = $i['id'];
+         $cust_res = $conn->query("SELECT option_name, option_price FROM order_item_customizations WHERE order_item_id = '$order_item_id'");
+         $customizations = [];
+         while ($cust_row = $cust_res->fetch_assoc()) {
+             $customizations[] = $cust_row;
+         }
+         $i['customizations'] = $customizations;
+
+         $pid = $i['product_id'];
+         $prod_res = $conn->query("SELECT name, unit FROM products WHERE id = '$pid'");
+         if ($p = $prod_res->fetch_assoc()) {
+             $i['name'] = $p['name'];
+             $i['unit'] = $p['unit'];
+         } else {
+             $i['name'] = "Item #$pid";
+             $i['unit'] = 'kg';
+         }
+
+         // Fetch rental details if any
+         $rent_stmt = $conn->prepare("SELECT rental_start_date, rental_end_date, rental_days, rental_price_per_day, security_deposit, late_penalty_per_day, status as rental_status FROM rentals WHERE order_id = ? AND product_id = ? LIMIT 1");
+         $rent_stmt->bind_param("ii", $order_id, $pid);
+         $rent_stmt->execute();
+         $rent_res = $rent_stmt->get_result();
+         if ($rent_row = $rent_res->fetch_assoc()) {
+             $i['is_rental'] = 1;
+             $i['rental_start_date'] = $rent_row['rental_start_date'];
+             $i['rental_end_date'] = $rent_row['rental_end_date'];
+             $i['rental_days'] = $rent_row['rental_days'];
+             $i['rental_price_per_day'] = $rent_row['rental_price_per_day'];
+             $i['security_deposit'] = $rent_row['security_deposit'];
+             $i['late_penalty_per_day'] = $rent_row['late_penalty_per_day'];
+             $i['rental_status'] = $rent_row['rental_status'];
+         } else {
+             $i['is_rental'] = 0;
+         }
+         $rent_stmt->close();
+
+         $items[] = $i;
+    }
+    $row['items'] = $items;
     $orders[] = $row;
 }
 

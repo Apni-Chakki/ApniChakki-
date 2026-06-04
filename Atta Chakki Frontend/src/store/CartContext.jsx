@@ -5,6 +5,16 @@ const CartContext = createContext(undefined);
 
 // Helper: create a stable key from selected customizations for comparison
 function customizationKey(service) {
+  const isRental = service.is_rental === 1 || service.is_rental === '1' || service.is_rental === true || service.is_rental === 'true';
+  if (isRental) {
+    return `rental|${service.rental_start_date}|${service.rental_days}`;
+  }
+  if (service.is_custom_mix && service.selected_mix_items) {
+    return 'mix|' + service.selected_mix_items
+      .map(m => `${m.item_name}:${m.ratio}`)
+      .sort()
+      .join('|');
+  }
   if (!service.selected_customizations || service.selected_customizations.length === 0) {
     // Backward compat: fallback to old is_cleaning/is_grinding
     return `${service.is_cleaning || false}_${service.is_grinding || false}`;
@@ -66,16 +76,26 @@ export function CartProvider({ children }) {
 
   const addToCart = (service, quantity = 1, isWeightPending = false) => {
     setCart(prev => {
+      const isRental = service.is_rental === 1 || service.is_rental === '1' || service.is_rental === true || service.is_rental === 'true';
+      let calculatedPrice = parseFloat(service.price) || 0;
+      if (isRental) {
+        calculatedPrice = (parseFloat(service.rental_price_per_day) * parseInt(service.rental_days)) + parseFloat(service.security_deposit);
+      }
+      const roundedService = {
+        ...service,
+        price: Math.round(calculatedPrice)
+      };
+
       if (isWeightPending) {
         const existingPending = prev.find(item => item.service.id === service.id && item.isWeightPending);
         if (existingPending) {
             toast.error('You already have a pickup request in your cart.');
             return prev;
           }
-          return [...prev, { service, quantity: quantity, isWeightPending: true }];
+          return [...prev, { service: roundedService, quantity: quantity, isWeightPending: true }];
       }
 
-      const key = customizationKey(service);
+      const key = customizationKey(roundedService);
       const existingItem = prev.find(item => 
         item.service.id === service.id && 
         !item.isWeightPending &&
@@ -94,14 +114,21 @@ export function CartProvider({ children }) {
       }
 
       toast.success(`${service.name} added to cart!`);
-      return [...prev, { service, quantity, isWeightPending: false }];
+      return [...prev, { service: roundedService, quantity, isWeightPending: false }];
     });
   };
 
-  const updateQuantity = (serviceId, quantity, isWeightPending = false, isCleaning = false, isGrinding = false, selectedCustomizations = null) => {
+  const updateQuantity = (serviceId, quantity, isWeightPending = false, isCleaning = false, isGrinding = false, selectedCustomizations = null, isCustomMix = false, selectedMixItems = null, isRental = false, rentalStartDate = null, rentalDays = null) => {
     setCart(prev => {
       const itemInCart = prev.find(item => {
         if (item.service.id !== serviceId || item.isWeightPending !== isWeightPending) return false;
+        
+        if (isRental) {
+          return customizationKey(item.service) === customizationKey({ is_rental: true, rental_start_date: rentalStartDate, rental_days: rentalDays });
+        }
+        if (isCustomMix) {
+           return customizationKey(item.service) === customizationKey({ is_custom_mix: true, selected_mix_items: selectedMixItems });
+        }
         if (selectedCustomizations) {
           return customizationKey(item.service) === customizationKey({ selected_customizations: selectedCustomizations });
         }
@@ -116,9 +143,15 @@ export function CartProvider({ children }) {
     });
   };
 
-  const removeFromCart = (serviceId, isWeightPending = false, isCleaning = false, isGrinding = false, selectedCustomizations = null) => {
+  const removeFromCart = (serviceId, isWeightPending = false, isCleaning = false, isGrinding = false, selectedCustomizations = null, isCustomMix = false, selectedMixItems = null, isRental = false, rentalStartDate = null, rentalDays = null) => {
     setCart(prev => prev.filter(item => {
       if (item.service.id !== serviceId || item.isWeightPending !== isWeightPending) return true;
+      if (isRental) {
+        return customizationKey(item.service) !== customizationKey({ is_rental: true, rental_start_date: rentalStartDate, rental_days: rentalDays });
+      }
+      if (isCustomMix) {
+         return customizationKey(item.service) !== customizationKey({ is_custom_mix: true, selected_mix_items: selectedMixItems });
+      }
       if (selectedCustomizations) {
         return customizationKey(item.service) !== customizationKey({ selected_customizations: selectedCustomizations });
       }
@@ -132,12 +165,13 @@ export function CartProvider({ children }) {
   };
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => {
+    const rawTotal = cart.reduce((total, item) => {
       if (item.isWeightPending) {
         return total;
       }
-      return total + item.service.price * item.quantity;
+      return total + (parseFloat(item.service.price) * item.quantity);
     }, 0);
+    return Math.round(rawTotal);
   };
 
   const getTotalItems = () => {

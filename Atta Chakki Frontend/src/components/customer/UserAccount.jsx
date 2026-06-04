@@ -92,6 +92,7 @@ export function UserAccount() {
             createdAt: order.created_at, 
 			  cancelReason: order.cancellation_reason,
 			  cancelledBy: order.cancelled_by,
+              assignedDate: order.assigned_date || null,
 			  total: totalAmount,
             amountPaid: amountPaid,
             paymentMethod: order.payment_method || 'cod',
@@ -139,6 +140,12 @@ export function UserAccount() {
       return;
     }
 
+    const cleanPhone = tempProfile.phone.replace(/\s/g, '');
+    if (!/^\d{11}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
+      return;
+    }
+
     setIsSaving(true);
     
     try {
@@ -148,7 +155,7 @@ export function UserAccount() {
         body: JSON.stringify({
           user_id: user.id,
           name: tempProfile.name,
-          phone: tempProfile.phone,
+          phone: cleanPhone,
           address: tempProfile.address
         })
       });
@@ -161,12 +168,13 @@ export function UserAccount() {
           ...prev,
           full_name: tempProfile.name,
           name: tempProfile.name,
-          phone: tempProfile.phone,
+          phone: cleanPhone,
           address: tempProfile.address
         }));
 
         // 3. Update UI
-        setProfile(tempProfile);
+        const updatedProfile = { ...tempProfile, phone: cleanPhone };
+        setProfile(updatedProfile);
         setEditMode(false);
         toast.success(t('Profile updated successfully!'));
       } else {
@@ -210,6 +218,15 @@ export function UserAccount() {
   const handleCancelOrder = async () => {
     if (!cancelOrder) return;
 
+    // Direct frontend check: block cancellation if order is assigned to today's date or earlier
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (cancelOrder.assignedDate && cancelOrder.assignedDate <= todayStr) {
+      toast.error(t('Processing has started, it cannot be cancelled now / پروسیسنگ شروع ہو چکی ہے، اب آرڈر کینسل نہیں کیا جا سکتا۔'));
+      setCancelOrder(null);
+      setCancelReason('');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
         method: 'POST',
@@ -225,7 +242,7 @@ export function UserAccount() {
         toast.success(t('Order cancelled successfully'));
         fetchOrders(); 
       } else {
-        toast.error(t('Failed to cancel order'));
+        toast.error(result.message || t('Failed to cancel order'));
       }
     } catch (e) {
       toast.error(t('Network error while cancelling'));

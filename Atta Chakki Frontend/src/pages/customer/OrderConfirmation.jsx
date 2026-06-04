@@ -34,11 +34,15 @@ export function OrderConfirmation() {
           paymentStatus: o.payment_status,
           deliveryAddress: o.shipping_address,
           createdAt: o.created_at,
+          couponCode: o.coupon_code || null,
+          couponDiscount: o.coupon_discount || 0,
           items: (o.items || []).map(item => ({
             name: item.name,
             quantity: item.quantity,
             price: item.price_at_purchase,
-            isWeightPending: item.is_weight_pending == 1
+            isWeightPending: item.is_weight_pending == 1,
+            discountType: item.discount_type || null,
+            discountValue: item.discount_value || 0
           }))
         });
       }
@@ -100,17 +104,48 @@ export function OrderConfirmation() {
                 {order.items && order.items.length > 0 && (
                   <div className="pt-3 border-t border-border">
                     <p className="text-sm font-semibold text-foreground mb-2">Items Ordered</p>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {order.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span>{item.name}</span>
-                          {item.isWeightPending ? (
-                            <span className="text-primary font-medium">Pending Wt.</span>
-                          ) : (
-                            <span>x {item.quantity}</span>
+                        <div key={idx} className="text-sm">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{item.name}</span>
+                            {item.isWeightPending ? (
+                              <span className="text-primary font-medium">Pending Wt.</span>
+                            ) : (
+                              <span>x {item.quantity}</span>
+                            )}
+                          </div>
+                          {item.discountType && item.discountType !== 'none' && item.discountValue > 0 && (
+                            <div className="flex justify-between text-xs text-blue-600 dark:text-blue-400 mt-1">
+                              <span>Product Discount</span>
+                              <span>
+                                {item.discountType === 'percentage'
+                                  ? `${item.discountValue}%`
+                                  : `Rs. ${item.discountValue}`} OFF
+                              </span>
+                            </div>
+                          )}
+                          {!item.isWeightPending && (
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Price</span>
+                              <span>Rs. {item.price * item.quantity}</span>
+                            </div>
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {order.couponCode && (
+                  <div className="pt-3 border-t border-border">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        Coupon Applied: {order.couponCode}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        -Rs. {order.couponDiscount}
+                      </span>
                     </div>
                   </div>
                 )}

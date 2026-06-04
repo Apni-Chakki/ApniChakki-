@@ -10,7 +10,6 @@ import { API_BASE_URL } from '../../config';
 import { Alert, AlertDescription, AlertTitle } from '../../components/common/alert';
 import { toast } from 'sonner';
 import { Checkbox } from '../../components/common/checkbox';
-import { ScrollArea } from '../../components/common/scroll-area';
 import {
   Dialog,
   DialogContent,

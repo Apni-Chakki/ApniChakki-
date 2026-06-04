@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { User, Package, MapPin, Phone, Mail, Edit, Save, X, LogOut, Loader2, ShieldCheck, Truck } from 'lucide-react'; 
+import { User, Package, MapPin, Phone, Mail, Edit, Save, X, LogOut, Loader2, ShieldCheck, Truck, Calendar, Clock, Coins, AlertCircle, CheckCircle2, ClipboardList } from 'lucide-react'; 
 import { Link, useNavigate } from 'react-router-dom'; 
+import { ImageWithFallback } from '../../components/common/ImageWithFallback';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
@@ -40,11 +41,14 @@ export function UserAccount() {
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isSaving, setIsSaving] = useState(false); // New loading state for saving
+  const [rentals, setRentals] = useState([]);
+  const [loadingRentals, setLoadingRentals] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadProfile();
       fetchOrders(); 
+      fetchRentals();
     }
   }, [user]);
 
@@ -92,6 +96,9 @@ export function UserAccount() {
             createdAt: order.created_at, 
 			  cancelReason: order.cancellation_reason,
 			  cancelledBy: order.cancelled_by,
+              paymentRejectReason: order.payment_reject_reason || null,
+              paymentRejectDate: order.payment_reject_date || null,
+              assignedDate: order.assigned_date || null,
 			  total: totalAmount,
             amountPaid: amountPaid,
             paymentMethod: order.payment_method || 'cod',
@@ -118,6 +125,29 @@ export function UserAccount() {
     }
   };
 
+  const fetchRentals = async () => {
+    setLoadingRentals(true);
+    if (!user || !user.id || user.id === 0) {
+      setRentals([]);
+      setLoadingRentals(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/get_rental_history.php?user_id=${user.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setRentals(data.data.rentals || []);
+      }
+    } catch (error) {
+      console.error("Error loading rentals:", error);
+      toast.error(t("Failed to load rental history."));
+    } finally {
+      setLoadingRentals(false);
+    }
+  };
+
   const handleEdit = () => {
     setTempProfile(profile);
     setEditMode(true);
@@ -139,6 +169,12 @@ export function UserAccount() {
       return;
     }
 
+    const cleanPhone = tempProfile.phone.replace(/\s/g, '');
+    if (!/^\d{11}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
+      return;
+    }
+
     setIsSaving(true);
     
     try {
@@ -148,7 +184,7 @@ export function UserAccount() {
         body: JSON.stringify({
           user_id: user.id,
           name: tempProfile.name,
-          phone: tempProfile.phone,
+          phone: cleanPhone,
           address: tempProfile.address
         })
       });
@@ -161,12 +197,13 @@ export function UserAccount() {
           ...prev,
           full_name: tempProfile.name,
           name: tempProfile.name,
-          phone: tempProfile.phone,
+          phone: cleanPhone,
           address: tempProfile.address
         }));
 
         // 3. Update UI
-        setProfile(tempProfile);
+        const updatedProfile = { ...tempProfile, phone: cleanPhone };
+        setProfile(updatedProfile);
         setEditMode(false);
         toast.success(t('Profile updated successfully!'));
       } else {
@@ -197,6 +234,16 @@ export function UserAccount() {
     });
   };
 
+  const formatSimpleDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-PK', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
@@ -207,8 +254,37 @@ export function UserAccount() {
     }
   };
 
+  const getRentalStatusColor = (status) => {
+    switch (status) {
+      case 'returned': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'overdue': return 'bg-red-100 text-red-800 animate-pulse dark:bg-red-900/30 dark:text-red-400';
+      case 'cancelled': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
+      case 'active':
+      default: return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+    }
+  };
+
+  const getDepositStatusColor = (status) => {
+    switch (status) {
+      case 'refunded': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'partial_refund': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'forfeited': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case 'held':
+      default: return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+    }
+  };
+
   const handleCancelOrder = async () => {
     if (!cancelOrder) return;
+
+    // Direct frontend check: block cancellation if order is assigned to today's date or earlier
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (cancelOrder.assignedDate && cancelOrder.assignedDate <= todayStr) {
+      toast.error(t('Processing has started, it cannot be cancelled now / پروسیسنگ شروع ہو چکی ہے، اب آرڈر کینسل نہیں کیا جا سکتا۔'));
+      setCancelOrder(null);
+      setCancelReason('');
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
@@ -225,7 +301,7 @@ export function UserAccount() {
         toast.success(t('Order cancelled successfully'));
         fetchOrders(); 
       } else {
-        toast.error(t('Failed to cancel order'));
+        toast.error(result.message || t('Failed to cancel order'));
       }
     } catch (e) {
       toast.error(t('Network error while cancelling'));
@@ -242,16 +318,23 @@ export function UserAccount() {
         <div className="mb-8">
           <h1 className="text-foreground mb-1">{t('My Account')}</h1>
           <p className="text-muted-foreground mb-3">{t('Manage your profile and view order history')}</p>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            {t('Sign Out')}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center h-10 px-5 rounded-xl text-sm font-semibold border-2 border-red-300 text-red-700 bg-red-50 hover:bg-red-100 transition-all duration-200 shadow-sm"
+            >
+              <LogOut className="h-4 w-4 mr-2 text-red-700" />
+              {t('Sign Out')}
+            </button>
+          </div>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="profile">{t('Profile')}</TabsTrigger>
-            <TabsTrigger value="orders">{t('Orders')}</TabsTrigger>
+          <TabsList className="flex flex-row w-full max-w-lg p-1.5 bg-[#f8f5f0] rounded-xl border border-[#e5d8c8] shadow-inner h-auto gap-1">
+            <TabsTrigger value="profile" className="flex-1 py-2.5 data-[state=active]:bg-white data-[state=active]:text-[#8b6f47] data-[state=active]:shadow-sm rounded-lg font-semibold">{t('Profile')}</TabsTrigger>
+            <TabsTrigger value="orders" className="flex-1 py-2.5 data-[state=active]:bg-white data-[state=active]:text-[#8b6f47] data-[state=active]:shadow-sm rounded-lg font-semibold">{t('Orders')}</TabsTrigger>
+            <TabsTrigger value="rentals" className="flex-1 py-2.5 data-[state=active]:bg-white data-[state=active]:text-[#8b6f47] data-[state=active]:shadow-sm rounded-lg font-semibold">{t('Rentals')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -267,10 +350,15 @@ export function UserAccount() {
                   </div>
                 </div>
                 {!editMode && (
-                  <Button onClick={handleEdit}>
-                    <Edit className="h-4 w-4 mr-2" />
+                  <button
+                    type="button"
+                    onClick={handleEdit}
+                    className="inline-flex items-center justify-center h-10 px-5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all duration-200"
+                    style={{ background: 'linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)' }}
+                  >
+                    <Edit className="h-4 w-4 mr-2 text-white" />
                     {t('Edit Details')}
-                  </Button>
+                  </button>
                 )}
               </div>
 
@@ -400,7 +488,29 @@ export function UserAccount() {
                               {t('Reason:')} {order.cancelReason}
                               {order.cancelledBy && ` (${t('by')} ${order.cancelledBy})`}
                             </p>
-                          )}                        <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
+                          )}
+                          {order.paymentStatus === 'unpaid' && order.paymentRejectReason && (
+                            <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
+                              <div className="flex items-start gap-2">
+                                <span className="text-red-500 text-base mt-0.5">⚠️</span>
+                                <div className="space-y-1">
+                                  <p className="text-xs font-bold text-red-800 uppercase tracking-wider">
+                                    {t('Payment Verification Failed')} / {t('ادائیگی کی تصدیق نامکمل')}
+                                  </p>
+                                  <p className="text-sm text-red-700">
+                                    <strong>{t('Reason')} / {t('وجہ')}:</strong> {order.paymentRejectReason}
+                                  </p>
+                                  {order.paymentRejectDate && new Date(order.paymentRejectDate).toDateString() === new Date().toDateString() && (
+                                    <div className="mt-2 inline-flex items-center gap-1.5 bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-full animate-bounce">
+                                      <span>🔴</span>
+                                      <span>PAYMENT REJECTED TODAY / ادائیگی آج ہی مسترد کی گئی ہے!</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <p className="text-sm text-muted-foreground mt-2">{formatDate(order.createdAt)}</p>
                       </div>
                       <div className="text-left sm:text-right">
                         <p className="text-sm text-muted-foreground">{t('Total Amount')}</p>
@@ -477,6 +587,193 @@ export function UserAccount() {
                 );
               })
             )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="rentals">
+            {/* Stats Overview */}
+            {rentals.length > 0 && (
+              <div className="flex flex-row w-full gap-4 mb-6">
+                <Card className="flex-1 p-4 flex flex-row items-center justify-start gap-4 border-l-4 border-l-blue-500 min-w-0">
+                  <div className="p-3 rounded-lg bg-blue-100 text-blue-600 flex-shrink-0">
+                    <Package className="h-6 w-6" />
+                  </div>
+                  <div className="flex flex-col items-start text-left min-w-0">
+                    <p className="text-sm text-muted-foreground truncate w-full">{t('Total Rentals')}</p>
+                    <p className="text-2xl font-bold">{rentals.length}</p>
+                  </div>
+                </Card>
+                <Card className="flex-1 p-4 flex flex-row items-center justify-start gap-4 border-l-4 border-l-orange-500 min-w-0">
+                  <div className="p-3 rounded-lg bg-orange-100 text-orange-600 flex-shrink-0">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div className="flex flex-col items-start text-left min-w-0">
+                    <p className="text-sm text-muted-foreground truncate w-full">{t('Active')}</p>
+                    <p className="text-2xl font-bold">
+                      {rentals.filter(r => r.status === 'active' || r.status === 'overdue').length}
+                    </p>
+                  </div>
+                </Card>
+                <Card className="flex-1 p-4 flex flex-row items-center justify-start gap-4 border-l-4 border-l-green-500 min-w-0">
+                  <div className="p-3 rounded-lg bg-green-100 text-green-600 flex-shrink-0">
+                    <Coins className="h-6 w-6" />
+                  </div>
+                  <div className="flex flex-col items-start text-left min-w-0">
+                    <p className="text-sm text-muted-foreground truncate w-full">{t('Refunded Amount')}</p>
+                    <p className="text-2xl font-bold truncate w-full">
+                      Rs. {rentals
+                        .filter(r => r.deposit_status === 'refunded' || r.deposit_status === 'partial_refund')
+                        .reduce((sum, r) => sum + parseFloat(r.deposit_refund_amount || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {loadingRentals ? (
+                <div className="text-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  <p>{t('Loading your rentals...')}</p>
+                </div>
+              ) : rentals.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="mb-2">{t('No rentals yet')}</h3>
+                  <p className="text-muted-foreground">{t('When you rent an item, it will appear here')}</p>
+                </Card>
+              ) : (
+                rentals.map((rental) => {
+                  const imageSrc = rental.product_image
+                    ? (rental.product_image.startsWith('http') || rental.product_image.startsWith('/')
+                      ? rental.product_image
+                      : `${API_BASE_URL}/${rental.product_image}`)
+                    : null;
+
+                  return (
+                    <Card key={rental.id} className="p-6 overflow-hidden">
+                      <div className="flex flex-col md:flex-row gap-6">
+                        {/* Left Side: Product Image & Badges */}
+                        <div className="flex flex-row md:flex-col gap-4 items-center md:items-start min-w-[120px]">
+                          <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                            {imageSrc ? (
+                              <ImageWithFallback
+                                src={imageSrc}
+                                alt={rental.product_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Package className="h-8 w-8 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 w-full">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold text-center w-fit ${getRentalStatusColor(rental.status)}`}>
+                              {t(rental.status.charAt(0).toUpperCase() + rental.status.slice(1))}
+                            </span>
+                            <span className="text-xs text-muted-foreground text-center md:text-left">
+                              {t('Qty')}: {rental.quantity}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Middle Side: Main details */}
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <h3 className="text-lg font-bold text-foreground mb-1">{rental.product_name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {t('Order ID')}: {rental.order_id || t('Direct Rental')}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+                              <span>
+                                <strong>{t('Start Date')}:</strong> {formatSimpleDate(rental.rental_start_date)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+                              <span>
+                                <strong>{t('End Date')}:</strong> {formatSimpleDate(rental.rental_end_date)}
+                              </span>
+                            </div>
+                            {rental.actual_return_date && (
+                              <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                <span>
+                                  <strong>{t('Return Date')}:</strong> {formatSimpleDate(rental.actual_return_date)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Notes if any */}
+                          {rental.condition_notes && (
+                            <div className="bg-muted/50 p-3 rounded-lg border border-border text-xs text-muted-foreground">
+                              <strong>{t('Condition Notes')}:</strong> {rental.condition_notes}
+                            </div>
+                          )}
+
+                          {/* Overdue/Late penalty notification */}
+                          {rental.status === 'overdue' && (
+                            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-900/50 text-left">
+                              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                              <span>
+                                {t('Late Penalty Applied')}: Rs. {parseFloat(rental.late_penalty_per_day).toLocaleString()}/{t('day')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right Side: Cost Summary */}
+                        <div className="md:border-l border-border md:pl-6 min-w-[200px] flex flex-col justify-between gap-4">
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">{t('Daily Price')}:</span>
+                              <span className="font-medium">Rs. {parseFloat(rental.rental_price_per_day).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">{t('Days')}:</span>
+                              <span className="font-medium">{rental.rental_days}</span>
+                            </div>
+                            <div className="flex justify-between pt-1 border-t border-dashed border-border">
+                              <span className="text-muted-foreground font-semibold">{t('Total Rental Amount')}:</span>
+                              <span className="font-bold text-primary">Rs. {parseFloat(rental.total_rental_amount).toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-muted/30 p-3 rounded-lg space-y-2 text-xs text-left">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground font-semibold">{t('Security Deposit')}:</span>
+                              <span className="font-bold">Rs. {parseFloat(rental.security_deposit).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">{t('Deposit Status')}:</span>
+                              <span className={`px-2 py-0.5 rounded-full font-semibold ${getDepositStatusColor(rental.deposit_status)}`}>
+                                {t(rental.deposit_status.replace('_', ' ').charAt(0).toUpperCase() + rental.deposit_status.replace('_', ' ').slice(1))}
+                              </span>
+                            </div>
+                            {parseFloat(rental.late_penalty_total) > 0 && (
+                              <div className="flex justify-between text-red-600 font-semibold pt-1 border-t border-border">
+                                <span>{t('Late Penalty')}:</span>
+                                <span>Rs. -{parseFloat(rental.late_penalty_total).toLocaleString()}</span>
+                              </div>
+                            )}
+                            {(rental.deposit_status === 'refunded' || rental.deposit_status === 'partial_refund') && (
+                              <div className="flex justify-between text-green-600 font-semibold pt-1 border-t border-border">
+                                <span>{t('Refunded Deposit')}:</span>
+                                <span>Rs. {parseFloat(rental.deposit_refund_amount).toLocaleString()}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </TabsContent>
         </Tabs>

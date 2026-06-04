@@ -30,7 +30,7 @@ export function DeliveryPanel() {
         (position) => resolve(position),
         () => resolve(null),
         {
-          enableHighAccuracy: false,
+          enableHighAccuracy: true,
           timeout: 15000,
           maximumAge: 0,
           ...options,
@@ -185,7 +185,7 @@ export function DeliveryPanel() {
         }
       },
       {
-        enableHighAccuracy: false,
+        enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 0
       }

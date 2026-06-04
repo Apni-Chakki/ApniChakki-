@@ -3,9 +3,10 @@ import { Card, CardContent } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Badge } from '../../components/common/badge';
 import { PrintTaskList } from './PrintTaskList';
+import { useTranslation } from 'react-i18next';
 import { 
   FileText, Loader2, Clock, CalendarClock, Timer, Weight, Package, 
-  User, Phone, MapPin, ArrowLeft, Zap, AlertTriangle, Sunrise 
+  User, Phone, MapPin, ArrowLeft, Zap, AlertTriangle, Sunrise, CheckCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
@@ -47,6 +48,7 @@ import {
 } from '../../components/common/tooltip';
 
 export function TomorrowsList() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPrintList, setShowPrintList] = useState(false);
@@ -61,6 +63,20 @@ export function TomorrowsList() {
   const [splitBatches, setSplitBatches] = useState([]);
   const [isSplitting, setIsSplitting] = useState(false);
   const [heavyThreshold, setHeavyThreshold] = useState(100);
+
+  const processingOrders = orders.filter(order =>
+    (order.items || []).some(item => {
+      const unit = (item.unit || '').toLowerCase().trim();
+      return unit === 'kg' || unit === 'g' || unit === 'trip';
+    })
+  );
+
+  const preparedOrders = orders.filter(order =>
+    !(order.items || []).some(item => {
+      const unit = (item.unit || '').toLowerCase().trim();
+      return unit === 'kg' || unit === 'g' || unit === 'trip';
+    })
+  );
 
   const fetchPersonnel = async () => {
     try {
@@ -82,7 +98,7 @@ export function TomorrowsList() {
       if (data.success) {
         setOrders((data.orders || []).map(order => ({
           ...order,
-          type: order.type || (order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup') ? 'delivery' : 'pickup'),
+          type: order.order_type || order.type || (order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup') ? 'delivery' : 'pickup'),
           deliveryPersonnel: order.deliveryPersonnel || order.driver_name || null,
         })));
         if (data.capacity) setCapacity(data.capacity);
@@ -278,19 +294,18 @@ export function TomorrowsList() {
 
   // format ETA time nicely
   const formatETA = (eta) => {
-    if (!eta) return 'Pending';
-    const date = new Date(eta);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (!eta) return t('Pending');
+    return t('Tomorrow');
   };
 
   // get total weight of all orders
   const getTotalWeight = () => {
-    return orders.reduce((sum, o) => sum + parseFloat(o.total_weight_kg || 0), 0).toFixed(1);
+    return processingOrders.reduce((sum, o) => sum + parseFloat(o.total_weight_kg || 0), 0).toFixed(1);
   };
 
   // get total processing time
   const getTotalProcessingTime = () => {
-    return orders.reduce((sum, o) => sum + parseInt(o.processing_time_minutes || 0), 0);
+    return processingOrders.reduce((sum, o) => sum + parseInt(o.processing_time_minutes || 0), 0);
   };
 
   // prepare orders for PrintTaskList
@@ -299,13 +314,169 @@ export function TomorrowsList() {
     id: order.id,
     customerName: order.customer_name,
     phone: order.customer_phone,
-    total: parseFloat(order.total_amount),
+    total: parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0),
+    couponCode: order.coupon_code || null,
+    couponDiscount: parseFloat(order.coupon_discount || 0),
     createdAt: order.created_at,
     paymentMethod: order.payment_method,
-    type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
+    type: order.type,
     deliveryAddress: order.shipping_address,
     deliveryPersonnel: null
   }));
+
+  const PreparedOrderCard = ({ order }) => {
+    return (
+      <Card key={order.id} className="border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white border-l-emerald-500">
+        {/* order header */}
+        <div className="p-5 pb-3 bg-emerald-50/30 rounded-t-xl">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-xl font-bold flex items-center gap-2 flex-wrap">
+                Order #{order.id}
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-2 py-0.5 font-bold uppercase">
+                  Prepared Item
+                </Badge>
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {new Date(order.created_at).toLocaleString()}
+              </p>
+            </div>
+            <div className="text-right bg-emerald-50/50 px-3 py-2 rounded-lg border border-emerald-200">
+              <div className="flex flex-col items-end">
+                <span className="text-lg font-bold text-slate-800">
+                  Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
+                </span>
+                {parseFloat(order.coupon_discount || 0) > 0 && (
+                  <div className="text-xs text-emerald-600 font-medium mt-1">
+                    -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
+                  </div>
+                )}
+                <p className="text-xs font-semibold text-emerald-600 uppercase mt-0.5">{order.payment_method}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <CardContent className="space-y-4 pt-4">
+          {/* customer info */}
+          <div className="bg-muted/30 p-3 rounded-md space-y-1.5 text-sm">
+            <div className="flex items-center gap-2">
+              <User className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium">{order.customer_name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{order.customer_phone}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate">{order.shipping_address}</span>
+            </div>
+            {order.deliveryPersonnel && (
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-slate-700">Driver: {order.deliveryPersonnel}</span>
+              </div>
+            )}
+          </div>
+
+          {/* order items */}
+          <div>
+            <h4 className="font-semibold mb-1.5 flex items-center gap-2 text-sm">
+              <Package className="h-4 w-4" /> Prepared Items to Deliver:
+            </h4>
+            <ul className="divide-y border rounded-md">
+              {order.items.map((item, idx) => (
+                <li key={idx} className="p-3 text-sm flex justify-between items-start bg-white hover:bg-slate-50 transition-colors">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <p className="font-bold text-slate-800 break-words">{item.name}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                    {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* action: move to today & buttons */}
+          <div className="pt-2">
+            <div className="space-y-3">
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700 shadow-md font-medium"
+                onClick={() => moveToToday(order)}
+                disabled={overriding === order.id}
+              >
+                {overriding === order.id ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Moving...</>
+                ) : (
+                  <><ArrowLeft className="h-4 w-4 mr-2" /> Move to Today's Work</>
+                )}
+              </Button>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {order.type === 'delivery' ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={`flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}
+                      >
+                        <Truck className="h-4 w-4 mr-2" />
+                        {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {activePersonnel.length > 0 ? (
+                        activePersonnel.map(person => (
+                          <DropdownMenuItem
+                            key={person.id}
+                            onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
+                            className="cursor-pointer text-xs"
+                          >
+                            <span>{person.name}</span>
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => handleAssignPersonnel(order.id, '')}
+                        className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
+                      >
+                        Clear
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button size="sm" variant="outline" disabled className="flex-1 opacity-50 border-slate-200 text-slate-500 text-xs">
+                    <Truck className="h-4 w-4 mr-2" />
+                    Pickup
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="flex-1 text-xs"
+                  onClick={() => setCancelOrder(order)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading && orders.length === 0) {
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" /></div>;
@@ -408,194 +579,291 @@ export function TomorrowsList() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {orders.map((order) => {
-            const isSplitBatch = order.is_split_batch === true;
-            const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
-            
-            return (
-            <Card key={order.id} className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all rounded-xl bg-white ${
-              order.is_manually_overridden === '1' || order.is_manually_overridden === 1 
-                ? 'border-l-amber-500' 
-                : 'border-l-orange-400'
-            }`}>
-              {/* order header */}
-              <div className="p-5 pb-3 bg-orange-50/50 rounded-t-xl">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-bold flex items-center gap-2 flex-wrap">
-                      Order #{order.id}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {new Date(order.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right bg-orange-50/80 px-3 py-2 rounded-lg border border-orange-200">
-                    <span className="text-lg font-bold text-slate-800">Rs. {parseInt(order.total_amount).toLocaleString()}</span>
-                    <p className="text-xs font-semibold text-orange-600 uppercase">{order.payment_method}</p>
-                  </div>
-                </div>
+        <div className="space-y-8">
+          {/* 1. Grinding & Processing Section (Tomorrow's Scheduler) */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 px-1">
+              <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm border border-orange-200">
+                <Timer className="h-4 w-4 text-orange-600" />
+                Tomorrow's Grinding Queue (Kg Items)
               </div>
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-xs text-slate-500 font-semibold">
+                {processingOrders.length} grind job(s)
+              </span>
+            </div>
 
-              <CardContent className="space-y-4 pt-4">
-                {/* ETA & scheduling info */}
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 p-3 rounded-lg">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-orange-600 mb-0.5">
-                        <Timer className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-semibold uppercase">ETA</span>
-                      </div>
-                      <p className="text-base font-bold text-orange-800">{formatETA(order.estimated_completion_time)}</p>
-                    </div>
-                    <div className="border-x border-orange-200">
-                      <div className="flex items-center justify-center gap-1 text-orange-600 mb-0.5">
-                        <Weight className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-semibold uppercase">Weight</span>
-                      </div>
-                      <p className="text-base font-bold text-orange-800">{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-orange-600 mb-0.5">
-                        <Package className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-semibold uppercase">Time</span>
-                      </div>
-                      <p className="text-base font-bold text-orange-800">{order.processing_time_minutes || '~'} min</p>
-                    </div>
+            {processingOrders.length === 0 ? (
+              <Card className="bg-slate-50/50 border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="rounded-full bg-background p-3 mb-2 shadow-sm">
+                    <CheckCircle className="h-6 w-6 text-slate-400" />
                   </div>
-                </div>
-
-                {/* customer info */}
-                <div className="bg-muted/30 p-3 rounded-md space-y-1.5 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-medium">{order.customer_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{order.customer_phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="truncate">{order.shipping_address}</span>
-                  </div>
-                </div>
-
-                {/* order items */}
-                <div>
-                  <h4 className="font-semibold mb-1.5 flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4" /> Items:
-                  </h4>
-                  <ul className="divide-y border rounded-md">
-                    {order.items.map((item, idx) => (
-                      <li key={idx} className="p-2 text-sm flex justify-between items-center bg-white">
-                        <span>{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">x {item.quantity}</Badge>
-                          {item.unit && <span className="text-xs text-muted-foreground">{item.unit}</span>}
+                  <p className="text-slate-500 text-sm font-semibold">No grinding / processing orders scheduled for tomorrow.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {processingOrders.map((order) => {
+                  const isSplitBatch = order.is_split_batch === true;
+                  const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+                  
+                  return (
+                  <Card key={order.id} className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all rounded-xl bg-white ${
+                    order.is_manually_overridden === '1' || order.is_manually_overridden === 1 
+                      ? 'border-l-amber-500' 
+                      : 'border-l-orange-400'
+                  }`}>
+                    {/* order header */}
+                    <div className="p-5 pb-3 bg-orange-50/50 rounded-t-xl">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold flex items-center gap-2 flex-wrap">
+                            Order #{order.id}
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            {new Date(order.created_at).toLocaleString()}
+                          </p>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                        <div className="text-right bg-orange-50/80 px-3 py-2 rounded-lg border border-orange-200">
+                          <div className="flex flex-col items-end">
+                            <span className="text-lg font-bold text-slate-800">
+                              Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
+                            </span>
+                            {parseFloat(order.coupon_discount || 0) > 0 && (
+                              <div className="text-xs text-emerald-600 font-medium mt-1">
+                                -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
+                              </div>
+                            )}
+                            <p className="text-xs font-semibold text-orange-600 uppercase">{order.payment_method}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* action: move to today */}
-                <div className="pt-2">
-                  <div className="space-y-3">
-                    <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700 shadow-md font-medium"
-                      onClick={() => moveToToday(order)}
-                      disabled={overriding === order.id}
-                    >
-                      {overriding === order.id ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Moving...</>
-                      ) : (
-                        <><ArrowLeft className="h-4 w-4 mr-2" /> Move to Today's Work</>
-                      )}
-                    </Button>
+                    <CardContent className="space-y-4 pt-4">
+                      {/* ETA & scheduling info */}
+                      <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 p-3 rounded-lg">
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <div className="flex items-center justify-center gap-1 text-orange-600 mb-0.5">
+                              <Timer className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-semibold uppercase">ETA</span>
+                            </div>
+                            <p className="text-base font-bold text-orange-800">{formatETA(order.estimated_completion_time)}</p>
+                          </div>
+                          <div className="border-x border-orange-200">
+                            <div className="flex items-center justify-center gap-1 text-orange-600 mb-0.5">
+                              <Weight className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-semibold uppercase">Weight</span>
+                            </div>
+                            <p className="text-base font-bold text-orange-800">{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-center gap-1 text-orange-600 mb-0.5">
+                              <Package className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-semibold uppercase">Time</span>
+                            </div>
+                            <p className="text-base font-bold text-orange-800">{order.processing_time_minutes || '~'} min</p>
+                          </div>
+                        </div>
+                      </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      {order.type === 'delivery' ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                      {/* customer info */}
+                      <div className="bg-muted/30 p-3 rounded-md space-y-1.5 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium">{order.customer_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{order.customer_phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="truncate">{order.shipping_address}</span>
+                        </div>
+                        {order.deliveryPersonnel && (
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-slate-700">Driver: {order.deliveryPersonnel}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* order items */}
+                      <div>
+                        <h4 className="font-semibold mb-1.5 flex items-center gap-2 text-sm">
+                          <Package className="h-4 w-4" /> Items to Prepare:
+                        </h4>
+                        <ul className="divide-y border rounded-md">
+                          {order.items.map((item, idx) => (
+                            <li key={idx} className="p-3 text-sm flex justify-between items-start bg-white hover:bg-slate-50 transition-colors">
+                              <div className="flex-1 min-w-0 pr-4">
+                                <p className="font-bold text-slate-800 break-words">{item.name}</p>
+                                {/* Dynamic customizations display */}
+                                {(item.customizations?.length > 0 || item.is_cleaning || item.is_grinding) && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {item.customizations?.length > 0 ? (
+                                      item.customizations.map((cust, cIdx) => (
+                                        <span key={cIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                          ✓ {cust.option_name}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <>
+                                        {item.is_cleaning == 1 && (
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                            ✓ Cleaning
+                                          </span>
+                                        )}
+                                        {item.is_grinding == 1 && (
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                            ✓ Grinding
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-1.5">
+                                <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                                {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* action: move to today */}
+                      <div className="pt-2">
+                        <div className="space-y-3">
+                          <Button
+                            className="w-full bg-blue-600 hover:bg-blue-700 shadow-md font-medium"
+                            onClick={() => moveToToday(order)}
+                            disabled={overriding === order.id}
+                          >
+                            {overriding === order.id ? (
+                              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Moving...</>
+                            ) : (
+                              <><ArrowLeft className="h-4 w-4 mr-2" /> Move to Today's Work</>
+                            )}
+                          </Button>
+
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            {order.type === 'delivery' ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={`flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}
+                                  >
+                                    <Truck className="h-4 w-4 mr-2" />
+                                    {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {activePersonnel.length > 0 ? (
+                                    activePersonnel.map(person => (
+                                      <DropdownMenuItem
+                                        key={person.id}
+                                        onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
+                                        className="cursor-pointer text-xs"
+                                      >
+                                        <span>{person.name}</span>
+                                      </DropdownMenuItem>
+                                    ))
+                                  ) : (
+                                    <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={() => handleAssignPersonnel(order.id, '')}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
+                                  >
+                                    Clear
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0} className="inline-block flex-1">
+                                    <Button size="sm" variant="outline" disabled className="w-full opacity-50 border-blue-200 text-blue-700 text-xs">
+                                      <Truck className="h-4 w-4 mr-2" />
+                                      Pickup
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-xs">
+                                  <p>Cannot assign to pickup</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+
                             <Button
                               size="sm"
-                              variant="outline"
-                              className={`flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}
+                              variant="destructive"
+                              className="flex-1 text-xs"
+                              onClick={() => setCancelOrder(order)}
                             >
-                              <Truck className="h-4 w-4 mr-2" />
-                              {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Cancel
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {activePersonnel.length > 0 ? (
-                              activePersonnel.map(person => (
-                                <DropdownMenuItem
-                                  key={person.id}
-                                  onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)}
-                                  className="cursor-pointer text-xs"
-                                >
-                                  <span>{person.name}</span>
-                                </DropdownMenuItem>
-                              ))
-                            ) : (
-                              <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onSelect={() => handleAssignPersonnel(order.id, '')}
-                              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs"
+                          </div>
+
+                          {/* Split Button below the flex row */}
+                          {isHeavy && !isSplitBatch && (
+                            <Button
+                              variant="outline"
+                              className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium animate-pulse"
+                              onClick={() => openSplitModal(order)}
                             >
-                              Clear
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span tabIndex={0} className="inline-block flex-1">
-                              <Button size="sm" variant="outline" disabled className="w-full opacity-50 border-blue-200 text-blue-700 text-xs">
-                                <Truck className="h-4 w-4 mr-2" />
-                                Pickup
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="text-xs">
-                            <p>Cannot assign to pickup</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                              <SplitSquareHorizontal className="h-4 w-4 mr-2" />
+                              Split Order
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )})}
+              </div>
+            )}
+          </div>
 
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="flex-1 text-xs"
-                        onClick={() => setCancelOrder(order)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Cancel
-                      </Button>
-                    </div>
+          {/* 2. Prepared & Ready to Deliver Section */}
+          <div className="space-y-6 pt-6 border-t border-slate-200">
+            <div className="flex items-center gap-3 px-1">
+              <div className="flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm border border-emerald-200">
+                <Package className="h-4 w-4 text-emerald-600" />
+                Tomorrow's Prepared Orders (Oil, Liter, Pieces, etc.)
+              </div>
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-xs text-emerald-600 font-semibold">
+                {preparedOrders.length} order(s)
+              </span>
+            </div>
 
-                    {/* Split Button below the flex row */}
-                    {isHeavy && !isSplitBatch && (
-                      <Button
-                        variant="outline"
-                        className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium animate-pulse"
-                        onClick={() => openSplitModal(order)}
-                      >
-                        <SplitSquareHorizontal className="h-4 w-4 mr-2" />
-                        Split Order
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )})}
+            {preparedOrders.length === 0 ? (
+              <Card className="bg-slate-50/50 border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-slate-500 text-sm font-semibold">No prepared orders scheduled for tomorrow.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {preparedOrders.map((order) => (
+                  <PreparedOrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -634,7 +902,10 @@ export function TomorrowsList() {
       </AlertDialog>
 
       <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
-        <DialogContent className="max-w-md max-h-[95vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent
+          style={{ maxHeight: '90vh', overflowY: 'auto', display: 'block' }}
+          className="max-w-md p-0 custom-scrollbar gap-0"
+        >
           <div className="p-6 pb-2">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -656,7 +927,7 @@ export function TomorrowsList() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar" style={{ maxHeight: '400px' }}>
+          <div className="px-6 py-2">
             <div className="space-y-3">
               {splitBatches.map((batch, idx) => (
                 <div key={batch.id} className="relative bg-slate-50 p-4 rounded-xl border border-slate-200 transition-all hover:border-blue-300">
@@ -739,7 +1010,7 @@ export function TomorrowsList() {
             </div>
           </div>
 
-          <div className="p-6 pt-2 bg-slate-50/50 border-t">
+          <div className="p-6 pt-4 bg-slate-50/50 border-t">
             {/* Live total check */}
             {splitOrder && (() => {
               const total = parseFloat(splitOrder.total_weight_kg || 0);

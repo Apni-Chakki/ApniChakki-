@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Phone, Megaphone, X, Mail, Clock } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/common/button';
 import { cn } from '../../components/common/utils';
@@ -19,9 +19,6 @@ const DEFAULT_SETTINGS = {
 export function Footer() {
   const { t, tDynamic } = useDynamicTranslation();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [isBannerVisible, setIsBannerVisible] = useState(true);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-
   const fetchSettings = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/get_store_settings.php`);
@@ -45,76 +42,13 @@ export function Footer() {
     
     window.addEventListener('settingsUpdated', handleSettingsUpdate);
 
-    const handleScroll = () => {
-      const scrollPosition = window.innerHeight + window.pageYOffset;
-      const threshold = document.documentElement.scrollHeight - 120;
-      setIsAtBottom(scrollPosition >= threshold);
-    };
-    window.addEventListener('scroll', handleScroll);
-
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('settingsUpdated', handleSettingsUpdate);
     };
   }, []);
 
-  const [dismissedText, setDismissedText] = useState('');
-
-  useEffect(() => {
-    // Only add padding when banner is visible AND fixed (not at bottom)
-    if (settings.announcement && isBannerVisible && !isAtBottom) {
-      document.body.classList.add('has-announcement');
-      document.body.style.paddingBottom = '80px';
-    } else {
-      document.body.classList.remove('has-announcement');
-      document.body.style.paddingBottom = '0';
-    }
-    // Only re-show banner if the announcement text changed to something new
-    if (settings.announcement && settings.announcement !== dismissedText && !isBannerVisible) {
-      setIsBannerVisible(true);
-    }
-    return () => {
-      document.body.classList.remove('has-announcement');
-      document.body.style.paddingBottom = '0';
-    };
-  }, [settings.announcement, isBannerVisible, isAtBottom, dismissedText]);
-
   return (
     <>
-      {/* Announcement Banner */}
-      {settings.announcement && isBannerVisible && (
-        <div 
-          className={cn(
-            "left-0 right-0 w-full transition-all duration-300 ease-in-out px-4 py-4 border-t border-primary-foreground/10",
-            "bg-primary text-primary-foreground", 
-            isAtBottom 
-              ? "relative z-40" 
-              : "fixed bottom-0 left-0 right-0 z-[9999] shadow-[0_-10px_25px_rgba(0,0,0,0.2)]"
-          )}
-          style={!isAtBottom ? { position: 'fixed', bottom: 0, left: 0, right: 0 } : {}}
-        >
-          <div className="container mx-auto max-w-6xl flex items-center justify-between gap-4">
-            <div className="w-10 hidden md:block"></div>
-            
-            <div className="flex-1 flex items-center justify-center gap-3">
-              <Megaphone className="h-5 w-5 animate-pulse flex-shrink-0" />
-              <p className="text-center text-sm md:text-base font-bold tracking-wide leading-tight">
-                {tDynamic(settings.announcement)}
-              </p>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-primary-foreground hover:bg-primary-foreground/20 h-9 w-9 rounded-full flex-shrink-0"
-              onClick={() => { setIsBannerVisible(false); setDismissedText(settings.announcement); }}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Main Footer Content */}
       <footer className="bg-primary text-primary-foreground py-12 px-4">
         <div className="container mx-auto max-w-6xl">

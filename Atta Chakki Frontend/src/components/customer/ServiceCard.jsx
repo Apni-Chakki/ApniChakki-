@@ -31,6 +31,21 @@ export function ServiceCard({ service }) {
     : service.price;
 
   const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
+
+  // Calculate discount if applicable
+  const discountType = service.discount_type || 'none';
+  const discountValue = parseFloat(service.discount_value) || 0;
+  const hasDiscount = discountType !== 'none' && discountValue > 0;
+  
+  let effectivePrice = currentPrice;
+  if (hasDiscount) {
+    if (discountType === 'percentage') {
+      effectivePrice = Math.max(0, currentPrice - (currentPrice * Math.min(discountValue, 100) / 100));
+    } else if (discountType === 'fixed') {
+      effectivePrice = Math.max(0, currentPrice - discountValue);
+    }
+  }
+
   const isOnlyPickup = service?.unit?.toLowerCase() === 'trip';
   const isPickupEligible = service.id == 1 || isOnlyPickup; 
   // Trip waly products out of stock nahi hoty kabhi bhi
@@ -47,7 +62,7 @@ export function ServiceCard({ service }) {
     }
     addToCart({
       ...service,
-      price: currentPrice,
+      price: effectivePrice,
       is_cleaning: isCleaningSelected,
       is_grinding: isGrindingSelected
     }, quantity, false); 
@@ -64,7 +79,7 @@ export function ServiceCard({ service }) {
     }
     addToCart({
       ...service,
-      price: currentPrice,
+      price: effectivePrice,
       is_cleaning: isCleaningSelected,
       is_grinding: isGrindingSelected
     }, quantity, true); 
@@ -115,12 +130,20 @@ export function ServiceCard({ service }) {
             {service.description && (
               <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
-            <p className="text-primary font-bold text-lg">
-              Rs. {currentPrice} / {t(service.unit || 'unit')}
-            </p>
-            <p className="text-primary">
-              Rs. {service.price} / {tDynamic(service.unit || 'unit')}
-            </p>
+            {hasDiscount ? (
+              <div className="flex items-center gap-2">
+                <p className="text-rose-700 font-extrabold text-lg">
+                  Rs. {Math.round(effectivePrice)} / {t(service.unit || 'unit')}
+                </p>
+                <p className="text-muted-foreground text-sm font-medium line-through">
+                  Rs. {Math.round(currentPrice)} / {tDynamic(service.unit || 'unit')}
+                </p>
+              </div>
+            ) : (
+              <p className="text-primary font-bold text-lg">
+                Rs. {Math.round(currentPrice)} / {t(service.unit || 'unit')}
+              </p>
+            )}
             {!!service.is_grinding_service && (
                <div className="mt-3 p-4 bg-orange-50/40 border border-orange-100 rounded-xl space-y-3 shadow-sm animate-in fade-in zoom-in-95 duration-300">
                   <div className="flex items-center gap-2 border-b border-orange-100/50 pb-2">

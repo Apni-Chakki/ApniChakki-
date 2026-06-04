@@ -372,6 +372,187 @@ app.post('/send-welcome-email', async (req, res) => {
   }
 });
 
+// 5. Contact Form Reply Email
+app.post('/send-contact-reply', async (req, res) => {
+  try {
+    const { customerEmail, customerName, originalSubject, originalMessage, replyMessage } = req.body;
+
+    if (!customerEmail || !replyMessage) {
+      return res.status(400).json({ success: false, message: 'Missing required fields (customerEmail, replyMessage)' });
+    }
+
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; }
+          .header { background-color: #8B7355; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background-color: white; padding: 25px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+          .quote-box { background-color: #f5f0eb; border-left: 4px solid #8B7355; padding: 15px; margin: 15px 0; border-radius: 4px; font-style: italic; }
+          .reply-box { background-color: #fcf8f2; border: 1px solid #e8d8c8; padding: 20px; margin: 20px 0; border-radius: 6px; }
+          .footer { text-align: center; color: #888; font-size: 12px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 24px;">🌾 Atta Chakki</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Response to Your Inquiry</p>
+          </div>
+          
+          <div class="content">
+            <p>السلام علیکم <strong>${customerName || 'Customer'}</strong>,</p>
+            <p>Thank you for reaching out to us. Here is the response to your message regarding <strong>"${originalSubject || 'Contact Inquiry'}"</strong>:</p>
+            
+            <div class="reply-box">
+              <h4 style="margin-top: 0; color: #8B7355; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Our Reply:</h4>
+              <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${replyMessage}</p>
+            </div>
+
+            ${originalMessage ? `
+              <h4 style="margin-bottom: 5px; color: #666; font-size: 13px;">Your Original Message:</h4>
+              <div class="quote-box">
+                <p style="margin: 0; font-size: 14px; color: #555; white-space: pre-wrap;">${originalMessage}</p>
+              </div>
+            ` : ''}
+            
+            <p style="margin-top: 25px;">If you have any further questions or need additional assistance, feel free to reply directly to this email.</p>
+            <p style="margin-bottom: 0;">Best regards,<br><strong>Atta Chakki Team</strong></p>
+            
+            <div class="footer">
+              <p style="margin: 5px 0;">Thank you for choosing Atta Chakki!</p>
+              <p style="margin: 5px 0;">📞 Contact: +92-XXX-XXXXXXX</p>
+              <p style="margin: 5px 0;">&copy; 2026 Atta Chakki. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: customerEmail,
+      subject: `RE: ${originalSubject || 'Your Inquiry to Atta Chakki'}`,
+      html: htmlTemplate,
+    });
+
+    console.log('✅ Contact reply email sent to:', customerEmail);
+    res.json({ success: true, message: 'Reply email sent successfully' });
+
+  } catch (error) {
+    console.error('❌ Error sending contact reply email:', error);
+    res.status(500).json({ success: false, message: 'Failed to send reply email', error: error.message });
+  }
+});
+
+// 6. Payment Rejection Email
+app.post('/send-payment-rejection', async (req, res) => {
+  try {
+    const { customerEmail, customerName, orderId, amount, transactionId, reason } = req.body;
+
+    if (!customerEmail || !orderId) {
+      return res.status(400).json({ success: false, message: 'Missing required fields (customerEmail, orderId)' });
+    }
+
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #faf7f2; margin: 0; padding: 20px; color: #333; }
+          .container { max-width: 550px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e8dcc4; }
+          .header { background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%); padding: 25px; text-align: center; color: white; }
+          .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+          .header p { margin: 5px 0 0 0; opacity: 0.9; font-size: 14px; }
+          .body { padding: 30px; line-height: 1.6; }
+          .alert-box { background-color: #ffebee; border-left: 4px solid #c62828; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .alert-title { font-weight: bold; color: #c62828; margin-bottom: 5px; font-size: 15px; }
+          .alert-reason { font-size: 14px; color: #b71c1c; font-style: italic; }
+          .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #fafafa; border-radius: 6px; overflow: hidden; border: 1px solid #eee; }
+          .details-table td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 14px; }
+          .details-table td.label { color: #666; width: 40%; font-weight: 500; }
+          .details-table td.value { font-weight: 600; text-align: right; }
+          .footer { padding: 20px 30px; background: #fdfbf7; text-align: center; color: #888; font-size: 12px; border-top: 1px solid #f0e6d2; }
+          .urdu-text { direction: rtl; text-align: right; font-family: 'Nafees', Arial, sans-serif; margin-top: 15px; border-top: 1px dashed #e0d0b0; padding-top: 15px; line-height: 1.8; }
+          p { margin: 0 0 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>❌ Apni Chakki - Payment Rejected ❌</h1>
+            <p>Verification Alert / ادائیگی کی تصدیق کا مسئلہ</p>
+          </div>
+          
+          <div class="body">
+            <p>Assalam-o-Alaikum <strong>${customerName || 'Customer'}</strong>,</p>
+            <p>We regret to inform you that your direct bank transfer payment for <strong>Order #${orderId}</strong> could not be verified by our accounts department and has been rejected. As a result, <strong>your order has been converted to Cash on Delivery (COD)</strong>. Please pay the order total in cash when the rider delivers your package.</p>
+            
+            <div class="alert-box">
+              <div class="alert-title">⚠️ Reason for Rejection / مسترد ہونے کی وجہ:</div>
+              <div class="alert-reason">${reason || 'Incorrect transaction reference or amount not received.'}</div>
+            </div>
+
+            <table class="details-table">
+              <tr>
+                <td class="label">Order ID:</td>
+                <td class="value">#${orderId}</td>
+              </tr>
+              <tr>
+                <td class="label">Amount:</td>
+                <td class="value" style="color: #c62828;">Rs. ${amount ? parseFloat(amount).toLocaleString() : 'N/A'}</td>
+              </tr>
+              <tr>
+                <td class="label">Transaction ID:</td>
+                <td class="value" style="font-family: monospace; font-size: 13px;">${transactionId || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td class="label">Payment Method:</td>
+                <td class="value" style="color: #1b5e20; font-weight: bold;">CASH ON DELIVERY (COD)</td>
+              </tr>
+              <tr>
+                <td class="label">Payment Status:</td>
+                <td class="value" style="color: #c62828; font-weight: bold;">UNPAID (Pay Cash on Delivery)</td>
+              </tr>
+            </table>
+
+            <p>You do not need to resubmit payment online. Your order will be delivered to your address shortly, and you can pay the amount in cash to our delivery rider.</p>
+            
+            <div class="urdu-text">
+              <p><strong>محترم کسٹمر،</strong></p>
+              <p>ہمیں افسوس کے ساتھ مطلع کرنا پڑ رہا ہے کہ آپ کے آرڈر <strong>#${orderId}</strong> کی بینک ٹرانسفر ادائیگی کی تصدیق نہیں ہو سکی اور اسے مسترد کر دیا گیا ہے۔</p>
+              <p>تصدیق نہ ہونے پر <strong>آپ کا آرڈر اب کیش آن ڈلیوری (Cash on Delivery) پر منتقل کر دیا گیا ہے</strong>۔ اب آپ کو کسی قسم کی آن لائن ادائیگی کی ضرورت نہیں ہے۔ برائے مہربانی آرڈر وصول کرتے وقت Rs. ${amount ? parseFloat(amount).toLocaleString() : 'N/A'} کیش ہمارے رائڈر کو ادا کریں۔ شکریہ۔</p>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>🌾 Apni Chakki - Pure Atta & Grains, Delivered Fresh</p>
+            <p>📞 Helpline: +92 3228483029</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: customerEmail,
+      subject: `🔴 Payment Rejected - Order #${orderId}`,
+      html: htmlTemplate,
+    });
+
+    console.log('✅ Payment rejection email sent successfully to:', customerEmail);
+    res.json({ success: true, message: 'Payment rejection email sent successfully' });
+
+  } catch (error) {
+    console.error('❌ Error sending payment rejection email:', error);
+    res.status(500).json({ success: false, message: 'Failed to send payment rejection email', error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('🔴 Server Error:', err);
@@ -379,7 +560,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════╗
