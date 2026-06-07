@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { motion } from 'framer-motion';
 import { LazyAnimatedSection } from '../../components/common/LazyAnimatedSection';
+import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 
 const DEFAULT_HERO_SLIDES = [
   {

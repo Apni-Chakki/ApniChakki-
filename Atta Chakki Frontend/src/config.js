@@ -3,7 +3,7 @@
 // Production:
 // - Socket Server is hosted on Render: https://apnichakki.onrender.com
 // - PHP Backend is hosted on InfinityFree. Replace the domain below with your actual InfinityFree domain.
-const PRODUCTION_API_URL = "https://apnichakki897.great-site.net/Atta_Chakki_API";
+const PRODUCTION_API_URL = window.location.origin + "/Atta_Chakki_API";
 
 
 

@@ -21,6 +21,7 @@ import {
 } from '../../components/common/dialog';
 import { Input } from '../../components/common/input';
 import { Textarea } from '../../components/common/textarea';
+import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
