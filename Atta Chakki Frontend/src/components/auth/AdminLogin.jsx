@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../../config';
-import { useAuth } from '../../lib/AuthContext'; // <-- RESTORED THIS
+import { useAuth } from '../../store/AuthContext'; // <-- RESTORED THIS
 
 export function AdminLogin() {
   const [phone, setPhone] = useState('');

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
@@ -36,7 +36,7 @@ export function ManageCategories() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/get_categories.php`);
+      const response = await fetch(`${API_BASE_URL}/get_categories.php?admin=1`);
       const data = await response.json();
 
       if (data.success) {
@@ -157,6 +157,26 @@ export function ManageCategories() {
     setImageFile(null);
   };
 
+  const handleToggleActive = async (id, currentStatus) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/update_category_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, is_active: currentStatus ? 0 : 1 })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        fetchCategories();
+        window.dispatchEvent(new Event('categoriesUpdated'));
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Network error while toggling status');
+    }
+  };
+
   const handleDelete = async (id) => {
     const deleteCategory = async () => {
       try {
@@ -181,12 +201,12 @@ export function ManageCategories() {
       }
     };
 
-    toast.custom((t) => (
+    toast.custom((toastId) => (
       <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
         <p className="text-primary-foreground font-medium">{t('Delete this category?')}</p>
         <div className="flex gap-2 justify-end">
           <Button
-            onClick={() => toast.dismiss(t)}
+            onClick={() => toast.dismiss(toastId)}
             variant="outline"
             size="sm"
             className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
@@ -195,7 +215,7 @@ export function ManageCategories() {
           </Button>
           <Button
             onClick={() => {
-              toast.dismiss(t);
+              toast.dismiss(toastId);
               deleteCategory();
             }}
             size="sm"
@@ -353,13 +373,19 @@ export function ManageCategories() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="mb-1 text-lg font-bold">{cat.name}</h3>
+                  <h3 className="mb-1 text-lg font-bold">
+                    {cat.name}
+                    {!cat.is_active && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border">Disabled</span>}
+                  </h3>
                   <div className="flex gap-4">
                     <p className="text-xs text-muted-foreground">ID: {cat.id}</p>
                     <p className="text-xs font-semibold text-primary">{t('Priority')}: {cat.priority || 0}</p>
                   </div>
                 </div>
                 <div className="flex sm:flex-col gap-2">
+                  <Button onClick={() => handleToggleActive(cat.id, cat.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+                    {cat.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
                   <Button onClick={() => handleEdit(cat)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
                     <Edit className="h-4 w-4" />
                   </Button>

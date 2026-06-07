@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { API_BASE_URL } from '../../config';
 import { Loader2, Trash2, Search, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 
 export function AdminComments() {
   const { user } = useAuth();

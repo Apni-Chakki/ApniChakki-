@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { API_BASE_URL } from '../../config';
 import { Loader2, ArrowLeft, Edit2, Trash2, Send } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 

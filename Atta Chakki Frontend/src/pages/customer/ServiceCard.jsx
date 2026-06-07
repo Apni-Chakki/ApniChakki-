@@ -9,7 +9,6 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '../../components/common/checkbox';
 import { Label } from '../../components/common/label';
-import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 import { API_BASE_URL } from '../../config';
 import { useAuth } from '../../store/AuthContext';
 import {
@@ -474,41 +473,44 @@ export function ServiceCard({ service }) {
             <span
               style={{
                 position: 'absolute',
-                top: '8px',
-                left: '8px',
-                zIndex: 50,
-                background: 'linear-gradient(90deg, #0d9488, #0891b2)',
-                color: '#fff',
-                padding: '4px 10px',
-                borderRadius: '999px',
+                top: '12px',
+                left: '12px',
+                zIndex: 10,
+                background: 'linear-gradient(135deg, #2c251e 0%, #4a3f35 100%)',
+                color: '#f5ede3',
+                padding: '5px 12px',
+                borderRadius: '8px',
                 fontSize: '10px',
-                fontWeight: 800,
-                letterSpacing: '0.05em',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
-                border: '2px solid rgba(255,255,255,0.5)',
-                whiteSpace: 'nowrap'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(212,165,116,0.3)',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
               }}
             >
-              🔄 FOR RENT
+              <span style={{ fontSize: '11px' }}>🔄</span> {t('FOR RENT')}
             </span>
           ) : badgeText ? (
             <span
               style={{
                 position: 'absolute',
-                top: '8px',
-                left: '8px',
-                zIndex: 50,
-                background: 'linear-gradient(90deg, #e11d48, #db2777)',
+                top: '12px',
+                left: '12px',
+                zIndex: 10,
+                background: 'linear-gradient(135deg, #ba2d2d 0%, #991b1b 100%)',
                 color: '#fff',
-                padding: '4px 10px',
-                borderRadius: '999px',
+                padding: '5px 12px',
+                borderRadius: '8px',
                 fontSize: '10px',
-                fontWeight: 800,
-                letterSpacing: '0.05em',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
-                border: '2px solid rgba(255,255,255,0.5)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 whiteSpace: 'nowrap'
               }}
             >
@@ -521,17 +523,18 @@ export function ServiceCard({ service }) {
             <span
               style={{
                 position: 'absolute',
-                top: '8px',
-                right: '8px',
-                zIndex: 50,
-                background: 'linear-gradient(135deg, #10b981, #047857)',
+                top: '12px',
+                right: '12px',
+                zIndex: 10,
+                background: 'linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)',
                 color: '#fff',
-                padding: '5px 11px',
-                borderRadius: '999px',
-                fontSize: '12px',
-                fontWeight: 800,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
-                border: '2px solid rgba(255,255,255,0.5)',
+                padding: '5px 12px',
+                borderRadius: '8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 whiteSpace: 'nowrap'
               }}
             >

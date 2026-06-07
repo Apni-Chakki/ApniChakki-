@@ -555,3 +555,367 @@ html, body {
   box-shadow: none !important;
 }
 
+/* ============================================================
+   PREMIUM FAQ ACCORDION STYLES & ANIMATIONS
+   ============================================================ */
+
+/* Slide down animation for Radix Accordion Content */
+@keyframes faq-slide-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+}
+
+/* Slide up animation for Radix Accordion Content */
+@keyframes faq-slide-up {
+  from {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* Radix Accordion Content Animations hook */
+[data-slot="accordion-content"][data-state="open"] {
+  animation: faq-slide-down 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+[data-slot="accordion-content"][data-state="closed"] {
+  animation: faq-slide-up 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Accordion Item Card Container */
+.faq-accordion-item {
+  border: 1px solid rgba(139, 111, 71, 0.15) !important;
+  border-radius: 1.25rem !important;
+  background-color: #ffffff !important;
+  padding: 0.25rem 1.5rem !important;
+  margin-bottom: 1rem !important;
+  box-shadow: 0 4px 10px -2px rgba(139, 111, 71, 0.05), 0 2px 4px -1px rgba(139, 111, 71, 0.03) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.faq-accordion-item:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(139, 111, 71, 0.4) !important;
+  box-shadow: 0 12px 20px -3px rgba(139, 111, 71, 0.1), 0 4px 6px -2px rgba(139, 111, 71, 0.05) !important;
+}
+
+/* Opened Card state */
+.faq-accordion-item[data-state="open"] {
+  border-color: #8b6f47 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #FAF6F0 100%) !important;
+  box-shadow: 0 20px 25px -5px rgba(139, 111, 71, 0.15), 0 10px 10px -5px rgba(139, 111, 71, 0.1) !important;
+  transform: translateY(0) !important;
+}
+
+/* Custom Number Badges */
+.faq-badge-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background-color: #F5EDE3;
+  color: #8b6f47;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.faq-accordion-item[data-state="open"] .faq-badge-num {
+  background-color: #8b6f47;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* Accordion Trigger overrides */
+.faq-accordion-trigger {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1.25rem !important;
+  text-decoration: none !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  color: #27272a !important;
+  text-align: left !important;
+  padding: 1.25rem 0 !important;
+  cursor: pointer !important;
+  transition: color 0.2s ease !important;
+}
+
+.faq-accordion-trigger:hover {
+  text-decoration: none !important;
+  color: #8b6f47 !important;
+}
+
+.faq-accordion-item[data-state="open"] .faq-accordion-trigger {
+  color: #8b6f47 !important;
+}
+
+/* Accordion Chevron rotates on open */
+.faq-accordion-item [data-slot="accordion-trigger"] svg {
+  color: #a1a1aa !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease !important;
+  flex-shrink: 0;
+}
+
+.faq-accordion-item[data-state="open"] [data-slot="accordion-trigger"] svg {
+  transform: rotate(180deg) !important;
+  color: #8b6f47 !important;
+}
+
+/* Content paragraph text wrapper */
+.faq-accordion-content {
+  overflow: hidden;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+  color: #4b5563 !important;
+}
+
+.faq-accordion-inner {
+  padding-bottom: 1.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed rgba(139, 111, 71, 0.15);
+  margin-top: 0.25rem;
+}
+
+/* FAQ Section Custom Layout Spacing */
+.faq-section {
+  padding-top: 5rem !important;
+  padding-bottom: 7.5rem !important; /* Generous gap between the last accordion card and the footer */
+}
+
+/* FAQ Title and Badge Prominence */
+.faq-title-badge {
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  background-color: rgba(139, 111, 71, 0.1) !important;
+  color: #8b6f47 !important;
+  padding: 0.45rem 1.25rem !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(139, 111, 71, 0.2) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.faq-title-heading {
+  font-size: 2.6rem !important;
+  font-weight: 900 !important; /* Black font weight */
+  color: #27272a !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+@media (max-width: 640px) {
+  .faq-title-heading {
+    font-size: 2rem !important;
+  }
+}
+
+.faq-title-sub {
+  font-size: 1.125rem !important;
+  color: #71717a !important;
+  max-width: 32rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  line-height: 1.5 !important;
+}
+
+/* Custom Mix Banner Card Padding & Spacing */
+.custom-mix-card {
+  padding-top: 4.5rem !important;
+  padding-bottom: 5.5rem !important; /* Extra padding-bottom for visual balance below button */
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+@media (max-width: 640px) {
+  .custom-mix-card {
+    padding-top: 3rem !important;
+    padding-bottom: 4rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+}
+
+/* Premium Reusable Section Headings */
+.premium-section-heading {
+  font-size: 2.6rem !important;
+  font-weight: 800 !important; /* Extra bold */
+  color: #27272a !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+@media (max-width: 640px) {
+  .premium-section-heading {
+    font-size: 2rem !important;
+  }
+}
+
+.premium-section-sub {
+  font-size: 1.125rem !important;
+  color: #71717a !important;
+  max-width: 36rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  line-height: 1.5 !important;
+}
+
+/* Trending Section Spacing */
+.trending-section {
+  padding-top: 5rem !important; /* Generous top padding for separation below hero */
+  padding-bottom: 0px !important; /* No bottom padding as requested */
+}
+
+/* Discounted Section Spacing */
+.discounted-section {
+  padding-top: 4rem !important;
+  padding-bottom: 5rem !important;
+}
+
+/* ============================================================
+   PREMIUM HOW IT WORKS SECTION STYLES
+   ============================================================ */
+
+.how-it-works-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 2.5rem !important;
+  position: relative !important;
+  max-width: 1050px !important;
+  margin: 0 auto !important;
+}
+
+@media (min-width: 768px) {
+  .how-it-works-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 2.25rem !important;
+  }
+}
+
+/* Connecting Line on Desktop */
+.how-it-works-connector {
+  position: absolute !important;
+  top: 5.5rem !important; /* Align with center of icons */
+  left: 10% !important;
+  right: 10% !important;
+  height: 2px !important;
+  border-top: 2px dashed rgba(139, 111, 71, 0.25) !important;
+  z-index: 0 !important;
+}
+
+/* Individual Card Styling */
+.how-it-works-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  position: relative !important;
+  background: #ffffff !important;
+  padding: 3.25rem 2rem 2.75rem 2rem !important;
+  border-radius: 1.75rem !important;
+  border: 1px solid rgba(139, 111, 71, 0.12) !important;
+  box-shadow: 0 10px 30px -5px rgba(139, 111, 71, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 1 !important;
+}
+
+/* Hover Effect for Card */
+.how-it-works-card:hover {
+  transform: translateY(-8px) !important;
+  border-color: rgba(139, 111, 71, 0.45) !important;
+  box-shadow: 0 20px 45px -12px rgba(139, 111, 71, 0.18), 0 8px 16px -4px rgba(139, 111, 71, 0.08) !important;
+}
+
+/* Icon Container Styling */
+.how-it-works-icon-wrapper {
+  width: 5rem !important;
+  height: 5rem !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 1.75rem !important;
+  border: 4px solid #ffffff !important;
+  box-shadow: 0 4px 12px rgba(139, 111, 71, 0.1) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 2 !important;
+  background-color: #FAF6F0 !important; /* Soft secondary-ish background */
+}
+
+/* Hover effects for the icon and card wrapper details */
+.how-it-works-card:hover .how-it-works-icon-wrapper {
+  background-color: #8b6f47 !important;
+  color: #ffffff !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 8px 24px rgba(139, 111, 71, 0.3) !important;
+}
+
+/* Dynamic styles depending on the icon category */
+.how-it-works-card:nth-child(2) .how-it-works-icon-wrapper {
+  background-color: #FCF7F2 !important;
+}
+.how-it-works-card:nth-child(2):hover .how-it-works-icon-wrapper {
+  background-color: #d4a574 !important;
+  color: #ffffff !important;
+}
+
+.how-it-works-card:nth-child(3) .how-it-works-icon-wrapper {
+  background-color: #FAF6F0 !important;
+}
+.how-it-works-card:nth-child(3):hover .how-it-works-icon-wrapper {
+  background-color: #8b6f47 !important;
+  color: #ffffff !important;
+}
+
+/* Small floating step number badge */
+.how-it-works-step-num {
+  position: absolute !important;
+  top: 1.25rem !important;
+  right: 1.5rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  color: #c9bfac !important;
+  letter-spacing: 0.05em !important;
+  background-color: rgba(139, 111, 71, 0.05) !important;
+  padding: 0.25rem 0.65rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.how-it-works-card:hover .how-it-works-step-num {
+  color: #8b6f47 !important;
+  background-color: rgba(139, 111, 71, 0.12) !important;
+  transform: scale(1.05) !important;
+}
+
+/* ---- Lazy Animated Section & Smooth Scroll ---- */
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

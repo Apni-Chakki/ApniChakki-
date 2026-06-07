@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Phone, Navigation, CheckCircle, Package, LogOut, Wheat, Clock, Truck, Radio, MessageCircle, Link2 } from 'lucide-react';
+import { MapPin, Phone, Navigation, CheckCircle, Package, LogOut, Wheat, Clock, Truck, Radio, MessageCircle, Link2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/button';
 import { Card } from '../../components/common/card';
@@ -122,7 +122,10 @@ export function DeliveryPanel() {
           paymentStatus: order.payment_status || 'pending',
           advancePayment: parseFloat(order.amount_paid || 0),
           couponDiscount: parseFloat(order.coupon_discount || 0),
-          items: order.items || []
+          items: order.items || [],
+          // order_type: 'pickup' = customer collects from store themselves
+          // order_type: 'delivery' = driver delivers to customer
+          orderType: order.order_type || 'delivery'
         }));
 
         // Sort: Out for delivery -> Ready -> Coming for Pickup -> Pickup Assigned -> Processing/Pending
@@ -266,7 +269,7 @@ export function DeliveryPanel() {
   }, [user]);
 
   // ─── Fallback WhatsApp link (Google Maps static location) ───
-  const generateWhatsAppLink = (order, lat, lng) => {
+  const generateWhatsAppLink = useCallback((order, lat, lng) => {
     const customerPhone = order.phone || order.customer_phone || '';
     let formattedPhone = customerPhone.replace(/\D/g, '');
     if (formattedPhone.startsWith('0')) {
@@ -312,7 +315,7 @@ export function DeliveryPanel() {
         
         // Rental details
         if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
-            itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+            itemsText += `   📅 _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
             itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
         }
       });
@@ -351,21 +354,94 @@ export function DeliveryPanel() {
     );
 
     return `https://wa.me/${formattedPhone}?text=${message}`;
-  };
+  }, [trackingLinks, user]);
+
+  // ─── Central helper: GPS → Google Maps Link → WhatsApp Customer ───
+  const shareLocationViaWhatsApp = useCallback(async (order, lat, lng) => {
+    const customerPhone = order.phone || order.customer_phone;
+    if (!customerPhone) {
+      toast.warning('⚠️ Customer ka phone number available nahi. WhatsApp message nahi bheja ja sakta.');
+      return;
+    }
+
+    // Format phone number for WhatsApp (Pakistan format)
+    const rawPhone = customerPhone.replace(/\D/g, '');
+    let formattedPhone = rawPhone;
+    if (rawPhone.startsWith('0')) {
+      formattedPhone = '92' + rawPhone.substring(1);
+    } else if (!rawPhone.startsWith('92')) {
+      formattedPhone = '92' + rawPhone;
+    }
+
+    // Build Google Maps link with current GPS coordinates
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+    const mapsLink = hasCoords
+      ? `https://www.google.com/maps?q=${lat},${lng}`
+      : null;
+
+    // Build order items summary
+    let itemsText = '';
+    if (order.items && order.items.length > 0) {
+      order.items.forEach(item => {
+        const unit = item.unit || item.service?.unit || 'unit';
+        const name = item.name || item.service?.name || '';
+        const qty = item.quantity || 1;
+        itemsText += `🔸 *${name}* × ${qty} ${unit}\n`;
+      });
+    }
+
+    // Payment summary
+    const subtotal = parseFloat(order.total_amount || order.total) || 0;
+    const discount = parseFloat(order.coupon_discount || order.couponDiscount) || 0;
+    const grandTotal = subtotal - discount;
+    const advancePaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
+    const remaining = grandTotal - advancePaid;
+    const isPickup = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
+
+    const message = encodeURIComponent(
+      `🚚 *Apni Chakki — Rider On The Way!* 🚚\n\n` +
+      `Assalam-o-Alaikum *${order.customerName || 'Customer'}*! 👋\n\n` +
+      `Aapka order *#${order.id}* dispatch ho gaya hai aur rider aapki taraf aa raha hai. 🛵💨\n\n` +
+      `📦 *Order Summary:*\n${itemsText}\n` +
+      (isPickup
+        ? `💰 *Amount:* TBD (Pickup Request)\n`
+        : `💰 *Total:* Rs. ${grandTotal.toLocaleString()}\n` +
+          (advancePaid > 0 ? `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n` : '') +
+          `❗ *Remaining Due:* Rs. ${remaining.toLocaleString()}\n`) +
+      `\n📍 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
+      `🧑‍💼 *Rider:* ${user?.name || 'Apni Chakki Driver'}\n\n` +
+      (mapsLink
+        ? `🗺️ *Rider ki Live Location (Google Maps):*\n${mapsLink}\n\n`
+        : '') +
+      `Apna phone paas rakhein taake rider aap tak asaani se pahunch sake.\n\n` +
+      `Shukriya! JazakAllah! 🙏🌾`
+    );
+
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`;
+
+    toast.dismiss();
+    setTimeout(() => window.open(whatsappUrl, '_blank'), 300);
+    toast.success(
+      mapsLink
+        ? '✅ WhatsApp khul gaya! Customer ko Google Maps location bhi mil jaegi.'
+        : '✅ WhatsApp khul gaya! (GPS location nahi mili, baaki details bhej di gayi hain.)'
+    );
+  }, [user]);
 
   // --- 2. Update Status to Out-For-Delivery + Start Tracking ---
   const handleStartDelivery = async (order) => {
     try {
-      // First get current GPS position for the initial "started" ping
+      // 1. Get GPS position
+      toast.loading('📡 Getting your location...', { id: 'start-delivery' });
       let initialLat = null, initialLng = null;
-
       const position = await getCurrentPositionSafe({ timeout: 15000, maximumAge: 0 });
+      toast.dismiss('start-delivery');
 
       if (position) {
         initialLat = position.coords.latitude;
         initialLng = position.coords.longitude;
 
-        // Send the "started" ping to server
+        // Send the initial "started" ping to server
         await fetch(`${API_BASE_URL}/update_driver_location.php`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -381,7 +457,7 @@ export function DeliveryPanel() {
         });
       }
 
-      // Update order status in DB
+      // 2. Update order status to out-for-delivery
       const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -390,35 +466,26 @@ export function DeliveryPanel() {
       const result = await response.json();
       
       if (result.success) {
-        // Assign driver in DB
+        // 3. Assign driver in DB
         await fetch(`${API_BASE_URL}/assign_driver.php`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ order_id: order.id, driver_name: user.name })
         });
         
-        // Start continuous GPS tracking
+        // 4. Start continuous GPS tracking
         startGpsTracking(order.id);
-        
         toast.success('🚚 Delivery started! GPS tracking active.');
 
-        // Generate tracking link and open WhatsApp with it
-        if (order.phone) {
-          const trackingData = await generateTrackingLink(order);
-          
-          setTimeout(() => {
-            if (trackingData?.whatsapp_url) {
-              window.open(trackingData.whatsapp_url, '_blank');
-            } else if (initialLat && initialLng) {
-              const whatsappUrl = generateWhatsAppLink(order, initialLat, initialLng);
-              window.open(whatsappUrl, '_blank');
-            }
-          }, 1000);
-        }
+        // 5. Send live location to customer via WhatsApp
+        await shareLocationViaWhatsApp(order, initialLat, initialLng);
 
         loadOrders();
+      } else {
+        toast.error('Failed to start delivery');
       }
     } catch (error) {
+      toast.dismiss('start-delivery');
       toast.error('Network error starting delivery');
       console.error('Start delivery error:', error);
     }
@@ -567,6 +634,12 @@ export function DeliveryPanel() {
     openCompleteConfirm(order, execute);
   };
 
+  const openMaps = useCallback((address) => {
+    if (!address) return;
+    const encodedAddress = encodeURIComponent(address);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+  }, []);
+
   const openCompleteConfirm = (order, execute) => {
     setConfirmTitle(t('Confirm Delivery'));
     setConfirmDesc(`${t('Mark order')} #${order.id} ${t('for')} ${order.customerName} ${t('as delivered')}?`);
@@ -581,25 +654,74 @@ export function DeliveryPanel() {
   };
 
   const getStatusBadge = (status) => {
+    const badgeStyle = (bg, border, text) => ({
+      backgroundColor: bg,
+      borderColor: border,
+      color: text,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px'
+    });
+
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={badgeStyle('#fffbeb', '#fde68a', '#b45309')}>
+            <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: '#b45309' }} />
+            {t('Pending')}
+          </Badge>
+        );
       case 'processing':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">Processing</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={badgeStyle('#eff6ff', '#bfdbfe', '#1d4ed8')}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: '#1d4ed8' }} />
+            {t('Processing')}
+          </Badge>
+        );
       case 'ready':
-        return <Badge className="bg-green-600 text-white">Ready for Pickup</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={badgeStyle('#ecfdf5', '#a7f3d0', '#047857')}>
+            <Package className="h-3.5 w-3.5 shrink-0" style={{ color: '#047857' }} />
+            {t('Ready for Pickup')}
+          </Badge>
+        );
       case 'out-for-delivery':
-        return <Badge className="bg-purple-600 text-white animate-pulse">Out for Delivery</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold animate-pulse" style={badgeStyle('#e0e7ff', '#c7d2fe', '#4338ca')}>
+            <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: '#4338ca' }} />
+            {t('Out for Delivery')}
+          </Badge>
+        );
       case 'completed':
-        return <Badge className="bg-emerald-600 text-white">Completed</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={badgeStyle('#f0fdfa', '#99f6e4', '#0f766e')}>
+            <CheckCircle className="h-3.5 w-3.5 shrink-0" style={{ color: '#0f766e' }} />
+            {t('Completed')}
+          </Badge>
+        );
       case 'pickup_assigned':
-        return <Badge className="bg-orange-500 text-white">Pickup Assigned</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={badgeStyle('#fff7ed', '#ffedd5', '#ea580c')}>
+            <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: '#ea580c' }} />
+            {t('Pickup Assigned')}
+          </Badge>
+        );
       case 'coming_for_pickup':
-        return <Badge className="bg-blue-500 text-white animate-pulse">Coming for Pickup</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold animate-pulse" style={badgeStyle('#ecfeff', '#cffafe', '#0891b2')}>
+            <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: '#0891b2' }} />
+            {t('Coming for Pickup')}
+          </Badge>
+        );
       case 'arrived_at_shop':
-        return <Badge className="bg-teal-600 text-white">Arrived at Shop</Badge>;
+        return (
+          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={badgeStyle('#f5f3ff', '#ddd6fe', '#6d28d9')}>
+            <Wheat className="h-3.5 w-3.5 shrink-0" style={{ color: '#6d28d9' }} />
+            {t('Arrived at Shop')}
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-medium">{status}</Badge>;
     }
   };
 
@@ -714,6 +836,7 @@ export function DeliveryPanel() {
 
   const handleImComing = async (order) => {
     try {
+      // 1. Notify backend database
       const pos = await getCurrentPositionSafe({ timeout: 8000, maximumAge: 3000 });
       const payload = {
         order_id: order.id,
@@ -721,9 +844,13 @@ export function DeliveryPanel() {
         driver_phone: user?.phone || user?.username || null,
         message: "I'm coming",
       };
+      
+      let initialLat = null, initialLng = null;
       if (pos) {
         payload.lat = pos.coords.latitude;
         payload.lng = pos.coords.longitude;
+        initialLat = pos.coords.latitude;
+        initialLng = pos.coords.longitude;
       }
 
       const res = await fetch(`${API_BASE_URL}/driver_notify.php`, {
@@ -733,10 +860,18 @@ export function DeliveryPanel() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message || 'Notified');
+        toast.success(data.message || 'Customer notified!');
       } else {
-        toast.error(data.message || 'Failed to notify');
+        console.warn('Notification failed, but will proceed to open WhatsApp');
       }
+
+      // 2. Start tracking if not already active
+      if (!activeTracking[order.id]) {
+        startGpsTracking(order.id);
+      }
+
+      // 3. Share Live Location via WhatsApp (automatically opens customer's chat)
+      await shareLocationViaWhatsApp(order, initialLat, initialLng);
     } catch (e) {
       console.error('Im coming error', e);
       toast.error('Network error');
@@ -783,194 +918,394 @@ export function DeliveryPanel() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => {
+              // isStorePickup = customer comes to shop themselves (no driver needed)
+              const isStorePickup = order.orderType === 'pickup';
               const isPickupRequest = ['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0;
-              // If it's a pickup request, it is actionable in pending/processing state too.
               const isActionable = ['pending', 'processing', 'ready', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status);
               const isTracking = !!activeTracking[order.id];
               
               return (
-              <Card key={order.id} className={`p-5 ${!isActionable ? 'opacity-75 bg-gray-50' : 'border-l-4 border-l-primary'}`}>
-                <div className="space-y-4">
-                  {/* Order Header */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-sm text-muted-foreground">#{order.id}</span>
-                        {getStatusBadge(order.status)}
-                        {isTracking && (
-                          <Badge className="bg-red-500 text-white text-[10px] animate-pulse gap-1">
-                            <Radio className="h-3 w-3" />
-                            LIVE
-                          </Badge>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-lg">{order.customerName}</h3>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-primary">
-                        {isPickupRequest ? 'TBD' : `Rs. ${order.total.toLocaleString()}`}
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {order.payment_method === 'cash' ? 'Collect Cash' : 'Paid Online'}
-                      </Badge>
-                    </div>
-                  </div>
+                <Card 
+                  key={order.id} 
+                  className={`p-6 relative overflow-hidden transition-all duration-300 border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
+                    !isActionable 
+                      ? 'opacity-70 bg-gray-50' 
+                      : 'bg-white'
+                  }`}
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '16px',
+                    borderColor: '#f1f5f9',
+                    backgroundColor: !isActionable ? '#f9fafb' : '#ffffff',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  {/* Left accent color strip */}
+                  {isActionable && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0"
+                      style={{ 
+                        width: '6px', 
+                        background: isStorePickup
+                          ? 'linear-gradient(to bottom, #22c55e, #16a34a)'   // green = store pickup
+                          : isPickupRequest 
+                            ? 'linear-gradient(to bottom, #fbbf24, #f97316)' // orange = driver pickup
+                            : 'linear-gradient(to bottom, #3b82f6, #4f46e5)' // blue = delivery
+                      }} 
+                    />
+                  )}
 
-                  {/* Address */}
-                  <div className="flex gap-3 bg-background p-3 rounded-md border border-border">
-                    <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{order.deliveryAddress || 'No address provided'}</p>
-                    </div>
-                    {isActionable && (
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-blue-600"
-                          onClick={() => openMaps(order.deliveryAddress || '')}
-                        >
-                          <Navigation className="h-4 w-4" />
-                        </Button>
-                        {order.phone && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-muted-foreground"
-                            onClick={() => window.open(`tel:${order.phone}`, '_self')}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Order Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex flex-col" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex items-center flex-wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                          <span 
+                            className="font-mono text-sm font-bold px-2.5 py-0.5 rounded-md border"
+                            style={{ backgroundColor: '#f1f5f9', color: '#475569', borderColor: '#e2e8f0' }}
                           >
-                            <Phone className="h-4 w-4" />
-                          </Button>
+                            #{order.id}
+                          </span>
+                          {getStatusBadge(order.status)}
+                          {isTracking && (
+                            <Badge 
+                              className="text-white text-[10px] font-bold tracking-wider animate-pulse border-none"
+                              style={{ 
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                backgroundColor: '#ef4444', 
+                                boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
+                              }}
+                            >
+                              <Radio className="h-3 w-3" style={{ color: '#ffffff' }} />
+                              LIVE
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Customer Avatar & Name */}
+                        <div className="flex items-center" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
+                          <div 
+                            className="rounded-full flex items-center justify-center font-bold text-sm shrink-0 border"
+                            style={{ 
+                              width: '40px', 
+                              height: '40px', 
+                              minWidth: '40px', 
+                              minHeight: '40px', 
+                              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
+                              borderColor: '#cbd5e1', 
+                              color: '#475569' 
+                            }}
+                          >
+                            {order.customerName ? order.customerName.charAt(0).toUpperCase() : 'C'}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-base leading-tight" style={{ color: '#1e293b', margin: 0 }}>
+                              {order.customerName}
+                            </h3>
+                            <p className="text-[11px] font-bold leading-none mt-1 uppercase tracking-wider" style={{ color: '#94a3b8', margin: '4px 0 0 0' }}>
+                              {t('Customer')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right flex flex-col items-end" style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: '6px' }}>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] uppercase font-bold tracking-wider leading-none mb-1" style={{ color: '#94a3b8', margin: '0 0 4px 0' }}>
+                            {isPickupRequest ? t('Pickup Request') : t('Total Amount')}
+                          </span>
+                          <p className="text-xl font-extrabold leading-none" style={{ color: '#0f172a', margin: 0 }}>
+                            {isPickupRequest ? 'TBD' : `Rs. ${order.total.toLocaleString()}`}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
+                          style={{
+                            backgroundColor: order.payment_method === 'cash' ? '#fffbeb' : '#ecfdf5',
+                            borderColor: order.payment_method === 'cash' ? '#fde68a' : '#a7f3d0',
+                            color: order.payment_method === 'cash' ? '#b45309' : '#047857'
+                          }}
+                        >
+                          {order.payment_method === 'cash' ? t('Collect Cash') : t('Paid Online')}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Address Block */}
+                    <div 
+                      className="flex p-4 rounded-xl border items-center justify-between"
+                      style={{ backgroundColor: '#fafaf9', borderColor: '#e7e5e4', gap: '12px', display: 'flex' }}
+                    >
+                      <div className="flex items-center min-w-0 flex-1" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div 
+                          className="rounded-full border flex items-center justify-center shrink-0"
+                          style={{ 
+                            width: '40px', 
+                            height: '40px', 
+                            minWidth: '40px', 
+                            minHeight: '40px', 
+                            backgroundColor: '#fee2e2', 
+                            borderColor: '#fca5a5' 
+                          }}
+                        >
+                          <MapPin className="h-5 w-5 text-red-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: '#94a3b8', margin: '0 0 4px 0' }}>
+                            {t('Delivery Address')}
+                          </span>
+                          <p className="text-sm font-semibold leading-snug break-words" style={{ color: '#334155', margin: 0 }}>
+                            {order.deliveryAddress || t('No address provided')}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {isActionable && (
+                        <div className="flex items-center shrink-0 ml-1" style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            className="rounded-full bg-white border flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                            style={{ 
+                              width: '36px', 
+                              height: '36px', 
+                              minWidth: '36px', 
+                              minHeight: '36px', 
+                              borderColor: '#e2e8f0', 
+                              color: '#2563eb',
+                              padding: '0'
+                            }}
+                            onClick={() => openMaps(order.deliveryAddress || '')}
+                            title={t('Navigate')}
+                          >
+                            <Navigation className="h-4.5 w-4.5" style={{ color: '#2563eb' }} />
+                          </button>
+                          {order.phone && (
+                            <button
+                              className="rounded-full bg-white border flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              style={{ 
+                                width: '36px', 
+                                height: '36px', 
+                                minWidth: '36px', 
+                                minHeight: '36px', 
+                                borderColor: '#e2e8f0', 
+                                color: '#475569',
+                                padding: '0'
+                              }}
+                              onClick={() => window.open(`tel:${order.phone}`, '_self')}
+                              title={t('Call Customer')}
+                            >
+                              <Phone className="h-4.5 w-4.5" style={{ color: '#475569' }} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    {isActionable && (
+                      <div className="flex flex-col pt-3" style={{ borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+                        {/* ── STORE PICKUP: Customer comes to shop — only Complete button ── */}
+                        {isStorePickup ? (
+                          <>
+                            <div
+                              className="w-full text-center text-xs font-semibold rounded-xl py-2 border flex items-center justify-center gap-2"
+                              style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#15803d' }}
+                            >
+                              <Package className="h-4 w-4" style={{ color: '#15803d' }} />
+                              {t('Customer will collect from store')}
+                            </div>
+                            {order.status === 'ready' && (
+                              <button
+                                className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md"
+                                style={{
+                                  background: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
+                                  border: 'none',
+                                  padding: '0 1.5rem'
+                                }}
+                                onClick={() => handleCompleteDelivery(order)}
+                              >
+                                <CheckCircle className="h-5 w-5 animate-pulse" style={{ color: '#ffffff' }} />
+                                {t('Mark as Collected')}
+                              </button>
+                            )}
+                          </>
+
+                        ) : isPickupRequest ? (
+                          <>
+                            {/* Status: pickup_assigned — I'm Coming button */}
+                            {order.status === 'pickup_assigned' && (
+                              <button
+                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md"
+                                style={{ 
+                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '0 1.5rem'
+                                }}
+                                onClick={() => handleComingForPickup(order)}
+                              >
+                                <Navigation className="h-4 w-4" style={{ color: '#ffffff' }} />
+                                {t("I'm coming")}
+                              </button>
+                            )}
+
+                            {/* Status: coming_for_pickup — WhatsApp Share + Mark as Arrived */}
+                            {order.status === 'coming_for_pickup' && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" style={{ display: 'grid', gap: '8px' }}>
+                                {/* WhatsApp Share button */}
+                                {order.phone && (
+                                  <button
+                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                                    style={{ 
+                                      borderColor: '#10b981', 
+                                      color: '#047857', 
+                                      backgroundColor: '#ecfdf5',
+                                      padding: '0 1rem'
+                                    }}
+                                    onClick={() => {
+                                      const trackingData = trackingLinks[order.id];
+                                      if (trackingData?.whatsapp_url) {
+                                        window.open(trackingData.whatsapp_url, '_blank');
+                                      } else {
+                                        generateTrackingLink(order).then(data => {
+                                          if (data?.whatsapp_url) {
+                                            window.open(data.whatsapp_url, '_blank');
+                                          } else {
+                                            getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 }).then(pos => {
+                                              const url = generateWhatsAppLink(order, pos?.coords?.latitude, pos?.coords?.longitude);
+                                              window.open(url, '_blank');
+                                            });
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <MessageCircle className="h-4 w-4" style={{ color: '#047857' }} />
+                                    {t('Share Live Location')}
+                                  </button>
+                                )}
+
+                                {/* Mark as Arrived at Shop */}
+                                <button
+                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md col-span-1 sm:col-span-1"
+                                  style={{ 
+                                    background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)', 
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    padding: '0 1rem'
+                                  }}
+                                  onClick={() => handleArrivedAtShopForPickup(order)}
+                                >
+                                  <CheckCircle className="h-4.5 w-4.5" style={{ color: '#ffffff' }} />
+                                  {t('Mark as Arrived')}
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Status: arrived_at_shop — info block */}
+                            {order.status === 'arrived_at_shop' && (
+                              <div 
+                                className="w-full text-center text-sm font-semibold rounded-xl py-3 border shadow-2xs flex items-center justify-center gap-2"
+                                style={{ 
+                                  backgroundColor: '#f0fdfa', 
+                                  borderColor: '#ccfbf1', 
+                                  color: '#0f766e',
+                                  gap: '8px'
+                                }}
+                              >
+                                <CheckCircle className="h-4.5 w-4.5 animate-bounce" style={{ color: '#0f766e' }} />
+                                {t('Arrived at Shop — Admin processing')}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {order.status !== 'out-for-delivery' ? (
+                              <button
+                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md"
+                                style={{ 
+                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '0 1.5rem'
+                                }}
+                                onClick={() => handleStartDelivery(order)}
+                              >
+                                <Truck className="h-5 w-5" style={{ color: '#ffffff' }} />
+                                {t('Start Delivery')}
+                              </button>
+                            ) : (
+                              <div className="flex flex-col" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="grid grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                                  {order.phone && (
+                                    <button
+                                      className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                                      style={{ 
+                                        borderColor: '#10b981', 
+                                        color: '#047857', 
+                                        backgroundColor: '#ecfdf5',
+                                        padding: '0 0.5rem'
+                                      }}
+                                      onClick={() => {
+                                        getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 })
+                                          .then((pos) => {
+                                            if (pos) {
+                                              const url = generateWhatsAppLink(order, pos.coords.latitude, pos.coords.longitude);
+                                              window.open(url, '_blank');
+                                              return;
+                                            }
+                                            toast.info(t('Could not get current location. Sending the update without live coordinates.'));
+                                            window.open(generateWhatsAppLink(order, null, null), '_blank');
+                                          });
+                                      }}
+                                    >
+                                      <MessageCircle className="h-4 w-4" style={{ color: '#047857' }} />
+                                      {t('WhatsApp Update')}
+                                    </button>
+                                  )}
+                                  <button
+                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                                    style={{ 
+                                      backgroundColor: '#f1f5f9', 
+                                      color: '#334155',
+                                      border: 'none',
+                                      padding: '0 0.5rem'
+                                    }}
+                                    onClick={() => handleImComing(order)}
+                                  >
+                                    <Navigation className="h-4 w-4" style={{ color: '#475569' }} />
+                                    {t("I'm coming")}
+                                  </button>
+                                </div>
+                                <button
+                                  className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1"
+                                  style={{ 
+                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    padding: '0 1.5rem'
+                                  }}
+                                  onClick={() => handleCompleteDelivery(order)}
+                                >
+                                  <CheckCircle className="h-5 w-5 animate-pulse" style={{ color: '#ffffff' }} />
+                                  {t('Mark as Delivered')}
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
                   </div>
-
-                  {isActionable && (
-                    <div className="flex flex-col gap-2">
-                      {isPickupRequest ? (
-                        <>
-                          {/* Status: pickup_assigned — sirf I'm Coming button */}
-                          {order.status === 'pickup_assigned' && (
-                            <button
-                              className="w-full h-11 rounded-md px-8 flex items-center justify-center gap-2 text-sm font-medium text-white transition-colors"
-                              style={{ backgroundColor: '#2563eb' }}
-                              onClick={() => handleComingForPickup(order)}
-                            >
-                              <Navigation className="h-4 w-4" />
-                              {t("I'm coming")}
-                            </button>
-                          )}
-
-                          {/* Status: coming_for_pickup — WhatsApp Share + Mark as Arrived */}
-                          {order.status === 'coming_for_pickup' && (
-                            <>
-                              {/* WhatsApp Share button */}
-                              {order.phone && (
-                                <button
-                                  className="w-full h-11 rounded-md px-4 flex items-center justify-center gap-2 text-sm font-medium border transition-colors"
-                                  style={{ borderColor: '#22c55e', color: '#15803d', backgroundColor: '#f0fdf4' }}
-                                  onClick={() => {
-                                    const trackingData = trackingLinks[order.id];
-                                    if (trackingData?.whatsapp_url) {
-                                      window.open(trackingData.whatsapp_url, '_blank');
-                                    } else {
-                                      generateTrackingLink(order).then(data => {
-                                        if (data?.whatsapp_url) {
-                                          window.open(data.whatsapp_url, '_blank');
-                                        } else {
-                                          getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 }).then(pos => {
-                                            const url = generateWhatsAppLink(order, pos?.coords?.latitude, pos?.coords?.longitude);
-                                            window.open(url, '_blank');
-                                          });
-                                        }
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <MessageCircle className="h-4 w-4" />
-                                  {t('Share Live Location')}
-                                </button>
-                              )}
-
-                              {/* Mark as Arrived at Shop */}
-                              <button
-                                className="w-full h-12 rounded-md px-4 flex items-center justify-center gap-2 text-base font-semibold text-white transition-colors"
-                                style={{ backgroundColor: '#0d9488' }}
-                                onClick={() => handleArrivedAtShopForPickup(order)}
-                              >
-                                <CheckCircle className="h-5 w-5" />
-                                {t('Mark as Arrived at Shop')}
-                              </button>
-                            </>
-                          )}
-
-                          {/* Status: arrived_at_shop — sirf info dikhao */}
-                          {order.status === 'arrived_at_shop' && (
-                            <div className="w-full text-center text-sm text-teal-700 font-semibold bg-teal-50 rounded-md py-3 border border-teal-200">
-                              ✅ Arrived at Shop — Admin processing karega
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {order.status !== 'out-for-delivery' ? (
-                            <button
-                              className="w-full h-11 rounded-md flex items-center justify-center gap-2 text-sm font-semibold text-white transition-colors"
-                              style={{ backgroundColor: '#2563eb' }}
-                              onClick={() => handleStartDelivery(order)}
-                            >
-                              <Truck className="h-5 w-5" />
-                              {t('Start Delivery')}
-                            </button>
-                          ) : (
-                            <>
-                              {order.phone && (
-                                <button
-                                  className="w-full h-11 rounded-md flex items-center justify-center gap-2 text-sm font-medium border transition-colors"
-                                  style={{ borderColor: '#22c55e', color: '#15803d', backgroundColor: '#f0fdf4' }}
-                                  onClick={() => {
-                                    getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 })
-                                      .then((pos) => {
-                                        if (pos) {
-                                          const url = generateWhatsAppLink(order, pos.coords.latitude, pos.coords.longitude);
-                                          window.open(url, '_blank');
-                                          return;
-                                        }
-                                        toast.info(t('Could not get current location. Sending the update without live coordinates.'));
-                                        window.open(generateWhatsAppLink(order, null, null), '_blank');
-                                      });
-                                  }}
-                                >
-                                  <MessageCircle className="h-4 w-4" />
-                                  {t('Send WhatsApp Update')}
-                                </button>
-                              )}
-                              <button
-                                className="w-full h-11 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors"
-                                style={{ backgroundColor: '#e2e8f0', color: '#334155' }}
-                                onClick={() => handleImComing(order)}
-                              >
-                                <Navigation className="h-4 w-4" />
-                                {t("I'm coming")}
-                              </button>
-                              <button
-                                className="w-full h-12 rounded-md flex items-center justify-center gap-2 text-base font-semibold text-white transition-colors"
-                                style={{ backgroundColor: '#16a34a' }}
-                                onClick={() => handleCompleteDelivery(order)}
-                              >
-                                <CheckCircle className="h-5 w-5" />
-                                {t('Mark as Delivered')}
-                              </button>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )})}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

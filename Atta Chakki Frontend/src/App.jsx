@@ -57,6 +57,7 @@ const LiveTrackingMap = lazy(() => import('./pages/admin/LiveTrackingMap').then(
 const ContactMessages = lazy(() => import('./pages/admin/ContactMessages').then(module => ({ default: module.ContactMessages })));
 const CustomMixRequests = lazy(() => import('./pages/admin/CustomMixRequests').then(module => ({ default: module.default })));
 const ActiveRentals = lazy(() => import('./pages/admin/ActiveRentals').then(module => ({ default: module.ActiveRentals })));
+const ManageCustomers = lazy(() => import('./pages/admin/ManageCustomers').then(module => ({ default: module.ManageCustomers })));
 
 
 function PageLoader() {
@@ -200,6 +201,7 @@ export default function App() {
             <Route path="/admin/payments" element={<ProtectedAdminRoute><AdminLayout><PaymentVerification /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/inventory" element={<ProtectedAdminRoute><AdminLayout><InventoryManagement /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminLayout><ManageCategories /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/customers" element={<ProtectedAdminRoute><AdminLayout><ManageCustomers /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/services" element={<ProtectedAdminRoute><AdminLayout><ManageServices /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminLayout><ManageCoupons /></AdminLayout></ProtectedAdminRoute>} />
             <Route path="/admin/delivery" element={<ProtectedAdminRoute><AdminLayout><ManageDelivery /></AdminLayout></ProtectedAdminRoute>} />

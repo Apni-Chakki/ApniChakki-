@@ -28,6 +28,7 @@ export function AdminSidebar({ isOpen = false, onClose = () => {} }) {
     { path: '/admin/rentals', label: 'Active Rentals', icon: RotateCcw },
     { path: '/admin/records', label: 'Orders Record', icon: FileText },
     { path: '/admin/udhaar', label: 'Udhaar Khata', icon: Users },
+    { path: '/admin/customers', label: 'Manage Customers', icon: Users },
     { path: '/admin/khata', label: 'Digital Khata', icon: BookOpen },
     { path: '/admin/inventory', label: 'Inventory', icon: Archive },
     { path: '/admin/categories', label: 'Manage Categories', icon: Package },

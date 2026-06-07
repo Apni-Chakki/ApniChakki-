@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, GripVertical, Truck, Weight } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, GripVertical, Truck, Weight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
@@ -355,6 +355,25 @@ export function ManageServices() {
     }
   };
 
+  const handleToggleActive = async (id, currentStatus) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/update_product_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, is_active: currentStatus ? 0 : 1 })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        fetchServices();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Network error while toggling status');
+    }
+  };
+
   const handleDelete = async (id) => {
     const deleteService = async () => {
       try {
@@ -375,12 +394,12 @@ export function ManageServices() {
       }
     };
 
-    toast.custom((t) => (
+    toast.custom((toastId) => (
       <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
         <p className="text-primary-foreground font-medium">Are you sure you want to delete this service?</p>
         <div className="flex gap-2 justify-end">
           <Button 
-            onClick={() => toast.dismiss(t)} 
+            onClick={() => toast.dismiss(toastId)} 
             variant="outline" 
             size="sm"
             className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
@@ -389,7 +408,7 @@ export function ManageServices() {
           </Button>
           <Button 
             onClick={() => {
-              toast.dismiss(t);
+              toast.dismiss(toastId);
               deleteService();
             }} 
             size="sm"
@@ -1060,7 +1079,10 @@ export function ManageServices() {
                             </div>
                           )}
                           <div className="flex-1 min-w-0 pr-4">
-                            <h3 className="mb-2 text-lg font-bold text-slate-800">{service.name}</h3>
+                            <h3 className="mb-2 text-lg font-bold text-slate-800">
+                              {service.name}
+                              {!service.is_active && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border">Disabled</span>}
+                            </h3>
                             <p className="text-muted-foreground mb-3 text-sm line-clamp-2">{service.description || 'No description provided'}</p>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium border border-primary/20">
@@ -1084,10 +1106,12 @@ export function ManageServices() {
                                 </span>
                               )}
 
-                              {service.category !== 'service' && service.category_name !== 'service' ? (
+                              {(service.category === 'service' || service.category_name === 'service') ? (
+                                <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium border border-green-500/20">Active Service</span>
+                              ) : (service.track_inventory == 1 || service.track_inventory === true) ? (
                                 <span className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/20">✓ Inventory Tracked</span>
                               ) : (
-                                <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium border border-green-500/20">Active Service</span>
+                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium border border-gray-200">Inventory Not Tracked</span>
                               )}
 
                               {(service.dual_unit === 1 || service.dual_unit === true) && (
@@ -1112,6 +1136,9 @@ export function ManageServices() {
                             </div>
                           </div>
                           <div className="flex sm:flex-col gap-2 self-start mt-4 sm:mt-0">
+                            <Button onClick={() => handleToggleActive(service.id, service.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+                              {service.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                            </Button>
                             <Button onClick={() => handleEdit(service)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
                               <Edit className="h-4 w-4" />
                             </Button>

@@ -507,7 +507,7 @@ function rejectBankPayment() {
 
         // ── cURL to Node.js Email Server ──
         if (!empty($payment['customer_email'])) {
-            $emailServerUrl = 'http://localhost:3002/send-payment-rejection';
+            $emailServerUrl = 'http://localhost:3001/send-payment-rejection';
             $dataToSend = [
                 'customerEmail' => $payment['customer_email'],
                 'customerName' => $payment['customer_name'],

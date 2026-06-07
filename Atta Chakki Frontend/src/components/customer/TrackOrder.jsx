@@ -17,7 +17,7 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { API_BASE_URL } from '../../config';
 
 const STATUS_STEPS = [

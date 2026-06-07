@@ -200,7 +200,8 @@ export function Checkout() {
   const [isOutOfLahore, setIsOutOfLahore] = useState(false);
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discount_amount : 0;
-  const grandTotal = total + deliveryFee - couponDiscount;
+  const vipDiscountAmount = user?.vip_discount ? (total - couponDiscount) * 0.10 : 0;
+  const grandTotal = Math.max(0, total + deliveryFee - couponDiscount - vipDiscountAmount);
 
   // Show warning if coupon is applied to items with product discounts
   const hasMixedDiscounts = couponDiscount > 0 && productDiscount > 0;
@@ -298,6 +299,10 @@ export function Checkout() {
 
       const updateFee = (distVal) => {
         setDistanceKm(distVal);
+        if (user?.vip_free_shipping) {
+          setDeliveryFee(0);
+          return;
+        }
         let fee = deliveryConfig.base_fare;
         if (distVal > deliveryConfig.base_distance) {
           fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
@@ -333,10 +338,10 @@ export function Checkout() {
         updateFee(straightDist);
       }
     } else {
-      setDeliveryFee(deliveryConfig.base_fare);
+      setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);
       setDistanceKm(0);
     }
-  }, [gpsCoords, isOutOfLahore, orderType, deliveryConfig]);
+  }, [gpsCoords, isOutOfLahore, orderType, deliveryConfig, user?.vip_free_shipping]);
 
   useEffect(() => {
     if (hasTripItem) setOrderType('delivery');
@@ -777,7 +782,7 @@ export function Checkout() {
         order_id: null,
         user_id: user.id,
         payment_method: paymentMethod,
-        amount: total,
+        amount: grandTotal,
         user_phone: paymentMethod === 'jazzcash' ? mobileNumber : null,
         bank_account_number: paymentMethod === 'bank' ? bankAccountNumber : null,
         card_number: paymentMethod === 'card' ? cardNumber.replace(/\s/g, '') : null,
@@ -1176,12 +1181,14 @@ export function Checkout() {
             <span className="text-foreground font-bold">{isTbdOrder ? 'TBD' : `Rs. ${total.toFixed(2)}`}</span>
           </div>
 
-          {orderType === 'delivery' && deliveryFee > 0 && !isOutOfLahore && (
+          {orderType === 'delivery' && !isOutOfLahore && (
             <div className="flex justify-between pt-2">
               <span className="text-muted-foreground text-sm">
                 {t('Delivery Fee')} ({distanceKm.toFixed(1)} km)
               </span>
-              <span className="text-muted-foreground text-sm">Rs. {deliveryFee}</span>
+              <span className={`text-sm ${user?.vip_free_shipping ? 'text-emerald-600 font-semibold' : 'text-muted-foreground'}`}>
+                {user?.vip_free_shipping ? t('Free (VIP Benefit)') : `Rs. ${deliveryFee}`}
+              </span>
             </div>
           )}
 
@@ -1244,9 +1251,17 @@ export function Checkout() {
               <span className="text-sm font-medium">-Rs. {couponDiscount.toFixed(2)}</span>
             </div>
           )}
+
+          {vipDiscountAmount > 0 && (
+            <div className="flex justify-between pt-2 text-purple-600 dark:text-purple-400">
+              <span className="text-sm font-medium">{t('VIP 10% Discount')}</span>
+              <span className="text-sm font-medium">-Rs. {vipDiscountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between pt-2 border-t border-border font-bold">
             <span className="text-foreground">{t('Grand Total')}</span>
-            <span className="text-foreground">{isTbdOrder ? 'TBD' : `Rs. ${grandTotal}`}</span>
+            <span className="text-foreground">{isTbdOrder ? 'TBD' : `Rs. ${grandTotal.toFixed(2)}`}</span>
           </div>
 
           {hasPendingWeightItem && (

@@ -5,8 +5,8 @@ import { Badge } from '../ui/badge';
 import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, AlertCircle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
-import { deductFromInventory } from '../../lib/inventoryUtils';
-import { downloadBillPDF } from '../../lib/billPdfUtils';
+import { deductFromInventory } from '../../utils/inventoryUtils';
+import { downloadBillPDF } from '../../utils/billPdfUtils';
 import { PrintOrderDetails } from './PrintOrderDetails';
 import {
   DropdownMenu,

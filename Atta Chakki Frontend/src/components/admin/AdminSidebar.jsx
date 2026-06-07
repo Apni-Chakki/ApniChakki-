@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Clock, Calendar, CheckCircle, Settings, LayoutDashboard, Package, FileText, Truck, LogOut, Archive, Plus, BookOpen, Users, BarChart3, PackageCheck, Wallet, MessageSquare, Radio, X, Store, ShoppingBag } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { useTranslation } from 'react-i18next';
 
 export function AdminSidebar({ isOpen = false, onClose = () => {} }) {

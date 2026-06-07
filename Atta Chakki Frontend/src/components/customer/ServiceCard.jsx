@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Minus, Plus, ShoppingCart } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
-import { useCart } from '../../lib/CartContext';
+import { useCart } from '../../store/CartContext';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
-import { useDynamicTranslation } from '../../lib/useDynamicTranslation';
+import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },

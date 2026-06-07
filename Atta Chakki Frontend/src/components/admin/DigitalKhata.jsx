@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Textarea } from '../ui/textarea';
 import { Trash2, Plus, Calendar as CalendarIcon, Wallet, TrendingDown, Printer, Loader2 } from 'lucide-react'; 
 import { toast } from 'sonner';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { format, startOfMonth, endOfMonth } from 'date-fns';

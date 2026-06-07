@@ -18,7 +18,7 @@ import {
   Loader2 // Added for loading state
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { PrintRestockList } from './PrintRestockList';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { API_BASE_URL } from '../../config'; // <-- NEW: API Config

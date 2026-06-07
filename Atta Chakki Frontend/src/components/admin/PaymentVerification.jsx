@@ -11,7 +11,7 @@ import {
   ArrowUpRight, DollarSign, Eye, Filter, Search, Banknote, TrendingUp
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 

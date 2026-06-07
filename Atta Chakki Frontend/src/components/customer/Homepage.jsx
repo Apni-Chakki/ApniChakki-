@@ -4,8 +4,8 @@ import { UserReviews } from './UserReviews';
 import { Card } from '../ui/card'; 
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useDynamicTranslation } from '../../lib/useDynamicTranslation';
-import { useCart } from '../../lib/CartContext';
+import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
+import { useCart } from '../../store/CartContext';
 import { API_BASE_URL } from '../../config';
 
 const DEFAULT_HERO_SLIDES = [

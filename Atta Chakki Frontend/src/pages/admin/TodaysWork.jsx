@@ -5,7 +5,6 @@ import { Badge } from '../../components/common/badge';
 import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Loader2, CalendarClock, Timer, Weight, ArrowRight, Zap, AlertTriangle, AlertCircle, History, SplitSquareHorizontal, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
-import { deductFromInventory } from '../../utils/inventoryUtils';
 import { downloadBillPDF } from '../../utils/billPdfUtils';
 import { PrintOrderDetails } from './PrintOrderDetails';
 import {
@@ -109,7 +108,8 @@ export function TodaysWork() {
       if (data.success) {
         setOrders((data.orders || []).map(order => ({
           ...order,
-          type: order.order_type || order.type || (order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup') ? 'delivery' : 'pickup'),
+          // Use DB order_type field directly — 'pickup' = store pickup, 'delivery' = home delivery
+          type: order.order_type === 'pickup' ? 'pickup' : 'delivery',
           deliveryPersonnel: order.deliveryPersonnel || order.driver_name || null,
         })));
         if (data.capacity) setCapacity(data.capacity);

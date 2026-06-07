@@ -18,7 +18,7 @@ import {
 } from '../ui/alert-dialog';
 import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../store/AuthContext';
 import { API_BASE_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
 
