@@ -77,7 +77,7 @@ export function Footer() {
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 shrink-0 mt-1" />
-                  <span>{settings.address}</span>
+                  <span>{tDynamic(settings.address)}</span>
                 </div>
               </div>
             </div>
@@ -104,7 +104,7 @@ export function Footer() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-primary-foreground/10 text-center">
-            <p className="text-sm opacity-50">&copy; {new Date().getFullYear()} {tDynamic(settings.storeName)}. All rights reserved.</p>
+            <p className="text-sm opacity-50">&copy; {new Date().getFullYear()} {tDynamic(settings.storeName)}. {t('All rights reserved.')}</p>
           </div>
         </div>
       </footer>

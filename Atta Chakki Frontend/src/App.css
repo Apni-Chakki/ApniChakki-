@@ -741,18 +741,18 @@ html, body {
 
 /* Custom Mix Banner Card Padding & Spacing */
 .custom-mix-card {
-  padding-top: 4.5rem !important;
-  padding-bottom: 5.5rem !important; /* Extra padding-bottom for visual balance below button */
-  padding-left: 2rem !important;
-  padding-right: 2rem !important;
+  padding-top: 2.5rem !important;
+  padding-bottom: 3.5rem !important; /* Extra padding-bottom for visual balance below button */
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
 }
 
 @media (max-width: 640px) {
   .custom-mix-card {
-    padding-top: 3rem !important;
-    padding-bottom: 4rem !important;
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2.5rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
   }
 }
 

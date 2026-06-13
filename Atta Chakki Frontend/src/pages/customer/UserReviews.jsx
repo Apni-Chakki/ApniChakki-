@@ -6,7 +6,7 @@ import { Button } from '../../components/common/button';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
 import { Loader2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -18,7 +18,7 @@ const sectionVariants = {
 };
 
 export function UserReviews() {
-  const { t } = useTranslation();
+  const { t, tDynamic } = useDynamicTranslation();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,7 +78,7 @@ export function UserReviews() {
                 <Card key={review.id} className="p-6 flex flex-col gap-4 bg-card h-full justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
                   <div>
                     <RollingStarRating rating={review.rating} />
-                    <p className="text-foreground italic mt-3 line-clamp-4">"{review.comment_text}"</p>
+                    <p className="text-foreground italic mt-3 line-clamp-4">"{tDynamic(review.comment_text)}"</p>
                   </div>
                   <div className="mt-4 border-t pt-4 border-border">
                     <p className="text-sm font-semibold text-foreground">{review.user_name}</p>

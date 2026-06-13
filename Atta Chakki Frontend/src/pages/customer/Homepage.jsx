@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { ServiceCard } from './ServiceCard';
 const UserReviews = lazy(() => import('./UserReviews').then(module => ({ default: module.UserReviews })));
-import { Card } from '../../components/common/card'; 
+import { Card } from '../../components/common/card';
 import { ArrowLeft, Tag, Copy, Star, Truck, ShieldCheck, Leaf, ArrowRight, Settings } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../../components/common/accordion';
@@ -63,8 +63,8 @@ const faqContainerVariants = {
 
 const faqItemVariants = {
   hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { type: 'spring', stiffness: 90, damping: 14 }
   }
@@ -106,7 +106,7 @@ export function Homepage() {
     if (storySlides.length === 0) return;
     const timer = setInterval(() => {
       setCurrentStorySlide((prev) => (prev + 1) % storySlides.length);
-    }, 4000);
+    }, 6000); // Increased from 4000ms for slower, smoother view
     return () => clearInterval(timer);
   }, [storySlides.length]);
 
@@ -120,16 +120,16 @@ export function Homepage() {
           fetch(`${API_BASE_URL}/get_store_settings.php`),
           fetch(`${API_BASE_URL}/coupons/get_featured_coupons.php`)
         ]);
-        
+
         const data = await productsRes.json();
         const catsData = await categoriesRes.json();
         const settingsData = await settingsRes.json();
-        
+
         if (settingsData.success && settingsData.settings) {
           if (settingsData.settings.heroSlides) {
             try {
               setHeroSlides(JSON.parse(settingsData.settings.heroSlides));
-            } catch(e) { console.error("Failed to parse heroSlides", e); }
+            } catch (e) { console.error("Failed to parse heroSlides", e); }
           }
           if (settingsData.settings.storySlides) {
             try {
@@ -145,13 +145,13 @@ export function Homepage() {
                   setStorySlides(storyUrls);
                 }
               }
-            } catch(e) { console.error("Failed to parse storySlides", e); }
+            } catch (e) { console.error("Failed to parse storySlides", e); }
           }
         }
-        
+
         console.log("Categories Response:", catsData);
         console.log("Products Response:", data);
-        
+
         if (catsData.success) {
           console.log("Setting categories:", catsData.categories);
           setDbCategories(catsData.categories || []);
@@ -185,7 +185,7 @@ export function Homepage() {
       console.log("Category update event received, refetching...");
       fetchData();
     };
-    
+
     window.addEventListener('categoriesUpdated', handleCategoryUpdate);
     return () => window.removeEventListener('categoriesUpdated', handleCategoryUpdate);
   }, []);
@@ -210,11 +210,11 @@ export function Homepage() {
 
   const getServicesByCategory = (categoryId) => {
     if (!services) return [];
-    
+
     // Find the category object to get its name
     const selectedCat = allCategories.find(c => c.id === categoryId);
     if (!selectedCat) return [];
-    
+
     // Filter by category NAME (products are saved with category name, not ID)
     return services.filter(s => s.category && s.category.toLowerCase() === selectedCat.labelKey.toLowerCase());
   };
@@ -223,7 +223,7 @@ export function Homepage() {
     return services.filter(service => !service.category); // Basic fallback
   };
 
-  const displayedServices = selectedCategory 
+  const displayedServices = selectedCategory
     ? (selectedCategory === 'other' ? getOtherServices() : getServicesByCategory(selectedCategory))
     : [];
 
@@ -296,7 +296,7 @@ export function Homepage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
 
         <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
@@ -318,21 +318,21 @@ export function Homepage() {
       {/* Auto-sliding Coupon Bar Below Hero */}
       {featuredCoupons.length > 0 && (
         <div className="bg-primary text-primary-foreground py-2.5 px-4 flex items-center w-full overflow-hidden shadow-sm border-b border-primary-foreground/10 group">
-           <div className="flex w-max">
-             {[...Array(6)].map((_, i) => (
-               <div key={i} className="animate-marquee flex shrink-0 items-center whitespace-nowrap" style={{ paddingRight: '4rem' }} aria-hidden={i > 0 ? "true" : "false"}>
-                 {featuredCoupons.map((coupon, j) => (
-                   <div key={`${i}-${j}`} className="flex items-center mr-10 bg-black/10 border border-primary-foreground/20 px-4 py-1.5 rounded-full">
-                     <Tag className="h-4 w-4 mr-2 text-accent animate-pulse"/>
-                     <span className="text-sm font-medium tracking-wide">
-                       {t('Code')}: <span className="font-bold text-accent tracking-wider px-1">{coupon.code}</span> | {t('Get')} <span className="font-bold">{coupon.discount_value}{coupon.discount_type === 'percentage' ? '%' : ' Rs.'}</span> {t('OFF')}
-                       {coupon.description && <span className="opacity-80 ml-2 text-xs">({coupon.description})</span>}
-                     </span>
-                   </div>
-                 ))}
-               </div>
-             ))}
-           </div>
+          <div className="flex w-max">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="animate-marquee flex shrink-0 items-center whitespace-nowrap" style={{ paddingRight: '4rem' }} aria-hidden={i > 0 ? "true" : "false"}>
+                {featuredCoupons.map((coupon, j) => (
+                  <div key={`${i}-${j}`} className="flex items-center mr-10 bg-black/10 border border-primary-foreground/20 px-4 py-1.5 rounded-full">
+                    <Tag className="h-4 w-4 mr-2 text-accent animate-pulse" />
+                    <span className="text-sm font-medium tracking-wide">
+                      {t('Code')}: <span className="font-bold text-accent tracking-wider px-1">{coupon.code}</span> | {t('Get')} <span className="font-bold">{coupon.discount_value}{coupon.discount_type === 'percentage' ? '%' : ' Rs.'}</span> {t('OFF')}
+                      {coupon.description && <span className="opacity-80 ml-2 text-xs">({coupon.description})</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -352,7 +352,7 @@ export function Homepage() {
                 {t('Discover our most popular freshly ground products and premium spices, loved by our customers.')}
               </p>
             </div>
-            <motion.div 
+            <motion.div
               variants={{
                 hidden: {},
                 visible: { transition: { staggerChildren: 0.08 } }
@@ -360,13 +360,13 @@ export function Homepage() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
             >
               {featuredProducts.map((product) => (
-                <motion.div 
+                <motion.div
                   key={product.id}
                   variants={itemVariants}
                   className="transition-all duration-500 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
                 >
-                  <ServiceCard 
-                    service={product} 
+                  <ServiceCard
+                    service={product}
                     onAddToCart={() => handleAddToCart(product)}
                   />
                 </motion.div>
@@ -378,7 +378,7 @@ export function Homepage() {
 
       {/* Discounted Products Section */}
       {!loading && !selectedCategory && discountedProducts.length > 0 && (
-        <LazyAnimatedSection 
+        <LazyAnimatedSection
           type="fade-up"
           placeholderHeight="400px"
           className="discounted-section px-4 bg-gradient-to-b from-secondary/5 to-background border-t border-border/40"
@@ -392,9 +392,9 @@ export function Homepage() {
                 {t('Grab your favorites at discounted prices. Pure quality, sweet savings.')}
               </p>
             </div>
-            
+
             <div className="relative px-8 md:px-12">
-              <Carousel 
+              <Carousel
                 opts={{
                   align: "start",
                   loop: false,
@@ -405,8 +405,8 @@ export function Homepage() {
                   {discountedProducts.map((product) => (
                     <CarouselItem key={product.id} className="basis-full sm:basis-1/2 lg:basis-1/4 pl-2 md:pl-4">
                       <div className="h-full py-2">
-                        <ServiceCard 
-                          service={product} 
+                        <ServiceCard
+                          service={product}
                           onAddToCart={() => handleAddToCart(product)}
                         />
                       </div>
@@ -422,7 +422,7 @@ export function Homepage() {
       )}
 
       {/* Categories Section */}
-      <LazyAnimatedSection 
+      <LazyAnimatedSection
         type="fade-up"
         placeholderHeight="500px"
         className="py-8 sm:py-12 md:py-16 px-4 bg-background"
@@ -445,7 +445,7 @@ export function Homepage() {
                   <p className="text-sm text-muted-foreground">{t('Please check back later or contact us for more information.')}</p>
                 </div>
               ) : (
-                <motion.div 
+                <motion.div
                   variants={{
                     hidden: {},
                     visible: { transition: { staggerChildren: 0.08 } }
@@ -462,13 +462,13 @@ export function Homepage() {
                         className="category-card-responsive cursor-pointer rounded-2xl shadow-md hover:shadow-lg group relative overflow-hidden w-full border border-border hover:border-primary/50"
                         onClick={() => setSelectedCategory(category.id)}
                       >
-                        <div 
+                        <div
                           className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
                           style={{ backgroundImage: `url(${category.imageUrl})` }}
                         />
                         <div className={`absolute inset-0 ${category.overlayColor} opacity-60`} />
                         <div className="absolute inset-0 bg-black/30" />
-                        
+
                         <div className="relative h-full flex flex-col items-center justify-center px-6">
                           <h3 className="text-xl md:text-2xl font-bold text-white text-center drop-shadow-md">
                             {tDynamic(category.labelKey)}
@@ -485,8 +485,8 @@ export function Homepage() {
           {!loading && selectedCategory && (
             <div>
               <div className="flex items-center gap-4 mb-6">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => setSelectedCategory(null)}
                   className="flex items-center gap-2 hover:bg-secondary"
                 >
@@ -500,9 +500,9 @@ export function Homepage() {
               {displayedServices.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
                   {displayedServices.map(service => (
-                    <ServiceCard 
-                      key={service.id} 
-                      service={service} 
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
                       onAddToCart={() => handleAddToCart(service)}
                     />
                   ))}
@@ -524,7 +524,7 @@ export function Homepage() {
 
       {/* How It Works Section */}
       {!selectedCategory && (
-        <LazyAnimatedSection 
+        <LazyAnimatedSection
           type="fade-up"
           placeholderHeight="450px"
           className="py-20 sm:py-24 px-4 bg-secondary/5 relative overflow-hidden"
@@ -532,7 +532,7 @@ export function Homepage() {
           <section>
             <div className="absolute top-1/2 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 -z-10" />
             <div className="absolute bottom-0 right-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl -z-10" />
-            
+
             <div className="container mx-auto max-w-5xl text-center relative z-10">
               <div className="inline-flex items-center justify-center gap-2 text-primary font-bold tracking-wider text-sm uppercase mb-4">
                 ✨ {t('Simple Process')}
@@ -543,8 +543,8 @@ export function Homepage() {
               <p className="premium-section-sub mb-16">
                 {t('Experience the authentic taste of freshly ground flour in 3 simple steps.')}
               </p>
-              
-              <motion.div 
+
+              <motion.div
                 variants={{
                   hidden: {},
                   visible: { transition: { staggerChildren: 0.15 } }
@@ -553,7 +553,7 @@ export function Homepage() {
               >
                 {/* Connecting Line */}
                 <div className="how-it-works-connector hidden md:block" />
-                
+
                 <motion.div variants={itemVariants} className="how-it-works-card group">
                   <div className="how-it-works-step-num">01</div>
                   <div className="how-it-works-icon-wrapper text-primary">
@@ -588,18 +588,18 @@ export function Homepage() {
 
       {/* Custom Mix CTA Banner */}
       {!selectedCategory && (
-        <LazyAnimatedSection 
+        <LazyAnimatedSection
           type="scale-up"
           placeholderHeight="300px"
-          className="py-12 sm:py-16 px-4 bg-background"
+          className="py-6 sm:py-8 px-4 bg-background"
         >
           <section className="container mx-auto max-w-5xl">
             <div className="relative rounded-[2rem] overflow-hidden shadow-2xl bg-accent">
-              <div 
+              <div
                 className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-overlay"
                 style={{ backgroundImage: "url('https://images.unsplash.com/photo-1596647318469-89d53c614b19?w=1400&auto=format&fit=crop&q=80')" }}
               />
-              
+
               <div className="relative custom-mix-card text-center text-white flex flex-col items-center">
                 <div className="bg-white/20 p-4 rounded-full mb-6 backdrop-blur-sm">
                   <Leaf className="w-10 h-10 text-white" />
@@ -621,7 +621,7 @@ export function Homepage() {
 
       {/* Our Story Section */}
       {!selectedCategory && (
-        <LazyAnimatedSection 
+        <LazyAnimatedSection
           type="fade-up"
           placeholderHeight="550px"
           className="py-20 px-4 bg-secondary/10 relative overflow-hidden"
@@ -629,24 +629,25 @@ export function Homepage() {
           <section>
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
             <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl -z-10" />
-            
+
             <div className="container mx-auto max-w-7xl">
               <div className="bg-card rounded-[2.5rem] shadow-xl border border-border/50 p-8 md:p-10 lg:p-16 relative z-10 overflow-hidden">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16 items-center">
-                  {currentStorySlide % 2 === 0 ? (
-                    <>
-                      {/* Image Column */}
-                      <motion.div 
+                <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 items-center w-full">
+                  {(() => {
+                    const content = [
+                      <motion.div
+                        layout
                         key="image-col"
                         variants={{
                           hidden: { opacity: 0, x: -50 },
                           visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 90, damping: 15 } }
                         }}
-                        className="w-full"
+                        transition={{ layout: { type: "spring", stiffness: 45, damping: 15, duration: 1.2 } }}
+                        className="flex-1 w-full"
                       >
-                        <div className="relative w-full max-w-[280px] sm:max-w-md mx-auto sm:ml-0 sm:mr-auto group">
+                        <div className={`relative w-full max-w-[280px] sm:max-w-md mx-auto group ${currentStorySlide % 2 !== 0 ? 'sm:ml-auto sm:mr-0' : 'sm:ml-0 sm:mr-auto'}`}>
                           <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-[2.5rem] blur-xl transform scale-105 transition-transform duration-700 group-hover:scale-110" />
-                          
+
                           {/* Floating Badge */}
                           <div className="absolute -top-6 -right-6 md:-top-8 md:-right-8 bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl z-20 flex flex-col items-center animate-bounce" style={{ animationDuration: '3s' }}>
                             <span className="text-2xl font-black text-primary block leading-none mb-1">10k+</span>
@@ -666,25 +667,26 @@ export function Homepage() {
                             ))}
                           </div>
                         </div>
-                      </motion.div>
-                      
-                      {/* Text Column */}
-                      <motion.div 
+                      </motion.div>,
+
+                      <motion.div
+                        layout
                         key="text-col"
                         variants={{
                           hidden: { opacity: 0, x: 50 },
                           visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 90, damping: 15 } }
                         }}
-                        className="w-full space-y-8 text-center sm:text-left"
+                        transition={{ layout: { type: "spring", stiffness: 45, damping: 15, duration: 1.2 } }}
+                        className="flex-1 w-full space-y-8 text-center sm:text-left"
                       >
-                        <div className="inline-flex items-center justify-center sm:justify-start gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-full font-bold tracking-wider text-sm uppercase shadow-sm border border-primary/20">
+                        <div className="inline-flex items-center justify-center gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-full font-bold tracking-wider text-sm uppercase shadow-sm border border-primary/20 sm:justify-start">
                           <ShieldCheck className="w-5 h-5" /> {t('100% Pure & Authentic')}
                         </div>
-                        
+
                         <h2 className="text-3xl font-bold text-foreground leading-tight tracking-tight">
                           {t('The Heritage of Pure Flour')}
                         </h2>
-                        
+
                         <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
                           <p>
                             {t('At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.')}
@@ -693,7 +695,7 @@ export function Homepage() {
                             {t('Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives—just pure, wholesome goodness for your family.')}
                           </p>
                         </div>
-                        
+
                         <div className="pt-6 flex flex-col sm:flex-row items-center gap-6 justify-center sm:justify-start">
                           <Button size="lg" className="bg-primary hover:bg-primary/90 text-white rounded-full px-10 py-6 text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-105 w-full sm:w-auto" onClick={() => window.location.href = '/reviews'}>
                             {t('Read Our Reviews')}
@@ -704,80 +706,10 @@ export function Homepage() {
                           </div>
                         </div>
                       </motion.div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Text Column */}
-                      <motion.div 
-                        key="text-col"
-                        variants={{
-                          hidden: { opacity: 0, x: -50 },
-                          visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 90, damping: 15 } }
-                        }}
-                        className="w-full space-y-8 text-center sm:text-left"
-                      >
-                        <div className="inline-flex items-center justify-center sm:justify-start gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-full font-bold tracking-wider text-sm uppercase shadow-sm border border-primary/20">
-                          <ShieldCheck className="w-5 h-5" /> {t('100% Pure & Authentic')}
-                        </div>
-                        
-                        <h2 className="text-3xl font-bold text-foreground leading-tight tracking-tight">
-                          {t('The Heritage of Pure Flour')}
-                        </h2>
-                        
-                        <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
-                          <p>
-                            {t('At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.')}
-                          </p>
-                          <p>
-                            {t('Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives—just pure, wholesome goodness for your family.')}
-                          </p>
-                        </div>
-                        
-                        <div className="pt-6 flex flex-col sm:flex-row items-center gap-6 justify-center sm:justify-start">
-                          <Button size="lg" className="bg-primary hover:bg-primary/90 text-white rounded-full px-10 py-6 text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-105 w-full sm:w-auto" onClick={() => window.location.href = '/reviews'}>
-                            {t('Read Our Reviews')}
-                          </Button>
-                          <div className="flex items-center gap-2 text-muted-foreground font-medium bg-secondary/10 px-4 py-2 rounded-full">
-                            <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                            <span>{t('4.9/5 from Happy Customers')}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-
-                      {/* Image Column */}
-                      <motion.div 
-                        key="image-col"
-                        variants={{
-                          hidden: { opacity: 0, x: 50 },
-                          visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 90, damping: 15 } }
-                        }}
-                        className="w-full"
-                      >
-                        <div className="relative w-full max-w-[280px] sm:max-w-md mx-auto sm:ml-auto sm:mr-0 group">
-                          <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-[2.5rem] blur-xl transform scale-105 transition-transform duration-700 group-hover:scale-110" />
-                          
-                          {/* Floating Badge */}
-                          <div className="absolute -top-6 -right-6 md:-top-8 md:-right-8 bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl z-20 flex flex-col items-center animate-bounce" style={{ animationDuration: '3s' }}>
-                            <span className="text-2xl font-black text-primary block leading-none mb-1">10k+</span>
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{t('Happy Families')}</span>
-                          </div>
-
-                          <div className="relative w-full rounded-[2.5rem] shadow-2xl -rotate-1 transition-transform duration-700 group-hover:rotate-0 overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                            {storySlides.map((slide, i) => (
-                              <div
-                                key={i}
-                                className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-                                style={{
-                                  backgroundImage: `url("${slide}")`,
-                                  opacity: i === currentStorySlide ? 1 : 0,
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
+                    ];
+                    
+                    return currentStorySlide % 2 !== 0 ? content.reverse() : content;
+                  })()}
                 </div>
               </div>
             </div>
@@ -785,14 +717,14 @@ export function Homepage() {
         </LazyAnimatedSection>
       )}
 
-      <LazyAnimatedSection 
-        type="fade-up" 
+      <LazyAnimatedSection
+        type="fade-up"
         placeholderHeight="400px"
       >
         <UserReviews />
       </LazyAnimatedSection>
 
-      <LazyAnimatedSection 
+      <LazyAnimatedSection
         type="fade-up"
         placeholderHeight="350px"
         className="py-8 sm:py-12 md:py-16 px-4 bg-secondary/20"
@@ -801,7 +733,7 @@ export function Homepage() {
           <h2 className="mb-4 sm:mb-6 text-3xl font-bold text-foreground">
             {t('Why Choose Apni Atta Chakki?')}
           </h2>
-          <motion.div 
+          <motion.div
             variants={{
               hidden: {},
               visible: { transition: { staggerChildren: 0.1 } }
@@ -829,7 +761,7 @@ export function Homepage() {
 
       {/* FAQ Section */}
       {!selectedCategory && (
-        <LazyAnimatedSection 
+        <LazyAnimatedSection
           type="fade-up"
           placeholderHeight="500px"
           className="faq-section px-4 bg-background relative overflow-hidden border-t border-border/50"
@@ -838,7 +770,7 @@ export function Homepage() {
             {/* Background decorative glows */}
             <div className="absolute top-1/2 left-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl -z-10" />
             <div className="absolute bottom-0 right-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl -z-10" />
-            
+
             <div className="container mx-auto max-w-3xl relative z-10">
               <div className="text-center mb-12">
                 <div className="faq-title-badge">
@@ -857,73 +789,73 @@ export function Homepage() {
                 initial="hidden"
                 animate="visible"
               >
-              <Accordion type="single" collapsible className="w-full">
-                <motion.div variants={faqItemVariants}>
-                  <AccordionItem value="item-1" className="faq-accordion-item">
-                    <AccordionTrigger className="faq-accordion-trigger">
-                      <div className="flex items-center gap-4">
-                        <span className="faq-badge-num">01</span>
-                        <span>{t('Is the flour 100% pure without additives?')}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="faq-accordion-content">
-                      <div className="faq-accordion-inner">
-                        {t('Yes, absolutely! We guarantee 100% purity. We do not use any preservatives, bleach, or additives. The flour you receive is ground directly from high-quality grains.')}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </motion.div>
+                <Accordion type="single" collapsible className="w-full">
+                  <motion.div variants={faqItemVariants}>
+                    <AccordionItem value="item-1" className="faq-accordion-item">
+                      <AccordionTrigger className="faq-accordion-trigger">
+                        <div className="flex items-center gap-4">
+                          <span className="faq-badge-num">01</span>
+                          <span>{t('Is the flour 100% pure without additives?')}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="faq-accordion-content">
+                        <div className="faq-accordion-inner">
+                          {t('Yes, absolutely! We guarantee 100% purity. We do not use any preservatives, bleach, or additives. The flour you receive is ground directly from high-quality grains.')}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
 
-                <motion.div variants={faqItemVariants}>
-                  <AccordionItem value="item-2" className="faq-accordion-item">
-                    <AccordionTrigger className="faq-accordion-trigger">
-                      <div className="flex items-center gap-4">
-                        <span className="faq-badge-num">02</span>
-                        <span>{t('How long does delivery take?')}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="faq-accordion-content">
-                      <div className="faq-accordion-inner">
-                        {t('Since we grind the flour fresh upon receiving your order, it typically takes 24 to 48 hours for your order to be processed and delivered to your doorstep.')}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </motion.div>
+                  <motion.div variants={faqItemVariants}>
+                    <AccordionItem value="item-2" className="faq-accordion-item">
+                      <AccordionTrigger className="faq-accordion-trigger">
+                        <div className="flex items-center gap-4">
+                          <span className="faq-badge-num">02</span>
+                          <span>{t('How long does delivery take?')}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="faq-accordion-content">
+                        <div className="faq-accordion-inner">
+                          {t('Since we grind the flour fresh upon receiving your order, it typically takes 24 to 48 hours for your order to be processed and delivered to your doorstep.')}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
 
-                <motion.div variants={faqItemVariants}>
-                  <AccordionItem value="item-3" className="faq-accordion-item">
-                    <AccordionTrigger className="faq-accordion-trigger">
-                      <div className="flex items-center gap-4">
-                        <span className="faq-badge-num">03</span>
-                        <span>{t('Can I request a custom mix of grains?')}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="faq-accordion-content">
-                      <div className="faq-accordion-inner">
-                        {t('Yes! We offer a Custom Mix service where you can specify the ratio of wheat, barley, chickpeas, oats, or other grains. Simply contact us or leave a note during checkout.')}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </motion.div>
+                  <motion.div variants={faqItemVariants}>
+                    <AccordionItem value="item-3" className="faq-accordion-item">
+                      <AccordionTrigger className="faq-accordion-trigger">
+                        <div className="flex items-center gap-4">
+                          <span className="faq-badge-num">03</span>
+                          <span>{t('Can I request a custom mix of grains?')}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="faq-accordion-content">
+                        <div className="faq-accordion-inner">
+                          {t('Yes! We offer a Custom Mix service where you can specify the ratio of wheat, barley, chickpeas, oats, or other grains. Simply contact us or leave a note during checkout.')}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
 
-                <motion.div variants={faqItemVariants}>
-                  <AccordionItem value="item-4" className="faq-accordion-item">
-                    <AccordionTrigger className="faq-accordion-trigger">
-                      <div className="flex items-center gap-4">
-                        <span className="faq-badge-num">04</span>
-                        <span>{t('Do you offer pickup services for cotton penja?')}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="faq-accordion-content">
-                      <div className="faq-accordion-inner">
-                        {t('Yes, we provide convenient home pickup and delivery for our Cotton Penja and Quilt filling services. Just schedule a pickup through our contact form.')}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </motion.div>
-              </Accordion>
-            </motion.div>
-          </div>
+                  <motion.div variants={faqItemVariants}>
+                    <AccordionItem value="item-4" className="faq-accordion-item">
+                      <AccordionTrigger className="faq-accordion-trigger">
+                        <div className="flex items-center gap-4">
+                          <span className="faq-badge-num">04</span>
+                          <span>{t('Do you offer pickup services for cotton penja?')}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="faq-accordion-content">
+                        <div className="faq-accordion-inner">
+                          {t('Yes, we provide convenient home pickup and delivery for our Cotton Penja and Quilt filling services. Just schedule a pickup through our contact form.')}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
+                </Accordion>
+              </motion.div>
+            </div>
           </section>
         </LazyAnimatedSection>
       )}
@@ -940,33 +872,33 @@ export function Homepage() {
           <form onSubmit={handleCustomMixSubmit} className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label htmlFor="mixName">{t('Your Name')}</Label>
-              <Input 
-                id="mixName" 
-                placeholder={t('Enter your full name')} 
+              <Input
+                id="mixName"
+                placeholder={t('Enter your full name')}
                 value={mixFormData.name}
-                onChange={e => setMixFormData({...mixFormData, name: e.target.value})}
+                onChange={e => setMixFormData({ ...mixFormData, name: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="mixPhone">{t('Phone Number')}</Label>
-              <Input 
-                id="mixPhone" 
-                type="tel" 
-                placeholder="03xx xxxxxxx" 
+              <Input
+                id="mixPhone"
+                type="tel"
+                placeholder="03xx xxxxxxx"
                 value={mixFormData.phone}
-                onChange={e => setMixFormData({...mixFormData, phone: e.target.value})}
+                onChange={e => setMixFormData({ ...mixFormData, phone: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="mixDetails">{t('Mix Details (Ingredients & Quantities)')}</Label>
-              <Textarea 
-                id="mixDetails" 
-                placeholder={t('E.g. 5kg Wheat flour, 2kg Multigrain...')} 
+              <Textarea
+                id="mixDetails"
+                placeholder={t('E.g. 5kg Wheat flour, 2kg Multigrain...')}
                 rows={4}
                 value={mixFormData.details}
-                onChange={e => setMixFormData({...mixFormData, details: e.target.value})}
+                onChange={e => setMixFormData({ ...mixFormData, details: e.target.value })}
                 required
               />
             </div>

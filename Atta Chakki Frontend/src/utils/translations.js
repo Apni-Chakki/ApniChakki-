@@ -425,6 +425,99 @@ export const translations = {
     "Premium quality flour, spices, and cotton services. Ground fresh daily.":
       "Premium quality flour, spices, and cotton services. Ground fresh daily.",
     "Apka Bhrosa Apki Apni Chakki": "Apka Bhrosa Apki Apni Chakki",
+
+    // Header / Notifications
+    "Notifications": "Notifications",
+    "No new notifications": "No new notifications",
+    "at": "at",
+    "Please log in or sign up to proceed to checkout.": "Please log in or sign up to proceed to checkout.",
+
+    // Footer
+    "All rights reserved.": "All rights reserved.",
+
+    // How It Works
+    "Simple Process": "Simple Process",
+    "How It Works": "How It Works",
+    "Experience the authentic taste of freshly ground flour in 3 simple steps.": "Experience the authentic taste of freshly ground flour in 3 simple steps.",
+    "Choose Grains": "Choose Grains",
+    "Select from our premium range of wheat or create your own custom mix.": "Select from our premium range of wheat or create your own custom mix.",
+    "Fresh Grinding": "Fresh Grinding",
+    "We grind your order fresh upon receiving it to ensure maximum nutrition.": "We grind your order fresh upon receiving it to ensure maximum nutrition.",
+    "Fast Delivery": "Fast Delivery",
+    "Your fresh flour is carefully packaged and delivered right to your doorstep.": "Your fresh flour is carefully packaged and delivered right to your doorstep.",
+
+    // Custom Mix CTA Banner
+    "Design Your Own Atta": "Design Your Own Atta",
+    "Looking for a specific diet? Mix wheat, barley, oats, and more according to your exact requirements. We grind it fresh for you.": "Looking for a specific diet? Mix wheat, barley, oats, and more according to your exact requirements. We grind it fresh for you.",
+    "Request Custom Mix": "Request Custom Mix",
+
+    // Our Story
+    "Happy Families": "Happy Families",
+    "100% Pure & Authentic": "100% Pure & Authentic",
+    "The Heritage of Pure Flour": "The Heritage of Pure Flour",
+    "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.",
+    "Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives\u2014just pure, wholesome goodness for your family.": "Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives\u2014just pure, wholesome goodness for your family.",
+    "Read Our Reviews": "Read Our Reviews",
+    "4.9/5 from Happy Customers": "4.9/5 from Happy Customers",
+
+    // FAQ
+    "Got Questions?": "Got Questions?",
+    "Frequently Asked Questions": "Frequently Asked Questions",
+    "Everything you need to know about our products and services.": "Everything you need to know about our products and services.",
+    "Is the flour 100% pure without additives?": "Is the flour 100% pure without additives?",
+    "Yes, absolutely! We guarantee 100% purity. We do not use any preservatives, bleach, or additives. The flour you receive is ground directly from high-quality grains.": "Yes, absolutely! We guarantee 100% purity. We do not use any preservatives, bleach, or additives. The flour you receive is ground directly from high-quality grains.",
+    "How long does delivery take?": "How long does delivery take?",
+    "Since we grind the flour fresh upon receiving your order, it typically takes 24 to 48 hours for your order to be processed and delivered to your doorstep.": "Since we grind the flour fresh upon receiving your order, it typically takes 24 to 48 hours for your order to be processed and delivered to your doorstep.",
+    "Can I request a custom mix of grains?": "Can I request a custom mix of grains?",
+    "Yes! We offer a Custom Mix service where you can specify the ratio of wheat, barley, chickpeas, oats, or other grains. Simply contact us or leave a note during checkout.": "Yes! We offer a Custom Mix service where you can specify the ratio of wheat, barley, chickpeas, oats, or other grains. Simply contact us or leave a note during checkout.",
+    "Do you offer pickup services for cotton penja?": "Do you offer pickup services for cotton penja?",
+    "Yes, we provide convenient home pickup and delivery for our Cotton Penja and Quilt filling services. Just schedule a pickup through our contact form.": "Yes, we provide convenient home pickup and delivery for our Cotton Penja and Quilt filling services. Just schedule a pickup through our contact form.",
+
+    // Trending & Offers
+    "Trending Now": "Trending Now",
+    "Discover our most popular freshly ground products and premium spices, loved by our customers.": "Discover our most popular freshly ground products and premium spices, loved by our customers.",
+    "Special Offers": "Special Offers",
+    "Grab your favorites at discounted prices. Pure quality, sweet savings.": "Grab your favorites at discounted prices. Pure quality, sweet savings.",
+    "Loading fresh products...": "Loading fresh products...",
+    "No categories available yet.": "No categories available yet.",
+    "Please check back later or contact us for more information.": "Please check back later or contact us for more information.",
+    "No products found in this category.": "No products found in this category.",
+
+    // Coupon Bar
+    "Code": "Code",
+    "Get": "Get",
+    "OFF": "OFF",
+    "Coupon code copied!": "Coupon code copied!",
+
+    // Custom Mix Dialog
+    "Design Your Custom Mix": "Design Your Custom Mix",
+    "Tell us exactly what you need. E.g., 5kg Wheat + 1kg Barley + 500g Oats.": "Tell us exactly what you need. E.g., 5kg Wheat + 1kg Barley + 500g Oats.",
+    "Mix Details (Ingredients & Quantities)": "Mix Details (Ingredients & Quantities)",
+    "E.g. 5kg Wheat flour, 2kg Multigrain...": "E.g. 5kg Wheat flour, 2kg Multigrain...",
+    "Submit Request": "Submit Request",
+    "Sending...": "Sending...",
+    "Please fill all fields": "Please fill all fields",
+    "Custom Mix request sent! We will call you soon.": "Custom Mix request sent! We will call you soon.",
+    "Failed to send request": "Failed to send request",
+    "Network error. Please try again.": "Network error. Please try again.",
+
+    // ServiceCard UI
+    "FOR RENT": "FOR RENT",
+    "day": "day",
+    "Deposit": "Deposit",
+    "Penalty": "Penalty",
+    "No Rental Qty": "No Rental Qty",
+    "Rent Now": "Rent Now",
+    "Available Qty": "Available Qty",
+    "Only": "Only",
+    "left": "left",
+    "Out of Stock": "Out of Stock",
+    "Added \u2713": "Added \u2713",
+    "Add to Cart": "Add to Cart",
+    "OR": "OR",
+    "Add Pickup Request": "Add Pickup Request",
+    "Pickup Request Added \u2713": "Pickup Request Added \u2713",
+    "Pickup request added to cart.": "Pickup request added to cart.",
   },
   ur: {
     // General
@@ -851,6 +944,99 @@ export const translations = {
     "Premium quality flour, spices, and cotton services. Ground fresh daily.":
       "اعلیٰ معیار کا آٹا، مصالحے اور کپاس کی خدمات۔",
     "Apka Bhrosa Apki Apni Chakki": "آپ کا بھروسہ، آپ کی اپنی چکی",
+
+    // Header / Notifications
+    "Notifications": "اطلاعات",
+    "No new notifications": "کوئی نئی اطلاع نہیں",
+    "at": "بجے",
+    "Please log in or sign up to proceed to checkout.": "چیک آؤٹ کے لیے براہ کرم لاگ ان کریں۔",
+
+    // Footer
+    "All rights reserved.": "تمام حقوق محفوظ ہیں۔",
+
+    // How It Works
+    "Simple Process": "آسان عمل",
+    "How It Works": "یہ کیسے کام کرتا ہے",
+    "Experience the authentic taste of freshly ground flour in 3 simple steps.": "3 آسان مراحل میں تازہ پسے آٹے کا اصل ذائقہ چکھیں۔",
+    "Choose Grains": "اناج منتخب کریں",
+    "Select from our premium range of wheat or create your own custom mix.": "ہمارے بہترین گندم کے ذخیرے میں سے منتخب کریں یا اپنا مرضی کا مکس بنائیں۔",
+    "Fresh Grinding": "تازہ پسائی",
+    "We grind your order fresh upon receiving it to ensure maximum nutrition.": "آرڈر ملتے ہی تازہ پسائی کی جاتی ہے تاکہ زیادہ سے زیادہ غذائیت برقرار رہے۔",
+    "Fast Delivery": "تیز ڈلیوری",
+    "Your fresh flour is carefully packaged and delivered right to your doorstep.": "آپ کا تازہ آٹا احتیاط سے پیک کر کے گھر تک پہنچایا جاتا ہے۔",
+
+    // Custom Mix CTA Banner
+    "Design Your Own Atta": "اپنا آٹا خود بنائیں",
+    "Looking for a specific diet? Mix wheat, barley, oats, and more according to your exact requirements. We grind it fresh for you.": "کسی خاص غذا کی تلاش ہے؟ گندم، جو، جئی اور مزید کو اپنی ضرورت کے مطابق ملائیں۔ ہم آپ کے لیے تازہ پیسیں گے۔",
+    "Request Custom Mix": "کسٹم مکس درخواست دیں",
+
+    // Our Story
+    "Happy Families": "خوش گھرانے",
+    "100% Pure & Authentic": "100% خالص اور اصلی",
+    "The Heritage of Pure Flour": "خالص آٹے کی وراثت",
+    "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "اپنی اٹہ چکی میں ہم پتھر پسائی کے روایتی فن کو برقرار رکھنے کے قائل ہیں۔ کاروباری چکیوں کے برعکس، ہمارا طریقہ اناج کے قدرتی تیل، چوکر اور ضروری غذائیت کو محفوظ رکھتا ہے۔",
+    "Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives\u2014just pure, wholesome goodness for your family.": "ہر دانے کو احتیاط سے چھانا، صاف کیا اور آرڈر پر تازہ پیسا جاتا ہے۔ کوئی حافظ مادہ نہیں، کوئی ملاوٹ نہیں — صرف آپ کے خاندان کے لیے خالص اور صحت بخش خوراک۔",
+    "Read Our Reviews": "ہمارے ریویوز پڑھیں",
+    "4.9/5 from Happy Customers": "خوش صارفین کی جانب سے 4.9/5",
+
+    // FAQ
+    "Got Questions?": "سوالات ہیں؟",
+    "Frequently Asked Questions": "اکثر پوچھے گئے سوالات",
+    "Everything you need to know about our products and services.": "ہماری مصنوعات اور خدمات کے بارے میں جاننے کے لیے سب کچھ۔",
+    "Is the flour 100% pure without additives?": "کیا آٹا 100% خالص ہے بغیر کسی ملاوٹ کے؟",
+    "Yes, absolutely! We guarantee 100% purity. We do not use any preservatives, bleach, or additives. The flour you receive is ground directly from high-quality grains.": "جی بالکل! ہم 100% خالص ہونے کی ضمانت دیتے ہیں۔ ہم کوئی حافظ مادہ، بلیچ یا ملاوٹ استعمال نہیں کرتے۔ آپ کو ملنے والا آٹا اعلیٰ معیار کے اناج سے سیدھا پیسا جاتا ہے۔",
+    "How long does delivery take?": "ڈلیوری میں کتنا وقت لگتا ہے؟",
+    "Since we grind the flour fresh upon receiving your order, it typically takes 24 to 48 hours for your order to be processed and delivered to your doorstep.": "چونکہ ہم آرڈر ملتے ہی تازہ پسائی کرتے ہیں، اس لیے عموماً آرڈر کو پروسیس کرنے اور آپ کے دروازے تک پہنچانے میں 24 سے 48 گھنٹے لگتے ہیں۔",
+    "Can I request a custom mix of grains?": "کیا میں اناج کا کسٹم مکس طلب کر سکتا ہوں؟",
+    "Yes! We offer a Custom Mix service where you can specify the ratio of wheat, barley, chickpeas, oats, or other grains. Simply contact us or leave a note during checkout.": "جی ہاں! ہم کسٹم مکس سروس پیش کرتے ہیں جہاں آپ گندم، جو، چنے، جئی یا دیگر اناج کا تناسب خود طے کر سکتے ہیں۔ بس ہم سے رابطہ کریں یا چیک آؤٹ کے دوران نوٹ چھوڑیں۔",
+    "Do you offer pickup services for cotton penja?": "کیا آپ روئی پنجائی کے لیے پک اپ سروس دیتے ہیں؟",
+    "Yes, we provide convenient home pickup and delivery for our Cotton Penja and Quilt filling services. Just schedule a pickup through our contact form.": "جی ہاں، ہم اپنی روئی پنجائی اور رضائی بھرائی سروسز کے لیے آسان گھر پک اپ اور ڈلیوری فراہم کرتے ہیں۔ بس ہمارے رابطہ فارم کے ذریعے پک اپ شیڈول کریں۔",
+
+    // Trending & Offers
+    "Trending Now": "ٹرینڈنگ",
+    "Discover our most popular freshly ground products and premium spices, loved by our customers.": "ہمارے سب سے مقبول تازہ پسے ہوئے مصنوعات اور اعلیٰ مصالحے دریافت کریں، جو ہمارے صارفین کی پسندیدہ ہیں۔",
+    "Special Offers": "خصوصی آفرز",
+    "Grab your favorites at discounted prices. Pure quality, sweet savings.": "اپنی پسندیدہ چیزیں کم قیمت پر لیں۔ خالص معیار، میٹھی بچت۔",
+    "Loading fresh products...": "تازہ مصنوعات لوڈ ہو رہی ہیں...",
+    "No categories available yet.": "ابھی کوئی کیٹیگری دستیاب نہیں۔",
+    "Please check back later or contact us for more information.": "براہ کرم بعد میں دوبارہ چیک کریں یا مزید معلومات کے لیے ہم سے رابطہ کریں۔",
+    "No products found in this category.": "اس کیٹیگری میں کوئی مصنوعات نہیں ملیں۔",
+
+    // Coupon Bar
+    "Code": "کوڈ",
+    "Get": "پائیں",
+    "OFF": "چھوٹ",
+    "Coupon code copied!": "کوپن کوڈ کاپی ہو گیا!",
+
+    // Custom Mix Dialog
+    "Design Your Custom Mix": "اپنا کسٹم مکس بنائیں",
+    "Tell us exactly what you need. E.g., 5kg Wheat + 1kg Barley + 500g Oats.": "ہمیں بالکل بتائیں کہ آپ کو کیا چاہیے۔ مثلاً 5 کلو گندم + 1 کلو جو + 500 گرام جئی۔",
+    "Mix Details (Ingredients & Quantities)": "مکس کی تفصیل (اجزاء اور مقدار)",
+    "E.g. 5kg Wheat flour, 2kg Multigrain...": "مثلاً 5 کلو گندم کا آٹا، 2 کلو ملٹی گرین...",
+    "Submit Request": "درخواست جمع کریں",
+    "Sending...": "بھیجا جا رہا ہے...",
+    "Please fill all fields": "براہ کرم تمام خانے پُر کریں",
+    "Custom Mix request sent! We will call you soon.": "کسٹم مکس درخواست بھیج دی گئی! ہم جلد آپ کو کال کریں گے۔",
+    "Failed to send request": "درخواست بھیجنا ناکام",
+    "Network error. Please try again.": "نیٹ ورک خرابی۔ دوبارہ کوشش کریں۔",
+
+    // ServiceCard UI
+    "FOR RENT": "کرائے کے لیے",
+    "day": "دن",
+    "Deposit": "ڈپازٹ",
+    "Penalty": "جرمانہ",
+    "No Rental Qty": "کرائے کی مقدار نہیں",
+    "Rent Now": "ابھی کرایہ لیں",
+    "Available Qty": "دستیاب مقدار",
+    "Only": "صرف",
+    "left": "باقی",
+    "Out of Stock": "ختم ہو گیا",
+    "Added \u2713": "شامل \u2713",
+    "Add to Cart": "کارٹ میں شامل کریں",
+    "OR": "یا",
+    "Add Pickup Request": "پک اپ درخواست شامل کریں",
+    "Pickup Request Added \u2713": "پک اپ درخواست شامل \u2713",
+    "Pickup request added to cart.": "پک اپ درخواست کارٹ میں شامل ہو گئی۔",
   },
 };
 
