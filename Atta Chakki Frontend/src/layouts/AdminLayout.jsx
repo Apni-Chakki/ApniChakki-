@@ -23,6 +23,18 @@ export default function AdminLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [storeName, setStoreName] = useState('Admin');
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/get_store_settings.php`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.settings?.storeName) {
+          setStoreName(data.settings.storeName);
+        }
+      })
+      .catch(err => console.error('Could not load store name:', err));
+  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -96,7 +108,7 @@ export default function AdminLayout({ children }) {
             >
               <Menu style={{ width: '1.25rem', height: '1.25rem' }} />
             </button>
-            <span className="admin-topbar-title">Admin</span>
+            <span className="admin-topbar-title">{storeName}</span>
           </div>
           <div className="admin-topbar-actions flex items-center gap-4">
             <div className="relative">

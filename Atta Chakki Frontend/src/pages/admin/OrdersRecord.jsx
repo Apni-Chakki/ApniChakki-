@@ -418,7 +418,13 @@ export function OrdersRecord() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 min-w-[280px]" align="start">
+              <PopoverContent
+                className="w-auto p-0 min-w-[280px]"
+                align="start"
+                side="bottom"
+                sideOffset={6}
+                collisionPadding={{ top: 80, bottom: 16, left: 8, right: 8 }}
+              >
                 <Calendar
                   initialFocus
                   mode="range"

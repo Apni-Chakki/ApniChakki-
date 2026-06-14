@@ -16,7 +16,7 @@ import {
 import {
   RotateCcw, Loader2, Clock, User, Phone, MapPin, Package,
   CalendarClock, AlertTriangle, CheckCircle, Shield, Banknote,
-  MessageCircle, Calendar, ArrowDownCircle, RefreshCw, TrendingUp,
+  MessageCircle, Calendar, ArrowDownCircle, TrendingUp,
   Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -252,14 +252,6 @@ Apni Chakki - Fresh Flour Daily`.trim();
           >
             <Clock className="h-4 w-4 mr-2" />
             {viewHistory ? 'Hide History' : 'View History'}
-          </Button>
-          <Button
-            onClick={loadRentals}
-            variant="outline"
-            size="icon"
-            className="border-teal-200 text-teal-700 hover:bg-teal-50"
-          >
-            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>

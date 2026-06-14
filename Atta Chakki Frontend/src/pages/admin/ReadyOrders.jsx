@@ -81,21 +81,21 @@ export function ReadyOrders() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <PackageCheck className="h-6 w-6 text-green-600" />
-            Ready Orders
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <PackageCheck className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 shrink-0" />
+            <span className="truncate">Ready Orders</span>
           </h1>
-          <p className="text-muted-foreground">{orders.length} orders waiting for pickup or delivery</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} orders waiting for pickup or delivery</p>
         </div>
       </div>
 
       {orders.length === 0 && !loading ? (
-        <div className="p-12 text-center border-2 border-dashed rounded-xl" style={{ background: '#ffffff' }}>
-            <PackageCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium text-foreground">No ready orders right now.</p>
-            <p className="text-muted-foreground">When you mark an order as 'Ready' in Today's Work, it will appear here.</p>
+        <div className="p-8 sm:p-12 text-center border-2 border-dashed rounded-xl" style={{ background: '#ffffff' }}>
+            <PackageCheck className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-base sm:text-lg font-medium text-foreground">No ready orders right now.</p>
+            <p className="text-sm text-muted-foreground">When you mark an order as 'Ready' in Today's Work, it will appear here.</p>
         </div>
       ) : (
         <OrdersTable
@@ -104,21 +104,21 @@ export function ReadyOrders() {
             <Button
               size="sm"
               className={`${
-                order.status === 'out-for-delivery' 
-                  ? 'bg-blue-600 hover:bg-blue-700' 
+                order.status === 'out-for-delivery'
+                  ? 'bg-blue-600 hover:bg-blue-700'
                   : order.status === 'coming_for_pickup'
                   ? 'bg-orange-500 hover:bg-orange-600'
                   : 'bg-green-600 hover:bg-green-700'
               } text-white shadow-sm`}
               onClick={() => updateToCompleted(order.id)}
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              {order.status === 'out-for-delivery' 
-                ? 'Mark as Completed' 
+              <CheckCircle2 className="h-4 w-4 mr-2 shrink-0" />
+              {order.status === 'out-for-delivery'
+                ? 'Mark as Completed'
                 : order.status === 'coming_for_pickup'
                 ? 'In Pickup'
-                : order.type === 'delivery' 
-                ? 'Ready for Delivery' 
+                : order.type === 'delivery'
+                ? 'Ready for Delivery'
                 : 'Handed to Customer'}
             </Button>
           )}

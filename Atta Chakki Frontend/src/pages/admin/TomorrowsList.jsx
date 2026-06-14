@@ -329,37 +329,37 @@ export function TomorrowsList() {
     return (
       <Card key={order.id} className="border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white border-l-emerald-500">
         {/* order header */}
-        <div className="p-5 pb-3 bg-emerald-50/30 rounded-t-xl">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-xl font-bold flex items-center gap-2 flex-wrap">
+        <div className="p-3 sm:p-5 pb-3 bg-emerald-50/30 rounded-t-xl">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-xl font-bold flex items-center gap-2 flex-wrap">
                 Order #{order.id}
                 <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-2 py-0.5 font-bold uppercase">
                   Prepared Item
                 </Badge>
               </h3>
-              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {new Date(order.created_at).toLocaleString()}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span className="break-words">{new Date(order.created_at).toLocaleString()}</span>
               </p>
             </div>
-            <div className="text-right bg-emerald-50/50 px-3 py-2 rounded-lg border border-emerald-200">
-              <div className="flex flex-col items-end">
-                <span className="text-lg font-bold text-slate-800">
+            <div className="sm:text-right bg-emerald-50/50 px-3 py-2 rounded-lg border border-emerald-200 self-stretch sm:self-auto">
+              <div className="flex flex-col items-start sm:items-end">
+                <span className="text-base sm:text-lg font-bold text-slate-800 break-all">
                   Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
                 </span>
                 {parseFloat(order.coupon_discount || 0) > 0 && (
-                  <div className="text-xs text-emerald-600 font-medium mt-1">
+                  <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1">
                     -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
                   </div>
                 )}
-                <p className="text-xs font-semibold text-emerald-600 uppercase mt-0.5">{order.payment_method}</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-emerald-600 uppercase mt-0.5">{order.payment_method}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <CardContent className="space-y-4 pt-4">
+        <CardContent className="space-y-4 pt-4 px-3 sm:px-6">
           {/* customer info */}
           <div className="bg-muted/30 p-3 rounded-md space-y-1.5 text-sm">
             <div className="flex items-center gap-2">
@@ -485,21 +485,21 @@ export function TomorrowsList() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Sunrise className="h-7 w-7 text-orange-500" />
-            Tomorrow's Work List
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Sunrise className="h-5 w-5 sm:h-7 sm:w-7 text-orange-500 shrink-0" />
+            <span className="truncate">Tomorrow's Work List</span>
           </h1>
-          <p className="text-muted-foreground">{orders.length} orders scheduled for tomorrow</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} orders scheduled for tomorrow</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             onClick={() => setShowPrintList(true)}
             disabled={orders.length === 0}
-            className="bg-primary"
+            className="bg-primary w-full sm:w-auto"
           >
             <FileText className="h-4 w-4 mr-2" />
             Print Full List
@@ -509,26 +509,26 @@ export function TomorrowsList() {
 
       {/* summary stats cards */}
       {orders.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-3 gap-2 sm:gap-4">
           <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
-            <CardContent className="py-4 text-center">
-              <CalendarClock className="h-6 w-6 text-orange-600 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-orange-800">{orders.length}</p>
-              <p className="text-xs text-orange-600 font-medium">Scheduled Orders</p>
+            <CardContent className="py-3 sm:py-4 px-2 sm:px-6 text-center">
+              <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 mx-auto mb-1" />
+              <p className="text-lg sm:text-2xl font-bold text-orange-800">{orders.length}</p>
+              <p className="text-[10px] sm:text-xs text-orange-600 font-medium leading-tight">Scheduled<span className="hidden sm:inline"> Orders</span></p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-            <CardContent className="py-4 text-center">
-              <Weight className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-blue-800">{getTotalWeight()} kg</p>
-              <p className="text-xs text-blue-600 font-medium">Total Weight</p>
+            <CardContent className="py-3 sm:py-4 px-2 sm:px-6 text-center">
+              <Weight className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mx-auto mb-1" />
+              <p className="text-lg sm:text-2xl font-bold text-blue-800">{getTotalWeight()} kg</p>
+              <p className="text-[10px] sm:text-xs text-blue-600 font-medium leading-tight">Total Weight</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
-            <CardContent className="py-4 text-center">
-              <Timer className="h-6 w-6 text-emerald-600 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-emerald-800">{getTotalProcessingTime()} mins</p>
-              <p className="text-xs text-emerald-600 font-medium">Est. Processing Time</p>
+            <CardContent className="py-3 sm:py-4 px-2 sm:px-6 text-center">
+              <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 mx-auto mb-1" />
+              <p className="text-lg sm:text-2xl font-bold text-emerald-800">{getTotalProcessingTime()}<span className="text-xs sm:text-base"> mins</span></p>
+              <p className="text-[10px] sm:text-xs text-emerald-600 font-medium leading-tight">Est. <span className="hidden sm:inline">Processing </span>Time</p>
             </CardContent>
           </Card>
         </div>
@@ -537,32 +537,32 @@ export function TomorrowsList() {
       {/* capacity bar for tomorrow */}
       {capacity && (
         <Card className="border-orange-200" style={{ background: '#ffffff' }}>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between mb-2">
+          <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-orange-600" />
-                <span className="font-semibold text-orange-900">Tomorrow's Capacity</span>
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 shrink-0" />
+                <span className="font-semibold text-orange-900 text-sm sm:text-base">Tomorrow's Capacity</span>
               </div>
-              <div className="text-sm text-orange-700">
+              <div className="text-[11px] sm:text-sm text-orange-700">
                 <span className="font-bold">{Math.round(capacity.booked_minutes)}</span> / {Math.round(capacity.total_minutes)} mins booked
-                <span className="mx-2">•</span>
+                <span className="mx-1.5 sm:mx-2">•</span>
                 <span className="font-bold text-green-700">{Math.round(capacity.remaining_minutes)} mins</span> available
               </div>
             </div>
-            <div className="w-full bg-orange-200 rounded-full h-3 overflow-hidden">
-              <div 
-                className={`h-3 rounded-full transition-all duration-500 ${
-                  capacity.percentage_used > 90 ? 'bg-red-500' : 
-                  capacity.percentage_used > 70 ? 'bg-orange-500' : 
+            <div className="w-full bg-orange-200 rounded-full h-2.5 sm:h-3 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  capacity.percentage_used > 90 ? 'bg-red-500' :
+                  capacity.percentage_used > 70 ? 'bg-orange-500' :
                   'bg-orange-400'
                 }`}
                 style={{ width: `${Math.min(capacity.percentage_used, 100)}%` }}
               />
             </div>
-            <div className="flex justify-between mt-1 text-xs text-orange-600">
-              <span>{capacity.opening_time} (Open)</span>
-              <span className="font-semibold">{capacity.percentage_used}% pre-booked</span>
-              <span>{capacity.closing_time} (Close)</span>
+            <div className="flex justify-between mt-1 text-[10px] sm:text-xs text-orange-600 gap-1">
+              <span className="truncate">{capacity.opening_time} <span className="hidden sm:inline">(Open)</span></span>
+              <span className="font-semibold text-center shrink-0">{capacity.percentage_used}% <span className="hidden sm:inline">pre-</span>booked</span>
+              <span className="truncate text-right">{capacity.closing_time} <span className="hidden sm:inline">(Close)</span></span>
             </div>
           </CardContent>
         </Card>
@@ -582,14 +582,15 @@ export function TomorrowsList() {
       ) : (
         <div className="space-y-8">
           {/* 1. Grinding & Processing Section (Tomorrow's Scheduler) */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 px-1">
-              <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm border border-orange-200">
-                <Timer className="h-4 w-4 text-orange-600" />
-                Tomorrow's Grinding Queue (Kg Items)
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
+              <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm border border-orange-200 self-start">
+                <Timer className="h-4 w-4 text-orange-600 shrink-0" />
+                <span className="hidden sm:inline">Tomorrow's Grinding Queue (Kg Items)</span>
+                <span className="sm:hidden">Grinding Queue</span>
               </div>
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-500 font-semibold">
+              <div className="hidden sm:block flex-1 h-px bg-slate-200" />
+              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold">
                 {processingOrders.length} grind job(s)
               </span>
             </div>
@@ -616,34 +617,34 @@ export function TomorrowsList() {
                       : 'border-l-orange-400'
                   }`}>
                     {/* order header */}
-                    <div className="p-5 pb-3 bg-orange-50/50 rounded-t-xl">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-bold flex items-center gap-2 flex-wrap">
+                    <div className="p-3 sm:p-5 pb-3 bg-orange-50/50 rounded-t-xl">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-base sm:text-xl font-bold flex items-center gap-2 flex-wrap">
                             Order #{order.id}
                           </h3>
-                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {new Date(order.created_at).toLocaleString()}
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5 shrink-0" />
+                            <span className="break-words">{new Date(order.created_at).toLocaleString()}</span>
                           </p>
                         </div>
-                        <div className="text-right bg-orange-50/80 px-3 py-2 rounded-lg border border-orange-200">
-                          <div className="flex flex-col items-end">
-                            <span className="text-lg font-bold text-slate-800">
+                        <div className="sm:text-right bg-orange-50/80 px-3 py-2 rounded-lg border border-orange-200 self-stretch sm:self-auto">
+                          <div className="flex flex-col items-start sm:items-end">
+                            <span className="text-base sm:text-lg font-bold text-slate-800 break-all">
                               Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
                             </span>
                             {parseFloat(order.coupon_discount || 0) > 0 && (
-                              <div className="text-xs text-emerald-600 font-medium mt-1">
+                              <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1">
                                 -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
                               </div>
                             )}
-                            <p className="text-xs font-semibold text-orange-600 uppercase">{order.payment_method}</p>
+                            <p className="text-[11px] sm:text-xs font-semibold text-orange-600 uppercase">{order.payment_method}</p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <CardContent className="space-y-4 pt-4">
+                    <CardContent className="space-y-4 pt-4 px-3 sm:px-6">
                       {/* ETA & scheduling info */}
                       <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 p-3 rounded-lg">
                         <div className="grid grid-cols-3 gap-2 text-center">
@@ -839,13 +840,14 @@ export function TomorrowsList() {
           </div>
 
           {/* 2. Prepared & Ready to Deliver Section */}
-          <div className="space-y-6 pt-6 border-t border-slate-200">
-            <div className="flex items-center gap-3 px-1">
-              <div className="flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm border border-emerald-200">
-                <Package className="h-4 w-4 text-emerald-600" />
-                Tomorrow's Prepared Orders (Oil, Liter, Pieces, etc.)
+          <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6 border-t border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
+              <div className="flex items-center gap-2 bg-emerald-100 text-emerald-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm border border-emerald-200 self-start">
+                <Package className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="hidden sm:inline">Tomorrow's Prepared Orders (Oil, Liter, Pieces, etc.)</span>
+                <span className="sm:hidden">Prepared Orders</span>
               </div>
-              <div className="flex-1 h-px bg-slate-200" />
+              <div className="hidden sm:block flex-1 h-px bg-slate-200" />
               <span className="text-xs text-emerald-600 font-semibold">
                 {preparedOrders.length} order(s)
               </span>

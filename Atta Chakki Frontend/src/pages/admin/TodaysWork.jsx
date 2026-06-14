@@ -792,10 +792,10 @@ Mughal Atta Chakki — Pure & Fresh Processing
               ? 'border-l-amber-500'
               : 'border-l-blue-600'
     }`}>
-      <CardHeader className={`pb-2 rounded-t-xl mb-4 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
+      <CardHeader className={`pb-2 rounded-t-xl mb-3 sm:mb-4 px-3 sm:px-6 pt-3 sm:pt-6 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-lg sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
               Order #{order.id}
               {isSplitBatch && (
                 <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] px-2 py-0.5 font-bold">
@@ -809,32 +809,32 @@ Mughal Atta Chakki — Pure & Fresh Processing
                 </Badge>
               )}
             </CardTitle>
-            <p className="text-sm font-medium text-muted-foreground mt-2 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Created: {new Date(order.created_at).toLocaleString()}
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1.5 sm:mt-2 flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="break-words">Created: {new Date(order.created_at).toLocaleString()}</span>
             </p>
           </div>
-          <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
-            <div className="flex flex-col items-end">
-              <span className="text-xl font-bold text-slate-800">
+          <div className="sm:text-right bg-blue-50/80 px-3 py-2 rounded-lg self-stretch sm:self-auto">
+            <div className="flex flex-col items-start sm:items-end">
+              <span className="text-base sm:text-xl font-bold text-slate-800 break-all">
                 Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
                 {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
               </span>
               {parseFloat(order.coupon_discount || 0) > 0 && (
-                <div className="text-xs text-emerald-600 font-medium mt-1">
+                <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1">
                   -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
                 </div>
               )}
-              <div className="flex items-center gap-1.5 justify-end mt-1">
-                <span className="text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
+              <div className="flex items-center gap-1.5 sm:justify-end mt-1 flex-wrap">
+                <span className="text-[11px] sm:text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                   order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 border border-green-300' :
                   order.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
                   order.paymentStatus === 'unpaid' ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse' :
                   'bg-yellow-100 text-yellow-800 border border-yellow-300'
                 }`}>
-                  {order.paymentStatus === 'paid' ? 'Paid' : 
-                   order.paymentStatus === 'partial' ? 'Partial' : 
+                  {order.paymentStatus === 'paid' ? 'Paid' :
+                   order.paymentStatus === 'partial' ? 'Partial' :
                    order.paymentStatus === 'unpaid' ? 'Unpaid / Rejected' : 'Pending'}
                 </span>
               </div>
@@ -843,37 +843,43 @@ Mughal Atta Chakki — Pure & Fresh Processing
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-5 px-6">
+      <CardContent className="space-y-4 sm:space-y-5 px-3 sm:px-6">
         {/* ETA & scheduling info card */}
-        <div className={`p-4 rounded-lg border transition-colors ${
-          isOverdue 
-            ? 'bg-red-50 border-red-300' 
+        <div className={`p-3 sm:p-4 rounded-lg border transition-colors ${
+          isOverdue
+            ? 'bg-red-50 border-red-300'
             : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
         }`}>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center">
-              <div className={`flex items-center justify-center gap-1 mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
-                <Timer className="h-4 w-4" />
+          <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2 sm:gap-3">
+            <div className="flex items-center justify-between sm:flex-col sm:text-center min-w-0">
+              <div className={`flex items-center gap-1 sm:justify-center sm:mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
+                <Timer className="h-4 w-4 shrink-0" />
                 <span className="text-xs font-semibold uppercase">ETA</span>
               </div>
-              <p className={`text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>{formatETA(order.estimated_completion_time)}</p>
-              <p className={`text-xs font-bold ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>{getTimeRemaining(order.estimated_completion_time)}</p>
+              <div className="text-right sm:text-center">
+                <p className={`text-base sm:text-lg font-bold break-words ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>{formatETA(order.estimated_completion_time)}</p>
+                <p className={`text-xs font-bold ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>{getTimeRemaining(order.estimated_completion_time)}</p>
+              </div>
             </div>
-            <div className={`text-center border-x ${isOverdue ? 'border-red-200' : 'border-emerald-200'}`}>
-              <div className={`flex items-center justify-center gap-1 mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
-                <Weight className="h-4 w-4" />
+            <div className={`flex items-center justify-between sm:flex-col sm:text-center min-w-0 border-y sm:border-y-0 sm:border-x py-2 sm:py-0 ${isOverdue ? 'border-red-200' : 'border-emerald-200'}`}>
+              <div className={`flex items-center gap-1 sm:justify-center sm:mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
+                <Weight className="h-4 w-4 shrink-0" />
                 <span className="text-xs font-semibold uppercase">Weight</span>
               </div>
-              <p className={`text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
-              <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>{order.processing_time_minutes || Math.ceil(parseFloat(order.total_weight_kg || 1) * 2)} mins</p>
+              <div className="text-right sm:text-center">
+                <p className={`text-base sm:text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>{parseFloat(order.total_weight_kg || 0).toFixed(1)} kg</p>
+                <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>{order.processing_time_minutes || Math.ceil(parseFloat(order.total_weight_kg || 1) * 2)} mins</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className={`flex items-center justify-center gap-1 mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
-                <Package className="h-4 w-4" />
+            <div className="flex items-center justify-between sm:flex-col sm:text-center min-w-0">
+              <div className={`flex items-center gap-1 sm:justify-center sm:mb-1 ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
+                <Package className="h-4 w-4 shrink-0" />
                 <span className="text-xs font-semibold uppercase">Queue</span>
               </div>
-              <p className={`text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>#{order.queue_position || '-'}</p>
-              <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>Position</p>
+              <div className="text-right sm:text-center">
+                <p className={`text-base sm:text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>#{order.queue_position || '-'}</p>
+                <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>Position</p>
+              </div>
             </div>
           </div>
         </div>
@@ -988,17 +994,17 @@ Mughal Atta Chakki — Pure & Fresh Processing
         </div>
 
         {/* actions */}
-        <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {canMarkReady ? (
             <Button
-              className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
+              className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-sm disabled:opacity-70"
               onClick={() => markAsReady(order)}
               disabled={sendingBill === order.id}
             >
               {sendingBill === order.id ? (
-                <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" /> Generating Bill...</>
               ) : (
-                <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
+                <><FileDown className="h-4 w-4 mr-2 shrink-0" /> Mark as Ready &amp; Send Bill</>
               )}
             </Button>
           ) : (
@@ -1006,11 +1012,11 @@ Mughal Atta Chakki — Pure & Fresh Processing
               <TooltipTrigger asChild>
                 <div className="w-full">
                   <Button
-                    className="w-full shadow-md font-medium text-[15px] text-white hover:opacity-90"
+                    className="w-full shadow-md font-medium text-sm text-white hover:opacity-90"
                     style={{ backgroundColor: '#4f46e5' }}
                     onClick={() => markBatchProcessed(order)}
                   >
-                    <CheckCircle className="h-5 w-5 mr-2" /> Mark Batch Processed
+                    <CheckCircle className="h-4 w-4 mr-2 shrink-0" /> Mark Batch Processed
                   </Button>
                 </div>
               </TooltipTrigger>
@@ -1024,32 +1030,32 @@ Mughal Atta Chakki — Pure & Fresh Processing
           {isHeavy && !isSplitBatch && (
             <Button
               variant="outline"
-              className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium animate-pulse"
+              className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium text-sm animate-pulse"
               onClick={() => openSplitModal(order)}
             >
-              <SplitSquareHorizontal className="h-4 w-4 mr-2" />
+              <SplitSquareHorizontal className="h-4 w-4 mr-2 shrink-0" />
               Split Order
             </Button>
           )}
 
           <Button
             variant="outline"
-            className="w-full border-2 border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm font-medium"
+            className="w-full border-2 border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm font-medium text-sm"
             onClick={() => moveToTomorrow(order)}
             disabled={overriding === order.id}
           >
             {overriding === order.id ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Moving...</>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" /> Moving...</>
             ) : (
-              <><CalendarClock className="h-4 w-4 mr-2" /> Push to Tomorrow</>
+              <><CalendarClock className="h-4 w-4 mr-2 shrink-0" /> Push to Tomorrow</>
             )}
           </Button>
 
           {order.type === 'delivery' ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className={`border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
-                  <Truck className="h-4 w-4 mr-2" />
+                <Button variant="outline" className={`w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium text-sm ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
+                  <Truck className="h-4 w-4 mr-2 shrink-0" />
                   {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
                 </Button>
               </DropdownMenuTrigger>
@@ -1072,18 +1078,18 @@ Mughal Atta Chakki — Pure & Fresh Processing
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" variant="outline" disabled className="border-slate-200 text-slate-500 opacity-60 cursor-default">
-              <Package className="h-4 w-4 mr-2" />
+            <Button variant="outline" disabled className="w-full border-2 border-slate-200 text-slate-500 opacity-60 cursor-default text-sm">
+              <Package className="h-4 w-4 mr-2 shrink-0" />
               Self Pickup
             </Button>
           )}
 
-          <Button variant="outline" className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium" onClick={() => handlePrint(order)}>
-            <Printer className="h-5 w-5 mr-2" /> Print
+          <Button variant="outline" className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium text-sm" onClick={() => handlePrint(order)}>
+            <Printer className="h-4 w-4 mr-2 shrink-0" /> Print
           </Button>
 
-          <Button variant="destructive" className="w-full shadow-sm font-medium px-6" onClick={() => setCancelOrder(order)}>
-            <Trash2 className="h-5 w-5 mr-2 text-white" /> Cancel
+          <Button variant="destructive" className="w-full shadow-sm font-medium text-sm" onClick={() => setCancelOrder(order)}>
+            <Trash2 className="h-4 w-4 mr-2 text-white shrink-0" /> Cancel
           </Button>
         </div>
       </CardContent>
@@ -1094,40 +1100,40 @@ Mughal Atta Chakki — Pure & Fresh Processing
   const PreparedOrderCard = ({ order }) => {
     return (
       <Card className="border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white border-l-emerald-600">
-        <CardHeader className="pb-2 rounded-t-xl mb-4 bg-slate-50/50">
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl font-bold flex items-center gap-2 flex-wrap">
+        <CardHeader className="pb-2 rounded-t-xl mb-3 sm:mb-4 px-3 sm:px-6 pt-3 sm:pt-6 bg-slate-50/50">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+            <div className="min-w-0">
+              <CardTitle className="text-lg sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
                 Order #{order.id}
                 <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-2 py-0.5 font-bold uppercase">
                   Prepared Item
                 </Badge>
               </CardTitle>
-              <p className="text-sm font-medium text-muted-foreground mt-2 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Created: {new Date(order.created_at).toLocaleString()}
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1.5 sm:mt-2 flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span className="break-words">Created: {new Date(order.created_at).toLocaleString()}</span>
               </p>
             </div>
-            <div className="text-right bg-blue-50/80 px-3 py-2 rounded-lg">
-              <div className="flex flex-col items-end">
-                <span className="text-xl font-bold text-slate-800">
+            <div className="sm:text-right bg-blue-50/80 px-3 py-2 rounded-lg self-stretch sm:self-auto">
+              <div className="flex flex-col items-start sm:items-end">
+                <span className="text-base sm:text-xl font-bold text-slate-800 break-all">
                   Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
                 </span>
                 {parseFloat(order.coupon_discount || 0) > 0 && (
-                  <div className="text-xs text-emerald-600 font-medium mt-1">
+                  <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1">
                     -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 justify-end mt-1">
-                  <span className="text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
+                <div className="flex items-center gap-1.5 sm:justify-end mt-1 flex-wrap">
+                  <span className="text-[11px] sm:text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                     order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 border border-green-300' :
                     order.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
                     order.paymentStatus === 'unpaid' ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse' :
                     'bg-yellow-100 text-yellow-800 border border-yellow-300'
                   }`}>
-                    {order.paymentStatus === 'paid' ? 'Paid' : 
-                     order.paymentStatus === 'partial' ? 'Partial' : 
+                    {order.paymentStatus === 'paid' ? 'Paid' :
+                     order.paymentStatus === 'partial' ? 'Partial' :
                      order.paymentStatus === 'unpaid' ? 'Unpaid / Rejected' : 'Pending'}
                   </span>
                 </div>
@@ -1136,7 +1142,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-5 px-6">
+        <CardContent className="space-y-4 sm:space-y-5 px-3 sm:px-6">
           <div className="bg-muted/30 p-3 rounded-md space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
@@ -1177,24 +1183,24 @@ Mughal Atta Chakki — Pure & Fresh Processing
             </ul>
           </div>
 
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
-              className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-[15px] disabled:opacity-70"
+              className="w-full bg-green-600 hover:bg-green-700 shadow-md font-medium text-sm disabled:opacity-70"
               onClick={() => markAsReady(order)}
               disabled={sendingBill === order.id}
             >
               {sendingBill === order.id ? (
-                <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Bill...</>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" /> Generating Bill...</>
               ) : (
-                <><FileDown className="h-5 w-5 mr-2" /> Mark as Ready & Send Bill</>
+                <><FileDown className="h-4 w-4 mr-2 shrink-0" /> Mark as Ready &amp; Send Bill</>
               )}
             </Button>
 
             {order.type === 'delivery' ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className={`border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
-                    <Truck className="h-4 w-4 mr-2" />
+                  <Button variant="outline" className={`w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium text-sm ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
+                    <Truck className="h-4 w-4 mr-2 shrink-0" />
                     {order.deliveryPersonnel ? `${order.deliveryPersonnel.slice(0, 10)}` : 'Driver'}
                   </Button>
                 </DropdownMenuTrigger>
@@ -1217,18 +1223,18 @@ Mughal Atta Chakki — Pure & Fresh Processing
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button size="sm" variant="outline" disabled className="border-slate-200 text-slate-500 opacity-60 cursor-default">
-                <Package className="h-4 w-4 mr-2" />
+              <Button variant="outline" disabled className="w-full border-2 border-slate-200 text-slate-500 opacity-60 cursor-default text-sm">
+                <Package className="h-4 w-4 mr-2 shrink-0" />
                 Self Pickup
               </Button>
             )}
 
-            <Button variant="outline" className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium" onClick={() => handlePrint(order)}>
-              <Printer className="h-5 w-5 mr-2" /> Print
+            <Button variant="outline" className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium text-sm" onClick={() => handlePrint(order)}>
+              <Printer className="h-4 w-4 mr-2 shrink-0" /> Print
             </Button>
 
-            <Button variant="destructive" className="w-full shadow-sm font-medium px-6" onClick={() => setCancelOrder(order)}>
-              <Trash2 className="h-5 w-5 mr-2 text-white" /> Cancel
+            <Button variant="destructive" className="w-full shadow-sm font-medium text-sm" onClick={() => setCancelOrder(order)}>
+              <Trash2 className="h-4 w-4 mr-2 text-white shrink-0" /> Cancel
             </Button>
           </div>
         </CardContent>
@@ -1245,45 +1251,46 @@ Mughal Atta Chakki — Pure & Fresh Processing
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* header with quick stats */}
-      <div className="rounded-xl border border-gray-100 p-6 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 text-xs font-semibold uppercase tracking-wide mb-3">
+      <div className="rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">
               Processing Board
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Today's Work</h1>
-            <p className="text-slate-600 mt-2 max-w-2xl">
+            <h1 className="text-xl sm:text-3xl font-bold text-slate-900">Today's Work</h1>
+            <p className="text-xs sm:text-base text-slate-600 mt-1 sm:mt-2 max-w-2xl">
               Orders currently in production, with live capacity, driver assignment, and scheduling actions in one place.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+          <div className="flex items-stretch gap-2 self-stretch lg:self-auto sm:items-center sm:flex-wrap">
             <Button
               onClick={handlePrintAll}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md flex items-center gap-2"
-              size="lg"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md flex items-center justify-center gap-2 flex-1 sm:flex-none h-11 rounded-lg"
             >
-              <Printer className="h-5 w-5 mr-1" /> Print Today's Work List
+              <Printer className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-1" />
+              <span className="hidden sm:inline">Print Today's Work List</span>
+              <span className="sm:hidden">Print List</span>
             </Button>
-            <Badge variant="secondary" className="text-lg px-4 py-2">
+            <div className="flex-1 sm:flex-none h-11 sm:h-auto rounded-lg sm:rounded-full bg-secondary text-secondary-foreground text-sm sm:text-lg font-semibold flex items-center justify-center px-3 sm:px-4 sm:py-2 border border-border sm:border-0">
               {orders.length} Active Jobs
-            </Badge>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 mt-6" style={{ gap: '1.25rem' }}>
-          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Total Weight</p>
-            <p className="text-2xl font-black text-gray-900">{totalWeight.toFixed(1)} kg</p>
+        <div className="grid grid-cols-3 md:grid-cols-3 mt-4 sm:mt-6 gap-2 sm:gap-5">
+          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-1 sm:mb-3">Total Weight</p>
+            <p className="text-base sm:text-2xl font-black text-gray-900">{totalWeight.toFixed(1)} kg</p>
           </div>
-          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Estimated Workload</p>
-            <p className="text-2xl font-black text-gray-900">{totalProcessingMinutes} mins</p>
+          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-1 sm:mb-3">Workload</p>
+            <p className="text-base sm:text-2xl font-black text-gray-900">{totalProcessingMinutes} mins</p>
           </div>
-          <div className="rounded-xl border border-gray-200/70 p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-3">Available Drivers</p>
-            <p className="text-2xl font-black text-gray-900">{activeDrivers}</p>
+          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+            <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-1 sm:mb-3">Drivers</p>
+            <p className="text-base sm:text-2xl font-black text-gray-900">{activeDrivers}</p>
           </div>
         </div>
       </div>
@@ -1291,36 +1298,36 @@ Mughal Atta Chakki — Pure & Fresh Processing
       {/* capacity utilization bar */}
       {capacity && (
         <Card className="border-blue-200 rounded-xl" style={{ background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)' }}>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between mb-2">
+          <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-blue-600" />
-                <span className="font-semibold text-blue-900">Today's Capacity</span>
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
+                <span className="font-semibold text-blue-900 text-sm sm:text-base">Today's Capacity</span>
               </div>
-              <div className="text-sm text-blue-700 text-right">
+              <div className="text-[11px] sm:text-sm text-blue-700 sm:text-right">
                 <span className="font-bold">{Math.round(capacity.booked_minutes)}</span> mins booked
-                <span className="mx-2">•</span>
+                <span className="mx-1.5 sm:mx-2">•</span>
                 <span className="font-bold text-green-700">{Math.round(capacity.remaining_minutes)} mins</span> remaining
-                <span className="text-xs text-blue-500 ml-1">(from now)</span>
+                <span className="text-[10px] sm:text-xs text-blue-500 ml-1">(from now)</span>
               </div>
             </div>
-            <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
-              <div 
-                className={`h-3 rounded-full transition-all duration-500 ${
-                  capacity.percentage_used > 90 ? 'bg-red-500' : 
-                  capacity.percentage_used > 70 ? 'bg-orange-500' : 
+            <div className="w-full bg-blue-200 rounded-full h-2.5 sm:h-3 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  capacity.percentage_used > 90 ? 'bg-red-500' :
+                  capacity.percentage_used > 70 ? 'bg-orange-500' :
                   'bg-blue-600'
                 }`}
                 style={{ width: `${Math.min(capacity.percentage_used, 100)}%` }}
               />
             </div>
-            <div className="flex justify-between mt-1 text-xs text-blue-600">
-              <span>{capacity.opening_time} (Open)</span>
-              <span className="font-semibold">
+            <div className="flex justify-between mt-1 text-[10px] sm:text-xs text-blue-600 gap-1">
+              <span className="truncate">{capacity.opening_time} <span className="hidden sm:inline">(Open)</span></span>
+              <span className="font-semibold text-center shrink-0">
                 {capacity.percentage_used}% utilized
-                {capacity.current_time && <span className="ml-2 text-blue-400">· Now: {capacity.current_time}</span>}
+                {capacity.current_time && <span className="ml-2 text-blue-400 hidden sm:inline">· Now: {capacity.current_time}</span>}
               </span>
-              <span>{capacity.closing_time} (Close)</span>
+              <span className="truncate text-right">{capacity.closing_time} <span className="hidden sm:inline">(Close)</span></span>
             </div>
           </CardContent>
         </Card>
@@ -1339,14 +1346,15 @@ Mughal Atta Chakki — Pure & Fresh Processing
       ) : (
         <div className="space-y-8">
           {/* 1. Grinding & Processing Section (Today's Scheduler) */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 px-1">
-              <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm border border-blue-200">
-                <Timer className="h-4 w-4 text-blue-600" />
-                Grinding Processing Board (Kg Items)
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
+              <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm border border-blue-200 self-start">
+                <Timer className="h-4 w-4 text-blue-600 shrink-0" />
+                <span className="hidden sm:inline">Grinding Processing Board (Kg Items)</span>
+                <span className="sm:hidden">Grinding Board</span>
               </div>
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-500 font-semibold">
+              <div className="hidden sm:block flex-1 h-px bg-slate-200" />
+              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold">
                 {processingOrders.length} grind job(s)
               </span>
             </div>
@@ -1408,14 +1416,15 @@ Mughal Atta Chakki — Pure & Fresh Processing
           </div>
 
           {/* 2. Prepared & Ready to Deliver Section */}
-          <div className="space-y-6 pt-6 border-t border-slate-200">
-            <div className="flex items-center gap-3 px-1">
-              <div className="flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm border border-emerald-200">
-                <Package className="h-4 w-4 text-emerald-600" />
-                Prepared & Ready to Deliver (Oil, Liter, Pieces, etc.)
+          <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6 border-t border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
+              <div className="flex items-center gap-2 bg-emerald-100 text-emerald-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm border border-emerald-200 self-start">
+                <Package className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="hidden sm:inline">Prepared & Ready to Deliver (Oil, Liter, Pieces, etc.)</span>
+                <span className="sm:hidden">Ready to Deliver</span>
               </div>
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-emerald-600 font-semibold">
+              <div className="hidden sm:block flex-1 h-px bg-slate-200" />
+              <span className="text-[11px] sm:text-xs text-emerald-600 font-semibold">
                 {preparedOrders.length} order(s)
               </span>
             </div>

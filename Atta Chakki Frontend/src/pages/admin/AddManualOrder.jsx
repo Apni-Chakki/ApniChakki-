@@ -217,16 +217,16 @@ export function AddManualOrder() {
   const currentCustomizations = currentProduct ? getEffectiveCustomizations(currentProduct) : [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('Add Manual Order')}</h1>
-          <p className="text-muted-foreground">{t('Create order for walk-in or phone customers')}</p>
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 pb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">{t('Add Manual Order')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('Create order for walk-in or phone customers')}</p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/admin')}>{t('Cancel')}</Button>
+        <Button variant="outline" onClick={() => navigate('/admin')} className="w-full sm:w-auto">{t('Cancel')}</Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         
         {/* Customer Details */}
         <Card>
@@ -305,11 +305,11 @@ export function AddManualOrder() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end mb-6">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end mb-4 sm:mb-6">
+            <div className="flex-1 min-w-0">
               <Label>{t('Select Product')}</Label>
               <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder={t('Choose an item...')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,7 +326,7 @@ export function AddManualOrder() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-24">
+            <div className="w-full sm:w-24">
               <Label>{t('Quantity')}</Label>
               <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} />
             </div>
@@ -334,33 +334,86 @@ export function AddManualOrder() {
 
           {/* Dynamic Customizations for selected product */}
           {selectedProduct && currentCustomizations.length > 0 && (
-            <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted rounded-lg border border-border">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 bg-muted rounded-lg border border-border">
               {currentCustomizations.map((cust, idx) => (
                 <div key={idx} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`admin-cust-${idx}`} 
-                    checked={!!selectedOptions[idx]} 
-                    onCheckedChange={(checked) => setSelectedOptions(prev => ({ ...prev, [idx]: !!checked }))} 
+                  <Checkbox
+                    id={`admin-cust-${idx}`}
+                    checked={!!selectedOptions[idx]}
+                    onCheckedChange={(checked) => setSelectedOptions(prev => ({ ...prev, [idx]: !!checked }))}
                   />
                   <Label htmlFor={`admin-cust-${idx}`} className="text-sm font-medium">
                     {t(cust.option_name)} (Rs. {cust.option_price})
                   </Label>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground ml-auto flex items-center">
+              <p className="text-xs text-muted-foreground sm:ml-auto flex items-center">
                 {t('Current Price')}: Rs. {currentCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price || 0) : 0), 0)}
               </p>
             </div>
           )}
 
-          <div className="flex justify-end mb-6">
-            <Button onClick={addToCart} disabled={!selectedProduct || selectedProduct === "none"}>
+          <div className="flex justify-end mb-4 sm:mb-6">
+            <Button onClick={addToCart} disabled={!selectedProduct || selectedProduct === "none"} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> {t('Add to Cart')}
             </Button>
           </div>
 
-          {/* Cart Table */}
-          <div className="border rounded-lg overflow-hidden">
+          {/* Cart — table on desktop, card stack on mobile */}
+          {/* Mobile: card list */}
+          <div className="sm:hidden space-y-2">
+            {cart.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground border rounded-lg">{t('Cart is empty')}</div>
+            ) : (
+              cart.map((item, idx) => (
+                <div key={idx} className="border rounded-lg p-3 bg-card">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm break-words">{item.name}</p>
+                      {item.selected_customizations && item.selected_customizations.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          ({item.selected_customizations.map(c => t(c.option_name)).join(' + ')})
+                        </p>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => removeFromCart(idx)} className="text-red-500 shrink-0 h-8 w-8 p-0">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">{t('Price')}</p>
+                      {item.original_price && item.original_price > item.price ? (
+                        <div>
+                          <span className="line-through text-muted-foreground block">Rs. {item.original_price.toLocaleString()}</span>
+                          <span className="text-green-600 font-bold">Rs. {item.price.toLocaleString()}</span>
+                        </div>
+                      ) : (
+                        <span className="font-semibold">Rs. {item.price.toLocaleString()}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t('Qty')}</p>
+                      <p className="font-semibold">{item.quantity}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t('Total')}</p>
+                      <p className="font-bold">Rs. {(item.price * item.quantity).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            {cart.length > 0 && (
+              <div className="border-t-2 border-primary/20 pt-3 flex justify-between items-center px-1">
+                <span className="font-bold text-sm">{t('Grand Total')}:</span>
+                <span className="font-bold text-lg">Rs. {calculateTotal().toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: cart table */}
+          <div className="hidden sm:block border rounded-lg overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted">
                 <tr>
@@ -417,8 +470,8 @@ export function AddManualOrder() {
             </table>
           </div>
 
-          <div className="mt-6 flex justify-end">
-            <Button size="lg" onClick={handleSubmit} disabled={loading}>
+          <div className="mt-4 sm:mt-6 flex justify-end">
+            <Button size="lg" onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
               <Save className="h-4 w-4 mr-2" />
               {loading ? t('Creating Order...') : t('Create Order')}
             </Button>

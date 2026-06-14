@@ -16,10 +16,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
         nav: "absolute top-1 inset-x-0 w-full flex justify-between px-2 z-10",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 hover:bg-gray-100 opacity-50 hover:opacity-100 rounded-md"
-        ),
+        nav_button: "h-7 w-7 p-0 inline-flex items-center justify-center bg-transparent text-foreground hover:text-primary cursor-pointer border-0 rounded-md",
         nav_button_previous: "",
         nav_button_next: "",
         table: "w-full border-collapse space-y-1",
@@ -41,11 +38,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+        IconLeft: () => (
+          <ChevronLeft size={18} color="#3d3020" strokeWidth={2.5} />
         ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+        IconRight: () => (
+          <ChevronRight size={18} color="#3d3020" strokeWidth={2.5} />
         ),
       }}
       {...props}

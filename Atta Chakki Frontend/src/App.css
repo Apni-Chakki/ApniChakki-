@@ -242,29 +242,36 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
 }
 
 /* ---- Admin sidebar brand header ---- */
+/* Height matches .admin-topbar (3.75rem) so the two align horizontally */
 .admin-brand-header {
   position: relative;
-  padding: 1.5rem 1.5rem 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 3.75rem;
+  padding: 0 1.5rem 0 1.75rem;
   border-bottom: 1px solid #f1ece5;
   background-color: #ffffff;
+  flex-shrink: 0;
 }
 .admin-brand-title {
   font-family: inherit;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: #18181b;
-  line-height: 1.2;
+  line-height: 1.15;
   margin: 0;
 }
 .admin-brand-subtitle {
   font-family: inherit;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #a1a1aa;
-  margin: 0.4rem 0 0 0;
+  margin: 0.15rem 0 0 0;
+  line-height: 1.1;
 }
 
 /* ---- Admin sidebar nav links ---- */
