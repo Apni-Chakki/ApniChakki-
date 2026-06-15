@@ -425,17 +425,37 @@ export function ServiceCard({ service }) {
           </div>
         )}
         {/* Manual +/- quantity selector */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex items-center border border-border rounded-md">
-            <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={isOutOfStock || disabled}>
-              <Minus className="h-4 w-4" strokeWidth={3} />
-            </Button>
-            <span className="w-auto min-w-[3rem] px-1 sm:px-2 text-center text-sm sm:text-base font-bold">{quantity} <span className="text-xs text-muted-foreground font-medium">{unitLabel}</span></span>
-            <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-200 hover:bg-gray-300 text-black border-gray-400 flex items-center justify-center px-0 py-0" onClick={() => setQuantity(quantity + 1)} disabled={isOutOfStock || disabled}>
-              <Plus className="h-4 w-4" strokeWidth={3} />
-            </Button>
+        <div className="flex flex-col gap-2">
+          {/* Quantity row — three separate pieces, no outer border */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              disabled={isOutOfStock || disabled}
+              aria-label="Decrease quantity"
+            >
+              −
+            </button>
+            <span className="min-w-[2.5rem] px-1 text-center text-sm font-bold leading-none">
+              {quantity} <span className="text-[10px] text-muted-foreground font-medium">{unitLabel}</span>
+            </span>
+            <button
+              type="button"
+              className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
+              onClick={() => setQuantity(quantity + 1)}
+              disabled={isOutOfStock || disabled}
+              aria-label="Increase quantity"
+            >
+              +
+            </button>
           </div>
-          <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-sm sm:text-base" onClick={handleAddToCart} disabled={isOutOfStock || disabled || (isCustomMix && currentPrice == 0)}>
+          {/* Add to Cart button (own row) */}
+          <Button
+            className="w-full bg-success hover:bg-success/90 text-success-foreground text-sm"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock || disabled || (isCustomMix && currentPrice == 0)}
+          >
             {isOutOfStock ? t("Out of Stock") : isAddedToCart ? t("Added ✓") : t("Add to Cart")}
           </Button>
         </div>

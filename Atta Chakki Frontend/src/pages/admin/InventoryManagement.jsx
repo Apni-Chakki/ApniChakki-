@@ -160,62 +160,62 @@ export function InventoryManagement() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-foreground mb-2">Inventory Management</h1>
-          <p className="text-muted-foreground">Track and manage stock levels for your products</p>
+      <div className="mb-4 sm:mb-6 flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">Inventory Management</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Track and manage stock levels for your products</p>
         </div>
-        
-        <Button variant="outline" onClick={handlePrintRestockList}>
-          <Printer className="h-4 w-4 mr-2" />
+
+        <Button variant="outline" onClick={handlePrintRestockList} className="w-full md:w-auto">
+          <Printer className="h-4 w-4 mr-2 shrink-0" />
           Print Restock List
         </Button>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Products</p>
-              <p className="text-2xl mt-1">{inventory.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">Total Products</p>
+              <p className="text-lg sm:text-2xl font-bold mt-1">{inventory.length}</p>
             </div>
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Package className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Low Stock</p>
-              <p className="text-2xl mt-1">{lowStockCount}</p>
-            </div>
-            <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Well Stocked</p>
-              <p className="text-2xl mt-1">
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">Low Stock</p>
+              <p className="text-lg sm:text-2xl font-bold mt-1">{lowStockCount}</p>
+            </div>
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-4 w-4 sm:h-6 sm:w-6 text-red-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">Well Stocked</p>
+              <p className="text-lg sm:text-2xl font-bold mt-1">
                 {inventory.filter(item => item.currentStock > item.minStockLevel).length}
               </p>
             </div>
-            <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+              <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-green-600" />
             </div>
           </div>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
+      <Card className="p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -241,112 +241,177 @@ export function InventoryManagement() {
         </div>
       </Card>
 
-      {/* Inventory Table */}
+      {/* Inventory list */}
       {filteredInventory.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground mb-2">No matching products found.</p>
+        <Card className="p-8 sm:p-12 text-center">
+          <Package className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+          <p className="text-sm sm:text-base text-muted-foreground mb-2">No matching products found.</p>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Product Name</TableHead>
-                <TableHead>Current Stock</TableHead>
-                <TableHead>Min Level</TableHead>
-                <TableHead>Max Level</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInventory.map((item) => {
-                const status = getStockStatus(item);
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span>{item.productName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-lg">
-                        {item.currentStock} {item.unit}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-muted-foreground">
-                        {item.minStockLevel} {item.unit}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-muted-foreground">
-                        {item.maxStockLevel || '-'} {item.maxStockLevel ? item.unit : ''}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={status.color}>{status.label}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(item.lastUpdated).toLocaleDateString()}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openUpdateDialog(item, 'add')}
-                          className="text-green-600 hover:bg-green-50 flex items-center"
-                        >
-                          <Plus className="h-4 w-4 mr-1" strokeWidth={3} />
-                          Add
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openUpdateDialog(item, 'remove')}
-                          className="text-red-600 hover:bg-red-50 flex items-center"
-                        >
-                          <Minus className="h-4 w-4 mr-1" strokeWidth={3} />
-                          Remove
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+        <>
+          {/* Mobile: card list (below md) */}
+          <div className="md:hidden space-y-3">
+            {filteredInventory.map((item) => {
+              const status = getStockStatus(item);
+              return (
+                <Card key={item.id} className="p-3 space-y-3">
+                  {/* Top: product name + status */}
+                  <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-semibold text-sm break-words">{item.productName}</span>
+                    </div>
+                    <Badge className={`${status.color} shrink-0 text-[10px]`}>{status.label}</Badge>
+                  </div>
+
+                  {/* Stock info grid */}
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase">Current</p>
+                      <p className="text-sm font-bold">{item.currentStock} <span className="text-[10px] text-muted-foreground">{item.unit}</span></p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase">Min</p>
+                      <p className="text-sm font-medium text-muted-foreground">{item.minStockLevel} <span className="text-[10px]">{item.unit}</span></p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase">Max</p>
+                      <p className="text-sm font-medium text-muted-foreground">{item.maxStockLevel || '-'}{item.maxStockLevel ? <span className="text-[10px]"> {item.unit}</span> : ''}</p>
+                    </div>
+                  </div>
+
+                  {/* Last updated */}
+                  <p className="text-[11px] text-muted-foreground">
+                    Last updated: {new Date(item.lastUpdated).toLocaleDateString()}
+                  </p>
+
+                  {/* Actions */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openUpdateDialog(item, 'add')}
+                      className="text-green-600 hover:bg-green-50"
+                    >
+                      <Plus className="h-4 w-4 mr-1 shrink-0" strokeWidth={3} />
+                      Add
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openUpdateDialog(item, 'remove')}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <Minus className="h-4 w-4 mr-1 shrink-0" strokeWidth={3} />
+                      Remove
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table (md and up) */}
+          <Card className="hidden md:block overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>Current Stock</TableHead>
+                  <TableHead>Min Level</TableHead>
+                  <TableHead>Max Level</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredInventory.map((item) => {
+                  const status = getStockStatus(item);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span>{item.productName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-lg">
+                          {item.currentStock} {item.unit}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">
+                          {item.minStockLevel} {item.unit}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">
+                          {item.maxStockLevel || '-'} {item.maxStockLevel ? item.unit : ''}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={status.color}>{status.label}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(item.lastUpdated).toLocaleDateString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openUpdateDialog(item, 'add')}
+                            className="text-green-600 hover:bg-green-50 flex items-center"
+                          >
+                            <Plus className="h-4 w-4 mr-1" strokeWidth={3} />
+                            Add
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openUpdateDialog(item, 'remove')}
+                            className="text-red-600 hover:bg-red-50 flex items-center"
+                          >
+                            <Minus className="h-4 w-4 mr-1" strokeWidth={3} />
+                            Remove
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       )}
 
       {/* Update Stock Dialog */}
       <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {updateType === 'add' ? 'Add Stock' : updateType === 'remove' ? 'Remove Stock' : 'Adjust Stock'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Update inventory for {selectedProduct?.productName}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Current Stock</p>
-              <p className="text-2xl">
+              <p className="text-xs sm:text-sm text-muted-foreground">Current Stock</p>
+              <p className="text-xl sm:text-2xl font-bold break-all">
                 {selectedProduct?.currentStock} {selectedProduct?.unit}
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm">
                 {updateType === 'adjust' ? 'New Stock Level' : 'Quantity'} ({selectedProduct?.unit})
               </Label>
               <Input
@@ -360,21 +425,22 @@ export function InventoryManagement() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Notes (Optional)</Label>
               <Textarea
                 value={updateNotes}
                 onChange={(e) => setUpdateNotes(e.target.value)}
                 placeholder="Add any notes about this update..."
                 rows={3}
                 disabled={isUpdating}
+                className="resize-none border border-input rounded-md bg-background focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
               />
             </div>
 
             {updateQuantity && selectedProduct && (
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">New Stock Level</p>
-                <p className="text-xl">
+              <div className="p-3 sm:p-4 bg-muted rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">New Stock Level</p>
+                <p className="text-lg sm:text-xl font-bold break-all">
                   {updateType === 'add'
                     ? selectedProduct.currentStock + (parseFloat(updateQuantity) || 0)
                     : updateType === 'remove'
@@ -385,11 +451,7 @@ export function InventoryManagement() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Button onClick={handleUpdateStock} className="flex-1" disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isUpdating ? 'Updating...' : 'Update Inventory'}
-              </Button>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
               <Button
                 variant="outline"
                 disabled={isUpdating}
@@ -398,8 +460,18 @@ export function InventoryManagement() {
                   setUpdateQuantity('');
                   setUpdateNotes('');
                 }}
+                className="w-full sm:flex-1"
               >
                 Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleUpdateStock}
+                disabled={isUpdating}
+                className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+              >
+                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isUpdating ? 'Updating...' : 'Update Inventory'}
               </Button>
             </div>
           </div>

@@ -317,13 +317,13 @@ export function OrdersRecord() {
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Orders Record</h1>
-        <p className="text-muted-foreground text-sm">Complete order history</p>
+      <div className="mb-3 sm:mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold">Orders Record</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm">Complete order history</p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
         <Card className="p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -371,24 +371,23 @@ export function OrdersRecord() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 mb-4">
+      <Card className="p-3 sm:p-4 mb-4">
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative group" style={{ flex: "1 1 auto", minWidth: "250px" }}>
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-green-600" />
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="relative group flex-1 min-w-0">
+                  <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-colors group-focus-within:text-green-600" />
                   <Input
                     placeholder="Search by name, phone, or order ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-14 text-base h-12 w-full rounded-full border-gray-200 bg-gray-50 hover:bg-white focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 shadow-sm transition-all transition-colors duration-200"
+                    className="pl-10 sm:pl-14 text-sm sm:text-base h-10 sm:h-12 w-full rounded-full border-gray-200 bg-gray-50 hover:bg-white focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 shadow-sm transition-all transition-colors duration-200"
                   />
                 </div>
-                
+
                 <select
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e.target.value)}
-                  className="h-12 items-center cursor-pointer justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ width: "150px", flexShrink: 0 }}
+                  className="h-10 sm:h-12 w-full sm:w-[150px] flex-shrink-0 items-center cursor-pointer justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                 <option value="all">All Sources</option>
                 <option value="manual">Manual Orders</option>
@@ -530,14 +529,108 @@ export function OrdersRecord() {
         </div>
       </Card>
 
-      {/* Orders Table */}
+      {/* Orders Table / Cards */}
       {filteredOrders.length === 0 ? (
         <Card className="p-8 text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">No orders found matching your filters.</p>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Mobile card view (below md) */}
+        <div className="md:hidden space-y-3">
+          {filteredOrders.map((order) => {
+            const remainingBalance = order.total - (order.advancePayment || 0);
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            const isOverdue = (Date.now() - new Date(order.createdAt).getTime() > sevenDaysMs) &&
+                              (order.paymentStatus === 'pending' || order.paymentStatus === 'partial') &&
+                              order.status !== 'cancelled';
+            return (
+              <Card key={order.id} className={`p-3 space-y-3 ${isOverdue ? 'bg-red-50 border-red-200' : ''}`}>
+                {/* Top row: Order ID + source + date */}
+                <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
+                  <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-bold">#{order.id}</span>
+                    <Badge variant="outline" className={`text-[9px] uppercase font-bold flex items-center gap-1 py-0 px-1.5 h-[18px] ${order.source === 'manual' ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-blue-700 bg-blue-50 border-blue-200'}`}>
+                      {order.source === 'manual' ? <Store className="h-2.5 w-2.5" /> : <Monitor className="h-2.5 w-2.5" />}
+                      {order.source}
+                    </Badge>
+                  </div>
+                  <div className="text-right text-[11px] text-muted-foreground shrink-0">
+                    <div className="font-medium text-foreground">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <div className="text-[10px]">{new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
+                  </div>
+                </div>
+
+                {/* Customer */}
+                <div className="text-sm">
+                  <p className="font-semibold break-words">{order.customerName}</p>
+                  <p className="text-xs text-muted-foreground break-all">{order.phone}</p>
+                </div>
+
+                {/* Items */}
+                <div className="text-xs space-y-0.5">
+                  {order.items.slice(0, 2).map((item, idx) => (
+                    <p key={idx} className="break-words"><span className="font-medium">{item.service.name}</span> ×{item.quantity}</p>
+                  ))}
+                  {order.items.length > 2 && <p className="text-muted-foreground">+{order.items.length - 2} more</p>}
+                </div>
+
+                {/* Amount + Payment + Status */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
+                  <div>
+                    <div className="font-bold text-base">
+                      Rs. {order.total}
+                      {order.items.some(i => i.isWeightPending) && <span className="text-primary text-[10px] ml-1">(+ TBD)</span>}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {getPaymentStatusBadge(order.paymentStatus)}
+                      {getStatusBadge(order.status)}
+                    </div>
+                    {remainingBalance > 0 && <p className="text-red-600 font-medium text-xs mt-1">Due: Rs. {remainingBalance}</p>}
+                  </div>
+                </div>
+
+                {order.status === "cancelled" && order.cancelReason && (
+                  <div className="text-[11px] text-red-600 bg-red-50 p-2 rounded font-medium">
+                    <span className="font-bold border-b border-red-200 block mb-0.5 pb-0.5">{order.cancelledBy || "User"} Reason:</span>
+                    <span>{order.cancelReason}</span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-xs h-8"
+                    onClick={() => setPrintOrder(order)}
+                  >
+                    <Printer className="h-3 w-3 mr-1 shrink-0" />
+                    Print
+                  </Button>
+                  {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-xs h-8 bg-green-600 hover:bg-green-700 text-white border-green-700 hover:border-green-800 shadow-sm"
+                      onClick={() => {
+                        setPaymentOrder(order);
+                        setPaymentAmount('');
+                      }}
+                    >
+                      <CreditCard className="h-3 w-3 mr-1 shrink-0" />
+                      Pay
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Desktop table (md and up) */}
+        <div className="hidden md:block overflow-x-auto">
           <Card className="overflow-hidden">
             <Table className="text-xs sm:text-sm">
               <TableHeader>
@@ -605,28 +698,28 @@ export function OrdersRecord() {
                       <div className="flex flex-col gap-1 items-start">{getStatusBadge(order.status)}{order.status === "cancelled" && order.cancelReason && (<div className="text-[11px] text-red-600 bg-red-50 p-1 rounded font-medium max-w-[150px]" title={`${order.cancelReason} (${order.cancelledBy || "User"})`}><span className="font-bold border-b border-red-200 block mb-0.5 pb-0.5">{order.cancelledBy || "User"} Reason:</span><span className="line-clamp-2">{order.cancelReason}</span></div>)}</div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex flex-col gap-1 items-end">
+                      <div className="flex flex-col gap-1.5 items-end">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs h-7 py-0"
+                          className="text-xs h-7 py-0 px-3 w-[72px]"
                           onClick={() => setPrintOrder(order)}
                         >
-                          <Printer className="h-3 w-3 mr-0.5" />
+                          <Printer className="h-3 w-3 mr-1" />
                           Print
                         </Button>
-                        
+
                         {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="text-primary hover:text-primary hover:bg-primary/10 text-xs h-7 py-0"
+                            variant="outline"
+                            className="text-xs h-7 py-0 px-3 w-[72px] bg-green-600 hover:bg-green-700 text-white border-green-700 hover:border-green-800 shadow-sm"
                             onClick={() => {
                               setPaymentOrder(order);
                               setPaymentAmount('');
                             }}
                           >
-                            <CreditCard className="h-3 w-3 mr-0.5" />
+                            <CreditCard className="h-3 w-3 mr-1" />
                             Pay
                           </Button>
                         )}
@@ -638,6 +731,7 @@ export function OrdersRecord() {
             </Table>
           </Card>
         </div>
+        </>
       )}
 
       <div className="mt-4 text-center text-sm text-muted-foreground">

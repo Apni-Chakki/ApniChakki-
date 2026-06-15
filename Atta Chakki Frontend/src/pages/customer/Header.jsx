@@ -102,7 +102,7 @@ export function Header() {
 
   const CartIcon = () => (
     <Link to="/checkout" className="relative" onClick={handleCartClick}>
-      <Button variant="ghost" size="icon" className="rounded-full px-0 py-0 flex items-center justify-center">
+      <Button variant="ghost" size="icon" className="rounded-full px-0 py-0 flex items-center justify-center text-foreground hover:bg-muted hover:text-foreground">
         <ShoppingCart className="h-5 w-5" />
         {itemCount > 0 && (
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-success text-success-foreground text-[10px] font-bold">
@@ -214,7 +214,7 @@ export function Header() {
         <div className="nav-desktop-actions">
           <LanguageToggle />
 
-          <Button variant="ghost" size="sm" asChild className="flex">
+          <Button variant="ghost" size="sm" asChild className="flex hover:bg-muted hover:text-foreground">
             <Link to="/track-order">
               <Package className="h-4 w-4 mr-2" />
               {t('Track Order')}
@@ -222,7 +222,7 @@ export function Header() {
           </Button>
 
           {user ? (
-            <Button variant="ghost" size="sm" asChild className="flex">
+            <Button variant="ghost" size="sm" asChild className="flex hover:bg-muted hover:text-foreground">
               <Link to="/account">
                 {user.profile_image ? (
                   <img src={user.profile_image} alt={user.name} className="h-6 w-6 rounded-full object-cover mr-2" />
@@ -235,7 +235,7 @@ export function Header() {
               </Link>
             </Button>
           ) : (
-            <Button variant="ghost" size="sm" asChild className="flex">
+            <Button variant="ghost" size="sm" asChild className="flex hover:bg-muted hover:text-foreground">
               <Link to="/login/customer">
                 <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center mr-2">
                   <User className="h-4 w-4" />

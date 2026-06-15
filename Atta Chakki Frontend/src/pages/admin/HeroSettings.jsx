@@ -248,100 +248,100 @@ export function HeroSettings() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manage Sliders</h1>
-          <p className="text-muted-foreground text-sm">Manage the Hero Banner and Our Story sliders on the homepage</p>
+    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto pb-8 sm:pb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Manage Sliders</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage the Hero Banner and Our Story sliders on the homepage</p>
         </div>
       </div>
 
       <Tabs defaultValue="hero" className="w-full">
-        <TabsList className="mb-6 grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="hero">Hero Slides</TabsTrigger>
-          <TabsTrigger value="story">Our Story Slides</TabsTrigger>
+        <TabsList className="mb-4 sm:mb-6 grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="hero" className="text-xs sm:text-sm">Hero Slides</TabsTrigger>
+          <TabsTrigger value="story" className="text-xs sm:text-sm">Our Story Slides</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="hero" className="space-y-6">
+
+        <TabsContent value="hero" className="space-y-4 sm:space-y-6">
           {slides.map((slide, index) => (
-          <Card key={index} className="p-6 border-muted bg-card shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-semibold text-lg">Slide {index + 1}</h3>
-              <Button 
-                variant="destructive" 
-                size="sm" 
+          <Card key={index} className="p-3 sm:p-6 border-muted bg-card shadow-sm">
+            <div className="flex justify-between items-center mb-4 sm:mb-6 gap-2">
+              <h3 className="font-semibold text-base sm:text-lg">Slide {index + 1}</h3>
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={() => removeSlide(index)}
-                className="px-6"
+                className="px-3 sm:px-6 shrink-0"
               >
-                <Trash2 className="h-4 w-4 mr-2 text-white" /> Remove Slide
+                <Trash2 className="h-4 w-4 sm:mr-2 text-white shrink-0" />
+                <span className="hidden sm:inline">Remove Slide</span>
               </Button>
             </div>
 
             {/* FULL WIDTH HERO PREVIEW — exact same look as Homepage */}
-            <div className="w-full rounded-lg overflow-hidden relative mb-8" style={{ aspectRatio: '16/6' }}>
+            <div className="w-full rounded-lg overflow-hidden relative mb-4 sm:mb-8" style={{ aspectRatio: '16/9' }}>
               {slide.image ? (
-                <img 
-                  src={slide.image} 
+                <img
+                  src={slide.image}
                   alt={`Slide ${index + 1}`}
                   className="absolute inset-0 w-full h-full object-cover object-center"
                 />
               ) : (
                 <div className="absolute inset-0 bg-gray-800 flex flex-col items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-white/20 mb-2" />
-                  <p className="text-sm text-white/40">No background image selected</p>
+                  <ImageIcon className="h-8 w-8 sm:h-12 sm:w-12 text-white/20 mb-1 sm:mb-2" />
+                  <p className="text-xs sm:text-sm text-white/40 text-center px-2">No background image selected</p>
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-              
+
               {/* Text Overlay — same as Homepage hero */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 sm:px-8">
-                <h3 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3 drop-shadow-lg">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3 sm:px-8">
+                <h3 className="text-white text-base sm:text-3xl md:text-4xl font-bold tracking-tight mb-2 sm:mb-3 drop-shadow-lg break-words">
                   {slide.title || 'Your Title Will Appear Here'}
                 </h3>
-                <p className="text-white/90 text-sm sm:text-base md:text-lg max-w-2xl drop-shadow-md">
+                <p className="text-white/90 text-[11px] sm:text-base md:text-lg max-w-2xl drop-shadow-md break-words">
                   {slide.subtitle || 'Your subtitle description will appear here...'}
                 </p>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
               {/* Image Upload */}
               <div className="space-y-3">
-                <Label className="text-base">Background Image Source</Label>
-                
+                <Label className="text-sm sm:text-base">Background Image Source</Label>
+
                 <div className="flex flex-col gap-3 mt-2">
                   <div className="flex items-center gap-3">
-                    <Label 
+                    <Label
                       htmlFor={`upload-${index}`}
-                      className={`cursor-pointer border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors w-full sm:w-auto ${uploadingIndex === index ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`cursor-pointer border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors w-full sm:w-auto mb-0 ${uploadingIndex === index ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {uploadingIndex === index ? (
-                        <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</>
+                        <><Loader2 className="h-4 w-4 animate-spin shrink-0" /> Uploading...</>
                       ) : (
-                        <><ImageIcon className="h-4 w-4 text-primary" /> Select From Device</>
+                        <><ImageIcon className="h-4 w-4 text-primary shrink-0" /> Select From Device</>
                       )}
                     </Label>
-                    <input 
+                    <input
                       id={`upload-${index}`}
-                      type="file" 
+                      type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={(e) => handleImageUpload(e, index)}
                       disabled={uploadingIndex === index}
                     />
                   </div>
-                  
-                  <div className="relative flex items-center mt-2">
+
+                  <div className="relative flex items-center mt-1 sm:mt-2">
                     <div className="flex-grow border-t border-muted"></div>
-                    <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-wider">OR PASTE URL</span>
+                    <span className="flex-shrink-0 mx-3 sm:mx-4 text-muted-foreground text-[10px] sm:text-xs uppercase tracking-wider">OR PASTE URL</span>
                     <div className="flex-grow border-t border-muted"></div>
                   </div>
 
-                  <Input 
-                    value={slide.image || ''} 
+                  <Input
+                    value={slide.image || ''}
                     onChange={(e) => updateSlide(index, 'image', e.target.value)}
                     placeholder="https://..."
-                    className="mt-1"
                   />
                 </div>
               </div>
@@ -349,21 +349,20 @@ export function HeroSettings() {
               {/* Texts */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base">Main Title (Tagline)</Label>
-                  <Input 
-                    value={slide.title || ''} 
+                  <Label className="text-sm sm:text-base">Main Title (Tagline)</Label>
+                  <Input
+                    value={slide.title || ''}
                     onChange={(e) => updateSlide(index, 'title', e.target.value)}
                     placeholder="E.g. Pure & Fresh, Every Time"
-                    className="mt-1.5"
                   />
                 </div>
                 <div>
-                  <Label className="text-base">Subtitle (Description)</Label>
-                  <textarea 
-                    value={slide.subtitle || ''} 
+                  <Label className="text-sm sm:text-base">Subtitle (Description)</Label>
+                  <textarea
+                    value={slide.subtitle || ''}
                     onChange={(e) => updateSlide(index, 'subtitle', e.target.value)}
                     placeholder="E.g. Grains ground with no additives..."
-                    className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1.5"
+                    className="flex min-h-[80px] sm:min-h-[100px] w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                   />
                 </div>
               </div>
@@ -371,93 +370,94 @@ export function HeroSettings() {
           </Card>
         ))}
 
-          <Button 
-            variant="outline" 
-            onClick={addSlide} 
-            className="w-full py-8 border-dashed border-2 hover:bg-muted/50 mb-4"
+          <Button
+            variant="outline"
+            onClick={addSlide}
+            className="w-full py-5 sm:py-8 border-dashed border-2 hover:bg-muted/50 mb-4 text-sm sm:text-base"
           >
-            <Plus className="h-5 w-5 mr-2" /> Add New Hero Slide
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0" /> Add New Hero Slide
           </Button>
         </TabsContent>
 
-        <TabsContent value="story" className="space-y-6">
-          <div className="bg-accent/10 p-4 rounded-lg mb-6 border border-accent/20">
-            <p className="text-sm text-accent-foreground font-medium flex items-center gap-2">
-              <ImageIcon className="h-4 w-4" /> Recommended Image Ratio: Square (1:1) or 4:3. Images will be cropped to fit perfectly.
+        <TabsContent value="story" className="space-y-4 sm:space-y-6">
+          <div className="bg-accent/10 p-3 sm:p-4 rounded-lg mb-4 sm:mb-6 border border-accent/20">
+            <p className="text-xs sm:text-sm text-accent-foreground font-medium flex items-start gap-2">
+              <ImageIcon className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>Recommended Image Ratio: Square (1:1) or 4:3. Images will be cropped to fit perfectly.</span>
             </p>
           </div>
-          
+
           {storySlides.map((slide, index) => (
-            <Card key={index} className="p-6 border-muted bg-card shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-semibold text-lg">Story Slide {index + 1}</h3>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
+            <Card key={index} className="p-3 sm:p-6 border-muted bg-card shadow-sm">
+              <div className="flex justify-between items-center mb-4 sm:mb-6 gap-2">
+                <h3 className="font-semibold text-base sm:text-lg">Story Slide {index + 1}</h3>
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={() => removeStorySlide(index)}
-                  className="px-6"
+                  className="px-3 sm:px-6 shrink-0"
                 >
-                  <Trash2 className="h-4 w-4 mr-2 text-white" /> Remove Slide
+                  <Trash2 className="h-4 w-4 sm:mr-2 text-white shrink-0" />
+                  <span className="hidden sm:inline">Remove Slide</span>
                 </Button>
               </div>
 
-              <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+              <div className="flex flex-col md:flex-row gap-4 sm:gap-8 items-center md:items-start">
                 {/* Preview */}
-                <div className="w-full max-w-[240px] flex-shrink-0">
-                  <div className="relative w-full rounded-[2rem] shadow-xl -rotate-1 overflow-hidden border-4 border-white group" style={{ aspectRatio: '4/3' }}>
+                <div className="w-full max-w-[200px] sm:max-w-[240px] flex-shrink-0">
+                  <div className="relative w-full rounded-[1.5rem] sm:rounded-[2rem] shadow-xl -rotate-1 overflow-hidden border-4 border-white group" style={{ aspectRatio: '4/3' }}>
                     {slide ? (
-                      <img 
-                        src={slide} 
+                      <img
+                        src={slide}
                         alt={`Story Slide ${index + 1}`}
                         className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105 group-hover:rotate-1"
                       />
                     ) : (
                       <div className="absolute inset-0 bg-secondary/20 flex flex-col items-center justify-center">
-                        <ImageIcon className="h-10 w-10 text-muted-foreground/50 mb-2" />
-                        <p className="text-xs font-medium text-muted-foreground">No Image</p>
+                        <ImageIcon className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50 mb-1 sm:mb-2" />
+                        <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">No Image</p>
                       </div>
                     )}
                   </div>
-                  <p className="text-center text-xs text-muted-foreground mt-4 font-medium">Homepage Preview Style</p>
+                  <p className="text-center text-[11px] sm:text-xs text-muted-foreground mt-2 sm:mt-4 font-medium">Homepage Preview Style</p>
                 </div>
-                
+
                 {/* Inputs */}
-                <div className="flex-grow space-y-3 w-full">
-                  <Label className="text-base">Image Source</Label>
-                  
+                <div className="flex-grow space-y-3 w-full min-w-0">
+                  <Label className="text-sm sm:text-base">Image Source</Label>
+
                   <div className="flex flex-col gap-3 mt-2">
                     <div className="flex items-center gap-3">
-                      <Label 
+                      <Label
                         htmlFor={`upload-story-${index}`}
-                        className={`cursor-pointer border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors w-full sm:w-auto ${uploadingStoryIndex === index ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`cursor-pointer border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors w-full sm:w-auto mb-0 ${uploadingStoryIndex === index ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {uploadingStoryIndex === index ? (
-                          <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</>
+                          <><Loader2 className="h-4 w-4 animate-spin shrink-0" /> Uploading...</>
                         ) : (
-                          <><ImageIcon className="h-4 w-4 text-primary" /> Select From Device</>
+                          <><ImageIcon className="h-4 w-4 text-primary shrink-0" /> Select From Device</>
                         )}
                       </Label>
-                      <input 
+                      <input
                         id={`upload-story-${index}`}
-                        type="file" 
+                        type="file"
                         accept="image/*"
                         className="hidden"
                         onChange={(e) => handleStoryImageUpload(e, index)}
                         disabled={uploadingStoryIndex === index}
                       />
                     </div>
-                    
-                    <div className="relative flex items-center mt-2">
+
+                    <div className="relative flex items-center mt-1 sm:mt-2">
                       <div className="flex-grow border-t border-muted"></div>
-                      <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-wider">OR PASTE URL</span>
+                      <span className="flex-shrink-0 mx-3 sm:mx-4 text-muted-foreground text-[10px] sm:text-xs uppercase tracking-wider">OR PASTE URL</span>
                       <div className="flex-grow border-t border-muted"></div>
                     </div>
 
-                    <Input 
-                      value={slide || ''} 
+                    <Input
+                      value={slide || ''}
                       onChange={(e) => updateStorySlide(index, e.target.value)}
                       placeholder="https://..."
-                      className="mt-1"
                     />
                   </div>
                 </div>
@@ -465,18 +465,18 @@ export function HeroSettings() {
             </Card>
           ))}
 
-          <Button 
-            variant="outline" 
-            onClick={addStorySlide} 
-            className="w-full py-8 border-dashed border-2 hover:bg-muted/50 mb-4"
+          <Button
+            variant="outline"
+            onClick={addStorySlide}
+            className="w-full py-5 sm:py-8 border-dashed border-2 hover:bg-muted/50 mb-4 text-sm sm:text-base"
           >
-            <Plus className="h-5 w-5 mr-2" /> Add New Story Image
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0" /> Add New Story Image
           </Button>
         </TabsContent>
-        
-        <div className="flex justify-end pt-6 border-t mt-6">
-          <Button onClick={handleSave} disabled={saving} size="lg" className="sm:w-auto min-w-[200px] shadow-sm">
-            {saving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+
+        <div className="flex justify-end pt-4 sm:pt-6 border-t mt-4 sm:mt-6">
+          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto sm:min-w-[200px] shadow-sm">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2 shrink-0" /> : <Save className="h-4 w-4 mr-2 shrink-0" />}
             {saving ? "Saving Changes..." : "Save All Changes"}
           </Button>
         </div>

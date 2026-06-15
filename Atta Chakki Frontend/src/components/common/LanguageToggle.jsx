@@ -42,7 +42,7 @@ export function LanguageToggle({ className }) {
               size="sm"
               onClick={toggleLanguage}
               disabled={switching}
-              className={`flex items-center gap-2 px-3 min-w-[80px] justify-center border-input bg-transparent hover:bg-accent hover:text-accent-foreground ${className}`}
+              className={`flex items-center gap-2 px-3 min-w-[80px] justify-center border-input bg-transparent hover:bg-muted hover:text-foreground ${className}`}
             >
               <Languages className="h-4 w-4" />
               <span className="font-semibold text-xs">

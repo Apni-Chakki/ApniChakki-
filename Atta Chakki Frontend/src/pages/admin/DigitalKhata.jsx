@@ -241,49 +241,68 @@ export function DigitalKhata() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-foreground mb-2">Digital Khata</h1>
-          <p className="text-muted-foreground">Track daily expenditures and purchases</p>
+    <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">Digital Khata</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Track daily expenditures and purchases</p>
         </div>
-        <div className="flex gap-2">
-           <Button variant="outline" onClick={() => setShowPrintReport(true)}>
-            <Printer className="h-4 w-4 mr-2" />
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => setShowPrintReport(true)}
+            className="w-full md:w-[180px]"
+          >
+            <Printer className="h-4 w-4 mr-2 shrink-0" />
             Print Report
           </Button>
-          <Button onClick={() => setIsAdding(!isAdding)} variant={isAdding ? "outline" : "default"}>
-            {isAdding ? 'Cancel' : <><Plus className="h-4 w-4 mr-2" /> Add New Expense</>}
-          </Button>
+          {isAdding ? (
+            <Button
+              variant="outline"
+              onClick={() => setIsAdding(false)}
+              className="w-full md:w-[180px]"
+            >
+              Cancel
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setIsAdding(true)}
+              className="w-full md:w-[180px] bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+            >
+              <Plus className="h-4 w-4 mr-2 shrink-0" />
+              Add New Expense
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Stats Cards (Now using Backend Totals!) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6 bg-orange-50 border-orange-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-800 font-medium">Today's Expenditure</p>
-              <h2 className="text-3xl font-bold text-orange-900 mt-2">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
+        <Card className="p-4 sm:p-6 bg-orange-50 border-orange-200">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-orange-800 font-medium text-sm sm:text-base">Today's Expenditure</p>
+              <h2 className="text-xl sm:text-3xl font-bold text-orange-900 mt-1 sm:mt-2 break-all">
                 Rs. {parseFloat(backendTotals.today).toLocaleString()}
               </h2>
             </div>
-            <div className="h-12 w-12 bg-orange-200 rounded-full flex items-center justify-center">
-              <Wallet className="h-6 w-6 text-orange-700" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-orange-200 rounded-full flex items-center justify-center shrink-0">
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-orange-700" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 bg-blue-50 border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-800 font-medium">This Month's Total</p>
-              <h2 className="text-3xl font-bold text-blue-900 mt-2">
+        <Card className="p-4 sm:p-6 bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-blue-800 font-medium text-sm sm:text-base">This Month's Total</p>
+              <h2 className="text-xl sm:text-3xl font-bold text-blue-900 mt-1 sm:mt-2 break-all">
                 Rs. {parseFloat(backendTotals.month).toLocaleString()}
               </h2>
             </div>
-            <div className="h-12 w-12 bg-blue-200 rounded-full flex items-center justify-center">
-              <CalendarIcon className="h-6 w-6 text-blue-700" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-blue-200 rounded-full flex items-center justify-center shrink-0">
+              <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
             </div>
           </div>
         </Card>
@@ -397,11 +416,11 @@ export function DigitalKhata() {
 
       {/* Expenses List with Filter */}
       <Card className="overflow-hidden">
-        <div className="p-4 border-b bg-muted/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h3 className="font-semibold">Expense Records</h3>
-          
-          <div className="flex items-center gap-2">
-            <Select 
+        <div className="p-3 sm:p-4 border-b bg-muted/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <h3 className="font-semibold text-sm sm:text-base">Expense Records</h3>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <Select
               onValueChange={(value) => {
                 const now = new Date();
                 if (value === 'current') {
@@ -414,7 +433,7 @@ export function DigitalKhata() {
                 }
               }}
             >
-              <SelectTrigger className="w-[140px] h-9">
+              <SelectTrigger className="w-full sm:w-[140px] h-9">
                 <SelectValue placeholder="Quick Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -431,26 +450,34 @@ export function DigitalKhata() {
                   variant={"outline"}
                   size="sm"
                   className={cn(
-                    "w-[240px] justify-start text-left font-normal",
+                    "w-full sm:w-[240px] justify-start text-left font-normal h-9",
                     !dateRange && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
+                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd, y")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
                     ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
+                      "Pick a date range"
+                    )}
+                  </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
+              <PopoverContent
+                className="w-auto p-0"
+                align="end"
+                side="bottom"
+                sideOffset={6}
+                collisionPadding={{ top: 80, bottom: 16, left: 8, right: 8 }}
+              >
                 <Calendar
                   initialFocus
                   mode="range"
@@ -462,14 +489,54 @@ export function DigitalKhata() {
               </PopoverContent>
             </Popover>
             {dateRange && (
-              <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+              <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)} className="h-9">
                 Clear
               </Button>
             )}
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile: card list (below md) */}
+        <div className="md:hidden p-3 space-y-2">
+          {filteredExpenses.length === 0 ? (
+            <p className="text-center py-8 text-sm text-muted-foreground">No expenses found for the selected period.</p>
+          ) : (
+            filteredExpenses.map((expense) => (
+              <div key={expense.id} className="border rounded-lg p-3 bg-card space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground">
+                        {expense.category}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(expense.date).toLocaleDateString()} • {new Date(expense.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {expense.description && expense.description !== '-' && (
+                      <p className="text-xs text-muted-foreground break-words">{expense.description}</p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground mt-1">By: {expense.recordedBy}</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="h-8 w-8 px-0 shrink-0"
+                    onClick={() => handleDelete(expense.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-white" />
+                  </Button>
+                </div>
+                <div className="flex justify-end pt-2 border-t border-border">
+                  <span className="font-bold text-red-600 break-all">Rs. {expense.amount.toLocaleString()}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop: table (md and up) */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -508,9 +575,9 @@ export function DigitalKhata() {
                       Rs. {expense.amount.toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="destructive" 
-                        size="icon" 
+                      <Button
+                        variant="destructive"
+                        size="icon"
                         className="h-8 w-8 px-0 flex items-center justify-center"
                         onClick={() => handleDelete(expense.id)}
                       >
@@ -523,12 +590,12 @@ export function DigitalKhata() {
             </TableBody>
           </Table>
         </div>
-        
+
         {/* Footer Total for Filtered View */}
         {filteredExpenses.length > 0 && (
-          <div className="p-4 border-t bg-muted/10 flex justify-end items-center gap-4">
-            <span className="text-muted-foreground font-medium">Total for period:</span>
-            <span className="text-xl font-bold text-foreground">
+          <div className="p-3 sm:p-4 border-t bg-muted/10 flex flex-col sm:flex-row sm:justify-end sm:items-center gap-1 sm:gap-4">
+            <span className="text-muted-foreground font-medium text-sm">Total for period:</span>
+            <span className="text-lg sm:text-xl font-bold text-foreground break-all">
               Rs. {filteredExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
             </span>
           </div>

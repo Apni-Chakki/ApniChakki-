@@ -474,15 +474,15 @@ export function ManageServices() {
   }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Manage Services</h1>
-          <p className="text-muted-foreground">Add, edit, or remove services from your catalog</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Manage Services</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Add, edit, or remove services from your catalog</p>
         </div>
         {!isAdding && !editingId && (
-          <Button onClick={() => setIsAdding(true)} size="lg">
-            <Plus className="h-5 w-5 mr-2" />
+          <Button onClick={() => setIsAdding(true)} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2 shrink-0" />
             Add New Service
           </Button>
         )}
@@ -1050,13 +1050,14 @@ export function ManageServices() {
           Object.keys(groupedServices).map((categoryName) => {
             const categoryItems = groupedServices[categoryName];
             return (
-              <div key={categoryName} className="space-y-4">
-                <div className="flex items-center gap-3 px-1">
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 px-4 py-2 rounded-full text-sm font-bold shadow-sm uppercase tracking-wider">
-                    {categoryName.toLowerCase() === 'service' || categoryName.toLowerCase() === 'services' ? '💼' : '🌾'} {categoryName}
+              <div key={categoryName} className="space-y-3 sm:space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
+                  <div className="inline-flex self-start items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm uppercase tracking-wider">
+                    <span>{categoryName.toLowerCase() === 'service' || categoryName.toLowerCase() === 'services' ? '💼' : '🌾'}</span>
+                    <span className="break-words">{categoryName}</span>
                   </div>
-                  <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-200 to-transparent" />
-                  <span className="text-xs text-slate-500 font-semibold">
+                  <div className="hidden sm:block flex-1 h-[1px] bg-gradient-to-r from-slate-200 to-transparent" />
+                  <span className="text-[11px] sm:text-xs text-slate-500 font-semibold">
                     {categoryItems.length} Item(s)
                   </span>
                 </div>
@@ -1066,62 +1067,62 @@ export function ManageServices() {
                     const custs = service.customizations || [];
                     const hasCusts = custs.length > 0 || service.is_grinding_service === 1 || service.is_grinding_service === true;
                     return (
-                      <Card key={service.id} className="p-6 transition-all duration-300 hover:shadow-lg border border-border/50 hover:border-primary/20 bg-white relative overflow-hidden group">
+                      <Card key={service.id} className="p-3 sm:p-6 transition-all duration-300 hover:shadow-lg border border-border/50 hover:border-primary/20 bg-white relative overflow-hidden group">
                         {/* Priority Badge */}
-                        <div className="absolute top-0 right-0 bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-1 rounded-bl border-l border-b border-primary/10 transition-all group-hover:bg-primary group-hover:text-primary-foreground">
-                          ⭐ Priority: {service.priority ?? 0}
+                        <div className="absolute top-0 right-0 bg-primary/10 text-primary text-[9px] sm:text-[10px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-bl border-l border-b border-primary/10 transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+                          ⭐ {service.priority ?? 0}
                         </div>
-                        
-                        <div className="flex flex-col sm:flex-row items-start gap-4">
+
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 sm:gap-4 mt-4 sm:mt-0">
                           {service.image && (
                             <div className="w-full sm:w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border shadow-inner">
                               <img src={service.image} alt={service.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             </div>
                           )}
-                          <div className="flex-1 min-w-0 pr-4">
-                            <h3 className="mb-2 text-lg font-bold text-slate-800">
-                              {service.name}
-                              {!service.is_active && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border">Disabled</span>}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="mb-1.5 sm:mb-2 text-base sm:text-lg font-bold text-slate-800 flex flex-wrap items-center gap-2 break-words">
+                              <span className="break-words">{service.name}</span>
+                              {!service.is_active && <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border shrink-0">Disabled</span>}
                             </h3>
-                            <p className="text-muted-foreground mb-3 text-sm line-clamp-2">{service.description || 'No description provided'}</p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium border border-primary/20">
+                            <p className="text-muted-foreground mb-2 sm:mb-3 text-xs sm:text-sm line-clamp-2">{service.description || 'No description provided'}</p>
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <span className="bg-primary/10 text-primary px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium border border-primary/20 break-words">
                                 Rs. {service.price} per {service.unit}
                               </span>
-                              <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm capitalize border">
+                              <span className="bg-slate-100 text-slate-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm capitalize border break-words">
                                 {service.category || service.category_name || 'Uncategorized'}
                               </span>
-                              
+
                               {hasCusts ? (
-                                <span className="bg-amber-500/10 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/20">
+                                <span className="bg-amber-500/10 text-amber-600 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border border-amber-500/20 break-words">
                                   ⚙️ {custs.length > 0 ? custs.map(c => `${c.option_name}: Rs.${c.option_price}`).join(' + ') : `Cleaning: ${service.cleaning_price} + Grinding: ${service.grinding_price}`}
                                 </span>
                               ) : service.is_custom_mix ? (
-                                <span className="bg-purple-500/10 text-purple-700 px-3 py-1 rounded-full text-xs font-bold border border-purple-300">
+                                <span className="bg-purple-500/10 text-purple-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border border-purple-300 break-words">
                                   🌾 Custom Mix: {(service.mix_items || []).map(m => m.item_name).join(', ')}
                                 </span>
                               ) : (
-                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium border">
+                                <span className="bg-gray-100 text-gray-500 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border">
                                   Standard Product
                                 </span>
                               )}
 
                               {(service.category === 'service' || service.category_name === 'service') ? (
-                                <span className="bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium border border-green-500/20">Active Service</span>
+                                <span className="bg-green-500/10 text-green-600 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border border-green-500/20">Active Service</span>
                               ) : (service.track_inventory == 1 || service.track_inventory === true) ? (
-                                <span className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/20">✓ Inventory Tracked</span>
+                                <span className="bg-blue-500/10 text-blue-600 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border border-blue-500/20">✓ Tracked</span>
                               ) : (
-                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium border border-gray-200">Inventory Not Tracked</span>
+                                <span className="bg-gray-100 text-gray-500 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border border-gray-200">Not Tracked</span>
                               )}
 
                               {(service.dual_unit === 1 || service.dual_unit === true) && (
-                                <span className="bg-blue-600/10 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-300/30">
-                                  🚚 Dual Mode (Pickup + KG)
+                                <span className="bg-blue-600/10 text-blue-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border border-blue-300/30">
+                                  🚚 Dual Mode
                                 </span>
                               )}
 
                               {service.discount_type && service.discount_type !== 'none' && parseFloat(service.discount_value) > 0 && (
-                                <span className="bg-emerald-600/10 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-300">
+                                <span className="bg-emerald-600/10 text-emerald-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border border-emerald-300">
                                   {service.discount_type === 'percentage'
                                     ? `🏷️ ${parseFloat(service.discount_value)}% OFF`
                                     : `🏷️ Rs.${parseFloat(service.discount_value)} OFF`}
@@ -1129,20 +1130,21 @@ export function ManageServices() {
                               )}
 
                               {service.badge_text && service.badge_text.trim() && (
-                                <span className="bg-rose-600/10 text-rose-700 px-3 py-1 rounded-full text-xs font-bold border border-rose-300 uppercase">
+                                <span className="bg-rose-600/10 text-rose-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border border-rose-300 uppercase">
                                   {service.badge_text.trim()}
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="flex sm:flex-col gap-2 self-start mt-4 sm:mt-0">
-                            <Button onClick={() => handleToggleActive(service.id, service.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+                          {/* Actions — full-width 3-col grid on mobile, vertical stack on desktop */}
+                          <div className="grid grid-cols-3 sm:flex sm:flex-col gap-2 pt-3 sm:pt-0 sm:self-start border-t sm:border-t-0 border-border shrink-0">
+                            <Button onClick={() => handleToggleActive(service.id, service.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
                               {service.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                             </Button>
-                            <Button onClick={() => handleEdit(service)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+                            <Button onClick={() => handleEdit(service)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button onClick={() => handleDelete(service.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="px-4">
+                            <Button onClick={() => handleDelete(service.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto sm:px-4">
                               <Trash2 className="h-4 w-4 text-white" />
                             </Button>
                           </div>

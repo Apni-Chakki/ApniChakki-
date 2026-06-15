@@ -95,40 +95,40 @@ export function Settings() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold">Store Settings</h1>
-        <p className="text-muted-foreground">Manage your store information and customer announcements</p>
+        <h1 className="text-xl sm:text-2xl font-bold">Store Settings</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage your store information and customer announcements</p>
       </div>
 
-      <Card className="p-6 border-amber-200 bg-amber-50/50">
-        <h2 className="mb-4 flex items-center gap-2 font-semibold text-amber-900">
-          <Megaphone className="h-5 w-5" />
+      <Card className="p-4 sm:p-6 border-amber-200 bg-amber-50/50">
+        <h2 className="mb-3 sm:mb-4 flex items-center gap-2 font-semibold text-amber-900 text-sm sm:text-base">
+          <Megaphone className="h-5 w-5 shrink-0" />
           Announcement Banner
         </h2>
         <div className="space-y-4">
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="announcement">Banner Text</Label>
             <Textarea
               id="announcement"
               placeholder="Enter text for the sticky bottom banner..."
               value={settings.announcement}
               onChange={(e) => setSettings({ ...settings, announcement: e.target.value })}
-              className="bg-white"
+              className="resize-none"
               rows={2}
             />
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               This message will stay fixed at the bottom of the viewport until it reaches the footer.
             </p>
           </div>
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h2 className="mb-6 font-semibold">Basic Information</h2>
+      <Card className="p-4 sm:p-6">
+        <h2 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base">Basic Information</h2>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="storeName">Store Name</Label>
               <Input
                 id="storeName"
@@ -136,7 +136,7 @@ export function Settings() {
                 onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="phone">
                 <Phone className="h-4 w-4 inline mr-2" />
                 Phone Number
@@ -149,7 +149,7 @@ export function Settings() {
             </div>
           </div>
 
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="email">
               <Mail className="h-4 w-4 inline mr-2" />
               Email Address
@@ -162,7 +162,7 @@ export function Settings() {
             />
           </div>
 
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="address">
               <MapPin className="h-4 w-4 inline mr-2" />
               Store Address
@@ -172,15 +172,16 @@ export function Settings() {
               value={settings.address}
               onChange={(e) => setSettings({ ...settings, address: e.target.value })}
               rows={2}
+              className="resize-none"
             />
           </div>
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h2 className="mb-6 font-semibold">Business Hours</h2>
+      <Card className="p-4 sm:p-6">
+        <h2 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base">Business Hours</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="openingTime">Opening Time</Label>
             <Input
               id="openingTime"
@@ -189,7 +190,7 @@ export function Settings() {
               onChange={(e) => setSettings({ ...settings, openingTime: e.target.value })}
             />
           </div>
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="closingTime">Closing Time</Label>
             <Input
               id="closingTime"
@@ -199,33 +200,35 @@ export function Settings() {
             />
           </div>
         </div>
-        <div className="mt-6 border-t pt-4">
-          <Label htmlFor="processingTimePerKg" className="mb-2 block">Processing Time Per Kg (minutes)</Label>
-          <Input
-            id="processingTimePerKg"
-            type="number"
-            min="1"
-            step="0.5"
-            value={settings.processingTimePerKg}
-            onChange={(e) => setSettings({ ...settings, processingTimePerKg: e.target.value })}
-            className="w-full md:w-1/2"
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            This value is used by the auto-scheduler to calculate the Estimated Completion Time (ETA) for each order.
-          </p>
+        <div className="mt-4 sm:mt-6 border-t pt-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="processingTimePerKg">Processing Time Per Kg (minutes)</Label>
+            <Input
+              id="processingTimePerKg"
+              type="number"
+              min="1"
+              step="0.5"
+              value={settings.processingTimePerKg}
+              onChange={(e) => setSettings({ ...settings, processingTimePerKg: e.target.value })}
+              className="w-full md:w-1/2"
+            />
+            <p className="text-xs text-muted-foreground">
+              This value is used by the auto-scheduler to calculate the Estimated Completion Time (ETA) for each order.
+            </p>
+          </div>
         </div>
       </Card>
 
       {/* NEW: Dynamic Delivery Fare UI */}
-      <Card className="p-6 border-blue-200 bg-blue-50/30">
-        <h2 className="mb-6 flex items-center gap-2 font-semibold text-blue-900">
-          <Map className="h-5 w-5" />
+      <Card className="p-4 sm:p-6 border-blue-200 bg-blue-50/30">
+        <h2 className="mb-4 sm:mb-6 flex items-center gap-2 font-semibold text-blue-900 text-sm sm:text-base">
+          <Map className="h-5 w-5 shrink-0" />
           Dynamic Delivery Geofencing
         </h2>
-        <div className="space-y-6">
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+        <div className="space-y-4 sm:space-y-6">
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
               <Label htmlFor="base_fare" className="font-bold">Base Fare (Rs.)</Label>
               <Input
                 id="base_fare"
@@ -233,10 +236,10 @@ export function Settings() {
                 value={deliveryConfig.base_fare}
                 onChange={(e) => setDeliveryConfig({ ...deliveryConfig, base_fare: e.target.value })}
               />
-              <p className="text-[11px] text-muted-foreground mt-1">Starting price for nearby deliveries.</p>
+              <p className="text-[11px] text-muted-foreground">Starting price for nearby deliveries.</p>
             </div>
-            
-            <div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="base_distance" className="font-bold">Base Distance (km)</Label>
               <Input
                 id="base_distance"
@@ -244,10 +247,10 @@ export function Settings() {
                 value={deliveryConfig.base_distance}
                 onChange={(e) => setDeliveryConfig({ ...deliveryConfig, base_distance: e.target.value })}
               />
-              <p className="text-[11px] text-muted-foreground mt-1">Distance covered by the Base Fare.</p>
+              <p className="text-[11px] text-muted-foreground">Distance covered by the Base Fare.</p>
             </div>
 
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="per_km_rate" className="font-bold">Per Extra KM Rate (Rs.)</Label>
               <Input
                 id="per_km_rate"
@@ -255,11 +258,11 @@ export function Settings() {
                 value={deliveryConfig.per_km_rate}
                 onChange={(e) => setDeliveryConfig({ ...deliveryConfig, per_km_rate: e.target.value })}
               />
-              <p className="text-[11px] text-muted-foreground mt-1">Fee added for every kilometer past the base distance.</p>
+              <p className="text-[11px] text-muted-foreground">Fee added for every kilometer past the base distance.</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-blue-100 text-sm">
+          <div className="bg-white p-3 sm:p-4 rounded-lg border border-blue-100 text-sm">
             <p className="font-semibold text-blue-800 mb-1">How it works on the Checkout Page:</p>
             <ul className="list-disc list-inside text-muted-foreground text-xs space-y-1">
               <li>Customer enters area, system maps it to GPS coordinates.</li>
@@ -268,13 +271,13 @@ export function Settings() {
               <li>If distance is 15km, fee is: {deliveryConfig.base_fare} + (5km x {deliveryConfig.per_km_rate}) = Rs. {Number(deliveryConfig.base_fare) + (5 * Number(deliveryConfig.per_km_rate))}.</li>
             </ul>
           </div>
-          
+
         </div>
       </Card>
 
       <div className="flex gap-4">
-        <Button onClick={handleSave} size="lg">
-          <Save className="h-5 w-5 mr-2" />
+        <Button onClick={handleSave} className="w-full sm:w-auto">
+          <Save className="h-4 w-4 mr-2 shrink-0" />
           Save Settings
         </Button>
       </div>

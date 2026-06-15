@@ -251,15 +251,15 @@ export function ManageCategories() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('Manage Categories')}</h1>
-          <p className="text-muted-foreground">{t('Add, edit, or remove categories')}</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">{t('Manage Categories')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('Add, edit, or remove categories')}</p>
         </div>
         {!isAdding && !editingId && (
-          <Button onClick={() => setIsAdding(true)} size="lg">
-            <Plus className="h-5 w-5 mr-2" />
+          <Button onClick={() => setIsAdding(true)} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2 shrink-0" />
             {t('Add New Category')}
           </Button>
         )}
@@ -343,13 +343,23 @@ export function ManageCategories() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button onClick={saveCategory} size="lg" disabled={isSaving || isUploading}>
-                {isSaving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
-                {editingId ? t('Update Category') : t('Save Category')}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-4">
+              <Button
+                onClick={handleCancel}
+                variant="outline"
+                disabled={isSaving || isUploading}
+                className="w-full sm:w-auto"
+              >
+                <X className="h-4 w-4 mr-2 shrink-0" /> {t('Cancel')}
               </Button>
-              <Button onClick={handleCancel} variant="outline" size="lg" disabled={isSaving || isUploading}>
-                <X className="h-5 w-5 mr-2" /> {t('Cancel')}
+              <Button
+                onClick={saveCategory}
+                variant="outline"
+                disabled={isSaving || isUploading}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" /> : <Save className="h-4 w-4 mr-2 shrink-0" />}
+                {editingId ? t('Update Category') : t('Save Category')}
               </Button>
             </div>
           </div>
@@ -363,33 +373,38 @@ export function ManageCategories() {
           </Card>
         ) : (
           categories.map((cat) => (
-            <Card key={cat.id} className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
-                  {cat.image_url ? (
-                    <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-muted-foreground text-xs">{t('No image')}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="mb-1 text-lg font-bold">
-                    {cat.name}
-                    {!cat.is_active && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border">Disabled</span>}
-                  </h3>
-                  <div className="flex gap-4">
-                    <p className="text-xs text-muted-foreground">ID: {cat.id}</p>
-                    <p className="text-xs font-semibold text-primary">{t('Priority')}: {cat.priority || 0}</p>
+            <Card key={cat.id} className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                {/* Image + text */}
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                  <div className="w-14 h-14 sm:w-24 sm:h-24 rounded bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
+                    {cat.image_url ? (
+                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-muted-foreground text-[10px] sm:text-xs text-center px-1">{t('No image')}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="mb-1 text-base sm:text-lg font-bold flex flex-wrap items-center gap-2 break-words">
+                      <span className="break-words">{cat.name}</span>
+                      {!cat.is_active && <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border shrink-0">Disabled</span>}
+                    </h3>
+                    <div className="flex gap-3 sm:gap-4 flex-wrap">
+                      <p className="text-[11px] sm:text-xs text-muted-foreground">ID: {cat.id}</p>
+                      <p className="text-[11px] sm:text-xs font-semibold text-primary">{t('Priority')}: {cat.priority || 0}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex sm:flex-col gap-2">
-                  <Button onClick={() => handleToggleActive(cat.id, cat.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+
+                {/* Actions — full-width grid on mobile, stacked column on desktop */}
+                <div className="grid grid-cols-3 sm:flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-border shrink-0">
+                  <Button onClick={() => handleToggleActive(cat.id, cat.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
                     {cat.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                   </Button>
-                  <Button onClick={() => handleEdit(cat)} variant="outline" size="sm" disabled={isAdding || editingId !== null}>
+                  <Button onClick={() => handleEdit(cat)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button onClick={() => handleDelete(cat.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="px-4">
+                  <Button onClick={() => handleDelete(cat.id)} variant="destructive" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto sm:px-4">
                     <Trash2 className="h-4 w-4 text-white" />
                   </Button>
                 </div>

@@ -4,7 +4,7 @@ import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
 import { Button } from '../../components/common/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/common/select';
-import { Plus, Trash2, Save, ShoppingCart, User } from 'lucide-react';
+import { Plus, Trash2, Save, ShoppingCart, User, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
@@ -231,8 +231,11 @@ export function AddManualOrder() {
         {/* Customer Details */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" /> {t('Customer Details')}
+            <CardTitle className="flex flex-col items-center justify-center gap-2 text-center">
+              <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary">
+                <User className="h-5 w-5" />
+              </span>
+              <span className="font-bold text-base sm:text-lg">{t('Customer Details')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -254,7 +257,12 @@ export function AddManualOrder() {
         {/* Order Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('Order Settings')}</CardTitle>
+            <CardTitle className="flex flex-col items-center justify-center gap-2 text-center">
+              <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary">
+                <Settings2 className="h-5 w-5" />
+              </span>
+              <span className="font-bold text-base sm:text-lg">{t('Order Settings')}</span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4">

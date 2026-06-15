@@ -1,9 +1,44 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, useNavigation } from "react-day-picker";
+import { format } from "date-fns";
 
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
+
+/**
+ * Custom caption that renders the month/year label flanked by clearly visible
+ * < and > navigation buttons. Replaces react-day-picker's built-in nav, whose
+ * IconLeft/IconRight components were not rendering reliably in this build.
+ */
+function CalendarCaption({ displayMonth }) {
+  const { goToMonth, nextMonth, previousMonth } = useNavigation();
+  return (
+    <div className="flex items-center justify-between px-1 pt-1 pb-2">
+      <button
+        type="button"
+        disabled={!previousMonth}
+        onClick={() => previousMonth && goToMonth(previousMonth)}
+        aria-label="Previous month"
+        className="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+      <span className="text-sm font-semibold text-foreground select-none">
+        {format(displayMonth, "MMMM yyyy")}
+      </span>
+      <button
+        type="button"
+        disabled={!nextMonth}
+        onClick={() => nextMonth && goToMonth(nextMonth)}
+        aria-label="Next month"
+        className="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+    </div>
+  );
+}
 
 function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
   return (
@@ -12,13 +47,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
       className={cn("p-3 w-fit", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4 relative w-full",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        nav: "absolute top-1 inset-x-0 w-full flex justify-between px-2 z-10",
-        nav_button: "h-7 w-7 p-0 inline-flex items-center justify-center bg-transparent text-foreground hover:text-primary cursor-pointer border-0 rounded-md",
-        nav_button_previous: "",
-        nav_button_next: "",
+        month: "space-y-2 relative w-full",
         table: "w-full border-collapse space-y-1",
         head_row: "flex justify-between",
         head_cell: "text-muted-foreground rounded-md w-9 shrink-0 font-normal text-[0.8rem]",
@@ -38,12 +67,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
         ...classNames,
       }}
       components={{
-        IconLeft: () => (
-          <ChevronLeft size={18} color="#3d3020" strokeWidth={2.5} />
-        ),
-        IconRight: () => (
-          <ChevronRight size={18} color="#3d3020" strokeWidth={2.5} />
-        ),
+        Caption: CalendarCaption,
       }}
       {...props}
     />

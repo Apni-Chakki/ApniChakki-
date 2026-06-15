@@ -85,8 +85,8 @@
   --warning: #ea580c;
   --warning-foreground: #fff;
   --border: #d9cfc1;
-  --input: transparent;
-  --input-background: #fff;
+  --input: #d9cfc1;
+  --input-background: #f5f1ec;
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;

@@ -207,17 +207,17 @@ export default function CustomMixRequests() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Custom Mix Requests</h2>
-          <p className="text-muted-foreground">Manage customer requests for custom multigrain proportions.</p>
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Custom Mix Requests</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage customer requests for custom multigrain proportions.</p>
         </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {requests.length === 0 ? (
-          <div className="text-center p-8 bg-muted/20 rounded-xl border-2 border-dashed border-border text-muted-foreground font-semibold">
+          <div className="text-center p-6 sm:p-8 bg-muted/20 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground font-semibold">
             No custom mix requests found.
           </div>
         ) : (
@@ -228,30 +228,31 @@ export default function CustomMixRequests() {
               animate={{ opacity: 1, y: 0 }}
             >
               <Card className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
-                <div 
-                  className="p-4 flex items-center justify-between cursor-pointer bg-white hover:bg-slate-50 transition-colors"
+                <div
+                  className="p-3 sm:p-4 flex items-center justify-between gap-2 cursor-pointer bg-white hover:bg-slate-50 transition-colors"
                   onClick={() => setExpandedId(expandedId === request.id ? null : request.id)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-full flex items-center justify-center w-10 h-10 ${getStatusColor(request.status).replace('border-', '')}`}>
-                       {request.status === 'pending' ? <Clock className="w-5 h-5" /> : request.status === 'completed' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                  <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                    <div className={`p-2 rounded-full flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 shrink-0 ${getStatusColor(request.status).replace('border-', '')}`}>
+                       {request.status === 'pending' ? <Clock className="w-4 h-4 sm:w-5 sm:h-5" /> : request.status === 'completed' ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-800">
-                        {request.customer_name} <span className="text-sm font-normal text-slate-500">({request.customer_phone})</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-sm sm:text-lg text-slate-800 flex flex-wrap items-baseline gap-x-1 break-words">
+                        <span className="break-words">{request.customer_name}</span>
+                        <span className="text-[11px] sm:text-sm font-normal text-slate-500 break-all">({request.customer_phone})</span>
                       </h3>
-                      <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
-                        <span className="font-semibold text-primary">{request.product_name}</span>
-                        <span>•</span>
-                        <span>{new Date(request.created_at).toLocaleString()}</span>
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[11px] sm:text-sm text-slate-600 mt-0.5 sm:mt-1">
+                        <span className="font-semibold text-primary break-words">{request.product_name}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="break-words">{new Date(request.created_at).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(request.status)} uppercase tracking-wider`}>
+                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-4 shrink-0">
+                    <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border ${getStatusColor(request.status)} uppercase tracking-wider`}>
                       {request.status}
                     </span>
-                    {expandedId === request.id ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                    {expandedId === request.id ? <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" /> : <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
                   </div>
                 </div>
 
@@ -341,12 +342,12 @@ export default function CustomMixRequests() {
 
       {/* Dialog for converting request to manual order */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md w-full rounded-2xl bg-white border border-primary/20 p-5 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b border-primary/10 pb-3">
-            <DialogTitle className="text-lg font-black text-primary uppercase tracking-wider flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 animate-pulse" /> Convert to Active Order
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md w-full rounded-2xl bg-white border border-primary/20 p-3 sm:p-5 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-primary/10 pb-2 sm:pb-3">
+            <DialogTitle className="text-base sm:text-lg font-black text-primary uppercase tracking-wider flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 animate-pulse shrink-0" /> Convert to Active Order
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 leading-normal">
+            <DialogDescription className="text-[11px] sm:text-xs text-slate-500 leading-normal">
               Customer ke sath finalize ki gayi ratios adjust karein aur is request ko directly active scheduled order me convert karein.
             </DialogDescription>
           </DialogHeader>

@@ -201,119 +201,173 @@ export function ManageDelivery() {
   if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-foreground font-bold
-">Manage Delivery Personnel</h1>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl text-foreground font-bold">Manage Delivery Personnel</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Add and manage delivery team members
           </p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2 shrink-0" />
           Add Personnel
         </Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Delivery Team</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Delivery Team</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             {personnelList.length} {personnelList.length === 1 ? 'person' : 'people'} in the team
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           {personnelList.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>No delivery personnel added yet.</p>
+            <div className="text-center py-8 sm:py-12 text-muted-foreground">
+              <p className="text-sm">No delivery personnel added yet.</p>
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => setIsAddDialogOpen(true)}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2 shrink-0" />
                 Add First Personnel
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: card list (below md) */}
+              <div className="md:hidden space-y-3">
                 {personnelList.map((personnel) => (
-                  <TableRow key={personnel.id}>
-                    <TableCell className="font-medium">{personnel.name}</TableCell>
-                    <TableCell>{personnel.email}</TableCell>
-                    <TableCell>{personnel.phone}</TableCell>
-                    <TableCell>
+                  <div key={personnel.id} className="border rounded-lg p-3 bg-card space-y-2.5">
+                    <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
+                      <p className="font-semibold text-sm break-words min-w-0 flex-1">{personnel.name}</p>
                       {personnel.isActive ? (
-                        <Badge className="bg-success text-success-foreground">Active</Badge>
+                        <Badge className="bg-success text-success-foreground shrink-0 text-[10px]">Active</Badge>
                       ) : (
-                        <Badge variant="secondary">Inactive</Badge>
+                        <Badge variant="secondary" className="shrink-0 text-[10px]">Inactive</Badge>
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className={`h-8 w-8 px-0 flex items-center justify-center ${personnel.isActive ? 'border-orange-300 hover:bg-orange-50' : 'border-green-300 hover:bg-green-50'}`}
-                          onClick={() => handleToggleActive(personnel)}
-                          title={personnel.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {personnel.isActive ? (
-                            <UserX className="h-4 w-4 text-orange-500" />
-                          ) : (
-                            <UserCheck className="h-4 w-4 text-green-600" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 px-0 flex items-center justify-center border-blue-200 hover:bg-blue-50"
-                          onClick={() => handleEditClick(personnel)}
-                        >
-                          <Edit2 className="h-4 w-4 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-8 w-8 px-0 flex items-center justify-center"
-                          onClick={() => handleDelete(personnel.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-white" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <p className="text-muted-foreground break-all">{personnel.email}</p>
+                      <p className="text-muted-foreground break-all">{personnel.phone}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`w-full ${personnel.isActive ? 'border-orange-300 hover:bg-orange-50' : 'border-green-300 hover:bg-green-50'}`}
+                        onClick={() => handleToggleActive(personnel)}
+                      >
+                        {personnel.isActive ? (
+                          <UserX className="h-4 w-4 text-orange-500" />
+                        ) : (
+                          <UserCheck className="h-4 w-4 text-green-600" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-blue-200 hover:bg-blue-50"
+                        onClick={() => handleEditClick(personnel)}
+                      >
+                        <Edit2 className="h-4 w-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleDelete(personnel.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-white" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: table (md and up) */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {personnelList.map((personnel) => (
+                      <TableRow key={personnel.id}>
+                        <TableCell className="font-medium">{personnel.name}</TableCell>
+                        <TableCell>{personnel.email}</TableCell>
+                        <TableCell>{personnel.phone}</TableCell>
+                        <TableCell>
+                          {personnel.isActive ? (
+                            <Badge className="bg-success text-success-foreground">Active</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={`h-8 w-8 px-0 flex items-center justify-center ${personnel.isActive ? 'border-orange-300 hover:bg-orange-50' : 'border-green-300 hover:bg-green-50'}`}
+                              onClick={() => handleToggleActive(personnel)}
+                              title={personnel.isActive ? 'Deactivate' : 'Activate'}
+                            >
+                              {personnel.isActive ? (
+                                <UserX className="h-4 w-4 text-orange-500" />
+                              ) : (
+                                <UserCheck className="h-4 w-4 text-green-600" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 px-0 flex items-center justify-center border-blue-200 hover:bg-blue-50"
+                              onClick={() => handleEditClick(personnel)}
+                            >
+                              <Edit2 className="h-4 w-4 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8 px-0 flex items-center justify-center"
+                              onClick={() => handleDelete(personnel.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-white" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Add Personnel Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Delivery Personnel</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Add Delivery Personnel</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Add a new member to your delivery team. They'll receive login credentials to access the delivery panel.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddPersonnel}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="add-name">Full Name</Label>
+            <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-name" className="text-sm">Full Name</Label>
                 <Input
                   id="add-name"
                   value={formData.name}
@@ -322,8 +376,8 @@ export function ManageDelivery() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-email" className="text-sm">Email</Label>
                 <Input
                   id="add-email"
                   type="email"
@@ -333,8 +387,8 @@ export function ManageDelivery() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-phone">Phone Number</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-phone" className="text-sm">Phone Number</Label>
                 <Input
                   id="add-phone"
                   type="tel"
@@ -344,8 +398,8 @@ export function ManageDelivery() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-password" className="text-sm">Password</Label>
                 <Input
                   id="add-password"
                   type="password"
@@ -357,9 +411,21 @@ export function ManageDelivery() {
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setIsAddDialogOpen(false); resetForm(); }}>Cancel</Button>
-              <Button type="submit" disabled={isProcessing}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setIsAddDialogOpen(false); resetForm(); }}
+                className="w-full sm:flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={isProcessing}
+                className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+              >
                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Personnel'}
               </Button>
             </DialogFooter>
@@ -369,17 +435,17 @@ export function ManageDelivery() {
 
       {/* Edit Personnel Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Delivery Personnel</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Edit Delivery Personnel</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Update personnel information. Leave password blank to keep current password.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdatePersonnel}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Full Name</Label>
+            <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-name" className="text-sm">Full Name</Label>
                 <Input
                   id="edit-name"
                   value={formData.name}
@@ -387,8 +453,8 @@ export function ManageDelivery() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-email" className="text-sm">Email</Label>
                 <Input
                   id="edit-email"
                   type="email"
@@ -397,8 +463,8 @@ export function ManageDelivery() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Phone Number</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-phone" className="text-sm">Phone Number</Label>
                 <Input
                   id="edit-phone"
                   type="tel"
@@ -407,8 +473,8 @@ export function ManageDelivery() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-password">New Password (Optional)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-password" className="text-sm">New Password (Optional)</Label>
                 <Input
                   id="edit-password"
                   type="password"
@@ -419,9 +485,21 @@ export function ManageDelivery() {
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingPersonnel(null); resetForm(); }}>Cancel</Button>
-              <Button type="submit" disabled={isProcessing}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setIsEditDialogOpen(false); setEditingPersonnel(null); resetForm(); }}
+                className="w-full sm:flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={isProcessing}
+                className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+              >
                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Personnel'}
               </Button>
             </DialogFooter>

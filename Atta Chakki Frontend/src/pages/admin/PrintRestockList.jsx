@@ -190,35 +190,39 @@ export function PrintRestockList({ items, open, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[400px] text-center">
+      <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-[400px] text-center">
         <DialogHeader>
-          <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-            <Printer className="h-8 w-8 text-primary" />
+          <div className="mx-auto bg-primary/10 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+            <Printer className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
           </div>
-          <DialogTitle className="text-xl">Print Restock List</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Print Restock List</DialogTitle>
         </DialogHeader>
-        
-        <div className="py-4">
-          <p className="text-muted-foreground mb-4">
+
+        <div className="py-3 sm:py-4">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
             You are about to generate an inventory restock report highlighting low stock items.
           </p>
 
-          <div className="bg-muted/50 p-4 rounded-lg flex justify-between items-center text-sm border border-border">
+          <div className="bg-muted/50 p-3 sm:p-4 rounded-lg flex justify-between items-center text-sm border border-border">
             <span>Total Items Tracked:</span>
             <span className="font-bold">{items.length}</span>
           </div>
-          <div className="bg-red-50 p-4 rounded-lg flex justify-between items-center text-sm border border-red-100 mt-2">
+          <div className="bg-red-50 p-3 sm:p-4 rounded-lg flex justify-between items-center text-sm border border-red-100 mt-2">
             <span className="text-red-700">Low Stock Items:</span>
             <span className="font-bold text-red-700 text-lg">{lowStockCount}</span>
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 w-full mt-2">
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full mt-2">
           <Button variant="outline" onClick={onClose} className="w-full sm:flex-1">
-            <X className="h-4 w-4 mr-2" /> Cancel
+            <X className="h-4 w-4 mr-2 shrink-0" /> Cancel
           </Button>
-          <Button onClick={handlePrint} className="w-full sm:flex-1 bg-primary">
-            <Printer className="h-4 w-4 mr-2" /> Print Document
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+          >
+            <Printer className="h-4 w-4 mr-2 shrink-0" /> Print Document
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -173,18 +173,18 @@ export function ManageCoupons() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('Manage Coupons')}</h1>
-        <Button onClick={handleAdd} disabled={isAdding || editingId !== null}>
-          <Plus className="h-4 w-4 mr-2" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">{t('Manage Coupons')}</h1>
+        <Button onClick={handleAdd} disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2 shrink-0" />
           {t('Add Coupon')}
         </Button>
       </div>
 
       {isAdding && (
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">
+        <Card className="p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
             {editingId ? t('Edit Coupon') : t('Add New Coupon')}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -270,55 +270,64 @@ export function ManageCoupons() {
                 placeholder={t('Special offer for new customers')}
               />
             </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4"
+                  className="w-4 h-4 shrink-0"
                 />
-                <span>{t('Active')}</span>
+                <span className="text-sm">{t('Active')}</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.is_featured}
                   onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
-                  className="w-4 h-4"
+                  className="w-4 h-4 shrink-0"
                 />
-                <span>{t('Featured (Show on Homepage)')}</span>
+                <span className="text-sm">{t('Featured (Show on Homepage)')}</span>
               </label>
             </div>
-            <div className="flex gap-2">
-              <Button type="submit">
-                {editingId ? t('Update Coupon') : t('Create Coupon')}
-              </Button>
-              <Button type="button" variant="outline" onClick={resetForm}>
+            <div className="flex flex-col-reverse sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetForm}
+                className="w-full sm:w-auto"
+              >
                 {t('Cancel')}
+              </Button>
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+              >
+                {editingId ? t('Update Coupon') : t('Create Coupon')}
               </Button>
             </div>
           </form>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {coupons.map((coupon) => (
-          <Card key={coupon.id} className="p-4 relative">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Tag className="h-5 w-5 text-primary" />
-                <span className="font-mono font-bold text-lg">{coupon.code}</span>
+          <Card key={coupon.id} className="p-3 sm:p-4 relative">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Tag className="h-5 w-5 text-primary shrink-0" />
+                <span className="font-mono font-bold text-base sm:text-lg break-all">{coupon.code}</span>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 px-0 py-0"
+                  className="h-6 w-6 px-0 py-0 shrink-0"
                   onClick={() => copyCode(coupon.code)}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <button
                   type="button"
                   className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0"

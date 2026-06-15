@@ -644,53 +644,53 @@ export function LiveTrackingMap() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Radio className="h-6 w-6 text-red-500 animate-pulse" />
-            {t('Live Delivery Tracking')}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-wrap gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <Radio className="h-5 w-5 sm:h-6 sm:w-6 text-red-500 animate-pulse shrink-0" />
+            <span className="truncate">{t('Live Delivery Tracking')}</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {drivers.length > 0
               ? `${drivers.length} ${t('active delivery')}${drivers.length > 1 ? 'ies' : 'y'} in progress`
               : t('No active deliveries right now')
             }
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Socket status indicator */}
-          <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${
-            socketConnected 
-              ? 'bg-green-100 text-green-700' 
+          <span className={`flex items-center gap-1.5 text-[11px] sm:text-xs px-2.5 py-1 rounded-full ${
+            socketConnected
+              ? 'bg-green-100 text-green-700'
               : 'bg-yellow-100 text-yellow-700'
           }`}>
             <span className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
             {socketConnected ? 'Real-time' : 'Polling'}
           </span>
           {lastUpdated && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {t('Updated')} {timeAgo(lastUpdated)}
+            <span className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span className="hidden sm:inline">{t('Updated')} </span>{timeAgo(lastUpdated)}
             </span>
           )}
-          <Button variant="outline" size="sm" onClick={fetchDriverLocations} className="gap-1">
-            <RefreshCw className="h-3.5 w-3.5" />
+          <Button variant="outline" size="sm" onClick={fetchDriverLocations} className="gap-1 ml-auto sm:ml-0">
+            <RefreshCw className="h-3.5 w-3.5 shrink-0" />
             {t('Refresh')}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* ─── Map ─── */}
         <div className="lg:col-span-2">
           <Card className="overflow-hidden">
             {/* Map Status Bar */}
-            <div className="bg-gradient-to-r from-purple-600/10 to-purple-500/5 px-4 py-2.5 flex items-center justify-between border-b">
-              <span className="text-sm font-semibold text-purple-800 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                {selectedOrder ? `Order #${selectedOrder} — Live Route` : t('All Active Drivers')}
+            <div className="bg-gradient-to-r from-purple-600/10 to-purple-500/5 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 border-b">
+              <span className="text-xs sm:text-sm font-semibold text-purple-800 flex items-center gap-2 min-w-0">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span className="truncate">{selectedOrder ? `Order #${selectedOrder} — Live Route` : t('All Active Drivers')}</span>
               </span>
               {selectedOrder && (
                 <Button
@@ -730,17 +730,16 @@ export function LiveTrackingMap() {
             {GOOGLE_MAPS_API_KEY ? (
               <div
                 ref={mapContainerRef}
-                style={{ height: '500px', width: '100%' }}
-                className="w-full"
+                className="w-full h-[350px] sm:h-[500px]"
               />
             ) : (
-              <div className="h-[500px] flex items-center justify-center bg-muted/30">
-                <div className="text-center space-y-2">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto" />
-                  <p className="text-sm text-muted-foreground">
+              <div className="h-[350px] sm:h-[500px] flex items-center justify-center bg-muted/30">
+                <div className="text-center space-y-2 px-4">
+                  <MapPin className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {t('Google Maps API key required for live tracking map.')}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">
                     {t('Set VITE_GOOGLE_MAPS_API_KEY in your .env.local file.')}
                   </p>
                 </div>
