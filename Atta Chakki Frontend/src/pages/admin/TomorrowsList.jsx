@@ -98,8 +98,14 @@ export function TomorrowsList() {
       if (data.success) {
         setOrders((data.orders || []).map(order => ({
           ...order,
-          // Use DB order_type field directly — 'pickup' = store pickup, 'delivery' = home delivery
-          type: order.order_type === 'pickup' ? 'pickup' : 'delivery',
+          // Use DB order_type or shipping_address keywords — 'pickup' = store pickup, 'delivery' = home delivery
+          type: (order.order_type === 'pickup' || (order.shipping_address && (
+            order.shipping_address.toLowerCase().includes('pickup') || 
+            order.shipping_address.toLowerCase().includes('store') || 
+            order.shipping_address.toLowerCase().includes('collect') || 
+            order.shipping_address.toLowerCase().includes('self') || 
+            order.shipping_address.toLowerCase().includes('shop')
+          ))) ? 'pickup' : 'delivery',
           deliveryPersonnel: order.deliveryPersonnel || order.driver_name || null,
         })));
         if (data.capacity) setCapacity(data.capacity);

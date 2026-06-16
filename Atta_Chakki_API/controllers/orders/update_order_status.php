@@ -33,7 +33,7 @@ try {
     }
     
     // checking if order exists
-    $orderSql = "SELECT o.id, o.status, o.assigned_date, u.full_name as customer_name, u.phone as customer_phone 
+    $orderSql = "SELECT o.id, o.status, o.assigned_date, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email 
                  FROM orders o 
                  LEFT JOIN users u ON o.user_id = u.id 
                  WHERE o.id = ?";
@@ -96,6 +96,26 @@ try {
         }
     }
     
+    // Send status update email if customer has email
+    if ($order && !empty($order['customer_email'])) {
+        $emailData = [
+            'customerEmail' => $order['customer_email'],
+            'customerName' => $order['customer_name'] ?? 'Customer',
+            'orderId' => $order_id,
+            'newStatus' => $status,
+            'cancellationReason' => $reason
+        ];
+
+        $ch = curl_init('http://localhost:3001/send-order-status-update');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "Order status updated to '$status'",

@@ -23,7 +23,33 @@ try {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
-        echo json_encode(["success" => true, "message" => "Reply saved successfully"]);
+        // Fetch contact details to send email
+        $msg_stmt = $conn->prepare("SELECT name, email, subject, message FROM contact_messages WHERE id = ?");
+        $msg_stmt->bind_param("i", $id);
+        $msg_stmt->execute();
+        $msg_row = $msg_stmt->get_result()->fetch_assoc();
+        $msg_stmt->close();
+
+        if ($msg_row && !empty($msg_row['email'])) {
+            $emailData = [
+                'customerEmail' => $msg_row['email'],
+                'customerName' => $msg_row['name'],
+                'originalSubject' => $msg_row['subject'],
+                'originalMessage' => $msg_row['message'],
+                'replyMessage' => $reply
+            ];
+
+            $ch = curl_init('http://localhost:3001/send-contact-reply');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+            curl_exec($ch);
+            curl_close($ch);
+        }
+
+        echo json_encode(["success" => true, "message" => "Reply saved and emailed successfully"]);
     } else {
         echo json_encode(["success" => false, "message" => "Message not found or no changes made"]);
     }

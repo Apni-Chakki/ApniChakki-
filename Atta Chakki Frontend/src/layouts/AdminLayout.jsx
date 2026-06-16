@@ -5,6 +5,7 @@ import { Menu, Loader2, Bell, X } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 function PageLoader() {
   return (
@@ -24,6 +25,7 @@ export default function AdminLayout({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [storeName, setStoreName] = useState('Admin');
+  const [lastNotificationId, setLastNotificationId] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/get_store_settings.php`)
@@ -43,6 +45,26 @@ export default function AdminLayout({ children }) {
       if (data.success) {
         setNotifications(data.notifications);
         setUnreadCount(data.unread_count);
+
+        if (data.notifications && data.notifications.length > 0) {
+          const maxId = Math.max(...data.notifications.map(n => parseInt(n.id) || 0));
+          
+          setLastNotificationId(prev => {
+            if (prev !== null && maxId > prev) {
+              const newUnread = data.notifications.filter(n => (parseInt(n.id) || 0) > prev && n.is_read == 0);
+              newUnread.forEach(n => {
+                toast.info(n.title, {
+                  description: n.message,
+                  action: {
+                    label: 'View',
+                    onClick: () => handleNotificationNavigation(n)
+                  }
+                });
+              });
+            }
+            return maxId;
+          });
+        }
       }
     } catch (error) {
       console.error("Could not load admin notifications:", error);

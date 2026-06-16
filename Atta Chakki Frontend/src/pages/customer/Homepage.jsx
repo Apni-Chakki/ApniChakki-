@@ -252,15 +252,17 @@ export function Homepage() {
     }
     setIsSubmittingMix(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/submit_contact.php`, {
+      const response = await fetch(`${API_BASE_URL}/submit_custom_mix_request.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: mixFormData.name,
-          email: 'custom.mix@apnichakki.com',
-          phone: mixFormData.phone,
-          subject: 'Custom Mix Request',
-          message: mixFormData.details
+          customer_name: mixFormData.name,
+          customer_phone: mixFormData.phone,
+          customer_email: 'custom.mix@apnichakki.com',
+          product_name: 'General Custom Mix Request',
+          custom_items: mixFormData.details,
+          total_quantity: 5,
+          estimated_price: 0
         }),
       });
       const data = await response.json();

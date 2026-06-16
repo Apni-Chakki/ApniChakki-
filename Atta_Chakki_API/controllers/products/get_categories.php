@@ -5,7 +5,14 @@ include __DIR__ . '/../../config/connect.php';
 header('Content-Type: application/json');
 
 try {
-    $sql = "SELECT id, name, image_url, priority, created_at FROM categories ORDER BY priority ASC, name ASC";
+    $isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
+    
+    if ($isAdmin) {
+        $sql = "SELECT id, name, image_url, priority, created_at, is_active FROM categories ORDER BY priority ASC, name ASC";
+    } else {
+        $sql = "SELECT id, name, image_url, priority, created_at, is_active FROM categories WHERE is_active = 1 ORDER BY priority ASC, name ASC";
+    }
+    
     $result = $conn->query($sql);
     
     if (!$result) {
@@ -25,7 +32,8 @@ try {
             'name' => $row['name'],
             'image_url' => $image_url,
             'priority' => (int)($row['priority'] ?? 0),
-            'created_at' => $row['created_at']
+            'created_at' => $row['created_at'],
+            'is_active' => (int)($row['is_active'] ?? 1)
         ];
     }
     

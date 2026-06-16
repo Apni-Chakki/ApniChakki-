@@ -104,7 +104,13 @@ export function UserAccount() {
             paymentMethod: order.payment_method || 'cod',
             paymentStatus: paymentStatus,
             deliveryAddress: order.shipping_address,
-            type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
+            type: (order.order_type === 'pickup' || (order.shipping_address && (
+              order.shipping_address.toLowerCase().includes('pickup') || 
+              order.shipping_address.toLowerCase().includes('store') || 
+              order.shipping_address.toLowerCase().includes('collect') || 
+              order.shipping_address.toLowerCase().includes('self') || 
+              order.shipping_address.toLowerCase().includes('shop')
+            ))) ? 'pickup' : 'delivery',
             items: order.items ? order.items.map(item => ({
                quantity: item.quantity,
                isWeightPending: item.is_weight_pending == 1, 

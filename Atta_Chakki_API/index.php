@@ -50,6 +50,7 @@ $mapping = [
     'reply_contact_message.php' => 'controllers/admin/reply_contact_message.php',
     'get_custom_mix_requests.php' => 'controllers/admin/get_custom_mix_requests.php',
     'update_custom_mix_request.php' => 'controllers/admin/update_custom_mix_request.php',
+    'submit_custom_mix_request.php' => 'controllers/products/submit_custom_mix_request.php',
     'admin_create_order.php' => 'controllers/orders/admin_create_order.php',
     'place_order.php' => 'controllers/orders/place_order.php',
     'track_order.php' => 'controllers/orders/track_order.php',

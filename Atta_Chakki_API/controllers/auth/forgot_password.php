@@ -21,7 +21,7 @@ try {
     }
 
     // Check if user exists
-    $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt = $conn->prepare("SELECT id, full_name FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -35,6 +35,7 @@ try {
 
     $user = $result->fetch_assoc();
     $user_id = $user['id'];
+    $customer_name = $user['full_name'] ?? 'Customer';
     $stmt->close();
 
     // Generate 6 digit OTP code
@@ -47,11 +48,20 @@ try {
     $stmt->execute();
     $stmt->close();
 
-    // Try sending email via PHP mail (silent fallback if not configured on localhost)
-    $subject = "Your OTP for Password Reset";
-    $message = "Your OTP is: " . $otp . "\nThis code will expire in 15 minutes.";
-    $headers = "From: no-reply@apnichakki.com\r\n";
-    @mail($email, $subject, $message, $headers);
+    // Send email via Node.js Email Server
+    $emailData = [
+        'email' => $email,
+        'name' => $customer_name,
+        'otp' => $otp
+    ];
+    $ch = curl_init('http://localhost:3001/send-password-reset');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_exec($ch);
+    curl_close($ch);
 
     // Return the response, including OTP in debug mode for local testing
     echo json_encode([

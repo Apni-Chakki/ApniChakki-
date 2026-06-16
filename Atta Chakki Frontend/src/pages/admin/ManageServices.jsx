@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, GripVertical, Truck, Weight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -68,6 +68,15 @@ export function ManageServices() {
 
   const [imageFile, setImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    if (isAdding || editingId) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [isAdding, editingId]);
 
   useEffect(() => {
     fetchServices();
@@ -360,7 +369,7 @@ export function ManageServices() {
       const response = await fetch(`${API_BASE_URL}/update_product_status.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, is_active: currentStatus ? 0 : 1 })
+        body: JSON.stringify({ id: id, is_active: Number(currentStatus) === 1 ? 0 : 1 })
       });
       const result = await response.json();
       if (result.success) {
@@ -490,7 +499,8 @@ export function ManageServices() {
 
       {/* Add/Edit Form */}
       {(isAdding || editingId) && (
-        <Card className="p-6">
+        <div ref={formRef}>
+          <Card className="p-6">
           <h2 className="mb-4 text-xl font-semibold">{editingId ? 'Edit Service' : 'Add New Service'}</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1038,6 +1048,7 @@ export function ManageServices() {
             </div>
           </div>
         </Card>
+      </div>
       )}
 
       {/* Services List Grouped by Category */}
@@ -1082,7 +1093,7 @@ export function ManageServices() {
                           <div className="flex-1 min-w-0">
                             <h3 className="mb-1.5 sm:mb-2 text-base sm:text-lg font-bold text-slate-800 flex flex-wrap items-center gap-2 break-words">
                               <span className="break-words">{service.name}</span>
-                              {!service.is_active && <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border shrink-0">Disabled</span>}
+                              {Number(service.is_active) === 0 && <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border shrink-0">Disabled</span>}
                             </h3>
                             <p className="text-muted-foreground mb-2 sm:mb-3 text-xs sm:text-sm line-clamp-2">{service.description || 'No description provided'}</p>
                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -1139,7 +1150,7 @@ export function ManageServices() {
                           {/* Actions — full-width 3-col grid on mobile, vertical stack on desktop */}
                           <div className="grid grid-cols-3 sm:flex sm:flex-col gap-2 pt-3 sm:pt-0 sm:self-start border-t sm:border-t-0 border-border shrink-0">
                             <Button onClick={() => handleToggleActive(service.id, service.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
-                              {service.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                              {Number(service.is_active) === 1 ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                             </Button>
                             <Button onClick={() => handleEdit(service)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
                               <Edit className="h-4 w-4" />

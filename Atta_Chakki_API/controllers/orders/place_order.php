@@ -225,13 +225,13 @@ if(isset($data->user_id) && isset($data->cart_items)) {
 
         if ($has_amount_paid_col && $has_coupon_cols) {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("iddssdsss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
+            $stmt->bind_param("idddsdsss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
         } elseif ($has_amount_paid_col) {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param("iddssss", $user_id, $total_amount, $amount_paid_input, $status, $address, $db_payment_method, $final_payment_status);
         } elseif ($has_coupon_cols) {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("iddsssss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
+            $stmt->bind_param("idsdssss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
         } else {
             $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param("idssss", $user_id, $total_amount, $status, $address, $db_payment_method, $final_payment_status);
@@ -307,6 +307,57 @@ if(isset($data->user_id) && isset($data->cart_items)) {
         }
 
         $conn->commit();
+
+        // Create admin notification
+        require_once __DIR__ . '/../../utils/notification_helper.php';
+        if ($is_pickup_request) {
+            addAdminNotification($conn, "New Pickup Request", "A new pickup request #$order_id has been placed.", "pickup_request", $order_id);
+        } else {
+            addAdminNotification($conn, "New Order Placed", "A new delivery order #$order_id has been placed.", "new_order", $order_id);
+        }
+
+        // Send order confirmation email
+        $user_query = $conn->prepare("SELECT email, full_name FROM users WHERE id = ?");
+        $user_query->bind_param("i", $user_id);
+        $user_query->execute();
+        $user_row = $user_query->get_result()->fetch_assoc();
+        $user_query->close();
+
+        if ($user_row && !empty($user_row['email'])) {
+            $email_items = [];
+            foreach ($valid_items as $v_item) {
+                // Fetch product name
+                $p_query = $conn->prepare("SELECT name FROM products WHERE id = ?");
+                $p_query->bind_param("i", $v_item['product_id']);
+                $p_query->execute();
+                $p_row = $p_query->get_result()->fetch_assoc();
+                $p_query->close();
+
+                $email_items[] = [
+                    'name' => $p_row['name'] ?? 'Product',
+                    'quantity' => $v_item['quantity'],
+                    'price' => $v_item['price']
+                ];
+            }
+
+            $emailData = [
+                'customerEmail' => $user_row['email'],
+                'customerName' => $user_row['full_name'],
+                'orderId' => $order_id,
+                'orderItems' => $email_items,
+                'totalPrice' => $total_amount,
+                'deliveryAddress' => $address
+            ];
+
+            $ch = curl_init('http://localhost:3001/send-order-confirmation');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+            curl_exec($ch);
+            curl_close($ch);
+        }
         
         // auto scheduling wala kaam kar rahe han
         $schedule_result = null;

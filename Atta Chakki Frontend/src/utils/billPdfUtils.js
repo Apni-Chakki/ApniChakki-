@@ -186,7 +186,14 @@ export async function generateBillPDF(order) {
   y = drawRow('Customer Name', order.customerName || 'Walk-in', y, true);
   y = drawRow('Phone Number', order.phone || '—', y, true);
 
-  if (order.deliveryAddress && !order.deliveryAddress.toLowerCase().includes('pickup')) {
+  const isPickup = order.type === 'pickup' || order.order_type === 'pickup' || (order.deliveryAddress && (
+    order.deliveryAddress.toLowerCase().includes('pickup') ||
+    order.deliveryAddress.toLowerCase().includes('store') ||
+    order.deliveryAddress.toLowerCase().includes('collect') ||
+    order.deliveryAddress.toLowerCase().includes('self') ||
+    order.deliveryAddress.toLowerCase().includes('shop')
+  ));
+  if (order.deliveryAddress && !isPickup) {
     doc.setFont('courier', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);

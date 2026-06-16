@@ -100,7 +100,13 @@ export function NewOrders() {
           total: parseFloat(order.total_amount),
           createdAt: order.created_at,
           paymentMethod: order.payment_method,
-          type: order.shipping_address && order.shipping_address.toLowerCase().includes('pickup') ? 'pickup' : 'delivery',
+          type: (order.order_type === 'pickup' || (order.shipping_address && (
+            order.shipping_address.toLowerCase().includes('pickup') || 
+            order.shipping_address.toLowerCase().includes('store') || 
+            order.shipping_address.toLowerCase().includes('collect') || 
+            order.shipping_address.toLowerCase().includes('self') || 
+            order.shipping_address.toLowerCase().includes('shop')
+          ))) ? 'pickup' : 'delivery',
           deliveryAddress: order.shipping_address,
           deliveryPersonnel: order.driver_name,
           weightKg: parseFloat(order.total_weight_kg || 0),

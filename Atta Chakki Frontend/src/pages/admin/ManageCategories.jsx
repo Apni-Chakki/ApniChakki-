@@ -28,6 +28,15 @@ export function ManageCategories() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFailed, setUploadFailed] = useState(false);
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    if (isAdding || editingId) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [isAdding, editingId]);
 
   useEffect(() => {
     fetchCategories();
@@ -162,7 +171,7 @@ export function ManageCategories() {
       const response = await fetch(`${API_BASE_URL}/update_category_status.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, is_active: currentStatus ? 0 : 1 })
+        body: JSON.stringify({ id: id, is_active: Number(currentStatus) === 1 ? 0 : 1 })
       });
       const result = await response.json();
       if (result.success) {
@@ -266,104 +275,106 @@ export function ManageCategories() {
       </div>
 
       {(isAdding || editingId) && (
-        <Card className="p-6">
-          <h2 className="mb-4 text-xl font-semibold">{editingId ? t('Edit Category') : t('Add New Category')}</h2>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">{t('Category Name *')}</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Wheat & Flour"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={isSaving}
-              />
-            </div>
+        <div ref={formRef}>
+          <Card className="p-6">
+            <h2 className="mb-4 text-xl font-semibold">{editingId ? t('Edit Category') : t('Add New Category')}</h2>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">{t('Category Name *')}</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Wheat & Flour"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  disabled={isSaving}
+                />
+              </div>
 
-            <div>
-              <Label htmlFor="priority">{t('Priority (Lower numbers show first)')}</Label>
-              <Input
-                id="priority"
-                type="number"
-                placeholder="e.g., 1"
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                disabled={isSaving}
-              />
-            </div>
-            
-            <div>
-              <Label>{t('Category Image')}</Label>
-              <div className="flex flex-col sm:flex-row gap-4 items-start mt-2">
-                <div className={`relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors ${uploadFailed ? 'border-red-400' : ''}`}>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={isUploading || isSaving}
-                  />
-                  {isUploading ? (
-                     <div className="flex flex-col items-center">
-                        <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                        <p className="text-sm">{t('Uploading...')}</p>
-                     </div>
-                  ) : uploadFailed ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-red-500 font-medium">⚠ {t('Upload failed')}</p>
-                      <p className="text-xs text-muted-foreground">{imageFile?.name}</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); retryUpload(); }}
-                        className="relative z-10 mt-1"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" /> {t('Retry Upload')}
-                      </Button>
-                      <p className="text-xs text-muted-foreground">{t('or click to choose another file')}</p>
-                    </div>
-                  ) : formData.imageUrl ? (
-                     <img src={formData.imageUrl} alt="Category image" className="h-32 object-contain" />
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                      <p className="font-medium text-sm">{t('Click to upload or drag & drop')}</p>
-                      <p className="text-xs text-muted-foreground">{t('PNG, JPG, WebP up to 10MB')}</p>
+              <div>
+                <Label htmlFor="priority">{t('Priority (Lower numbers show first)')}</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  placeholder="e.g., 1"
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  disabled={isSaving}
+                />
+              </div>
+              
+              <div>
+                <Label>{t('Category Image')}</Label>
+                <div className="flex flex-col sm:flex-row gap-4 items-start mt-2">
+                  <div className={`relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors ${uploadFailed ? 'border-red-400' : ''}`}>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      ref={fileInputRef}
+                      onChange={handleImageChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={isUploading || isSaving}
+                    />
+                    {isUploading ? (
+                       <div className="flex flex-col items-center">
+                          <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                          <p className="text-sm">{t('Uploading...')}</p>
+                       </div>
+                    ) : uploadFailed ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm text-red-500 font-medium">⚠ {t('Upload failed')}</p>
+                        <p className="text-xs text-muted-foreground">{imageFile?.name}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); retryUpload(); }}
+                          className="relative z-10 mt-1"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" /> {t('Retry Upload')}
+                        </Button>
+                        <p className="text-xs text-muted-foreground">{t('or click to choose another file')}</p>
+                      </div>
+                    ) : formData.imageUrl ? (
+                       <img src={formData.imageUrl} alt="Category image" className="h-32 object-contain" />
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
+                        <p className="font-medium text-sm">{t('Click to upload or drag & drop')}</p>
+                        <p className="text-xs text-muted-foreground">{t('PNG, JPG, WebP up to 10MB')}</p>
+                      </div>
+                    )}
+                  </div>
+                  {formData.imageUrl && (
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-success mb-2">✓ {t('Image uploaded successfully')}</p>
+                      <Input value={formData.imageUrl} readOnly className="text-xs" />
                     </div>
                   )}
                 </div>
-                {formData.imageUrl && (
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-success mb-2">✓ {t('Image uploaded successfully')}</p>
-                    <Input value={formData.imageUrl} readOnly className="text-xs" />
-                  </div>
-                )}
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row gap-2 pt-4">
+                <Button
+                  onClick={handleCancel}
+                  variant="outline"
+                  disabled={isSaving || isUploading}
+                  className="w-full sm:w-auto"
+                >
+                  <X className="h-4 w-4 mr-2 shrink-0" /> {t('Cancel')}
+                </Button>
+                <Button
+                  onClick={saveCategory}
+                  variant="outline"
+                  disabled={isSaving || isUploading}
+                  className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" /> : <Save className="h-4 w-4 mr-2 shrink-0" />}
+                  {editingId ? t('Update Category') : t('Save Category')}
+                </Button>
               </div>
             </div>
-
-            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-4">
-              <Button
-                onClick={handleCancel}
-                variant="outline"
-                disabled={isSaving || isUploading}
-                className="w-full sm:w-auto"
-              >
-                <X className="h-4 w-4 mr-2 shrink-0" /> {t('Cancel')}
-              </Button>
-              <Button
-                onClick={saveCategory}
-                variant="outline"
-                disabled={isSaving || isUploading}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary"
-              >
-                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" /> : <Save className="h-4 w-4 mr-2 shrink-0" />}
-                {editingId ? t('Update Category') : t('Save Category')}
-              </Button>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       )}
 
       <div className="space-y-4">
@@ -387,7 +398,7 @@ export function ManageCategories() {
                   <div className="flex-1 min-w-0">
                     <h3 className="mb-1 text-base sm:text-lg font-bold flex flex-wrap items-center gap-2 break-words">
                       <span className="break-words">{cat.name}</span>
-                      {!cat.is_active && <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border shrink-0">Disabled</span>}
+                      {Number(cat.is_active) === 0 && <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border shrink-0">Disabled</span>}
                     </h3>
                     <div className="flex gap-3 sm:gap-4 flex-wrap">
                       <p className="text-[11px] sm:text-xs text-muted-foreground">ID: {cat.id}</p>
@@ -399,7 +410,7 @@ export function ManageCategories() {
                 {/* Actions — full-width grid on mobile, stacked column on desktop */}
                 <div className="grid grid-cols-3 sm:flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-border shrink-0">
                   <Button onClick={() => handleToggleActive(cat.id, cat.is_active)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
-                    {cat.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                    {Number(cat.is_active) === 1 ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                   <Button onClick={() => handleEdit(cat)} variant="outline" size="sm" disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
                     <Edit className="h-4 w-4" />

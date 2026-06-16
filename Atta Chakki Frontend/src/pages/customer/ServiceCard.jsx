@@ -380,7 +380,7 @@ export function ServiceCard({ service }) {
         estimated_price: currentPrice
       };
       
-      const response = await fetch(`${API_BASE_URL}/api/Controllers/Products/submit_custom_mix_request.php`, {
+      const response = await fetch(`${API_BASE_URL}/submit_custom_mix_request.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

@@ -108,8 +108,14 @@ export function TodaysWork() {
       if (data.success) {
         setOrders((data.orders || []).map(order => ({
           ...order,
-          // Use DB order_type field directly — 'pickup' = store pickup, 'delivery' = home delivery
-          type: order.order_type === 'pickup' ? 'pickup' : 'delivery',
+          // Use DB order_type or shipping_address keywords — 'pickup' = store pickup, 'delivery' = home delivery
+          type: (order.order_type === 'pickup' || (order.shipping_address && (
+            order.shipping_address.toLowerCase().includes('pickup') || 
+            order.shipping_address.toLowerCase().includes('store') || 
+            order.shipping_address.toLowerCase().includes('collect') || 
+            order.shipping_address.toLowerCase().includes('self') || 
+            order.shipping_address.toLowerCase().includes('shop')
+          ))) ? 'pickup' : 'delivery',
           deliveryPersonnel: order.deliveryPersonnel || order.driver_name || null,
         })));
         if (data.capacity) setCapacity(data.capacity);
@@ -360,7 +366,7 @@ export function TodaysWork() {
 
   // whatsapp message generator
   const generateWhatsAppMessage = (order) => {
-    const isDelivery = order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup');
+    const isDelivery = order.type !== 'pickup';
     const orderType = isDelivery ? "DELIVERY" : "PICKUP";
     
     let itemsText = "";
@@ -488,7 +494,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
           phone: order.customer_phone || '',
           total: totalAmount,
           advancePayment: amountPaid,
-          type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
+          type: order.type === 'pickup' ? 'pickup' : 'delivery',
           deliveryAddress: order.shipping_address || '',
           paymentMethod: order.payment_method || 'cash',
           paymentStatus: amountPaid >= totalAmount && totalAmount > 0 ? 'paid' : amountPaid > 0 ? 'partial' : 'pending',
@@ -542,7 +548,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
       paymentMethod: order.payment_method || 'cod',
       paymentStatus: paymentStatus,
       advancePayment: amountPaid,
-      type: (order.shipping_address && order.shipping_address.toLowerCase().includes('pickup')) ? 'pickup' : 'delivery',
+      type: order.type === 'pickup' ? 'pickup' : 'delivery',
       source: (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
       deliveryPersonnel: order.driver_name || null,
       deliveryAddress: order.shipping_address,
@@ -669,7 +675,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
         return `<div class="item-row">• ${item.name} x ${item.quantity} ${item.unit || 'kg'}<span class="item-cust">${custsText}</span></div>`;
       }).join('');
 
-      const orderType = order.shipping_address && !order.shipping_address.toLowerCase().includes('pickup') ? 'DELIVERY' : 'PICKUP';
+      const orderType = order.type === 'pickup' ? 'PICKUP' : 'DELIVERY';
       const address = order.shipping_address || 'Self Pickup / Shop';
       const driver = order.driver_name || order.deliveryPersonnel || 'Not Assigned';
       const orderWeight = order.total_weight_kg ? `${parseFloat(order.total_weight_kg).toFixed(1)} kg` : '-';

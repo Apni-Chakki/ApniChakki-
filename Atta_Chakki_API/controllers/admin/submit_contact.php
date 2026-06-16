@@ -40,6 +40,9 @@ try {
     $stmt->bind_param("sssss", $name, $email, $phone, $subject, $message);
 
     if ($stmt->execute()) {
+        $msg_id = $stmt->insert_id;
+        require_once __DIR__ . '/../../utils/notification_helper.php';
+        addAdminNotification($conn, "New Contact Message", "From $name: " . ($subject ?? "Inquiry"), "contact_message", $msg_id);
         echo json_encode(["success" => true, "message" => "Message sent successfully! We will get back to you soon."]);
     } else {
         echo json_encode(["success" => false, "message" => "Error: " . $stmt->error]);

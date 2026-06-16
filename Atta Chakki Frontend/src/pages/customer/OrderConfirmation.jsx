@@ -96,8 +96,13 @@ export function OrderConfirmation() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Order Type:</span>
                   <span className="text-foreground capitalize">
-                    {order.deliveryAddress && !order.deliveryAddress.toLowerCase().includes('pickup') 
-                      ? 'Delivery' : 'Pickup'}
+                    {(order.order_type === 'pickup' || order.type === 'pickup' || (order.deliveryAddress && (
+                      order.deliveryAddress.toLowerCase().includes('pickup') ||
+                      order.deliveryAddress.toLowerCase().includes('store') ||
+                      order.deliveryAddress.toLowerCase().includes('collect') ||
+                      order.deliveryAddress.toLowerCase().includes('self') ||
+                      order.deliveryAddress.toLowerCase().includes('shop')
+                    ))) ? 'Pickup' : 'Delivery'}
                   </span>
                 </div>
 
