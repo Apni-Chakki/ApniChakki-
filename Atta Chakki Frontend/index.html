@@ -3,12 +3,84 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Apni Chakki</title>
+    <title>Apni Chakki | Fresh Wheat Grinding & Premium Atta</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Apni Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta name="description" content="Apni Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <meta name="keywords" content="apni chakki, chakki, wheat grinding, fresh atta, chakki fresh atta, pure wheat, custom flour mix, whole wheat flour, desi chakki, organic wheat, healthy atta, grain grinding, pure atta delivery, wheat flour online">
+    <meta name="author" content="Apni Chakki">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://apnichakki.com/">
+    <meta property="og:title" content="Apni Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta property="og:description" content="Apni Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <!-- Replace with actual absolute image path -->
+    <meta property="og:image" content="https://apnichakki.com/logo.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://apnichakki.com/">
+    <meta property="twitter:title" content="Apni Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta property="twitter:description" content="Apni Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <!-- Replace with actual absolute image path -->
+    <meta property="twitter:image" content="https://apnichakki.com/logo.png">
+
+    <!-- Structured Data (JSON-LD) for Local Business / Food Store -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FoodStore",
+      "name": "Apni Chakki",
+      "image": "https://apnichakki.com/logo.png",
+      "description": "100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes delivered to your doorstep.",
+      "url": "https://apnichakki.com/",
+      "priceRange": "Rs.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "PK"
+      }
+    }
+    </script>
     <!-- Leaflet CSS for map in checkout -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin="" />
     <!-- Dynamic Favicon is set via App.jsx -->
+    <!-- Meta Pixel Code -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '<YOUR_PIXEL_ID_HERE>');
+    </script>
+    <!-- End Meta Pixel Code -->
+
+    <!-- OneSignal Web SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "6a090ab3-a214-481b-99b0-917fb4a5a902",
+          safari_web_id: "web.onesignal.auto.32358c52-eb5f-4c9c-a5b8-d10e6e7ce454",
+          notifyButton: {
+            enable: false,
+          },
+          allowLocalhostAsSecureOrigin: true
+        });
+        OneSignal.Slidedown.promptPush();
+      });
+    </script>
+    <!-- End OneSignal Web SDK -->
     <style>
       /* Contain Leaflet map z-index so it doesn't overlay fixed banners/footer */
       .leaflet-container {
@@ -49,6 +121,11 @@
   </head>
 
   <body>
+    <!-- Meta Pixel Code (noscript) -->
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=<YOUR_PIXEL_ID_HERE>&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

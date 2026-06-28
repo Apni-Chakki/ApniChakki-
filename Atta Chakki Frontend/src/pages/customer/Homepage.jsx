@@ -16,6 +16,7 @@ import { API_BASE_URL } from '../../config';
 import { motion } from 'framer-motion';
 import { LazyAnimatedSection } from '../../components/common/LazyAnimatedSection';
 import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
+import { SEO } from '../../components/common/SEO';
 
 const DEFAULT_HERO_SLIDES = [
   {
@@ -282,6 +283,11 @@ export function Homepage() {
 
   return (
     <div className="min-h-screen">
+      <SEO 
+        title="Home"
+        description="Fresh, hygienic, and authentic Chakki Atta and premium spices delivered straight to your doorstep."
+        keywords="chakki atta, fresh flour, pure spices, whole wheat, custom mix atta, online chakki"
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden w-full" style={{ height: '65vh', minHeight: '400px' }}>
         {heroSlides.map((slide, i) => (

@@ -1,18 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, useState } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './store/CartContext';
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { Toaster } from './components/common/sonner';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { API_BASE_URL } from './config';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
-// saarey layout components yahan hain
-import CustomerLayout from './layouts/CustomerLayout';
-import AdminLayout from './layouts/AdminLayout';
+// Importing all layouts
+const CustomerLayout = lazy(() => import('./layouts/CustomerLayout'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
-// sari pages ko load kar rahe han yahan se
-// customer ki pages
+// Lazy loading all pages for better performance
+// Customer side pages
 const Homepage = lazy(() => import('./pages/customer/Homepage').then(module => ({ default: module.Homepage })));
 const Checkout = lazy(() => import('./pages/customer/Checkout').then(module => ({ default: module.Checkout })));
 const OrderConfirmation = lazy(() => import('./pages/customer/OrderConfirmation').then(module => ({ default: module.OrderConfirmation })));
@@ -22,17 +24,17 @@ const ReviewsPage = lazy(() => import('./pages/customer/ReviewsPage').then(modul
 const UserAccount = lazy(() => import('./pages/customer/UserAccount').then(module => ({ default: module.UserAccount })));
 const LiveTrackingPage = lazy(() => import('./pages/customer/LiveTrackingPage').then(module => ({ default: module.LiveTrackingPage })));
 
-// login wagera ki pages
+// Authentication pages
 const AdminLogin = lazy(() => import('./pages/auth/AdminLogin').then(module => ({ default: module.AdminLogin })));
 const DeliveryLogin = lazy(() => import('./pages/auth/DeliveryLogin').then(module => ({ default: module.DeliveryLogin })));
 const CustomerLogin = lazy(() => import('./pages/auth/CustomerLogin').then(module => ({ default: module.CustomerLogin })));
 const CustomerSignUp = lazy(() => import('./pages/auth/CustomerSignUp').then(module => ({ default: module.CustomerSignUp })));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then(module => ({ default: module.ForgotPassword })));
 
-// delivery wala panel yahan hai
+// Delivery boy panel
 const DeliveryPanel = lazy(() => import('./pages/delivery/DeliveryPanel').then(module => ({ default: module.DeliveryPanel })));
 
-// admin ki sari pages yahan se import ho rahi hain
+// Admin dashboard pages
 const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(module => ({ default: module.Dashboard })));
 const TodaysWork = lazy(() => import('./pages/admin/TodaysWork').then(module => ({ default: module.TodaysWork })));
 const TomorrowsList = lazy(() => import('./pages/admin/TomorrowsList').then(module => ({ default: module.TomorrowsList })));
@@ -68,7 +70,7 @@ function PageLoader() {
   );
 }
 
-// protecting admin routes
+// Function to protect admin routes from normal users
 function ProtectedAdminRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -85,7 +87,7 @@ function ProtectedAdminRoute({ children }) {
   return <>{children}</>;
 }
 
-// delivery ki routes ko lock kar rahe han
+// Function to protect delivery routes
 function ProtectedDeliveryRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -99,7 +101,7 @@ function ProtectedDeliveryRoute({ children }) {
   return <>{children}</>;
 }
 
-// logged in users ko login page se bachane ke liye (Guest Route)
+// Guest route to prevent logged in users from visiting login page again
 function GuestRoute({ children, role, redirectTo }) {
   const { user } = useAuth();
   const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
@@ -110,20 +112,97 @@ function GuestRoute({ children, role, redirectTo }) {
   return <>{children}</>;
 }
 
+function MetaPixelTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (window.fbq) {
+      window.fbq('track', 'PageView');
+    }
+  }, [location]);
+
+  return null;
+}
+
+const routeTitles = {
+  '/': 'Home',
+  '/checkout': 'Checkout',
+  '/track-order': 'Track Order',
+  '/contact': 'Contact Us',
+  '/reviews': 'Reviews',
+  '/account': 'My Account',
+  '/login/customer': 'Customer Login',
+  '/login/admin': 'Admin Login',
+  '/login/delivery': 'Delivery Login',
+  '/signup/customer': 'Sign Up',
+  '/forgot-password': 'Forgot Password',
+  '/delivery': 'Delivery Panel',
+  '/admin/dashboard': 'Admin Dashboard',
+  '/admin/add-order': 'Add Manual Order',
+  '/admin/today': 'Today\'s Work',
+  '/admin/tomorrow': 'Tomorrow\'s List',
+  '/admin/ready': 'Ready Orders',
+  '/admin/pickup-requests': 'Pickup Requests',
+  '/admin/completed': 'Completed Orders',
+  '/admin/records': 'Orders Record',
+  '/admin/udhaar': 'Udhaar Khata',
+  '/admin/khata': 'Digital Khata',
+  '/admin/analytics': 'Financial Analytics',
+  '/admin/payments': 'Payment Verification',
+  '/admin/inventory': 'Inventory Management',
+  '/admin/categories': 'Manage Categories',
+  '/admin/customers': 'Manage Customers',
+  '/admin/services': 'Manage Services',
+  '/admin/coupons': 'Manage Coupons',
+  '/admin/delivery': 'Manage Delivery',
+  '/admin/live-tracking': 'Live Tracking',
+  '/admin/comments': 'Admin Comments',
+  '/admin/contact-messages': 'Contact Messages',
+  '/admin/custom-mix-requests': 'Custom Mix Requests',
+  '/admin/rentals': 'Active Rentals',
+  '/admin/settings': 'Settings',
+  '/admin/hero-settings': 'Hero Settings',
+};
+
+function PageTitleUpdater({ storeName }) {
+  const location = useLocation();
+
+  useEffect(() => {
+    let title = 'Apni Chakki';
+    
+    if (location.pathname.startsWith('/order-confirmation/')) {
+      title = 'Order Confirmation';
+    } else if (location.pathname.startsWith('/track/')) {
+      title = 'Live Tracking';
+    } else if (routeTitles[location.pathname]) {
+      title = routeTitles[location.pathname];
+    }
+
+    if (storeName && title !== storeName) {
+      document.title = `${title} | ${storeName}`;
+    } else {
+      document.title = storeName || title;
+    }
+  }, [location, storeName]);
+
+  return null;
+}
+
 export default function App() {
   const { i18n } = useTranslation();
+  const [storeName, setStoreName] = useState('Apni Chakki');
 
-  // db se store ki setting nikal rahe han title k liye
+  // Fetching store name from DB so it's dynamic
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/get_store_settings.php`);
         const data = await response.json();
         if (data.success && data.settings && data.settings.storeName) {
-          document.title = data.settings.storeName;
+          setStoreName(data.settings.storeName);
         }
         
-        // favicon set ho raha hai yahan
+        // Changing the favicon dynamically here
         let link = document.querySelector("link[rel~='icon']");
         if (!link) {
           link = document.createElement('link');
@@ -146,7 +225,9 @@ export default function App() {
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
 
-  // urdu/english language change karne ka logic
+
+
+  // Logic to handle language switch between Urdu and English
   useEffect(() => {
     const isUrdu = i18n.language === 'ur';
     document.documentElement.dir = isUrdu ? 'rtl' : 'ltr';
@@ -159,70 +240,75 @@ export default function App() {
   }, [i18n.language]);
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <Routes>
-            {/* login wagera ki routes */}
-            <Route path="/login/admin" element={<Navigate to="/" replace />} />
-            <Route path="/login/delivery" element={<Navigate to="/" replace />} />
-            <Route path="/login/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerLogin /></Suspense></GuestRoute>} />
-            <Route path="/signup/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerSignUp /></Suspense></GuestRoute>} />
-            <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
+    <HelmetProvider>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <MetaPixelTracker />
+          <PageTitleUpdater storeName={storeName} />
+          <AuthProvider>
+          <CartProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+              {/* Authentication Routes */}
+              <Route path="/login/admin" element={<Navigate to="/" replace />} />
+              <Route path="/login/delivery" element={<Navigate to="/" replace />} />
+              <Route path="/login/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerLogin /></Suspense></GuestRoute>} />
+              <Route path="/signup/customer" element={<GuestRoute role="customer" redirectTo="/"><Suspense fallback={<PageLoader />}><CustomerSignUp /></Suspense></GuestRoute>} />
+              <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
 
-            {/* customer ki routes */}
-            <Route path="/" element={<CustomerLayout><Homepage /></CustomerLayout>} />
-            <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
-            <Route path="/order-confirmation/:orderId" element={<CustomerLayout><OrderConfirmation /></CustomerLayout>} />
-            <Route path="/track-order" element={<CustomerLayout><TrackOrder /></CustomerLayout>} />
-            <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
-            <Route path="/reviews" element={<CustomerLayout><Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense></CustomerLayout>} />
-            <Route path="/account" element={<CustomerLayout><UserAccount /></CustomerLayout>} />
+              {/* Customer Routes */}
+              <Route path="/" element={<CustomerLayout><Homepage /></CustomerLayout>} />
+              <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
+              <Route path="/order-confirmation/:orderId" element={<CustomerLayout><OrderConfirmation /></CustomerLayout>} />
+              <Route path="/track-order" element={<CustomerLayout><TrackOrder /></CustomerLayout>} />
+              <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
+              <Route path="/reviews" element={<CustomerLayout><Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense></CustomerLayout>} />
+              <Route path="/account" element={<CustomerLayout><UserAccount /></CustomerLayout>} />
 
-            {/* whatsapp wala tracking link */}
-            <Route path="/track/:token" element={<Suspense fallback={<PageLoader />}><LiveTrackingPage /></Suspense>} />
+              {/* WhatsApp Live Tracking Link */}
+              <Route path="/track/:token" element={<Suspense fallback={<PageLoader />}><LiveTrackingPage /></Suspense>} />
 
-            {/* delivery panel */}
-            <Route path="/delivery" element={<ProtectedDeliveryRoute><Suspense fallback={<PageLoader />}><DeliveryPanel /></Suspense></ProtectedDeliveryRoute>} />
+              {/* Delivery Boy Panel */}
+              <Route path="/delivery" element={<ProtectedDeliveryRoute><Suspense fallback={<PageLoader />}><DeliveryPanel /></Suspense></ProtectedDeliveryRoute>} />
 
-            {/* admin ki sari routes yahan hain */}
-            <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/add-order" element={<ProtectedAdminRoute><AdminLayout><AddManualOrder /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin" element={<ProtectedAdminRoute><Navigate to="/admin/today" replace /></ProtectedAdminRoute>} />
-            <Route path="/admin/today" element={<ProtectedAdminRoute><AdminLayout><TodaysWork /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/tomorrow" element={<ProtectedAdminRoute><AdminLayout><TomorrowsList /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/ready" element={<ProtectedAdminRoute><AdminLayout><ReadyOrders /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/pickup-requests" element={<ProtectedAdminRoute><AdminLayout><PickupRequests /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/completed" element={<ProtectedAdminRoute><AdminLayout><CompletedOrders /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/records" element={<ProtectedAdminRoute><AdminLayout><OrdersRecord /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/udhaar" element={<ProtectedAdminRoute><AdminLayout><UdhaarKhata /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/khata" element={<ProtectedAdminRoute><AdminLayout><DigitalKhata /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/analytics" element={<ProtectedAdminRoute><AdminLayout><FinancialAnalytics /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/payments" element={<ProtectedAdminRoute><AdminLayout><PaymentVerification /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/inventory" element={<ProtectedAdminRoute><AdminLayout><InventoryManagement /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminLayout><ManageCategories /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/customers" element={<ProtectedAdminRoute><AdminLayout><ManageCustomers /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/services" element={<ProtectedAdminRoute><AdminLayout><ManageServices /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminLayout><ManageCoupons /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/delivery" element={<ProtectedAdminRoute><AdminLayout><ManageDelivery /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/contact-messages" element={<ProtectedAdminRoute><AdminLayout><ContactMessages /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/custom-mix-requests" element={<ProtectedAdminRoute><AdminLayout><CustomMixRequests /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/rentals" element={<ProtectedAdminRoute><AdminLayout><ActiveRentals /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster />
-        </CartProvider>
-      </AuthProvider>
-    </BrowserRouter>
+              {/* All Admin Routes */}
+              <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/add-order" element={<ProtectedAdminRoute><AdminLayout><AddManualOrder /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin" element={<ProtectedAdminRoute><Navigate to="/admin/today" replace /></ProtectedAdminRoute>} />
+              <Route path="/admin/today" element={<ProtectedAdminRoute><AdminLayout><TodaysWork /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/tomorrow" element={<ProtectedAdminRoute><AdminLayout><TomorrowsList /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/ready" element={<ProtectedAdminRoute><AdminLayout><ReadyOrders /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/pickup-requests" element={<ProtectedAdminRoute><AdminLayout><PickupRequests /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/completed" element={<ProtectedAdminRoute><AdminLayout><CompletedOrders /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/records" element={<ProtectedAdminRoute><AdminLayout><OrdersRecord /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/udhaar" element={<ProtectedAdminRoute><AdminLayout><UdhaarKhata /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/khata" element={<ProtectedAdminRoute><AdminLayout><DigitalKhata /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedAdminRoute><AdminLayout><FinancialAnalytics /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/payments" element={<ProtectedAdminRoute><AdminLayout><PaymentVerification /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/inventory" element={<ProtectedAdminRoute><AdminLayout><InventoryManagement /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminLayout><ManageCategories /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/customers" element={<ProtectedAdminRoute><AdminLayout><ManageCustomers /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/services" element={<ProtectedAdminRoute><AdminLayout><ManageServices /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminLayout><ManageCoupons /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/delivery" element={<ProtectedAdminRoute><AdminLayout><ManageDelivery /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/live-tracking" element={<ProtectedAdminRoute><AdminLayout><LiveTrackingMap /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/comments" element={<ProtectedAdminRoute><AdminLayout><AdminComments /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/contact-messages" element={<ProtectedAdminRoute><AdminLayout><ContactMessages /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/custom-mix-requests" element={<ProtectedAdminRoute><AdminLayout><CustomMixRequests /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/rentals" element={<ProtectedAdminRoute><AdminLayout><ActiveRentals /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminLayout><Settings /></AdminLayout></ProtectedAdminRoute>} />
+              <Route path="/admin/hero-settings" element={<ProtectedAdminRoute><AdminLayout><HeroSettings /></AdminLayout></ProtectedAdminRoute>} />
+              
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            </Suspense>
+            <Toaster />
+          </CartProvider>
+        </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </HelmetProvider>
   );
+
+
 }
-
-
-
-
-

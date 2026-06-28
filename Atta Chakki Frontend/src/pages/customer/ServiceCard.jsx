@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Minus, Plus, ShoppingCart, Calendar, RotateCcw } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Card } from '../../components/common/card';
@@ -27,7 +27,7 @@ const cardVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export function ServiceCard({ service }) {
+export const ServiceCard = memo(function ServiceCard({ service }) {
   const [quantity, setQuantity] = useState(1);
   const [isPickupRequested, setIsPickupRequested] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
@@ -907,4 +907,4 @@ export function ServiceCard({ service }) {
       </Dialog>
     </motion.div>
   );
-}
+});

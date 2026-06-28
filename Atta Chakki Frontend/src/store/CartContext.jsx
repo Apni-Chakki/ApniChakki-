@@ -103,6 +103,15 @@ export function CartProvider({ children }) {
       );
 
       if (existingItem) {
+        if (window.fbq) {
+          window.fbq('track', 'AddToCart', {
+            content_name: service.name,
+            content_ids: [service.id],
+            content_type: 'product',
+            value: roundedService.price * quantity,
+            currency: 'PKR'
+          });
+        }
         toast.success(`Updated quantity for ${service.name}`);
         return prev.map(item =>
           item.service.id === service.id && 
@@ -113,6 +122,15 @@ export function CartProvider({ children }) {
         );
       }
 
+      if (window.fbq) {
+        window.fbq('track', 'AddToCart', {
+          content_name: service.name,
+          content_ids: [service.id],
+          content_type: 'product',
+          value: roundedService.price * quantity,
+          currency: 'PKR'
+        });
+      }
       toast.success(`${service.name} added to cart!`);
       return [...prev, { service: roundedService, quantity, isWeightPending: false }];
     });

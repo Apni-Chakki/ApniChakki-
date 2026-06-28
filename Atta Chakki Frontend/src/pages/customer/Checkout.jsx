@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../../store/AuthContext';
 import { API_BASE_URL, GOOGLE_MAPS_API_KEY } from "../../config";
 import { useTranslation } from 'react-i18next';
+import { SEO } from '../../components/common/SEO';
 import { GoogleMapPicker } from './GoogleMapPicker';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -964,6 +965,12 @@ export function Checkout() {
       const result = await response.json();
 
       if (result.success) {
+        if (window.fbq) {
+          window.fbq('track', 'Purchase', {
+            value: totalWithDelivery,
+            currency: 'PKR'
+          });
+        }
         toast.success(result.message || t("Order placed successfully!"));
         clearCart(); 
         navigate(`/order-confirmation/${result.order_id}`); 
@@ -1060,6 +1067,10 @@ export function Checkout() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
+      <SEO 
+        title="Checkout"
+        description="Complete your order at Apni Chakki. Secure checkout for fresh flour and premium services."
+      />
       {/* Background Carousel */}
       {CAROUSEL_SLIDES.map((slide, i) => (
         <div
