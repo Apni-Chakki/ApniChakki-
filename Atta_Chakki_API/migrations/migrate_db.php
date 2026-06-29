@@ -1,5 +1,5 @@
 <?php
-require_once dirname(__DIR__) . '/api/Config/connect.php';
+require_once dirname(__DIR__) . '/config/connect.php';
 
 echo "Starting database migration...\n";
 

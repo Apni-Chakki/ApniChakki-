@@ -1,5 +1,5 @@
 <?php
-require_once dirname(__DIR__) . '/api/Config/connect.php';
+require_once dirname(__DIR__) . '/config/connect.php';
 header('Content-Type: application/json');
 
 $r = $conn->query("ALTER TABLE products ADD COLUMN track_inventory TINYINT(1) NOT NULL DEFAULT 1");

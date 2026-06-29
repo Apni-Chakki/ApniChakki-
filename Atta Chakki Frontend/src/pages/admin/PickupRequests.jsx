@@ -220,26 +220,25 @@ export function PickupRequests() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-xl border border-gray-100 p-6 shadow-sm" style={{ background: '#ffffff' }}>
+      <div className="rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm" style={{ background: '#ffffff' }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-amber-700 text-xs font-semibold uppercase tracking-wide mb-3">
               Pickup Services
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Pickup Requests</h1>
-            <p className="text-slate-500 mt-1 text-sm">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Pickup Requests</h1>
+            <p className="text-slate-500 mt-1 text-xs sm:text-sm">
               Manage requests for services where the driver has to pick up items (Trip unit).
             </p>
           </div>
-          <Badge variant="secondary" className="text-base font-bold px-4 py-2 self-start sm:self-auto">
+          <Badge variant="secondary" className="text-sm sm:text-base font-bold px-3 sm:px-4 py-1.5 sm:py-2 self-start sm:self-auto">
             {orders.length} Active Requests
           </Badge>
         </div>
       </div>
 
-      {/* Table Card */}
-      <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
-        {orders.length === 0 ? (
+      {orders.length === 0 ? (
+        <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="rounded-full bg-gray-100 p-4 mb-4">
               <Truck className="h-8 w-8 text-gray-400" />
@@ -247,7 +246,126 @@ export function PickupRequests() {
             <h3 className="font-semibold text-lg text-gray-800">No active requests</h3>
             <p className="text-gray-400 text-sm mt-1">There are currently no pickup requests pending.</p>
           </div>
-        ) : (
+        </div>
+      ) : (
+        <>
+        {/* Mobile card view (below md) */}
+        <div className="md:hidden space-y-3">
+          {orders.map((order) => {
+            const statusBg = (order.status === 'pending' || order.status === 'pickup_pending') ? '#FEF3C7' : order.status === 'arrived_at_shop' ? '#CCFBF1' : order.status === 'processing' ? '#DBEAFE' : '#DCFCE7';
+            const statusColor = (order.status === 'pending' || order.status === 'pickup_pending') ? '#92400E' : order.status === 'arrived_at_shop' ? '#0F766E' : order.status === 'processing' ? '#1E40AF' : '#166534';
+            return (
+              <div key={order.id} className="rounded-xl border border-gray-100 shadow-sm p-4 space-y-3" style={{ background: '#ffffff' }}>
+                {/* Top: Order ID + date + status */}
+                <div className="flex items-start justify-between gap-2 pb-2 border-b border-gray-100">
+                  <div className="min-w-0">
+                    <div className="font-bold text-base text-gray-900">#{order.id}</div>
+                    <div className="mt-0.5 text-[11px] text-gray-500">
+                      {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em', backgroundColor: statusBg, color: statusColor, whiteSpace: 'nowrap' }}>
+                    {order.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </span>
+                </div>
+
+                {/* TBD badge */}
+                <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
+                  <AlertCircle className="h-3 w-3" /> TBD – Weight Pending
+                </div>
+
+                {/* Customer */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    <span className="break-words">{order.customer_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span className="break-all">{order.customer_phone}</span>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="flex items-start gap-2 text-sm text-gray-600">
+                  <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                  <span className="leading-snug break-words">{order.shipping_address || 'No address'}</span>
+                </div>
+
+                {/* Items */}
+                <div className="space-y-1 pt-2 border-t border-gray-100">
+                  {order.items && order.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm">
+                      <Package className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="font-medium text-gray-800 break-words">{item.name}</span>
+                      <span className="text-xs text-gray-400 shrink-0">({item.quantity} {item.unit})</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, border: '1.5px solid #BFDBFE', backgroundColor: order.driver_name ? '#EFF6FF' : '#ffffff', color: '#1D4ED8', cursor: 'pointer', width: '100%' }}>
+                        <Truck style={{ width: 13, height: 13 }} />
+                        {order.driver_name ? order.driver_name : 'Assign Driver'}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {activePersonnel.length > 0 ? (
+                        activePersonnel.map(person => (
+                          <DropdownMenuItem key={person.id} onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)} className="cursor-pointer text-xs">
+                            {person.name}
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => handleAssignPersonnel(order.id, '')} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs">
+                        Clear
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleArrivedAtShop(order)}
+                      disabled={order.status !== 'arrived_at_shop'}
+                      style={{
+                        flex: 1,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                        padding: '8px 11px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                        border: order.status === 'arrived_at_shop' ? '1.5px solid #99F6E4' : '1.5px solid #E5E7EB',
+                        backgroundColor: order.status === 'arrived_at_shop' ? '#F0FDFA' : '#F9FAFB',
+                        color: order.status === 'arrived_at_shop' ? '#0F766E' : '#9CA3AF',
+                        cursor: order.status === 'arrived_at_shop' ? 'pointer' : 'not-allowed',
+                        opacity: order.status === 'arrived_at_shop' ? 1 : 0.7
+                      }}
+                    >
+                      {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
+                    </button>
+
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-9 w-9 px-0 flex items-center justify-center shrink-0"
+                      onClick={() => setCancelOrder(order)}
+                    >
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table (md and up) */}
+        <div className="hidden md:block rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -375,8 +493,9 @@ export function PickupRequests() {
               </TableBody>
             </Table>
           </div>
-        )}
-      </div>
+        </div>
+        </>
+      )}
 
       <Dialog open={!!cancelOrder} onOpenChange={(open) => { if (!open) { setCancelOrder(null); setCancelReason(''); } }}>
         <DialogContent className="max-w-md">

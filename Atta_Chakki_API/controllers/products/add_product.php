@@ -88,13 +88,21 @@ try {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
-    $stmt->bind_param("sdsissddidddidddisisdsdi", 
-        $name, $price, $unit, $category_id, $description, $image, 
-        $stock_quantity, $min_stock_level, $is_grinding_service, 
-        $cleaning_price, $grinding_price, $is_rental, 
-        $rental_price_per_day, $security_deposit, $late_penalty_per_day, 
-        $rental_available_qty, $dual_unit, $weight_options, 
-        $is_custom_mix, $track_inventory, $discount_type, 
+    // Types in order of parameters below:
+    // name=s, price=d, unit=s, category_id=i, description=s, image=s,
+    // stock_quantity=d, min_stock_level=d, is_grinding_service=i,
+    // cleaning_price=d, grinding_price=d, is_rental=i,
+    // rental_price_per_day=d, security_deposit=d, late_penalty_per_day=d,
+    // rental_available_qty=i, dual_unit=i, weight_options=s,
+    // is_custom_mix=i, track_inventory=i, discount_type=s,
+    // discount_value=d, badge_text=s, priority=i
+    $stmt->bind_param("sdsissddiddidddiisiisdsi",
+        $name, $price, $unit, $category_id, $description, $image,
+        $stock_quantity, $min_stock_level, $is_grinding_service,
+        $cleaning_price, $grinding_price, $is_rental,
+        $rental_price_per_day, $security_deposit, $late_penalty_per_day,
+        $rental_available_qty, $dual_unit, $weight_options,
+        $is_custom_mix, $track_inventory, $discount_type,
         $discount_value, $badge_text, $priority
     );
 

@@ -1,6 +1,6 @@
 <?php
 // Migration: add discount and badge columns to products
-require_once dirname(__DIR__) . '/api/Config/connect.php';
+require_once dirname(__DIR__) . '/config/connect.php';
 header('Content-Type: application/json');
 
 $results = [];

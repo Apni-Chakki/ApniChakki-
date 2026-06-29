@@ -617,16 +617,16 @@ export function PrintOrderDetails({ order, open, onClose }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className={`max-w-lg p-0 gap-0 overflow-hidden ${lang === 'ur' ? 'text-right' : 'text-left'}`}
+        className={`max-w-lg p-0 gap-0 overflow-hidden w-[95vw] ${lang === 'ur' ? 'text-right' : 'text-left'}`}
         hideCloseButton
       >
         {/* Dialog Header with Logo */}
-        <DialogHeader className="px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5">
+        <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5">
           <div className="flex items-center justify-between" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <HeaderLogo size={40} />
-              <div className={lang === 'ur' ? 'text-right' : 'text-left'}>
-                <DialogTitle className={`text-sm font-black uppercase ${lang === 'ur' ? 'tracking-normal text-right' : 'tracking-wide'}`}>
+              <div className={`min-w-0 ${lang === 'ur' ? 'text-right' : 'text-left'}`}>
+                <DialogTitle className={`text-sm font-black uppercase break-words ${lang === 'ur' ? 'tracking-normal text-right' : 'tracking-wide'}`}>
                   {translateText(storeSettings.name, lang)}
                 </DialogTitle>
                 <p className={`text-[10px] text-muted-foreground ${lang === 'ur' ? 'text-right' : ''}`}>
@@ -639,8 +639,8 @@ export function PrintOrderDetails({ order, open, onClose }) {
 
         {/* ── Scrollable Bill Preview ── */}
         <div className="overflow-y-auto" style={{ maxHeight: '65vh' }}>
-          <div 
-            className={`${lang === 'en' ? 'font-mono' : ''} text-sm px-6 py-5 space-y-4`}
+          <div
+            className={`${lang === 'en' ? 'font-mono' : ''} text-sm px-3 sm:px-6 py-4 sm:py-5 space-y-4`}
             dir={lang === 'ur' ? 'rtl' : 'ltr'}
             style={{ 
               direction: lang === 'ur' ? 'rtl' : 'ltr', 
@@ -652,15 +652,17 @@ export function PrintOrderDetails({ order, open, onClose }) {
             <div className="pb-4 border-b-2 border-dashed border-border">
               <div className="flex flex-col items-center text-center gap-2 mb-2.5">
                 <HeaderLogo size={50} />
-                <div>
-                  <h2 className={`text-base font-black uppercase ${lang === 'ur' ? 'tracking-normal' : 'tracking-widest'}`}>
+                <div className="w-full min-w-0">
+                  <h2 className={`text-sm sm:text-base font-black uppercase break-words ${lang === 'ur' ? 'tracking-normal' : 'tracking-widest'}`}>
                     {translateText(storeSettings.name, lang)}
                   </h2>
                   <p className={`text-[9px] text-muted-foreground mt-0.5 uppercase ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                     {translateText(storeSettings.tagline, lang)}
                   </p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">
-                    📍 {translateText(storeSettings.address, lang)} &nbsp;|&nbsp; 📞 {storeSettings.phone}
+                  <p className="text-[9px] text-muted-foreground mt-0.5 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 break-words">
+                    <span>📍 {translateText(storeSettings.address, lang)}</span>
+                    <span className="hidden sm:inline">|</span>
+                    <span>📞 {storeSettings.phone}</span>
                   </p>
                 </div>
               </div>
@@ -928,13 +930,13 @@ export function PrintOrderDetails({ order, open, onClose }) {
         </div>
 
         {/* ── Sticky Action Buttons ── */}
-        <div className="flex gap-2.5 px-6 py-4 border-t border-border/50 bg-background" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
-          <Button onClick={handlePrint} className="flex-1 bg-primary hover:bg-primary/90 text-sm h-9">
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-2.5 px-3 sm:px-6 py-3 sm:py-4 border-t border-border/50 bg-background" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
+          <Button onClick={handlePrint} className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-sm h-9">
             <Printer className={`h-4 w-4 ${lang === 'ur' ? 'ml-2' : 'mr-2'}`} />
             {lang === 'ur' ? 'پرنٹ کریں' : 'Print Details'}
           </Button>
 
-          <Button onClick={handleWhatsAppShare} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm h-9">
+          <Button onClick={handleWhatsAppShare} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 text-white text-sm h-9">
             <MessageCircle className={`h-4 w-4 ${lang === 'ur' ? 'ml-2' : 'mr-2'}`} />
             {lang === 'ur' ? 'واٹس ایپ' : 'WhatsApp'}
           </Button>
@@ -943,7 +945,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
             variant="outline"
             size="sm"
             onClick={() => setLang(lang === 'en' ? 'ur' : 'en')}
-            className="flex items-center gap-2 px-3 min-w-[80px] justify-center border-input bg-transparent hover:bg-accent hover:text-accent-foreground"
+            className="w-full sm:min-w-[80px] sm:w-auto h-9 flex items-center gap-2 px-3 justify-center border-input bg-transparent hover:bg-accent hover:text-accent-foreground"
           >
             <Languages className="h-4 w-4" />
             <span className="font-semibold text-xs">
@@ -951,7 +953,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
             </span>
           </Button>
 
-          <Button onClick={onClose} variant="outline" className="flex-1 text-sm h-9">
+          <Button onClick={onClose} variant="outline" className="w-full sm:flex-1 text-sm h-9">
             {lang === 'ur' ? 'بند کریں' : 'Close'}
           </Button>
         </div>

@@ -768,16 +768,16 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           {isRental ? (
             /* Rental products: Rent Now button */
             <div className="flex flex-col gap-2">
-              <Button 
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold" 
+              <p className="text-xs text-muted-foreground text-center">
+                {t('Available Qty')}: {service.rental_available_qty}
+              </p>
+              <Button
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold"
                 onClick={() => setShowRentalModal(true)}
                 disabled={parseFloat(service.rental_available_qty || 0) <= 0}
               >
                 {parseFloat(service.rental_available_qty || 0) <= 0 ? t('No Rental Qty') : t('Rent Now')}
               </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                {t('Available Qty')}: {service.rental_available_qty}
-              </p>
             </div>
           ) : isOnlyPickup && !isCustomMix ? (
             /* Trip-only products: just show pickup button */
@@ -804,18 +804,18 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
 
       {/* Rental Booking Dialog */}
       <Dialog open={showRentalModal} onOpenChange={setShowRentalModal}>
-        <DialogContent className="max-w-md bg-white rounded-xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full !z-[9999]">
-          <DialogHeader className="border-b border-slate-100 pb-4 mb-2">
-            <DialogTitle className="flex items-center gap-3 text-slate-800 text-xl font-black">
-              <div className="bg-teal-100 p-2.5 rounded-2xl">
+        <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
+          <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
+            <DialogTitle className="flex items-center gap-3 text-slate-800 text-lg sm:text-xl font-black">
+              <div className="bg-teal-100 p-2 sm:p-2.5 rounded-2xl shrink-0">
                 <RotateCcw className="h-5 w-5 text-teal-700" />
               </div>
-              <div className="flex flex-col items-start gap-0.5">
+              <div className="flex flex-col items-start gap-0.5 min-w-0">
                 <span className="block text-[10px] text-teal-600 font-bold uppercase tracking-widest">{t('Rent Product')}</span>
-                <span className="leading-none">{tDynamic(service.name)}</span>
+                <span className="leading-tight break-words">{tDynamic(service.name)}</span>
               </div>
             </DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium pt-1">
+            <DialogDescription className="text-slate-500 font-medium text-xs sm:text-sm pt-1">
               {t('Select your rental duration and quantity below')}
             </DialogDescription>
           </DialogHeader>
@@ -825,37 +825,37 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
               <p className="text-muted-foreground text-sm font-semibold">
                 {t('You must be logged in to book a rental.')}
               </p>
-              <Button 
-                onClick={() => window.location.href = '/login/customer'} 
+              <Button
+                onClick={() => window.location.href = '/login/customer'}
                 className="bg-primary text-white"
               >
                 {t('Go to Login')}
               </Button>
             </div>
           ) : (
-            <div className="space-y-4 py-2 text-left">
-              <div className="flex flex-col sm:flex-row gap-4 mt-2">
-                <div className="flex-1">
+            <div className="flex flex-col gap-3 text-left min-h-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+                <div>
                   <Label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><span className="text-base">📅</span> {t('Start Date')}</Label>
                   <input
                     type="date"
                     min={new Date().toISOString().slice(0, 10)}
                     value={rentalStartDate}
                     onChange={(e) => setRentalStartDate(e.target.value)}
-                    className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
+                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
                   />
                 </div>
-                <div className="flex-1">
+                <div>
                   <Label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><span className="text-base">⏳</span> {t('Rental Days')}</Label>
                   <input
                     type="number"
                     min="1"
                     value={rentalDays}
                     onChange={(e) => setRentalDays(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
+                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
                   />
                 </div>
-                <div className="flex-1">
+                <div>
                   <Label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><span className="text-base">📦</span> {t('Quantity')}</Label>
                   <input
                     type="number"
@@ -863,41 +863,41 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                     max={parseFloat(service.rental_available_qty || 0)}
                     value={rentalQty}
                     onChange={(e) => setRentalQty(Math.min(parseFloat(service.rental_available_qty || 1), Math.max(1, parseInt(e.target.value) || 1)))}
-                    className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
+                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
                   />
                 </div>
               </div>
 
-              {/* Total calculations */}
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 border border-slate-200 rounded-xl p-4 text-xs space-y-3 mt-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
-                <div className="flex justify-between items-center">
+              {/* Total calculations — internal scroll only if it overflows */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 border border-slate-200 rounded-xl p-3 sm:p-4 text-xs space-y-2.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] overflow-y-auto min-h-0">
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-slate-500 font-semibold">{t('Rental Rate')}</span>
-                  <span className="font-bold text-slate-800">Rs. {Math.round(parseFloat(service.rental_price_per_day) || 0)} <span className="text-slate-400 font-medium">/{t('day')}</span></span>
+                  <span className="font-bold text-slate-800 whitespace-nowrap">Rs. {Math.round(parseFloat(service.rental_price_per_day) || 0)} <span className="text-slate-400 font-medium">/{t('day')}</span></span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-slate-500 font-semibold">{t('Rental Subtotal')} ({rentalDays} {t('days')} × {rentalQty} {t('qty')})</span>
-                  <span className="font-bold text-slate-800">Rs. {Math.round((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty)}</span>
+                  <span className="font-bold text-slate-800 whitespace-nowrap">Rs. {Math.round((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-semibold flex items-center gap-1.5">🛡️ {t('Refundable Deposit')} <span className="text-[9px] bg-slate-200/80 text-slate-600 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">(Rs. {Math.round(parseFloat(service.security_deposit) || 0)} × {rentalQty})</span></span>
-                  <span className="font-bold text-slate-800">Rs. {Math.round((parseFloat(service.security_deposit) || 0) * rentalQty)}</span>
+                <div className="flex justify-between items-center gap-2 flex-wrap">
+                  <span className="text-slate-500 font-semibold flex items-center gap-1.5 flex-wrap">🛡️ {t('Refundable Deposit')} <span className="text-[9px] bg-slate-200/80 text-slate-600 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">(Rs. {Math.round(parseFloat(service.security_deposit) || 0)} × {rentalQty})</span></span>
+                  <span className="font-bold text-slate-800 whitespace-nowrap">Rs. {Math.round((parseFloat(service.security_deposit) || 0) * rentalQty)}</span>
                 </div>
-                <div className="flex justify-between items-center font-black text-base text-teal-800 border-t border-slate-200 border-dashed pt-3 mt-3">
-                  <span className="uppercase tracking-wider text-sm">{t('Total Amount')}</span>
-                  <span className="bg-teal-100 text-teal-900 px-3.5 py-1.5 rounded-lg shadow-sm border border-teal-200/50">Rs. {Math.round(((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty) + ((parseFloat(service.security_deposit) || 0) * rentalQty))}</span>
+                <div className="flex justify-between items-center gap-2 font-black text-sm sm:text-base text-teal-800 border-t border-slate-200 border-dashed pt-2.5 mt-2.5">
+                  <span className="uppercase tracking-wider text-xs sm:text-sm">{t('Total Amount')}</span>
+                  <span className="bg-teal-100 text-teal-900 px-3 py-1.5 rounded-lg shadow-sm border border-teal-200/50 whitespace-nowrap">Rs. {Math.round(((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty) + ((parseFloat(service.security_deposit) || 0) * rentalQty))}</span>
                 </div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-3 mt-6 sm:justify-between w-full flex-col sm:flex-row">
-            <Button variant="outline" className="w-full sm:w-1/2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl py-6 font-bold shadow-sm" onClick={() => setShowRentalModal(false)}>
+          <DialogFooter className="gap-2 sm:gap-3 sm:justify-between w-full flex-col sm:flex-row shrink-0 pt-2 border-t border-slate-100">
+            <Button variant="outline" className="w-full sm:w-1/2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl py-3 font-bold shadow-sm" onClick={() => setShowRentalModal(false)}>
               {t('Cancel')}
             </Button>
             {user && (
               <Button
                 onClick={handlePlaceRental}
-                className="w-full sm:w-1/2 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-md text-white rounded-xl py-6 font-bold text-base transition-all active:scale-[0.98]"
+                className="w-full sm:w-1/2 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-md text-white rounded-xl py-3 font-bold text-base transition-all active:scale-[0.98]"
               >
                 {t('Add to Cart')}
               </Button>

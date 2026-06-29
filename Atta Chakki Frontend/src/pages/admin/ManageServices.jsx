@@ -500,8 +500,8 @@ export function ManageServices() {
       {/* Add/Edit Form */}
       {(isAdding || editingId) && (
         <div ref={formRef}>
-          <Card className="p-6">
-          <h2 className="mb-4 text-xl font-semibold">{editingId ? 'Edit Service' : 'Add New Service'}</h2>
+          <Card className="p-4 sm:p-6">
+          <h2 className="mb-4 text-lg sm:text-xl font-semibold">{editingId ? 'Edit Service' : 'Add New Service'}</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -706,36 +706,37 @@ export function ManageServices() {
 
               {formData.has_customizations && !formData.is_custom_mix && (
                 <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm font-bold text-primary">Customization Options</p>
-                    <Button type="button" size="sm" variant="outline" onClick={addCustomization} disabled={isSaving}>
+                    <Button type="button" size="sm" variant="outline" onClick={addCustomization} disabled={isSaving} className="w-full sm:w-auto">
                       <Plus className="h-3 w-3 mr-1" /> Add Option
                     </Button>
                   </div>
 
                   {formData.customizations.map((cust, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg border border-border shadow-sm">
-                      <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1">
+                    <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center p-3 bg-white rounded-lg border border-border shadow-sm">
+                      <div className="flex items-center gap-2 sm:contents">
+                        <GripVertical className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
                         <Input
                           placeholder="Option name (e.g. Cleaning, Grinding, Roasting...)"
                           value={cust.option_name}
                           onChange={(e) => updateCustomization(idx, 'option_name', e.target.value)}
                           disabled={isSaving}
-                          className="text-sm"
+                          className="text-sm flex-1 min-w-0 sm:flex-1"
                         />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomization(idx)} disabled={isSaving} className="sm:hidden shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="w-28">
-                        <Input
-                          type="number"
-                          placeholder="Rs."
-                          value={cust.option_price}
-                          onChange={(e) => updateCustomization(idx, 'option_price', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm"
-                        />
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomization(idx)} disabled={isSaving} className="shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8">
+                      <Input
+                        type="number"
+                        placeholder="Rs."
+                        value={cust.option_price}
+                        onChange={(e) => updateCustomization(idx, 'option_price', e.target.value)}
+                        disabled={isSaving}
+                        className="text-sm w-full sm:w-28"
+                      />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomization(idx)} disabled={isSaving} className="hidden sm:flex shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -749,50 +750,57 @@ export function ManageServices() {
 
               {formData.is_custom_mix && (
                 <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 animate-in fade-in slide-in-from-top-2 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm font-bold text-purple-800">Mix Ingredients</p>
-                    <Button type="button" size="sm" variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-100" onClick={addMixItem} disabled={isSaving}>
+                    <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto border-purple-300 text-purple-700 hover:bg-purple-100" onClick={addMixItem} disabled={isSaving}>
                       <Plus className="h-3 w-3 mr-1" /> Add Ingredient
                     </Button>
                   </div>
 
                   {formData.mix_items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                      <GripVertical className="h-4 w-4 text-purple-300 shrink-0" />
-                      <div className="flex-1">
-                        <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
-                        <Input
-                          placeholder="e.g. Wheat, Chana, Bajra"
-                          value={item.item_name}
-                          onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                        />
+                    <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-end p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
+                      <div className="flex items-end gap-2 sm:contents">
+                        <GripVertical className="hidden sm:block h-4 w-4 text-purple-300 shrink-0 mb-2.5" />
+                        <div className="flex-1 min-w-0 sm:flex-1">
+                          <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
+                          <Input
+                            placeholder="e.g. Wheat, Chana, Bajra"
+                            value={item.item_name}
+                            onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
+                            disabled={isSaving}
+                            className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                          />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMixItem(idx)} disabled={isSaving} className="sm:hidden shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 mb-1">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="w-24">
-                        <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
-                        <Input
-                          type="number"
-                          placeholder="Rs."
-                          value={item.price_per_kg}
-                          onChange={(e) => updateMixItem(idx, 'price_per_kg', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                        />
+                      <div className="grid grid-cols-2 gap-2 sm:contents">
+                        <div className="min-w-0 sm:w-24">
+                          <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
+                          <Input
+                            type="number"
+                            placeholder="Rs."
+                            value={item.price_per_kg}
+                            onChange={(e) => updateMixItem(idx, 'price_per_kg', e.target.value)}
+                            disabled={isSaving}
+                            className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                          />
+                        </div>
+                        <div className="min-w-0 sm:w-24">
+                          <Label className="text-[10px] text-purple-600 mb-1 block">Default Ratio</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            placeholder="e.g. 1"
+                            value={item.default_ratio}
+                            onChange={(e) => updateMixItem(idx, 'default_ratio', e.target.value)}
+                            disabled={isSaving}
+                            className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                          />
+                        </div>
                       </div>
-                      <div className="w-24">
-                        <Label className="text-[10px] text-purple-600 mb-1 block">Default Ratio</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          placeholder="e.g. 1"
-                          value={item.default_ratio}
-                          onChange={(e) => updateMixItem(idx, 'default_ratio', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                        />
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMixItem(idx)} disabled={isSaving} className="shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 mt-4">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMixItem(idx)} disabled={isSaving} className="hidden sm:flex shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 mb-1">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -817,7 +825,7 @@ export function ManageServices() {
               </div>
 
               {formData.track_inventory && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-6 border-l-2 border-primary/20">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-3 sm:pl-6 border-l-2 border-primary/20">
                   <div>
                     <Label htmlFor="stock_quantity" className="text-xs font-semibold text-primary">Initial Stock Quantity</Label>
                     <Input
@@ -1036,12 +1044,12 @@ export function ManageServices() {
               )}
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={editingId ? handleUpdate : handleAdd} size="lg" disabled={isSaving || isUploading}>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button onClick={editingId ? handleUpdate : handleAdd} size="lg" disabled={isSaving || isUploading} className="w-full sm:w-auto">
                 {isSaving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
                 {editingId ? 'Update Service' : 'Add Service'}
               </Button>
-              <Button onClick={handleCancel} variant="outline" size="lg" disabled={isSaving || isUploading}>
+              <Button onClick={handleCancel} variant="outline" size="lg" disabled={isSaving || isUploading} className="w-full sm:w-auto">
                 <X className="h-5 w-5 mr-2" />
                 Cancel
               </Button>

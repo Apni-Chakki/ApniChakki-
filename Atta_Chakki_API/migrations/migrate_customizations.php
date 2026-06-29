@@ -4,7 +4,7 @@
  * Creates product_customizations and order_item_customizations tables.
  * Also migrates existing hardcoded cleaning/grinding data into the new dynamic system.
  */
-require_once dirname(__DIR__) . '/api/Config/connect.php';
+require_once dirname(__DIR__) . '/config/connect.php';
 
 header('Content-Type: application/json');
 

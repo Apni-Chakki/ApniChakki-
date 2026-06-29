@@ -1652,28 +1652,42 @@ export function Checkout() {
           }
         }
       }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {paymentMethod === 'jazzcash' && (
-                <>
-                  <Smartphone className="h-5 w-5" style={{ color: '#e1272c' }} />
-                  JazzCash Payment
-                </>
-              )}
-              {paymentMethod === 'card' && (
-                <>
-                  <CreditCard className="h-5 w-5" style={{ color: '#1a1f71' }} />
-                  {t('Card Payment')}
-                </>
-              )}
-              {paymentMethod === 'bank' && (
-                <>
-                  <Building2 className="h-5 w-5 text-primary" />
-                  {t('Bank Transfer')}
-                </>
-              )}
-            </DialogTitle>
+        <DialogContent
+          className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6 gap-3 sm:gap-4"
+          hideCloseButton
+        >
+          <DialogHeader className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg min-w-0">
+                {paymentMethod === 'jazzcash' && (
+                  <>
+                    <Smartphone className="h-5 w-5 shrink-0" style={{ color: '#e1272c' }} />
+                    <span className="truncate">JazzCash Payment</span>
+                  </>
+                )}
+                {paymentMethod === 'card' && (
+                  <>
+                    <CreditCard className="h-5 w-5 shrink-0" style={{ color: '#1a1f71' }} />
+                    <span className="truncate">{t('Card Payment')}</span>
+                  </>
+                )}
+                {paymentMethod === 'bank' && (
+                  <>
+                    <Building2 className="h-5 w-5 text-primary shrink-0" />
+                    <span className="truncate">{t('Bank Transfer')}</span>
+                  </>
+                )}
+              </DialogTitle>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => { if (!isProcessingPayment) { setShowPaymentDialog(false); setPaymentStep('input'); setPaymentResult(null); } }}
+                disabled={isProcessingPayment}
+                className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <DialogDescription className="hidden">
               Payment processing and details
             </DialogDescription>
@@ -1758,12 +1772,12 @@ export function Checkout() {
           )}
 
           {paymentStep === 'input' && (
-            <div className="space-y-4">
-              <div className="text-center py-3 bg-secondary/30 rounded-lg">
-                <p className="text-3xl font-bold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</p>
-                <p className="text-sm text-muted-foreground">{t('Amount to pay')}</p>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="text-center py-2.5 sm:py-3 bg-secondary/30 rounded-lg">
+                <p className="text-2xl sm:text-3xl font-bold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('Amount to pay')}</p>
                 {hasPendingWeightItem && (
-                  <p className="text-xs text-primary mt-1">
+                  <p className="text-xs text-primary mt-1 px-2">
                     {t('(Additional charges for pending items will be due on delivery/pickup)')}
                   </p>
                 )}
@@ -1778,7 +1792,7 @@ export function Checkout() {
               </button>
 
               {paymentMethod === 'jazzcash' && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {showSandboxHelper && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
                       <p className="text-xs font-semibold text-yellow-800 flex items-center gap-1">
@@ -1829,7 +1843,7 @@ export function Checkout() {
               )}
 
               {paymentMethod === 'card' && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {showSandboxHelper && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
                       <p className="text-xs font-semibold text-yellow-800 flex items-center gap-1">
@@ -1917,7 +1931,7 @@ export function Checkout() {
               )}
 
               {paymentMethod === 'bank' && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
                     <Label htmlFor="bankAccountNumber">{t('Bank Account / IBAN Number')}</Label>
                     <div className="relative mt-1">

@@ -1,6 +1,6 @@
 <?php
 // Migration: create coupons + coupon_usage tables
-require_once dirname(__DIR__) . '/api/Config/connect.php';
+require_once dirname(__DIR__) . '/config/connect.php';
 header('Content-Type: application/json');
 
 $results = [];

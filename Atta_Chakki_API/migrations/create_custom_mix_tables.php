@@ -6,7 +6,7 @@
  * Also adds is_custom_mix column to products table
  */
 
-require_once dirname(__DIR__) . '/api/Config/connect.php';
+require_once dirname(__DIR__) . '/config/connect.php';
 
 header('Content-Type: application/json');
 

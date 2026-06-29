@@ -184,9 +184,16 @@ export function OrdersRecord() {
     partialOrders: orders.filter(o => o.paymentStatus === 'partial').length,
   };
 
+  const prettifyStatus = (status) =>
+    String(status || '')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       'pending': { label: 'Pending', className: 'bg-yellow-500 text-white' },
+      'pickup_pending': { label: 'Pickup Pending', className: 'bg-amber-500 text-white' },
+      'arrived_at_shop': { label: 'Arrived at Shop', className: 'bg-teal-500 text-white' },
       'processing': { label: 'Processing', className: 'bg-blue-500 text-white' },
       'ready': { label: 'Ready', className: 'bg-green-500 text-white' },
       'out-for-delivery': { label: 'Out for Delivery', className: 'bg-purple-500 text-white' },
@@ -194,19 +201,19 @@ export function OrdersRecord() {
       'cancelled': { label: 'Cancelled', className: 'bg-red-500 text-white' },
     };
 
-    const config = statusConfig[status] || { label: status, className: '' };
+    const config = statusConfig[status] || { label: prettifyStatus(status), className: 'bg-slate-500 text-white' };
     return <Badge className={config.className}>{config.label}</Badge>;
   };
-  
+
   const getPaymentStatusBadge = (status) => {
     switch(status) {
         case 'paid':
-            return <Badge className='bg-green-500 text-white mt-1'>Paid</Badge>;
+            return <Badge className='bg-green-500 text-white'>Paid</Badge>;
         case 'partial':
-            return <Badge className='bg-blue-500 text-white mt-1'>Partial</Badge>;
+            return <Badge className='bg-blue-500 text-white'>Partial</Badge>;
         case 'pending':
         default:
-            return <Badge className='bg-orange-500 text-white mt-1'>Unpaid</Badge>;
+            return <Badge className='bg-orange-500 text-white'>Unpaid</Badge>;
     }
   }
 

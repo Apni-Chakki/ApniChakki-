@@ -401,15 +401,23 @@ export function Homepage() {
               </p>
             </div>
 
-            <div className="relative px-8 md:px-12">
+            <div className="relative px-4 sm:px-8 md:px-12">
               <Carousel
                 opts={{
                   align: "start",
-                  loop: false,
+                  loop: true,
                 }}
                 className="w-full"
               >
-                <CarouselContent className="-ml-2 md:-ml-4">
+                <CarouselContent
+                  className={`-ml-2 md:-ml-4 ${
+                    discountedProducts.length <= 1 ? 'justify-center' : ''
+                  } ${
+                    discountedProducts.length <= 2 ? 'sm:justify-center' : ''
+                  } ${
+                    discountedProducts.length <= 4 ? 'lg:justify-center' : ''
+                  }`}
+                >
                   {discountedProducts.map((product) => (
                     <CarouselItem key={product.id} className="basis-full sm:basis-1/2 lg:basis-1/4 pl-2 md:pl-4">
                       <div className="h-full py-2">
@@ -421,8 +429,24 @@ export function Homepage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="-left-4 md:-left-6" />
-                <CarouselNext className="-right-4 md:-right-6" />
+                <CarouselPrevious
+                  className={`-left-2 sm:-left-4 md:-left-6 ${
+                    discountedProducts.length > 1 ? 'flex' : 'hidden'
+                  } ${
+                    discountedProducts.length > 2 ? 'sm:flex' : 'sm:hidden'
+                  } ${
+                    discountedProducts.length > 4 ? 'lg:flex' : 'lg:hidden'
+                  }`}
+                />
+                <CarouselNext
+                  className={`-right-2 sm:-right-4 md:-right-6 ${
+                    discountedProducts.length > 1 ? 'flex' : 'hidden'
+                  } ${
+                    discountedProducts.length > 2 ? 'sm:flex' : 'sm:hidden'
+                  } ${
+                    discountedProducts.length > 4 ? 'lg:flex' : 'lg:hidden'
+                  }`}
+                />
               </Carousel>
             </div>
           </section>
@@ -492,15 +516,15 @@ export function Homepage() {
 
           {!loading && selectedCategory && (
             <div>
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-6">
                 <Button
                   variant="ghost"
                   onClick={() => setSelectedCategory(null)}
-                  className="flex items-center gap-2 hover:bg-secondary"
+                  className="flex items-center gap-2 hover:bg-secondary self-start -ml-6 sm:ml-0"
                 >
                   <ArrowLeft className="h-4 w-4" /> {t('Back to Categories')}
                 </Button>
-                <h2 className="text-2xl font-bold text-foreground">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                   {tDynamic(allCategories.find(c => c.id === selectedCategory)?.labelKey || '')}
                 </h2>
               </div>
