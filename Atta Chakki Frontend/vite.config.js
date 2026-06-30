@@ -10,7 +10,7 @@ export default defineConfig({
     react(), 
     tailwindcss(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       filename: 'OneSignalSDKWorker.js',
       workbox: {
         cleanupOutdatedCaches: true,
