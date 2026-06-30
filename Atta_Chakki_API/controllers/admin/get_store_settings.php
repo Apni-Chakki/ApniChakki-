@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+// Public endpoint
 
 try {
     $sql = "SELECT setting_key, setting_value FROM store_settings";

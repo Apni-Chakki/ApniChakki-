@@ -9,7 +9,6 @@ const ADMIN_CREDENTIALS = {
 };
 
 export function AuthProvider({ children }) {
-  // user ko local storage se load kar rahe han
   const [user, setUser] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('user');
@@ -20,88 +19,52 @@ export function AuthProvider({ children }) {
 
   const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);
 
-  // user ko save kar rahe han local storage me
   useEffect(() => {
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
     } else {
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
     }
   }, [user]);
 
-  // login wala function
   const login = async (identifier, password, role) => {
-    if (role === 'customer') {
-      try {
-        const response = await fetch(`${API_BASE_URL}/login.php`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            phone: identifier, 
-            password: password,
-            login_type: 'customer' 
-          }),
-        });
+    try {
+      // route all logins (admin, customer, delivery) through API
+      let loginType = role === 'delivery' ? 'delivery' : 'customer';
+      
+      const response = await fetch(`${API_BASE_URL}/login.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone: identifier, 
+          username: identifier,
+          password: password,
+          login_type: loginType 
+        }),
+      });
 
-        const data = await response.json();
-        if (data.success) {
-          setUser(data.user); 
-          return true;
+      const data = await response.json();
+      if (data.success) {
+        if (data.token) localStorage.setItem('token', data.token);
+        // If login was meant for admin, verify the backend returned role=admin
+        if (role === 'admin' && data.user.role !== 'admin') {
+            return false;
         }
-        return false;
-      } catch (error) {
-        console.error("Login API Error:", error);
-        return false;
-      }
-    }
-
-    // admin login check ho raha hai
-    if (role === 'admin') {
-      if (identifier === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-        const adminUser = {
-          id: 'admin-1',
-          name: 'Admin',
-          email: ADMIN_CREDENTIALS.email,
-          role: 'admin',
-        };
-        setUser(adminUser);
+        
+        let finalUser = data.user;
+        if (role === 'delivery') finalUser = { ...data.user, role: 'delivery' };
+        
+        setUser(finalUser); 
         return true;
       }
+      return false;
+    } catch (error) {
+      console.error("Login API Error:", error);
+      return false;
     }
-    
-    // delivery boy login check ho raha hai
-    if (role === 'delivery') {
-      try {
-        const response = await fetch(`${API_BASE_URL}/login.php`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            phone: identifier, 
-            password: password,
-            login_type: 'delivery'
-          }),
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // forcing role to delivery for route guard
-          setUser({ ...data.user, role: 'delivery' }); 
-          return true;
-        } else {
-          console.error(data.message || "Invalid credentials");
-          return false;
-        }
-      } catch (error) {
-        console.error("Login API Error:", error);
-        return false;
-      }
-    }
-    
-    return false;
   };
 
-  // google se login karne wala function
   const googleLogin = async (accessToken) => {
     try {
       const response = await fetch(`${API_BASE_URL}/google_login.php`, {
@@ -112,6 +75,7 @@ export function AuthProvider({ children }) {
 
       const data = await response.json();
       if (data.success) {
+        if (data.token) localStorage.setItem('token', data.token);
         setUser(data.user);
         return data.user;
       } else {
@@ -124,7 +88,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // naya account banane wala function
   const signup = async (name, phone, password, address = '') => {
     try {
       const response = await fetch(`${API_BASE_URL}/register.php`, {
@@ -134,7 +97,9 @@ export function AuthProvider({ children }) {
       });
       const data = await response.json();
       if (data.success) {
-        return await login(phone, password, 'customer');
+        if (data.token) localStorage.setItem('token', data.token);
+        setUser(data.user);
+        return true;
       }
       return false; 
     } catch (error) {
@@ -142,12 +107,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // logout wala function
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user'); 
-    
-    // sab users ko main page ya login pe bhej do kyunke direct admin/delivery login ab band hai
+    localStorage.removeItem('token');
     window.location.href = '/';
   };
 

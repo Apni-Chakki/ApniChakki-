@@ -128,6 +128,7 @@ export function LiveTrackingMap() {
   const markersRef = useRef({});        // { orderId: markerInstance }
   const polylinesRef = useRef({});      // { orderId: { bg, fg } }
   const destMarkersRef = useRef({});    // { orderId: markerInstance }
+  const routeDrawnRef = useRef(new Set()); // Tracks if route was already drawn for order
   const infoWindowRef = useRef(null);
   const trailPolylineRef = useRef(null); // The actual recorded GPS trail
   const previousDriversRef = useRef({}); // { orderId: driverInfo } — for completion detection
@@ -160,7 +161,15 @@ export function LiveTrackingMap() {
               : d
           );
         }
-        return prev;
+        return [...prev, { 
+          order_id: data.order_id, 
+          latitude: data.latitude, 
+          longitude: data.longitude, 
+          heading: data.heading, 
+          speed: data.speed, 
+          driver_name: data.driver_name,
+          created_at: new Date().toISOString() 
+        }];
       });
 
       // Update marker position smoothly
@@ -181,6 +190,18 @@ export function LiveTrackingMap() {
       }
 
       setLastUpdated(new Date());
+    });
+
+    socket.on('admin:active_drivers', (data) => {
+      if (data && data.drivers) {
+        setDrivers(prev => {
+          const map = new Map(prev.map(d => [String(d.order_id), d]));
+          data.drivers.forEach(d => {
+            map.set(String(d.order_id), { ...map.get(String(d.order_id)), ...d });
+          });
+          return Array.from(map.values());
+        });
+      }
     });
 
     socket.on('tracking:delivery_completed', (data) => {
@@ -267,13 +288,18 @@ export function LiveTrackingMap() {
   // ─── Fetch ETA & Distance for a driver ───
   const fetchDriverETA = useCallback((driver) => {
     if (!window.google || !driver.shipping_address) return;
+    const orderId = String(driver.order_id);
+
+    // Only draw route and geocode ONCE per order to avoid rate limits
+    if (routeDrawnRef.current.has(orderId)) return;
 
     const geocoder = new window.google.maps.Geocoder();
     geocoder.geocode({ address: driver.shipping_address }, (results, status) => {
       if (status !== 'OK' || !results[0]) return;
+      
+      routeDrawnRef.current.add(orderId);
 
       const destPos = results[0].geometry.location;
-      const orderId = String(driver.order_id);
 
       // Place destination marker if not exists
       if (!destMarkersRef.current[orderId] && mapRef.current) {
@@ -514,6 +540,7 @@ export function LiveTrackingMap() {
       if (!activeOrderIds.has(orderId)) {
         markersRef.current[orderId].setMap(null);
         delete markersRef.current[orderId];
+        routeDrawnRef.current.delete(orderId);
         // Clean up destination markers and polylines
         if (destMarkersRef.current[orderId]) {
           destMarkersRef.current[orderId].setMap(null);

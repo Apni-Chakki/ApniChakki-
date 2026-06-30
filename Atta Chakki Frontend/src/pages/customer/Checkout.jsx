@@ -311,33 +311,9 @@ export function Checkout() {
         setDeliveryFee(fee);
       };
 
-      if (USE_GOOGLE_MAPS && window.google?.maps?.DistanceMatrixService) {
-        try {
-          const service = new window.google.maps.DistanceMatrixService();
-          service.getDistanceMatrix(
-            {
-              origins: [new window.google.maps.LatLng(SHOP_LOCATION.lat, SHOP_LOCATION.lng)],
-              destinations: [new window.google.maps.LatLng(gpsCoords.lat, gpsCoords.lng)],
-              travelMode: window.google.maps.TravelMode.DRIVING,
-              unitSystem: window.google.maps.UnitSystem.METRIC,
-            },
-            (response, status) => {
-              if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
-                const element = response.rows[0].elements[0];
-                const roadDist = element.distance.value / 1000;
-                updateFee(roadDist);
-              } else {
-                updateFee(straightDist);
-              }
-            }
-          );
-        } catch (e) {
-          console.warn('Distance Matrix failed, using straight-line:', e);
-          updateFee(straightDist);
-        }
-      } else {
-        updateFee(straightDist);
-      }
+      // Use 1.5 rule instead of Google Maps API
+      const roadDistApprox = straightDist * 1.5;
+      updateFee(roadDistApprox);
     } else {
       setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);
       setDistanceKm(0);

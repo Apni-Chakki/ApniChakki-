@@ -50,11 +50,27 @@ try {
     $user_id = $stmt->insert_id;
     $stmt->close();
 
+    require_once __DIR__ . '/../../utils/jwt_helper.php';
+    $payload = [
+        'id' => $user_id,
+        'phone' => $phone,
+        'role' => 'customer'
+    ];
+    $token = generate_jwt($payload);
+
     http_response_code(201);
     echo json_encode([
         'success' => true,
         'message' => 'Registration successful',
-        'user_id' => $user_id
+        'token' => $token,
+        'user' => [
+            'id' => $user_id,
+            'name' => $full_name,
+            'full_name' => $full_name,
+            'phone' => $phone,
+            'address' => $address,
+            'role' => 'customer'
+        ]
     ]);
 
 } catch (Exception $e) {

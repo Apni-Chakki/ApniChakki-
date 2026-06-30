@@ -4,6 +4,9 @@ require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_auth();
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

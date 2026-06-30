@@ -3,11 +3,13 @@
 include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+$payload = require_auth();
 
 $data = json_decode(file_get_contents("php://input"));
+$user_id = $payload['id']; // IDOR fixed
 
-if(isset($data->user_id) && isset($data->cart_items)) {
-    $user_id = intval($data->user_id);
+if($user_id && isset($data->cart_items)) {
     $address = isset($data->address) ? $data->address : "No address provided";
     $cart_items = $data->cart_items;
     $payment_method = isset($data->payment_method) ? $data->payment_method : 'cash';

@@ -3,6 +3,9 @@
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 if (!isset($_GET['driver_phone'])) {
     http_response_code(400);

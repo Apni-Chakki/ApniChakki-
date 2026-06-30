@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import "./index.css";
 import "./App.css";
 import "./i18n";
+import "./utils/apiInterceptor";
 import { registerSW } from 'virtual:pwa-register';
 
 const updateSW = registerSW({

@@ -3,6 +3,9 @@
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 try {
     $low_stock = isset($_GET['low_stock']) && $_GET['low_stock'] === 'true';

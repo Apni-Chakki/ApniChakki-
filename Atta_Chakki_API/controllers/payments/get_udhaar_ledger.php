@@ -3,6 +3,9 @@ include __DIR__ . '/../../config/cors.php';
 include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 // Fetch all unpaid orders grouped by customer
 // KEY FIX: Subtract payments already made from each order's outstanding balance

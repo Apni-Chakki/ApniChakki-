@@ -4,6 +4,9 @@
  */
 include __DIR__ . '/../../config/connect.php';
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 $raw = file_get_contents('php://input');
 $data = json_decode($raw);

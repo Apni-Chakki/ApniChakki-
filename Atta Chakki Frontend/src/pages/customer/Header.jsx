@@ -101,8 +101,8 @@ export function Header() {
   };
 
   const CartIcon = () => (
-    <Link to="/checkout" className="relative" onClick={handleCartClick}>
-      <Button variant="ghost" size="icon" className="rounded-full px-0 py-0 flex items-center justify-center text-foreground hover:bg-muted hover:text-foreground">
+    <Link to="/checkout" className="relative" onClick={handleCartClick} aria-label="Shopping Cart">
+      <Button variant="ghost" size="icon" className="rounded-full px-0 py-0 flex items-center justify-center text-foreground hover:bg-muted hover:text-foreground" aria-label="View Cart">
         <ShoppingCart className="h-5 w-5" />
         {itemCount > 0 && (
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-success text-success-foreground text-[10px] font-bold">
@@ -115,7 +115,7 @@ export function Header() {
 
   const NotificationIcon = () => (
     <div className="relative inline-flex items-center justify-center">
-      <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10 text-foreground hover:bg-muted" onClick={handleNotificationClick}>
+      <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10 text-foreground hover:bg-muted" onClick={handleNotificationClick} aria-label="Notifications">
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <Badge className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center p-0 bg-red-600 text-white text-[10px] font-bold rounded-full border-none shadow-sm pointer-events-none">
@@ -136,7 +136,7 @@ export function Header() {
         >
           <div className="p-4 border-b bg-muted/20 flex justify-between items-center shrink-0">
             <h3 className="font-semibold text-foreground">{t('Notifications')}</h3>
-            <button onClick={() => setShowNotificationsDropdown(false)} className="hover:bg-muted p-1.5 rounded-full transition-colors text-muted-foreground hover:text-foreground">
+            <button onClick={() => setShowNotificationsDropdown(false)} className="hover:bg-muted p-1.5 rounded-full transition-colors text-muted-foreground hover:text-foreground" aria-label="Close Notifications">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -192,6 +192,7 @@ export function Header() {
              size="icon" 
              onClick={() => setIsAnnouncementVisible(false)} 
              className="ml-2 flex-shrink-0 text-primary-foreground hover:bg-primary-foreground/20 h-6 w-6 rounded-full"
+             aria-label="Close Announcement"
            >
              <X className="h-3 w-3" />
            </Button>

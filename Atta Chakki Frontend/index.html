@@ -13,21 +13,28 @@
     <meta name="robots" content="index, follow">
     <meta name="language" content="English">
 
+    <!-- Preconnect to Backend API -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Preload first hero image for LCP -->
+    <link rel="preload" href="https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779346834/apni-chakki/other/oa0f5tgym9p912fylepy.jpg" as="image" fetchpriority="high">
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://apnichakki.com/">
+    <meta property="og:url" content="https://apnichakki897.great-site.net/">
     <meta property="og:title" content="Apni Chakki | Fresh Wheat Grinding & Premium Atta">
     <meta property="og:description" content="Apni Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
     <!-- Replace with actual absolute image path -->
-    <meta property="og:image" content="https://apnichakki.com/logo.png">
+    <meta property="og:image" content="https://apnichakki897.great-site.net/logo.png">
 
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://apnichakki.com/">
-    <meta property="twitter:title" content="Apni Chakki | Fresh Wheat Grinding & Premium Atta">
-    <meta property="twitter:description" content="Apni Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://apnichakki897.great-site.net/">
+    <meta name="twitter:title" content="Apni Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta name="twitter:description" content="Apni Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
     <!-- Replace with actual absolute image path -->
-    <meta property="twitter:image" content="https://apnichakki.com/logo.png">
+    <meta name="twitter:image" content="https://apnichakki897.great-site.net/logo.png">
 
     <!-- Structured Data (JSON-LD) for Local Business / Food Store -->
     <script type="application/ld+json">
@@ -35,9 +42,9 @@
       "@context": "https://schema.org",
       "@type": "FoodStore",
       "name": "Apni Chakki",
-      "image": "https://apnichakki.com/logo.png",
+      "image": "https://apnichakki897.great-site.net/logo.png",
       "description": "100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes delivered to your doorstep.",
-      "url": "https://apnichakki.com/",
+      "url": "https://apnichakki897.great-site.net/",
       "priceRange": "Rs.",
       "address": {
         "@type": "PostalAddress",
@@ -45,10 +52,9 @@
       }
     }
     </script>
-    <!-- Leaflet CSS for map in checkout -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin="" />
+    <!-- Leaflet CSS for map in checkout - Deferred to avoid render blocking -->
+    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
     <!-- Dynamic Favicon is set via App.jsx -->
     <!-- Meta Pixel Code -->
     <script>

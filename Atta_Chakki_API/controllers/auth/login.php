@@ -54,9 +54,18 @@ try {
             exit;
         }
 
+        require_once __DIR__ . '/../../utils/jwt_helper.php';
+        $payload = [
+            'id' => $user['id'],
+            'phone' => $user['phone'],
+            'role' => 'delivery_boy'
+        ];
+        $token = generate_jwt($payload);
+
         echo json_encode([
             'success' => true,
             'message' => 'Login successful',
+            'token' => $token,
             'user' => [
                 'id' => $user['id'],
                 'name' => $user['name'],
@@ -92,9 +101,20 @@ try {
             exit;
         }
 
+        // Generate JWT Token
+        require_once __DIR__ . '/../../utils/jwt_helper.php';
+        $payload = [
+            'id' => $user['id'],
+            'email' => $user['email'],
+            'phone' => $user['phone'],
+            'role' => $user['role']
+        ];
+        $token = generate_jwt($payload);
+
         echo json_encode([
             'success' => true,
             'message' => 'Login successful',
+            'token' => $token,
             'user' => [
                 'id' => $user['id'],
                 'name' => $user['full_name'],

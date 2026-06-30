@@ -2,13 +2,17 @@
 // get user orders api
 include __DIR__ . '/../../config/connect.php';
 
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+$payload = require_auth();
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
+    // Extract user_id from token instead of GET param
+    $user_id = $payload['id'];
 
     if (!$user_id) {
-        echo json_encode(["success" => false, "message" => "Missing user_id"]);
+        echo json_encode(["success" => false, "message" => "Missing user_id in token"]);
         exit;
     }
 

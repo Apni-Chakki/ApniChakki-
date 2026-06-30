@@ -4,6 +4,9 @@ include __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/order_scheduler.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 

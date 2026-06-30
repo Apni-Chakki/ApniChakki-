@@ -20,19 +20,29 @@ import { SEO } from '../../components/common/SEO';
 
 const DEFAULT_HERO_SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
-    title: "Apka Bhrosa Apki Apni Chakki",
-    subtitle: "Premium quality flour, spices & cotton services. Ground fresh daily."
+    image: "https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779346834/apni-chakki/other/oa0f5tgym9p912fylepy.jpg",
+    title: "Aap Ka Bharosa, Hamari Pehchan",
+    subtitle: "Taaza anaaj aur khalis masalay, seedha apka ghar"
   },
   {
-    image: "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=1400&auto=format&fit=crop&q=80",
-    title: "Pure & Fresh, Every Time",
-    subtitle: "Grains ground with no additives — just the way nature intended."
+    image: "https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779347152/apni-chakki/other/hefhvpd1we8elq3nwaju.jpg",
+    title: "Haar Dana Taaza, Har Zaiqa Be-Misaal",
+    subtitle: "Atta, daalain aur masalay mayaar jis per aap bharosa karien"
   },
   {
-    image: "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=1400&auto=format&fit=crop&q=80",
-    title: "Traditional Services, Modern Convenience",
-    subtitle: "Expert Cotton Penja, Quilt filling & home delivery — all in one place."
+    image: "https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779347575/apni-chakki/other/ajup6fejhevrzkwhl4hs.jpg",
+    title: "Rasoi Ki Har Zaroorat, Ek Hi Jagah",
+    subtitle: "Rozmarra essentials, premium packing aur fresh quality ka sath"
+  },
+  {
+    image: "https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779348145/apni-chakki/other/bwt1tctgsxeztduiwz2d.jpg",
+    title: "Sehat Ka Khayal, Zaiqay Ke Saath",
+    subtitle: "Apni family ke liye halka aur standard oil."
+  },
+  {
+    image: "https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779348506/apni-chakki/other/zel9ath3qm4iskhg79qh.jpg",
+    title: "Munji Se Dastar Khwan Tak",
+    subtitle: "Freshness aur bharosay ka safar."
   }
 ];
 
@@ -291,11 +301,14 @@ export function Homepage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden w-full" style={{ height: '65vh', minHeight: '400px' }}>
         {heroSlides.map((slide, i) => (
-          <div
+          <img
             key={i}
-            className="absolute inset-0 bg-cover bg-center"
+            src={slide.image}
+            alt={slide.title || "Apni Chakki Hero"}
+            fetchpriority={i === 0 ? "high" : "auto"}
+            loading={i === 0 ? "eager" : "lazy"}
+            className="absolute inset-0 w-full h-full object-cover"
             style={{
-              backgroundImage: `url(${slide.image})`,
               opacity: i === currentSlide ? 1 : 0,
               transition: 'opacity 1.2s ease-in-out',
             }}
@@ -324,7 +337,9 @@ export function Homepage() {
       </section>
 
       {/* Auto-sliding Coupon Bar Below Hero */}
-      {featuredCoupons.length > 0 && (
+      {loading ? (
+        <div className="bg-primary/20 animate-pulse h-11 w-full border-b border-primary-foreground/10" />
+      ) : featuredCoupons.length > 0 && (
         <div className="bg-primary text-primary-foreground py-2.5 px-4 flex items-center w-full overflow-hidden shadow-sm border-b border-primary-foreground/10 group">
           <div className="flex w-max">
             {[...Array(6)].map((_, i) => (
@@ -345,6 +360,21 @@ export function Homepage() {
       )}
 
       {/* Featured Products Section */}
+      {loading && (
+        <section className="trending-section px-4 bg-gradient-to-b from-background to-secondary/10 py-12">
+          <div className="container mx-auto max-w-6xl">
+            <div className="text-center mb-10 sm:mb-16">
+              <div className="h-8 w-48 bg-muted rounded animate-pulse mx-auto mb-4"></div>
+              <div className="h-4 w-64 sm:w-96 bg-muted/50 rounded animate-pulse mx-auto"></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-80 bg-muted rounded-2xl animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       {!loading && !selectedCategory && featuredProducts.length > 0 && (
         <LazyAnimatedSection
           type="fade-up"
@@ -385,6 +415,21 @@ export function Homepage() {
       )}
 
       {/* Discounted Products Section */}
+      {loading && (
+        <section className="discounted-section px-4 bg-gradient-to-b from-secondary/5 to-background border-t border-border/40 py-12">
+          <div className="container mx-auto max-w-6xl">
+            <div className="text-center mb-10">
+              <div className="h-8 w-48 bg-muted rounded animate-pulse mx-auto mb-4"></div>
+              <div className="h-4 w-64 sm:w-96 bg-muted/50 rounded animate-pulse mx-auto"></div>
+            </div>
+            <div className="flex gap-4 overflow-hidden px-4 md:px-12">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-80 w-full sm:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] bg-muted rounded-2xl animate-pulse shrink-0"></div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       {!loading && !selectedCategory && discountedProducts.length > 0 && (
         <LazyAnimatedSection
           type="fade-up"
@@ -461,8 +506,15 @@ export function Homepage() {
       >
         <section className="container mx-auto max-w-6xl">
           {loading && (
-            <div className="text-center py-12">
-              <p>{t("Loading fresh products...")}</p>
+            <div className="w-full">
+              <h2 className="text-center mb-6 sm:mb-8 md:mb-10 text-3xl font-bold text-foreground">
+                <div className="h-8 w-48 bg-muted rounded animate-pulse mx-auto"></div>
+              </h2>
+              <div className="category-grid-responsive">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="category-card-responsive rounded-2xl bg-muted animate-pulse border border-border"></div>
+                ))}
+              </div>
             </div>
           )}
 

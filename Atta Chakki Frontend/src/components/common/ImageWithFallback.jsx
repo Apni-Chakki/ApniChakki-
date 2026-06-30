@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export const ImageWithFallback = ({ src, alt, fallbackSrc, className, ...props }) => {
+export const ImageWithFallback = ({ src, alt, fallbackSrc, className, loading = "lazy", decoding = "async", ...props }) => {
   const [imgSrc, setImgSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
 
@@ -17,6 +17,8 @@ export const ImageWithFallback = ({ src, alt, fallbackSrc, className, ...props }
       src={imgSrc}
       alt={alt}
       className={className}
+      loading={loading}
+      decoding={decoding}
       onError={handleError}
       {...props}
     />
