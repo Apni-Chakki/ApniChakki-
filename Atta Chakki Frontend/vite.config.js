@@ -17,7 +17,7 @@ export default defineConfig({
         importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js']
       },
       devOptions: {
-        enabled: true
+        enabled: false,
       },
       manifest: {
         name: 'Apni Chakki',
