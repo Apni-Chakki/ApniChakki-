@@ -636,6 +636,11 @@ export function DeliveryPanel() {
 
   const openMaps = useCallback((address) => {
     if (!address) return;
+    const gpsMatch = String(address).match(/\[?GPS:\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)\]?/i) || String(address).match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/i);
+    if (gpsMatch) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${gpsMatch[1]},${gpsMatch[2]}`, '_blank');
+      return;
+    }
     const encodedAddress = encodeURIComponent(address);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   }, []);

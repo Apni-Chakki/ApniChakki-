@@ -64,6 +64,7 @@ $mapping = [
     'add_product.php' => 'controllers/products/add_product.php',
     'delete_product.php' => 'controllers/products/delete_product.php',
     'update_product.php' => 'controllers/products/update_product.php',
+    'change_password.php' => 'controllers/users/change_password.php',
 ];
 
 if (isset($mapping[$path])) {

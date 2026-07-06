@@ -24,6 +24,21 @@ function notifyAll() {
   updateListeners.forEach(fn => fn());
 }
 
+function applyGlossaryCorrection(str, lang) {
+  if (!str || typeof str !== 'string' || lang === 'en') return str;
+  if (lang === 'ur') {
+    return str
+      .replace(/اپنی چاکی/g, 'اپنی چکی')
+      .replace(/اپنے چاکی/g, 'اپنی چکی')
+      .replace(/چاکی/g, 'چکی')
+      .replace(/Apni Chakki/gi, 'اپنی چکی')
+      .replace(/G3 Apni Chakki/gi, 'جی تھری اپنی چکی')
+      .replace(/Atta Chakki/gi, 'آٹا چکی')
+      .replace(/\bChakki\b/gi, 'چکی');
+  }
+  return str;
+}
+
 async function fetchSingle(text, lang) {
   const cacheKey = `${lang}:${text}`;
   if (pendingRequests.has(cacheKey)) return;
@@ -36,7 +51,7 @@ async function fetchSingle(text, lang) {
     });
     const data = await res.json();
     if (data.success && data.translated && data.translated !== text) {
-      memoryCache[cacheKey] = data.translated;
+      memoryCache[cacheKey] = applyGlossaryCorrection(data.translated, lang);
       saveCache();
       notifyAll();
     }
@@ -71,7 +86,7 @@ async function fetchBatch(texts, lang) {
       toFetch.forEach((text, i) => {
         const translated = data.translations[i];
         if (translated && translated !== text) {
-          memoryCache[`${lang}:${text}`] = translated;
+          memoryCache[`${lang}:${text}`] = applyGlossaryCorrection(translated, lang);
           changed = true;
         }
       });
@@ -119,11 +134,21 @@ export function useDynamicTranslation() {
       // Static dictionary first
       if (i18n.exists(text)) {
         const staticTrans = t(text);
-        if (staticTrans && staticTrans !== text) return staticTrans;
+        if (staticTrans && staticTrans !== text) return applyGlossaryCorrection(staticTrans, language);
       }
 
+      const glossaryTrans = applyGlossaryCorrection(text, language);
+      if (glossaryTrans !== text) return glossaryTrans;
+
       const cacheKey = `${language}:${text}`;
-      if (memoryCache[cacheKey]) return memoryCache[cacheKey];
+      if (memoryCache[cacheKey]) {
+        const corrected = applyGlossaryCorrection(memoryCache[cacheKey], language);
+        if (corrected !== memoryCache[cacheKey]) {
+          memoryCache[cacheKey] = corrected;
+          saveCache();
+        }
+        return corrected;
+      }
 
       // Trigger async fetch — won't duplicate for same key
       fetchSingle(text, language);

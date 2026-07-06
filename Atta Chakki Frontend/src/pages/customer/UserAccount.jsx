@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Package, MapPin, Phone, Mail, Edit, Save, X, LogOut, Loader2, ShieldCheck, Truck, Calendar, Clock, Coins, AlertCircle, CheckCircle2, ClipboardList } from 'lucide-react'; 
+import { User, Package, MapPin, Phone, Mail, Edit, Save, X, LogOut, Loader2, ShieldCheck, Truck, Calendar, Clock, Coins, AlertCircle, CheckCircle2, ClipboardList, Lock, Key, Eye, EyeOff } from 'lucide-react'; 
 import { Link, useNavigate } from 'react-router-dom'; 
 import { ImageWithFallback } from '../../components/common/ImageWithFallback';
 import { Button } from '../../components/common/button';
@@ -43,6 +43,17 @@ export function UserAccount() {
   const [isSaving, setIsSaving] = useState(false); // New loading state for saving
   const [rentals, setRentals] = useState([]);
   const [loadingRentals, setLoadingRentals] = useState(true);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [isOldPasswordVerified, setIsOldPasswordVerified] = useState(false);
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -219,6 +230,104 @@ export function UserAccount() {
       toast.error(t('Network error. Could not connect to database.'));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleVerifyCurrentPassword = async () => {
+    if (!currentPassword.trim()) {
+      toast.error(t('Please enter your current password.'));
+      return;
+    }
+    setIsVerifyingPassword(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/change_password.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          user_id: user.id,
+          current_password: currentPassword
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setIsOldPasswordVerified(true);
+        toast.success(t('Current password verified! You can now set your new password.'));
+      } else {
+        toast.error(t(result.message || 'Incorrect current password.'));
+      }
+    } catch (error) {
+      toast.error(t('Network error. Please try again.'));
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  const validateNewPassword = () => {
+    if (/\s/.test(newPassword)) {
+      toast.error(t('Password must not contain spaces.'));
+      return false;
+    }
+    if (newPassword.length < 8) {
+      toast.error(t('Password must be at least 8 characters.'));
+      return false;
+    }
+    if (newPassword.length > 50) {
+      toast.error(t('Password must not exceed 50 characters.'));
+      return false;
+    }
+    if (!/^[A-Z]/.test(newPassword)) {
+      toast.error(t('Password must start with a capital letter.'));
+      return false;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      toast.error(t('Password must contain at least one number.'));
+      return false;
+    }
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      toast.error(t('Password must contain at least one special character.'));
+      return false;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error(t('Passwords do not match.'));
+      return false;
+    }
+    return true;
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!isOldPasswordVerified) {
+      toast.error(t('Please verify your current password first to unlock new password setting.'));
+      return;
+    }
+    if (!validateNewPassword()) return;
+
+    setIsUpdatingPassword(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/change_password.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          user_id: user.id,
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(t('Password updated successfully!'));
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setIsOldPasswordVerified(false);
+      } else {
+        toast.error(t(result.message || 'Failed to update password'));
+      }
+    } catch (error) {
+      toast.error(t('Network error. Please try again.'));
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -461,6 +570,173 @@ export function UserAccount() {
                   </div>
                 </div>
               )}
+            </Card>
+
+            {/* Security & Password Card */}
+            <Card className="p-6 mt-6 border-l-4" style={{ borderLeftColor: '#8b6f47' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">
+                    {t('Security & Password')}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {t('Change your account password securely')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5 max-w-xl">
+                {/* Step 1: Verify Current Password */}
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="currentPassword" className="flex items-center gap-2 text-sm font-semibold">
+                      <Lock className="h-4 w-4 text-amber-600" /> {t('Current Password')}
+                    </Label>
+                    {isOldPasswordVerified && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600 bg-green-100 dark:bg-green-950/60 dark:text-green-400 px-2.5 py-0.5 rounded-full">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> {t('Verified')}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => {
+                          setCurrentPassword(e.target.value);
+                          if (isOldPasswordVerified) setIsOldPasswordVerified(false);
+                        }}
+                        disabled={isOldPasswordVerified}
+                        placeholder={t('Please enter your current password.')}
+                        className={`pr-10 ${isOldPasswordVerified ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/20' : ''}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+
+                    {!isOldPasswordVerified && (
+                      <Button
+                        type="button"
+                        onClick={handleVerifyCurrentPassword}
+                        disabled={isVerifyingPassword || !currentPassword.trim()}
+                        style={{ background: 'linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)' }}
+                        className="text-white shrink-0 shadow-sm hover:shadow-md transition-all duration-200"
+                      >
+                        {isVerifyingPassword ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {t('Verifying...')}
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            {t('Verify Current Password')}
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  {!isOldPasswordVerified && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      {t('Please verify your current password first to unlock new password setting.')}
+                    </p>
+                  )}
+                </div>
+
+                {/* Step 2: New Password & Confirm New Password (Locked until verified) */}
+                <div className={`space-y-4 transition-all duration-300 ${!isOldPasswordVerified ? 'opacity-50 pointer-events-none select-none filter blur-[0.5px]' : ''}`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* New Password */}
+                    <div>
+                      <Label htmlFor="newPassword" className="flex items-center gap-2 mb-1.5 text-sm font-semibold">
+                        <Key className="h-4 w-4 text-primary" /> {t('New Password')}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="newPassword"
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value.replace(/\s/g, ''))}
+                          disabled={!isOldPasswordVerified}
+                          placeholder={t('New Password')}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          disabled={!isOldPasswordVerified}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div>
+                      <Label htmlFor="confirmNewPassword" className="flex items-center gap-2 mb-1.5 text-sm font-semibold">
+                        <Lock className="h-4 w-4 text-primary" /> {t('Confirm New Password')}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmNewPassword"
+                          type={showConfirmNewPassword ? 'text' : 'password'}
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value.replace(/\s/g, ''))}
+                          disabled={!isOldPasswordVerified}
+                          placeholder={t('Confirm New Password')}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                          disabled={!isOldPasswordVerified}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
+                    <div className="text-[11px] text-muted-foreground space-y-0.5">
+                      <p>• {t('At least 8 characters, 1 uppercase letter')}</p>
+                      <p>• {t('At least 1 number and 1 special character')}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleUpdatePassword}
+                      disabled={!isOldPasswordVerified || isUpdatingPassword || !newPassword || !confirmNewPassword}
+                      className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm px-6"
+                    >
+                      {isUpdatingPassword ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {t('Updating...')}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          {t('Update Password')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </Card>
           </TabsContent>
 

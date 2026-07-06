@@ -1,5 +1,11 @@
 export const translations = {
   en: {
+    // Brand & General
+    "Apni Chakki": "Apni Chakki",
+    "G3 Apni Chakki": "G3 Apni Chakki",
+    "Atta Chakki": "Atta Chakki",
+    "Chakki": "Chakki",
+    "Atta": "Atta",
     // General
     Home: "Home",
     "Track Order": "Track Order",
@@ -55,9 +61,9 @@ export const translations = {
     View: "View",
 
     // Customer Header / Store name
-    "Apni Chaki": "Apni Chaki",
     "Apni Chakki": "Apni Chakki",
-    "Mughal Ata Chaki": "Mughal Ata Chaki",
+    "Apni Chakki": "Apni Chakki",
+    "Mughal Ata Chakki": "Mughal Ata Chakki",
 
     // Admin Sidebar
     "Admin Panel": "Admin Panel",
@@ -518,8 +524,31 @@ export const translations = {
     "Add Pickup Request": "Add Pickup Request",
     "Pickup Request Added \u2713": "Pickup Request Added \u2713",
     "Pickup request added to cart.": "Pickup request added to cart.",
+
+    // Password update in UserAccount
+    "Security & Password": "Security & Password",
+    "Change Password": "Change Password",
+    "Current Password": "Current Password",
+    "Verify Current Password": "Verify Current Password",
+    "Verifying...": "Verifying...",
+    "Current password verified! You can now set your new password.": "Current password verified! You can now set your new password.",
+    "Please verify your current password first to unlock new password setting.": "Please verify your current password first to unlock new password setting.",
+    "New Password": "New Password",
+    "Confirm New Password": "Confirm New Password",
+    "Update Password": "Update Password",
+    "Updating...": "Updating...",
+    "Passwords do not match.": "Passwords do not match.",
+    "Password updated successfully!": "Password updated successfully!",
+    "Incorrect current password.": "Incorrect current password.",
+    "Please enter your current password.": "Please enter your current password.",
   },
   ur: {
+    // Brand & General
+    "Apni Chakki": "اپنی چکی",
+    "G3 Apni Chakki": "جی تھری اپنی چکی",
+    "Atta Chakki": "آٹا چکی",
+    "Chakki": "چکی",
+    "Atta": "آٹا",
     // General
     Home: "ہوم",
     "Track Order": "آرڈر ٹریک",
@@ -575,9 +604,9 @@ export const translations = {
     View: "دیکھیں",
 
     // Customer Header / Store name
-    "Apni Chaki": "اپنی چکی",
     "Apni Chakki": "اپنی چکی",
-    "Mughal Ata Chaki": "مغل اٹہ چکی",
+    "Apni Chakki": "اپنی چکی",
+    "Mughal Ata Chakki": "مغل اٹہ چکی",
 
     // Admin Sidebar
     "Admin Panel": "ایڈمن پینل",
@@ -1080,6 +1109,23 @@ export const translations = {
     "Manage Comments": "تبصرے منظم کریں",
     "Inventory Management": "انوینٹری منیجمنٹ",
     "Custom Mix Requests": "کسٹم مکس درخواستیں",
+
+    // Password update in UserAccount
+    "Security & Password": "سیکیورٹی اور پاس ورڈ",
+    "Change Password": "پاس ورڈ تبدیل کریں",
+    "Current Password": "موجودہ پاس ورڈ (پہلے والا پاس ورڈ)",
+    "Verify Current Password": "موجودہ پاس ورڈ کی تصدیق کریں",
+    "Verifying...": "تصدیق ہو رہی ہے...",
+    "Current password verified! You can now set your new password.": "موجودہ پاس ورڈ درست ہے! اب آپ نیا پاس ورڈ سیٹ کر سکتے ہیں۔",
+    "Please verify your current password first to unlock new password setting.": "نیا پاس ورڈ سیٹ کرنے کے لیے پہلے اپنے موجودہ پاس ورڈ کی تصدیق کریں۔",
+    "New Password": "نیا پاس ورڈ",
+    "Confirm New Password": "نئے پاس ورڈ کی تصدیق کریں",
+    "Update Password": "پاس ورڈ اپڈیٹ کریں",
+    "Updating...": "اپڈیٹ ہو رہا ہے...",
+    "Passwords do not match.": "دونوں پاس ورڈ آپس میں نہیں مل رہے۔",
+    "Password updated successfully!": "پاس ورڈ کامیابی سے تبدیل ہو گیا ہے!",
+    "Incorrect current password.": "موجودہ پاس ورڈ غلط ہے۔",
+    "Please enter your current password.": "براہ کرم اپنا موجودہ پاس ورڈ درج کریں۔",
   },
 };
 

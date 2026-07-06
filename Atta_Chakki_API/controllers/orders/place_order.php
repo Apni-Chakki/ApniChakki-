@@ -9,8 +9,12 @@ $payload = require_auth();
 $data = json_decode(file_get_contents("php://input"));
 $user_id = $payload['id']; // IDOR fixed
 
-if($user_id && isset($data->cart_items)) {
     $address = isset($data->address) ? $data->address : "No address provided";
+    $latitude = isset($data->latitude) && is_numeric($data->latitude) ? floatval($data->latitude) : null;
+    $longitude = isset($data->longitude) && is_numeric($data->longitude) ? floatval($data->longitude) : null;
+    if ($latitude !== null && $longitude !== null && !str_contains($address, '[GPS:')) {
+        $address .= sprintf(" [GPS: %.6f, %.6f]", $latitude, $longitude);
+    }
     $cart_items = $data->cart_items;
     $payment_method = isset($data->payment_method) ? $data->payment_method : 'cash';
     $payment_status = isset($data->payment_status) ? $data->payment_status : 'pending';
@@ -226,17 +230,17 @@ if($user_id && isset($data->cart_items)) {
         $has_coupon_cols = ($coupon_col_check && $coupon_col_check->num_rows > 0);
 
         if ($has_amount_paid_col && $has_coupon_cols) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("idddsdsss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("iddsdssddss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         } elseif ($has_amount_paid_col) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("iddssss", $user_id, $total_amount, $amount_paid_input, $status, $address, $db_payment_method, $final_payment_status);
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("iddssddss", $user_id, $total_amount, $amount_paid_input, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         } elseif ($has_coupon_cols) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("idsdssss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $db_payment_method, $final_payment_status);
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("idsdssddss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         } else {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("idssss", $user_id, $total_amount, $status, $address, $db_payment_method, $final_payment_status);
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("idssddss", $user_id, $total_amount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         }
         
         if(!$stmt->execute()) {

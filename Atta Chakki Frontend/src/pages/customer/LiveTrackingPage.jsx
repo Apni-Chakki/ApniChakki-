@@ -408,42 +408,62 @@ export function LiveTrackingPage() {
         origin: { lat: driverLocation.lat, lng: driverLocation.lng },
         destination: destinationCoords,
         travelMode: window.google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: false,
       },
       (result, status) => {
         if (status === 'OK') {
-          // Remove old polyline
+          // Remove old polylines
           if (routePolylineRef.current) {
             routePolylineRef.current.setMap(null);
           }
 
-          // Draw the route as a styled polyline
-          const path = result.routes[0].overview_path;
-          
-          // Background line (wider, darker)
-          const bgPolyline = new window.google.maps.Polyline({
-            path,
-            geodesic: true,
-            strokeColor: '#1e40af',
-            strokeOpacity: 0.3,
-            strokeWeight: 8,
-            map: mapRef.current,
+          // Use detailed step paths for road-accurate route (not overview_path)
+          const legs = result.routes[0].legs;
+          const fullPath = [];
+          legs.forEach(leg => {
+            leg.steps.forEach(step => {
+              step.path.forEach(pt => fullPath.push(pt));
+            });
           });
 
-          // Foreground line (thinner, brighter blue)
-          const fgPolyline = new window.google.maps.Polyline({
-            path,
+          // === BORDER GLOW ===
+          const borderPolyline = new window.google.maps.Polyline({
+            path: fullPath,
             geodesic: true,
-            strokeColor: '#3b82f6',
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
+            strokeColor: '#1e40af',
+            strokeOpacity: 0.18,
+            strokeWeight: 14,
             map: mapRef.current,
+            zIndex: 1,
+          });
+
+          // === MAIN BLUE ROUTE (Uber style with white tick dashes) ===
+          const mainPolyline = new window.google.maps.Polyline({
+            path: fullPath,
+            geodesic: true,
+            strokeColor: '#2563eb',
+            strokeOpacity: 0.95,
+            strokeWeight: 6,
+            map: mapRef.current,
+            zIndex: 2,
+            icons: [{
+              icon: {
+                path: 'M 0,-1 0,1',
+                strokeOpacity: 1,
+                scale: 3,
+                strokeColor: '#ffffff',
+                strokeWeight: 1,
+              },
+              offset: '0',
+              repeat: '18px',
+            }],
           });
 
           // Store refs for cleanup
           routePolylineRef.current = {
             setMap: (map) => {
-              bgPolyline.setMap(map);
-              fgPolyline.setMap(map);
+              borderPolyline.setMap(map);
+              mainPolyline.setMap(map);
             }
           };
 

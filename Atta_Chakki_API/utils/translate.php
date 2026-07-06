@@ -53,8 +53,37 @@ if (isset($data['text'])) {
 
 echo json_encode(["success" => false, "message" => "Missing 'text' or 'texts' parameter"]);
 
+function applyDomainTerms($str, $to) {
+    if ($to !== 'ur' || empty($str)) return $str;
+    $replacements = [
+        'اپنی چاکی' => 'اپنی چکی',
+        'اپنے چاکی' => 'اپنی چکی',
+        'چاکی' => 'چکی',
+        'Apni Chakki' => 'اپنی چکی',
+        'G3 Apni Chakki' => 'جی تھری اپنی چکی',
+        'Atta Chakki' => 'آٹا چکی',
+        'Chakki' => 'چکی',
+        'Atta' => 'آٹا'
+    ];
+    return strtr($str, $replacements);
+}
+
 // --- Translation function using MyMemory API ---
 function translateText($text, $from, $to) {
+    if ($to === 'ur') {
+        $exactDict = [
+            'Apni Chakki' => 'اپنی چکی',
+            'G3 Apni Chakki' => 'جی تھری اپنی چکی',
+            'Atta Chakki' => 'آٹا چکی',
+            'Chakki' => 'چکی',
+            'Atta' => 'آٹا'
+        ];
+        $trimText = trim($text);
+        if (isset($exactDict[$trimText])) {
+            return $exactDict[$trimText];
+        }
+    }
+
     $langpair = urlencode("$from|$to");
     $textEncoded = urlencode($text);
 
@@ -82,14 +111,14 @@ function translateText($text, $from, $to) {
 
     // If not translating to a script-changing language, accept primary as-is.
     if (!isTargetScriptLanguage($to)) {
-        return $primary ?: $text;
+        return applyDomainTerms($primary ?: $text, $to);
     }
 
     // Target uses a non-Latin script (Urdu/Arabic/etc.). MyMemory sometimes returns
     // Roman transliteration ("Munji Se Dastar Khwan Tak") from community memory.
     // Prefer a candidate that actually contains characters in the target script.
     if ($primary && hasTargetScript($primary, $to)) {
-        return $primary;
+        return applyDomainTerms($primary, $to);
     }
 
     // Scan matches[] for a machine-translated candidate with the right script.
@@ -97,7 +126,7 @@ function translateText($text, $from, $to) {
         foreach ($result['matches'] as $match) {
             $candidate = $match['translation'] ?? '';
             if ($candidate && hasTargetScript($candidate, $to)) {
-                return $candidate;
+                return applyDomainTerms($candidate, $to);
             }
         }
     }
@@ -108,12 +137,12 @@ function translateText($text, $from, $to) {
     if (isMostlyAscii($text)) {
         $transliterated = transliterateRomanToScript($text, $to);
         if ($transliterated && hasTargetScript($transliterated, $to)) {
-            return $transliterated;
+            return applyDomainTerms($transliterated, $to);
         }
     }
 
     // Nothing usable — return original rather than a bad transliteration.
-    return $text;
+    return applyDomainTerms($text, $to);
 }
 
 // True when $text has no characters outside the basic Latin range.

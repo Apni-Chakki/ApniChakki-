@@ -397,9 +397,60 @@ export function Checkout() {
     }
   }, [user]);
 
+  const NON_LAHORE_CITIES = [
+    'faisalabad', 'karachi', 'islamabad', 'rawalpindi', 'multan', 'gujranwala', 'peshawar', 
+    'quetta', 'sialkot', 'hyderabad', 'sargodha', 'bahawalpur', 'sukkur', 'jhang', 'sheikhupura', 
+    'kasur', 'okara', 'gujrat', 'mardan', 'abbottabad', 'murree', 'sahiwal', 'wah cantt', 'taxila',
+    'dera ghazi khan', 'mirpur', 'muzaffarabad', 'gilgit', 'skardu', 'chaman', 'larkana', 'nawabshah'
+  ];
+
+  const checkIsLahore = (text, lat, lng, addressComponents) => {
+    const lt = parseFloat(lat);
+    const lg = parseFloat(lng);
+    const t = String(text || '').toLowerCase();
+    
+    if (NON_LAHORE_CITIES.some(city => t.includes(city))) {
+      return false;
+    }
+
+    if (addressComponents && Array.isArray(addressComponents)) {
+      for (const comp of addressComponents) {
+        const compName = (comp.long_name || comp.short_name || '').toLowerCase();
+        if (NON_LAHORE_CITIES.some(city => compName === city || compName.includes(city))) {
+          return false;
+        }
+      }
+    }
+
+    if (!isNaN(lt) && !isNaN(lg)) {
+      if (lt < 31.15 || lt > 31.80 || lg < 74.00 || lg > 74.60) {
+        return false;
+      }
+    }
+
+    return t.includes('lahore') || (!isNaN(lt) && !isNaN(lg) && lt >= 31.15 && lt <= 31.80 && lg >= 74.00 && lg <= 74.60);
+  };
+
   const reverseGeocode = useCallback(async (lat, lng) => {
     let addressText = null;
     let inLahore = false;
+
+    if (USE_GOOGLE_MAPS && window.google?.maps?.Geocoder) {
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        const res = await new Promise((resolve) => {
+          geocoder.geocode({ location: { lat: parseFloat(lat), lng: parseFloat(lng) } }, (results, status) => {
+            if (status === 'OK' && results && results.length > 0) resolve(results);
+            else resolve(null);
+          });
+        });
+        if (res && res.length > 0) {
+          const bestResult = res.find(r => !r.types.includes('plus_code') && r.formatted_address) || res[0];
+          inLahore = checkIsLahore(bestResult.formatted_address, lat, lng, bestResult.address_components);
+          return { addressText: bestResult.formatted_address, inLahore };
+        }
+      } catch (e) { console.warn('Google JS reverse geocode failed, trying HTTP:', e); }
+    }
 
     if (USE_GOOGLE_MAPS) {
       try {
@@ -409,10 +460,7 @@ export function Checkout() {
           const data = await response.json();
           if (data.status === 'OK' && data.results && data.results.length > 0) {
             const bestResult = data.results.find(r => !r.types.includes('plus_code') && r.formatted_address) || data.results[0];
-            inLahore = bestResult.address_components.some(comp => 
-              comp.long_name.toLowerCase().includes('lahore') || 
-              comp.short_name.toLowerCase().includes('lahore')
-            );
+            inLahore = checkIsLahore(bestResult.formatted_address, lat, lng, bestResult.address_components);
             return { addressText: bestResult.formatted_address, inLahore };
           }
         }
@@ -425,7 +473,7 @@ export function Checkout() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.display_name) {
-          inLahore = data.display_name.toLowerCase().includes('lahore');
+          inLahore = checkIsLahore(data.display_name, lat, lng, null);
           const addr = data.address;
           if (addr) {
             const parts = [ addr.house_number, addr.road, addr.neighbourhood || addr.suburb, addr.city || addr.town || addr.village, addr.state, addr.country ].filter(Boolean);
@@ -463,7 +511,7 @@ export function Checkout() {
       if (!houseDetails || houseDetails.trim() === '') {
         setHouseDetails(addressText);
       }
-      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Out of city service not available')}`);
       if(inLahore) toast.success(t('Area updated from your current location'));
     } else {
       const nearText = `Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -471,7 +519,7 @@ export function Checkout() {
       if (!houseDetails || houseDetails.trim() === '') {
         setHouseDetails(nearText);
       }
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Out of city service not available')}`);
     }
 
     const isLowAccuracy = accuracy > 200; 
@@ -483,7 +531,7 @@ export function Checkout() {
         setLocationStatus(`⚠️ ${t('Approximate location')} (±${Math.round(accuracy)}m) — ${t('Please refine on the map')}`);
       }
     } else {
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Out of city service not available')}`);
     }
 
     if (addressText) {
@@ -527,7 +575,7 @@ export function Checkout() {
         if (addressText) {
           setDeliveryArea(addressText);
           setIsOutOfLahore(!inLahore);
-          setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
+          setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Out of city service not available')}`);
         }
       };
       initLocation();
@@ -553,8 +601,6 @@ export function Checkout() {
     return null;
   };
 
-
-
   const searchTypedAddress = async (queryOverride) => {
     const addressToSearch = typeof queryOverride === 'string' ? queryOverride : deliveryArea;
     if (!addressToSearch || addressToSearch.length < 3) return;
@@ -562,54 +608,145 @@ export function Checkout() {
 
     let foundLocation = null;
 
-    if (USE_GOOGLE_MAPS) {
-      try {
-        const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressToSearch + ', Pakistan')}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
-        const response = await fetch(apiUrl);
-        const data = await response.json();
+    const buildSearchQueries = (orig) => {
+      const str = String(orig || '').trim();
+      if (!str) return [];
+      const queries = [];
+      const hasOtherCity = NON_LAHORE_CITIES.some(c => str.toLowerCase().includes(c));
+      const addPak = (s) => {
+        let tmp = s.trim();
+        if (!tmp.toLowerCase().includes('pakistan')) tmp += ', Pakistan';
+        return tmp;
+      };
+      const addLahorePak = (s) => {
+        let tmp = s.trim();
+        if (!hasOtherCity && !tmp.toLowerCase().includes('lahore')) tmp += ', Lahore';
+        if (!tmp.toLowerCase().includes('pakistan')) tmp += ', Pakistan';
+        return tmp;
+      };
 
-        if (data.status === 'OK' && data.results.length > 0) {
-          const result = data.results[0];
-          const { lat, lng } = result.geometry.location;
-          const isOfficiallyLahore = result.address_components.some(comp =>
-            comp.long_name.toLowerCase().includes('lahore') ||
-            comp.short_name.toLowerCase().includes('lahore')
-          );
-          foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+      const plusMatch = str.match(/([A-Z0-9]{4}\+[A-Z0-9]{2,3})/i);
+      if (plusMatch && !hasOtherCity) {
+        queries.push(`${plusMatch[1]}, Lahore, Pakistan`);
+        queries.push(`${plusMatch[1]}, Pakistan`);
+      } else if (plusMatch) {
+        queries.push(`${plusMatch[1]}, Pakistan`);
+      }
+
+      queries.push(addPak(str));
+
+      const noPlus = str.replace(/^[A-Z0-9]{4}\+[A-Z0-9]{2,3}(,\s*)?/i, '').trim();
+      if (noPlus && noPlus !== str) {
+        queries.push(addPak(noPlus));
+      }
+
+      const parts = (noPlus || str).split(',').map(p => p.trim()).filter(p => p && !p.toLowerCase().includes('pakistan') && !p.toLowerCase().includes('lahore'));
+      if (parts.length > 0) {
+        for (let i = parts.length - 1; i >= 0; i--) {
+          queries.push(addLahorePak(parts[i]));
+          const words = parts[i].split(/\s+/);
+          if (words.length > 2) {
+            queries.push(addLahorePak(words.slice(-3).join(' ')));
+            queries.push(addLahorePak(words.slice(-2).join(' ')));
+          }
         }
-      } catch (e) { console.warn('Google forward geocode failed', e); }
+      }
+
+      return queries.filter((q, idx, arr) => q && q.length > 3 && arr.indexOf(q) === idx);
+    };
+
+    const queriesToTry = buildSearchQueries(addressToSearch);
+
+    if (USE_GOOGLE_MAPS && window.google?.maps?.Geocoder) {
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        for (const q of queriesToTry) {
+          const res = await new Promise((resolve) => {
+            geocoder.geocode({ address: q }, (results, status) => {
+              if (status === 'OK' && results && results.length > 0) resolve(results[0]);
+              else resolve(null);
+            });
+          });
+          if (res) {
+            const lat = res.geometry.location.lat();
+            const lng = res.geometry.location.lng();
+            const isOfficiallyLahore = checkIsLahore(q || res.formatted_address, lat, lng, res.address_components);
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            break;
+          }
+        }
+      } catch (e) { console.warn('Google JS Geocoder failed', e); }
+    }
+
+    if (!foundLocation && USE_GOOGLE_MAPS && window.google?.maps?.places?.PlacesService) {
+      try {
+        const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+        for (const q of queriesToTry) {
+          const res = await new Promise((resolve) => {
+            service.findPlaceFromQuery({ query: q, fields: ['geometry', 'formatted_address'] }, (results, status) => {
+              if (status === window.google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) resolve(results[0]);
+              else resolve(null);
+            });
+          });
+          if (res && res.geometry?.location) {
+            const lat = res.geometry.location.lat();
+            const lng = res.geometry.location.lng();
+            const isOfficiallyLahore = checkIsLahore(q || res.formatted_address, lat, lng, null);
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            break;
+          }
+        }
+      } catch (e) { console.warn('Google Places JS search failed', e); }
+    }
+
+    if (!foundLocation && USE_GOOGLE_MAPS) {
+      for (const q of queriesToTry) {
+        try {
+          const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          if (data.status === 'OK' && data.results.length > 0) {
+            const result = data.results[0];
+            const { lat, lng } = result.geometry.location;
+            const isOfficiallyLahore = checkIsLahore(q || result.formatted_address, lat, lng, result.address_components);
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            break;
+          }
+        } catch (e) { console.warn('Google forward geocode HTTP failed', e); }
+      }
     }
 
     if (!foundLocation) {
-      try {
-        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressToSearch + ', Pakistan')}&limit=1`;
-        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
-        const data = await response.json();
-        
-        if (data && data.length > 0) {
-          const lat = parseFloat(data[0].lat);
-          const lng = parseFloat(data[0].lon);
-          const isOfficiallyLahore = data[0].display_name.toLowerCase().includes('lahore');
-          foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
-        }
-      } catch (e) { console.warn('Nominatim forward geocode failed', e); }
+      for (const q of queriesToTry) {
+        try {
+          const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+          const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
+          const data = await response.json();
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            const isOfficiallyLahore = checkIsLahore(q || data[0].display_name, lat, lng, null);
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            break;
+          }
+        } catch (e) { console.warn('Nominatim forward geocode failed', e); }
+      }
     }
 
     if (foundLocation) {
       setGpsCoords({ lat: foundLocation.lat, lng: foundLocation.lng, accuracy: 50 });
       setMapCenter([foundLocation.lat, foundLocation.lng]);
       setShowMap(true);
-      setDeliveryArea(addressToSearch); // Synchronize deliveryArea state
+      setDeliveryArea(addressToSearch);
       
       setIsOutOfLahore(!foundLocation.isLahore);
 
       if (foundLocation.isLahore) {
         setLocationStatus(`✅ ${t('Area verified & mapped!')}`);
       } else {
-        setLocationStatus(`❌ ${t('Service not available in this city')}`);
+        setLocationStatus(`❌ ${t('Out of city service not available')}`);
       }
     } else {
-      // NEW CUSTOM ERROR MESSAGE
       setLocationStatus(`⚠️ ${t("Can't find your area, select from map or try another nearest area.")}`);
     }
   };
@@ -640,7 +777,7 @@ export function Checkout() {
       if (!houseDetails || houseDetails.trim() === '') {
         setHouseDetails(addressText);
       }
-      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Service not available in this city')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Out of city service not available')}`);
       if(inLahore) toast.success(t('Area updated from new pin location'));
     } else {
       const nearText = `Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`;
@@ -648,7 +785,7 @@ export function Checkout() {
       if (!houseDetails || houseDetails.trim() === '') {
         setHouseDetails(nearText);
       }
-      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Service not available in this city')}`);
+      setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Out of city service not available')}`);
     }
   }, [reverseGeocode, t, houseDetails]);
 
@@ -718,14 +855,14 @@ export function Checkout() {
       }
 
       if (hasMap && isOutOfLahore) {
-        toast.error(t('Service not available in this city'));
+        toast.error(t('Out of city service not available'));
         return;
       }
 
       if (!hasMap && hasManual) {
         const manualLower = houseDetails.toLowerCase();
-        if (!manualLower.includes('lahore') && !manualLower.includes('lhr')) {
-          toast.error(t('Service not available in this city'));
+        if (NON_LAHORE_CITIES.some(c => manualLower.includes(c)) || (!manualLower.includes('lahore') && !manualLower.includes('lhr'))) {
+          toast.error(t('Out of city service not available'));
           return;
         }
       }
@@ -818,6 +955,9 @@ export function Checkout() {
         } else {
           fullDeliveryAddress = h || a || "";
         }
+        if (gpsCoords && gpsCoords.lat && gpsCoords.lng && !fullDeliveryAddress.includes('[GPS:')) {
+          fullDeliveryAddress += ` [GPS: ${gpsCoords.lat.toFixed(6)}, ${gpsCoords.lng.toFixed(6)}]`;
+        }
       }
 
       const orderData = {
@@ -848,6 +988,8 @@ export function Checkout() {
         }),
         total: isTbdOrder ? 0 : grandTotal,
         address: fullDeliveryAddress,
+        latitude: gpsCoords?.lat || null,
+        longitude: gpsCoords?.lng || null,
         payment_method: isTbdOrder ? 'cash' : paymentMethod,
         payment_status: 'pending',
         amount_paid: 0,
@@ -920,7 +1062,9 @@ export function Checkout() {
       } else {
         deliveryAddress = h || a || "";
       }
-      if (gpsCoords) deliveryAddress += ` | 📍 https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
+      if (gpsCoords && gpsCoords.lat && gpsCoords.lng && !deliveryAddress.includes('[GPS:')) {
+        deliveryAddress += ` [GPS: ${gpsCoords.lat.toFixed(6)}, ${gpsCoords.lng.toFixed(6)}]`;
+      }
     }
 
     const orderData = {
@@ -953,6 +1097,8 @@ export function Checkout() {
       delivery_fee: deliveryFee,
       distance_km: distanceKm.toFixed(1),
       address: deliveryAddress,
+      latitude: gpsCoords?.lat || null,
+      longitude: gpsCoords?.lng || null,
       payment_method: isTbdOrder ? 'cash' : paymentMethod,
       payment_status: finalStatus,
       transaction_id: transactionId || null,

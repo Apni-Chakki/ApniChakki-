@@ -14,7 +14,7 @@ try {
     if ($category) {
         // Filter by category name
         $sql = "SELECT p.*, c.name as category
-                FROM products p
+                FROM products p IGNORE INDEX (idx_products_is_active)
                 LEFT JOIN categories c ON p.category_id = c.id
                 WHERE c.name = ? AND p.is_active = 1 AND (c.id IS NULL OR c.is_active = 1)
                 ORDER BY p.priority DESC, p.created_at DESC";
@@ -30,7 +30,7 @@ try {
     } else {
         // Get all products
         $sql = "SELECT p.*, c.name as category
-                FROM products p
+                FROM products p IGNORE INDEX (idx_products_is_active)
                 LEFT JOIN categories c ON p.category_id = c.id
                 WHERE p.is_active = 1 AND (c.id IS NULL OR c.is_active = 1)
                 ORDER BY p.priority DESC, p.created_at DESC";
