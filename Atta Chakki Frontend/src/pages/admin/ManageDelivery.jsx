@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Edit2, Trash2, UserCheck, UserX, Loader2 } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/common/card';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 
 export function ManageDelivery() {
+  const { t } = useTranslation();
   const [personnelList, setPersonnelList] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -204,7 +206,7 @@ export function ManageDelivery() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl text-foreground font-bold">Manage Delivery Personnel</h1>
+          <h1 className="text-xl sm:text-2xl text-foreground font-bold">{t("Manage Delivery Personnel")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Add and manage delivery team members
           </p>

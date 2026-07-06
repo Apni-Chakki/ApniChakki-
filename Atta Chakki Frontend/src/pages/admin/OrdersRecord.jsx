@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Badge } from '../../components/common/badge';
 import { Button } from '../../components/common/button';
@@ -34,6 +35,7 @@ import * as XLSX from 'xlsx';
 import { API_BASE_URL } from '../../config'; // <-- NEW: Added API Config
 
 export function OrdersRecord() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true); // <-- NEW: Added Loading State
   
@@ -331,7 +333,7 @@ export function OrdersRecord() {
   return (
     <div>
       <div className="mb-3 sm:mb-4">
-        <h1 className="text-xl sm:text-2xl font-bold">Orders Record</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{t("Orders Record")}</h1>
         <p className="text-muted-foreground text-xs sm:text-sm">Complete order history</p>
       </div>
 

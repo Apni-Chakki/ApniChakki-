@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Save, X, Loader2, UploadCloud, GripVertical, Truck, Weight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -12,6 +13,7 @@ import { API_BASE_URL } from '../../config';
 import { compressImage } from '../../utils/imageCompressor';
 
 export function ManageServices() {
+  const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -486,7 +488,7 @@ export function ManageServices() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold">Manage Services</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t("Manage Services")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Add, edit, or remove services from your catalog</p>
         </div>
         {!isAdding && !editingId && (

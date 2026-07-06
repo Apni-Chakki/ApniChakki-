@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from 'react';
-import { Minus, Plus, ShoppingCart, Calendar, RotateCcw } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Calendar, RotateCcw, ChevronRight } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Card } from '../../components/common/card';
 import { useCart } from '../../store/CartContext';
@@ -38,6 +38,8 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   const isRental = service.is_rental === 1 || service.is_rental === true;
   
   const [showRentalModal, setShowRentalModal] = useState(false);
+  const [showMixModal, setShowMixModal] = useState(false);
+  const [showCustomizationsModal, setShowCustomizationsModal] = useState(false);
   const [rentalDays, setRentalDays] = useState(1);
   const [rentalStartDate, setRentalStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [rentalQty, setRentalQty] = useState(1);
@@ -92,13 +94,29 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   const isCustomMix = service.is_custom_mix === 1 || service.is_custom_mix === true;
   const mixItems = service.mix_items || [];
   
-  // Custom Mix states
+  // Custom Mix states — ratios always sum to 1 (representing a full 1kg mix)
   const [mixRatios, setMixRatios] = useState(() => {
-    if (!isCustomMix) return {};
+    if (!isCustomMix || mixItems.length === 0) return {};
+    const raw = mixItems.map(item => parseFloat(item.default_ratio) || 0);
+    const sum = raw.reduce((s, v) => s + v, 0);
+    const round1 = (v) => Math.round(v * 10) / 10;
+
     const ratios = {};
-    mixItems.forEach((item, idx) => {
-      ratios[idx] = parseFloat(item.default_ratio) || 0;
-    });
+    if (sum <= 0) {
+      // No defaults — split equally
+      const equal = round1(1 / mixItems.length);
+      mixItems.forEach((_, idx) => { ratios[idx] = equal; });
+    } else {
+      // Normalize so ratios sum to 1
+      mixItems.forEach((_, idx) => { ratios[idx] = Math.max(0, round1(raw[idx] / sum)); });
+    }
+    // Fix rounding drift so the sum is exactly 1
+    const total = Object.values(ratios).reduce((s, v) => s + v, 0);
+    const drift = round1(1 - total);
+    if (drift !== 0 && mixItems.length > 0) {
+      const lastIdx = mixItems.length - 1;
+      ratios[lastIdx] = Math.max(0, round1(ratios[lastIdx] + drift));
+    }
     return ratios;
   });
   
@@ -131,8 +149,44 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   };
 
   const handleRatioChange = (index, value) => {
-    const newRatio = parseFloat(value) || 0;
-    setMixRatios(prev => ({ ...prev, [index]: newRatio }));
+    const round1 = (v) => Math.round(v * 10) / 10;
+    const newVal = round1(Math.max(0, Math.min(1, parseFloat(value) || 0)));
+
+    setMixRatios(prev => {
+      const otherIndices = mixItems.map((_, i) => i).filter(i => i !== index);
+
+      // Only one ingredient — it always takes 100% of the mix.
+      if (otherIndices.length === 0) return { ...prev, [index]: 1 };
+
+      const remaining = round1(1 - newVal);
+      const currentOthersSum = otherIndices.reduce((s, i) => s + (parseFloat(prev[i]) || 0), 0);
+
+      const next = { ...prev, [index]: newVal };
+
+      // Distribute `remaining` across the other ingredients.
+      // Proportional to their previous values so the user's relative preferences are preserved.
+      // Fall back to equal split when the others sum to zero.
+      otherIndices.forEach(i => {
+        const prevVal = parseFloat(prev[i]) || 0;
+        const share = currentOthersSum > 0.0001
+          ? (prevVal / currentOthersSum) * remaining
+          : remaining / otherIndices.length;
+        next[i] = Math.max(0, round1(share));
+      });
+
+      // Correct rounding drift so the sum is exactly 1 — nudge the largest of the "others".
+      const total = Object.values(next).reduce((s, v) => s + v, 0);
+      const drift = round1(1 - total);
+      if (drift !== 0) {
+        const largestOther = otherIndices.reduce(
+          (max, i) => (next[i] > next[max] ? i : max),
+          otherIndices[0]
+        );
+        next[largestOther] = Math.max(0, round1(next[largestOther] + drift));
+      }
+
+      return next;
+    });
   };
 
   // Calculate current price
@@ -406,17 +460,17 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
     const unitLabel = isDualUnit ? 'kg' : displayUnit;
     return (
       <div className="flex flex-col gap-2">
-        {/* Quick-select preset chips */}
+        {/* Quick-select preset chips — compact, single row */}
         {hasQuickOptions && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-nowrap justify-center gap-1">
             {quickOptions.map((qty) => (
               <button
                 key={qty}
                 type="button"
                 disabled={disabled || isOutOfStock}
                 onClick={() => handleQuickAdd(qty)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all duration-200
-                  bg-background text-foreground border-border hover:border-primary hover:bg-primary/10 hover:scale-105 active:scale-95
+                className={`flex-1 min-w-0 px-1.5 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 whitespace-nowrap
+                  bg-background text-foreground border-border hover:border-primary hover:bg-primary/10 active:scale-95
                   ${disabled || isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 {qty} {unitLabel}
@@ -426,8 +480,8 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
         )}
         {/* Manual +/- quantity selector */}
         <div className="flex flex-col gap-2">
-          {/* Quantity row — three separate pieces, no outer border */}
-          <div className="flex items-center gap-1.5">
+          {/* Quantity row — centered */}
+          <div className="flex items-center justify-center gap-1.5">
             <button
               type="button"
               className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
@@ -577,7 +631,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
             {service.description && (
               <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
             )}
-            
+
             {isRental ? (
               <div className="flex flex-col gap-1">
                 <div className="flex items-baseline gap-2 flex-wrap">
@@ -606,8 +660,8 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                   <span className="text-muted-foreground text-sm font-medium">
                     / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
                   </span>
-                  <p 
-                    className="text-muted-foreground text-sm ml-1.5 font-medium" 
+                  <p
+                    className="text-muted-foreground text-sm ml-1.5 font-medium"
                     style={{ textDecoration: 'line-through', textDecorationColor: '#ef4444', textDecorationThickness: '2px' }}
                   >
                     Rs. {Math.round(baseForDiscount)}
@@ -625,146 +679,65 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
               </p>
             )}
 
-            {/* Custom Mix Options */}
-            {isCustomMix && mixItems.length > 0 && (
-              <div className="mt-3 p-3.5 bg-[#fcfaf7] border border-primary/20 rounded-2xl space-y-3 shadow-sm animate-in fade-in zoom-in-95 duration-300">
-                <div className="border-b border-primary/10 pb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="text-[11px] font-black text-primary uppercase tracking-wider">{t("Create Your Mix")}</span>
-                  </div>
-                  <p className="text-[9px] text-slate-500 mt-0.5 leading-none">
-                    {t("Price updates automatically")}
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  {mixItems.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-primary/10 shadow-sm gap-2">
-                      <div className="flex flex-col min-w-0 text-left items-start">
-                         <span className="text-xs text-slate-900 truncate leading-tight text-left" style={{ fontWeight: '800' }}>{tDynamic(item.item_name)}</span>
-                         <span className="text-[10px] text-slate-500 mt-1 leading-none text-left" style={{ fontWeight: '400' }}>Rs. {item.price_per_kg}/kg</span>
-                      </div>
-                      
-                      <div className="flex items-center border border-primary/20 rounded-lg overflow-hidden bg-white shadow-sm h-7 shrink-0">
-                         <button 
-                           type="button"
-                           className="w-7 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors select-none" 
-                           onClick={() => {
-                             const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
-                             const newVal = Math.max(0, currentVal - 0.1).toFixed(1);
-                             handleRatioChange(idx, parseFloat(newVal));
-                           }}
-                         >
-                           -
-                         </button>
-                         <span className="w-9 text-center text-xs font-black text-slate-800 select-none">
-                           {mixRatios[idx] !== undefined ? parseFloat(mixRatios[idx]).toFixed(1) : '0.0'}
-                         </span>
-                         <button 
-                           type="button"
-                           className="w-7 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors select-none" 
-                           onClick={() => {
-                             const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
-                             const newVal = (currentVal + 0.1).toFixed(1);
-                             handleRatioChange(idx, parseFloat(newVal));
-                           }}
-                         >
-                           +
-                         </button>
-                      </div>
+            {/* Custom Mix — compact trigger, full builder opens in modal */}
+            {isCustomMix && mixItems.length > 0 && (() => {
+              const activeMixCount = mixItems.reduce((n, _, idx) => n + ((parseFloat(mixRatios[idx]) || 0) > 0 ? 1 : 0), 0);
+              return (
+                <button
+                  type="button"
+                  onClick={() => setShowMixModal(true)}
+                  className="mt-3 w-full p-3 bg-[#fcfaf7] border border-primary/20 rounded-2xl flex items-center justify-between hover:bg-primary/5 hover:border-primary/40 transition-colors text-left shadow-sm"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black text-primary uppercase tracking-wider">{t("Create Your Mix")}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+                        {activeMixCount > 0
+                          ? `${activeMixCount} ${activeMixCount === 1 ? t('ingredient') : t('ingredients')} • ${t('Tap to edit')}`
+                          : t("Tap to build your mix")}
+                      </p>
                     </div>
-                  ))}
-                </div>
-                
-                <div className="pt-1 flex justify-center w-full">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-white font-bold rounded-xl transition-all shadow-sm"
-                    onClick={() => setShowCustomRequest(!showCustomRequest)}
-                  >
-                    {showCustomRequest ? t("Cancel Custom Request") : t("Want something else? Custom Request")}
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            {/* Custom Request Form Dropdown */}
-            {showCustomRequest && isCustomMix && (
-              <div className="mt-3 p-3.5 bg-[#fcfaf7] border border-primary/20 rounded-2xl space-y-3.5 shadow-sm animate-in slide-in-from-top-2 fade-in duration-300">
-                <div className="border-b border-primary/10 pb-1.5">
-                  <p className="text-xs font-extrabold text-primary uppercase tracking-wider">{t("Send a Custom Request")}</p>
-                  <p className="text-[9px] text-slate-500 mt-0.5 leading-normal">{t("Tell us what ingredients and proportions you want, and we'll contact you!")}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <input 
-                    type="text" 
-                    placeholder={t("Your Name")} 
-                    className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" 
-                    value={customRequestData.name} 
-                    onChange={e => setCustomRequestData({...customRequestData, name: e.target.value})} 
-                  />
-                  <input 
-                    type="text" 
-                    placeholder={t("Phone Number")} 
-                    className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" 
-                    value={customRequestData.phone} 
-                    onChange={e => setCustomRequestData({...customRequestData, phone: e.target.value})} 
-                  />
-                  <textarea 
-                    placeholder={t("Describe your custom mix (e.g., 50% Wheat, 30% Chana, 20% Oats)")} 
-                    className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all min-h-[60px]" 
-                    value={customRequestData.message} 
-                    onChange={e => setCustomRequestData({...customRequestData, message: e.target.value})} 
-                  />
-                  <Button 
-                    className="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] h-8 text-xs text-white font-bold rounded-xl transition-all shadow-md" 
-                    onClick={submitCustomRequest}
-                    disabled={isSubmittingRequest}
-                  >
-                    {isSubmittingRequest ? t("Sending...") : t("Send Request")}
-                  </Button>
-                </div>
-              </div>
-            )}
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-primary shrink-0" />
+                </button>
+              );
+            })()}
 
-            {/* Dynamic Customization Options (Legacy) */}
-            {hasCustomizations && effectiveCustomizations.length > 0 && !isCustomMix && (
-               <div className="mt-3 p-4 bg-orange-50/40 border border-orange-100 rounded-xl space-y-3 shadow-sm animate-in fade-in zoom-in-95 duration-300">
-                  <div className="flex items-center gap-2 border-b border-orange-100/50 pb-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                    <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">{t("Service Customization")}</p>
+            {/* Service Customization — compact trigger, full picker opens in modal */}
+            {hasCustomizations && effectiveCustomizations.length > 0 && !isCustomMix && (() => {
+              const selectedCount = Object.values(selectedOptions).filter(Boolean).length;
+              const noneSelected = selectedCount === 0;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setShowCustomizationsModal(true)}
+                  className={`mt-3 w-full p-3 rounded-xl border flex items-center justify-between transition-colors text-left shadow-sm ${
+                    noneSelected
+                      ? 'bg-orange-50/40 border-orange-200 hover:bg-orange-100/40'
+                      : 'bg-orange-50/60 border-orange-200 hover:bg-orange-100/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">{t("Service Customization")}</p>
+                      <p className={`text-[10px] mt-0.5 truncate ${noneSelected ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
+                        {noneSelected
+                          ? `⚠ ${t("Please select at least one service")}`
+                          : `${selectedCount} ${t('selected')} • ${t('Tap to edit')}`}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-2.5">
-                    {effectiveCustomizations.map((cust, idx) => (
-                      <div key={cust.id || idx} className={`flex items-center justify-between p-2 rounded-lg transition-colors ${selectedOptions[idx] ? 'bg-orange-100/50' : 'bg-transparent'}`}>
-                         <div className="flex items-center space-x-3">
-                            <Checkbox 
-                              id={`cust-${service.id}-${idx}`} 
-                              checked={!!selectedOptions[idx]}
-                              onCheckedChange={() => toggleOption(idx)}
-                              className="checkbox-orange border-orange-500 bg-white"
-                            />
-                            <Label htmlFor={`cust-${service.id}-${idx}`} className="text-xs font-bold text-orange-900 cursor-pointer select-none">{t(cust.option_name)}</Label>
-                         </div>
-                         <span className="text-[10px] font-bold text-orange-700 bg-white px-2 py-0.5 rounded-full border border-orange-100">Rs. {cust.option_price}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {Object.values(selectedOptions).every(v => !v) && (
-                    <p className="text-[9px] text-red-500 font-bold animate-bounce text-center italic mt-1">
-                      ⚠ {t("Please select at least one service")}
-                    </p>
-                  )}
-               </div>
-            )}
+                  <ChevronRight className="h-4 w-4 text-orange-600 shrink-0" />
+                </button>
+              );
+            })()}
             {stock < 10 && stock > 0 && !isOnlyPickup && !isDualUnit && (
                  <p className="text-xs text-red-500 mt-1">{t('Only')} {stock} {t('left')}!</p>
             )}
           </div>
-          
+
           {isRental ? (
             /* Rental products: Rent Now button */
             <div className="flex flex-col gap-2">
@@ -902,6 +875,149 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                 {t('Add to Cart')}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Mix Modal */}
+      <Dialog open={showMixModal} onOpenChange={setShowMixModal}>
+        <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
+          <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-slate-800 text-lg font-black">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="truncate">{t("Create Your Mix")}</span>
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium text-xs pt-1">
+              {t("Price updates automatically")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 overflow-y-auto min-h-0">
+            <div className="space-y-2">
+              {mixItems.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-primary/10 shadow-sm gap-2">
+                  <div className="flex flex-col min-w-0 text-left items-start">
+                    <span className="text-xs text-slate-900 truncate leading-tight text-left" style={{ fontWeight: '800' }}>{tDynamic(item.item_name)}</span>
+                    <span className="text-[10px] text-slate-500 mt-1 leading-none text-left" style={{ fontWeight: '400' }}>Rs. {item.price_per_kg}/kg</span>
+                  </div>
+
+                  <div className="flex items-center border border-primary/20 rounded-lg overflow-hidden bg-white shadow-sm h-8 shrink-0">
+                    <button
+                      type="button"
+                      className="w-8 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-sm transition-colors select-none"
+                      onClick={() => {
+                        const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
+                        const newVal = Math.max(0, currentVal - 0.1).toFixed(1);
+                        handleRatioChange(idx, parseFloat(newVal));
+                      }}
+                    >
+                      -
+                    </button>
+                    <span className="w-10 text-center text-sm font-black text-slate-800 select-none">
+                      {mixRatios[idx] !== undefined ? parseFloat(mixRatios[idx]).toFixed(1) : '0.0'}
+                    </span>
+                    <button
+                      type="button"
+                      className="w-8 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-sm transition-colors select-none"
+                      onClick={() => {
+                        const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
+                        const newVal = (currentVal + 0.1).toFixed(1);
+                        handleRatioChange(idx, parseFloat(newVal));
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Live total inside modal */}
+            <div className="flex items-center justify-between text-xs bg-primary/5 border border-primary/20 rounded-xl px-3 py-2">
+              <span className="font-semibold text-slate-600">{t('Total')}</span>
+              <span className="font-black text-primary">Rs. {Math.round(parseFloat(currentPrice) || 0)}</span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-white font-bold rounded-xl transition-all shadow-sm"
+              onClick={() => setShowCustomRequest(!showCustomRequest)}
+            >
+              {showCustomRequest ? t("Cancel Custom Request") : t("Want something else? Custom Request")}
+            </Button>
+
+            {showCustomRequest && (
+              <div className="p-3.5 bg-[#fcfaf7] border border-primary/20 rounded-2xl space-y-3 shadow-sm animate-in slide-in-from-top-2 fade-in duration-300">
+                <div className="border-b border-primary/10 pb-1.5">
+                  <p className="text-xs font-extrabold text-primary uppercase tracking-wider">{t("Send a Custom Request")}</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5 leading-normal">{t("Tell us what ingredients and proportions you want, and we'll contact you!")}</p>
+                </div>
+                <div className="space-y-2">
+                  <input type="text" placeholder={t("Your Name")} className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" value={customRequestData.name} onChange={e => setCustomRequestData({...customRequestData, name: e.target.value})} />
+                  <input type="text" placeholder={t("Phone Number")} className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" value={customRequestData.phone} onChange={e => setCustomRequestData({...customRequestData, phone: e.target.value})} />
+                  <textarea placeholder={t("Describe your custom mix (e.g., 50% Wheat, 30% Chana, 20% Oats)")} className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all min-h-[60px]" value={customRequestData.message} onChange={e => setCustomRequestData({...customRequestData, message: e.target.value})} />
+                  <Button className="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] h-8 text-xs text-white font-bold rounded-xl transition-all shadow-md" onClick={submitCustomRequest} disabled={isSubmittingRequest}>
+                    {isSubmittingRequest ? t("Sending...") : t("Send Request")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0 pt-2 border-t border-slate-100">
+            <Button onClick={() => setShowMixModal(false)} className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl">
+              {t('Done')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Customization Modal */}
+      <Dialog open={showCustomizationsModal} onOpenChange={setShowCustomizationsModal}>
+        <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
+          <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-slate-800 text-lg font-black">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+              <span className="truncate text-orange-800">{t("Service Customization")}</span>
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium text-xs pt-1">
+              {t("Select the services you want")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2.5 overflow-y-auto min-h-0">
+            {effectiveCustomizations.map((cust, idx) => (
+              <div key={cust.id || idx} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${selectedOptions[idx] ? 'bg-orange-100/60 border-orange-200' : 'bg-white border-orange-100'}`}>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`cust-modal-${service.id}-${idx}`}
+                    checked={!!selectedOptions[idx]}
+                    onCheckedChange={() => toggleOption(idx)}
+                    className="checkbox-orange border-orange-500 bg-white"
+                  />
+                  <Label htmlFor={`cust-modal-${service.id}-${idx}`} className="text-sm font-bold text-orange-900 cursor-pointer select-none">{t(cust.option_name)}</Label>
+                </div>
+                <span className="text-xs font-bold text-orange-700 bg-white px-2 py-0.5 rounded-full border border-orange-100">Rs. {cust.option_price}</span>
+              </div>
+            ))}
+
+            {Object.values(selectedOptions).every(v => !v) && (
+              <p className="text-xs text-red-500 font-bold text-center italic mt-1">
+                ⚠ {t("Please select at least one service")}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between text-xs bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 mt-2">
+              <span className="font-semibold text-slate-600">{t('Total')}</span>
+              <span className="font-black text-orange-700">Rs. {Math.round(parseFloat(currentPrice) || 0)}</span>
+            </div>
+          </div>
+
+          <DialogFooter className="shrink-0 pt-2 border-t border-slate-100">
+            <Button onClick={() => setShowCustomizationsModal(false)} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl">
+              {t('Done')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

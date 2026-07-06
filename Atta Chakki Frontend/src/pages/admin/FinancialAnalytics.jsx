@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { 
   BarChart, 
@@ -17,6 +18,7 @@ import { API_BASE_URL } from '../../config'; // <-- NEW: Import API Config
 import { toast } from 'sonner';
 
 export function FinancialAnalytics() {
+  const { t } = useTranslation();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true); // <-- NEW: Loading state
   const [summary, setSummary] = useState({
@@ -70,7 +72,7 @@ export function FinancialAnalytics() {
       <div>
         <h1 className="text-foreground font-bold
  mb-2">Financial Analytics</h1>
-        <p className="text-muted-foreground">Profit & Loss overview for the last 7 days</p>
+        <p className="text-muted-foreground">{t("Profit & Loss overview for the last 7 days")}</p>
       </div>
 
       {/* Summary Cards */}

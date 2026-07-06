@@ -497,9 +497,9 @@ export function TomorrowsList() {
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <Sunrise className="h-5 w-5 sm:h-7 sm:w-7 text-orange-500 shrink-0" />
-            <span className="truncate">Tomorrow's Work List</span>
+            <span className="truncate">{t("Tomorrow's Work List")}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} orders scheduled for tomorrow</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} {t('orders scheduled for tomorrow')}</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <Button
@@ -508,7 +508,7 @@ export function TomorrowsList() {
             className="bg-primary w-full sm:w-auto"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Print Full List
+            {t('Print Full List')}
           </Button>
         </div>
       </div>
@@ -547,7 +547,7 @@ export function TomorrowsList() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 shrink-0" />
-                <span className="font-semibold text-orange-900 text-sm sm:text-base">Tomorrow's Capacity</span>
+                <span className="font-semibold text-orange-900 text-sm sm:text-base">{t("Tomorrow's Capacity")}</span>
               </div>
               <div className="text-[11px] sm:text-sm text-orange-700">
                 <span className="font-bold">{Math.round(capacity.booked_minutes)}</span> / {Math.round(capacity.total_minutes)} mins booked
@@ -581,8 +581,8 @@ export function TomorrowsList() {
             <div className="rounded-full bg-background p-4 mb-4">
               <CalendarClock className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold text-lg">No orders scheduled for tomorrow</h3>
-            <p className="text-muted-foreground">Orders that exceed today's capacity will appear here automatically.</p>
+            <h3 className="font-semibold text-lg">{t('No orders scheduled for tomorrow')}</h3>
+            <p className="text-muted-foreground">{t("Orders that exceed today's capacity will appear here automatically.")}</p>
           </CardContent>
         </Card>
       ) : (

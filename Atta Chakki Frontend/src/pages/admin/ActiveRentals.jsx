@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Badge } from '../../components/common/badge';
@@ -25,6 +26,7 @@ import { PrintOrderDetails } from './PrintOrderDetails';
 import { downloadBillPDF } from '../../utils/billPdfUtils';
 
 export function ActiveRentals() {
+  const { t } = useTranslation();
   const [rentals, setRentals] = useState([]);
   const [summary, setSummary] = useState({ total_active: 0, total_overdue: 0, total_deposits_held: 0 });
   const [loading, setLoading] = useState(true);
@@ -242,7 +244,7 @@ Apni Chakki - Fresh Flour Daily`.trim();
             <RotateCcw className="h-7 w-7 text-teal-500" />
             Active Rentals
           </h1>
-          <p className="text-muted-foreground">{rentals.length} rental(s) currently active</p>
+          <p className="text-muted-foreground">{rentals.length} {t("rental(s) currently active")}</p>
         </div>
         <div className="flex gap-2">
           <Button

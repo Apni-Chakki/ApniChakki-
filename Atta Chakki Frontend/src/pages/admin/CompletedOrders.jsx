@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/card';
 import { Badge } from '../../components/common/badge';
 import { CheckCircle, Calendar, User, Package, Search, Monitor, Store } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Input } from '../../components/common/input';
 import { API_BASE_URL } from '../../config';
 
 export function CompletedOrders() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,7 +49,7 @@ export function CompletedOrders() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-green-700">Completed Orders</h1>
+          <h1 className="text-2xl font-bold text-green-700">{t("Completed Orders")}</h1>
           <p className="text-muted-foreground">History of delivered and finished jobs</p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-3">

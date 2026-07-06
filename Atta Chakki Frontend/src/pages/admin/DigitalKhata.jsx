@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -17,6 +18,7 @@ import { PrintExpenseReport } from './PrintExpenseReport';
 import { API_BASE_URL } from '../../config'; // <-- NEW: Import API Config
 
 export function DigitalKhata() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [backendTotals, setBackendTotals] = useState({ today: 0, month: 0 }); // <-- Store DB totals
@@ -244,7 +246,7 @@ export function DigitalKhata() {
     <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">Digital Khata</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">{t("Digital Khata")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">Track daily expenditures and purchases</p>
         </div>
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">

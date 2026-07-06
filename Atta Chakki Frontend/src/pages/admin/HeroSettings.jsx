@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -10,6 +11,7 @@ import { API_BASE_URL } from '../../config';
 import { compressImage } from '../../utils/imageCompressor';
 
 export function HeroSettings() {
+  const { t } = useTranslation();
   const [slides, setSlides] = useState([]);
   const [storySlides, setStorySlides] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -251,7 +253,7 @@ export function HeroSettings() {
     <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto pb-8 sm:pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Manage Sliders</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("Manage Sliders")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage the Hero Banner and Our Story sliders on the homepage</p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OrdersTable } from './OrdersTable';
 import { Button } from '../../components/common/button';
 import { toast } from 'sonner';
@@ -6,6 +7,7 @@ import { API_BASE_URL } from '../../config';
 import { CheckCircle2, Loader2, PackageCheck } from 'lucide-react';
 
 export function ReadyOrders() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -91,9 +93,9 @@ export function ReadyOrders() {
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <PackageCheck className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 shrink-0" />
-            <span className="truncate">Ready Orders</span>
+            <span className="truncate">{t("Ready Orders")}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} orders waiting for pickup or delivery</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} {t("orders waiting for pickup or delivery")}</p>
         </div>
       </div>
 

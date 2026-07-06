@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Badge } from '../../components/common/badge';
@@ -35,6 +36,7 @@ import {
 } from '../../components/common/tooltip';
 
 export function TodaysWork() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [printOrder, setPrintOrder] = useState(null);
@@ -1263,11 +1265,11 @@ Mughal Atta Chakki — Pure & Fresh Processing
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 sm:gap-4">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">
-              Processing Board
+              {t('Processing Board')}
             </div>
-            <h1 className="text-xl sm:text-3xl font-bold text-slate-900">Today's Work</h1>
+            <h1 className="text-xl sm:text-3xl font-bold text-slate-900">{t("Today's Work")}</h1>
             <p className="text-xs sm:text-base text-slate-600 mt-1 sm:mt-2 max-w-2xl">
-              Orders currently in production, with live capacity, driver assignment, and scheduling actions in one place.
+              {t('Orders currently in production, with live capacity, driver assignment, and scheduling actions in one place.')}
             </p>
           </div>
           <div className="flex items-stretch gap-2 self-stretch lg:self-auto sm:items-center sm:flex-wrap">
@@ -1276,11 +1278,11 @@ Mughal Atta Chakki — Pure & Fresh Processing
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md flex items-center justify-center gap-2 flex-1 sm:flex-none h-11 rounded-lg"
             >
               <Printer className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-1" />
-              <span className="hidden sm:inline">Print Today's Work List</span>
-              <span className="sm:hidden">Print List</span>
+              <span className="hidden sm:inline">{t("Print Today's Work List")}</span>
+              <span className="sm:hidden">{t('Print List')}</span>
             </Button>
             <div className="flex-1 sm:flex-none h-11 sm:h-auto rounded-lg sm:rounded-full bg-secondary text-secondary-foreground text-sm sm:text-lg font-semibold flex items-center justify-center px-3 sm:px-4 sm:py-2 border border-border sm:border-0">
-              {orders.length} Active Jobs
+              {orders.length} {t('Active Jobs')}
             </div>
           </div>
         </div>

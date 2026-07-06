@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
 
 export default function CustomMixRequests() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -210,7 +212,7 @@ export default function CustomMixRequests() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="min-w-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Custom Mix Requests</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">{t("Custom Mix Requests")}</h2>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage customer requests for custom multigrain proportions.</p>
         </div>
       </div>

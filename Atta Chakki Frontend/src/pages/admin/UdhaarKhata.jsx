@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 
 export function UdhaarKhata() {
+  const { t } = useTranslation();
   const [ledgers, setLedgers] = useState([]);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -111,7 +113,7 @@ export function UdhaarKhata() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">Udhaar Khata</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">{t("Udhaar Khata")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">Customer Ledger &amp; Outstanding Payments</p>
         </div>
         <Card className="px-3 sm:px-4 py-2 bg-red-50 border-red-200 flex items-center gap-3 w-full md:w-auto">

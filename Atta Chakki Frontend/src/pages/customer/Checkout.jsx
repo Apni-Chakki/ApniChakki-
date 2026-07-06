@@ -104,7 +104,14 @@ const SANDBOX_TEST_PHONES = {
 };
 
 // dukan ki jagah aur distance nikalne k liye yahan settings hain
-const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 }; 
+const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 };
+
+// When Google Maps isn't available, we fall back to the straight-line (Haversine)
+// distance. Real road distance in Lahore is typically ~1.3–1.5× the straight line,
+// so we scale the fallback up to approximate the driving distance the rider covers.
+// Google Maps' own DistanceMatrixService already returns true road km, so it is
+// NOT multiplied — this factor only applies to the fallback path.
+const ROAD_DISTANCE_FACTOR = 1.5;
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; 
@@ -294,9 +301,12 @@ export function Checkout() {
 
     if (gpsCoords && !isOutOfLahore) {
       const straightDist = calculateDistance(
-        SHOP_LOCATION.lat, SHOP_LOCATION.lng, 
+        SHOP_LOCATION.lat, SHOP_LOCATION.lng,
         gpsCoords.lat, gpsCoords.lng
       );
+      // Fallback estimate: Haversine underreports actual road distance,
+      // so scale it up for the paths that don't hit Google Maps.
+      const estimatedRoadDist = straightDist * ROAD_DISTANCE_FACTOR;
 
       const updateFee = (distVal) => {
         setDistanceKm(distVal);
@@ -311,9 +321,33 @@ export function Checkout() {
         setDeliveryFee(fee);
       };
 
-      // Use 1.5 rule instead of Google Maps API
-      const roadDistApprox = straightDist * 1.5;
-      updateFee(roadDistApprox);
+      if (USE_GOOGLE_MAPS && window.google?.maps?.DistanceMatrixService) {
+        try {
+          const service = new window.google.maps.DistanceMatrixService();
+          service.getDistanceMatrix(
+            {
+              origins: [new window.google.maps.LatLng(SHOP_LOCATION.lat, SHOP_LOCATION.lng)],
+              destinations: [new window.google.maps.LatLng(gpsCoords.lat, gpsCoords.lng)],
+              travelMode: window.google.maps.TravelMode.DRIVING,
+              unitSystem: window.google.maps.UnitSystem.METRIC,
+            },
+            (response, status) => {
+              if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
+                const element = response.rows[0].elements[0];
+                const roadDist = element.distance.value / 1000;
+                updateFee(roadDist); // Google returns true road km — use as-is.
+              } else {
+                updateFee(estimatedRoadDist);
+              }
+            }
+          );
+        } catch (e) {
+          console.warn('Distance Matrix failed, using straight-line estimate:', e);
+          updateFee(estimatedRoadDist);
+        }
+      } else {
+        updateFee(estimatedRoadDist);
+      }
     } else {
       setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);
       setDistanceKm(0);

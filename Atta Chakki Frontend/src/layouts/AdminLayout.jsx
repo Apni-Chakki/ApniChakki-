@@ -6,6 +6,7 @@ import { useAuth } from '../store/AuthContext';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 function PageLoader() {
   return (
@@ -19,6 +20,7 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const initial = user?.name?.charAt(0)?.toUpperCase() || 'A';
 
   const [notifications, setNotifications] = useState([]);
@@ -143,28 +145,27 @@ export default function AdminLayout({ children }) {
                 )}
               </button>
               {showNotifications && (
-                <div 
-                  className="absolute mt-2 bg-card border border-border rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden" 
-                  style={{ 
-                    top: 'calc(100% + 5px)', 
-                    right: '-10px',
-                    width: '380px', 
-                    maxWidth: 'calc(100vw - 32px)' 
+                <div
+                  className="absolute mt-2 bg-card border border-border rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden -end-[10px]"
+                  style={{
+                    top: 'calc(100% + 5px)',
+                    width: '380px',
+                    maxWidth: 'calc(100vw - 32px)'
                   }}
                 >
                   <div className="p-4 border-b bg-muted/20 flex justify-between items-center shrink-0">
-                    <h3 className="font-semibold text-foreground">Admin Notifications</h3>
+                    <h3 className="font-semibold text-foreground">{t('Admin Notifications')}</h3>
                     <button onClick={() => setShowNotifications(false)} className="hover:bg-muted p-1.5 rounded-full transition-colors text-muted-foreground hover:text-foreground">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="max-h-[350px] overflow-y-auto w-full custom-scrollbar">
                     {notifications.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-muted-foreground">No new notifications</div>
+                      <div className="p-4 text-center text-sm text-muted-foreground">{t('No new notifications')}</div>
                     ) : (
                       notifications.map(notif => (
-                        <div 
-                          key={notif.id} 
+                        <div
+                          key={notif.id}
                           onClick={() => handleNotificationNavigation(notif)}
                           className={`p-4 border-b last:border-b-0 hover:bg-muted/30 transition-colors flex items-start gap-3 cursor-pointer ${notif.is_read ? 'opacity-75' : 'bg-primary/5'}`}
                         >
@@ -175,7 +176,7 @@ export default function AdminLayout({ children }) {
                             <p className="font-semibold text-sm text-foreground mb-1">{notif.title}</p>
                             <p className="text-xs text-muted-foreground leading-relaxed break-words">{notif.message}</p>
                             <p className="text-[10px] text-muted-foreground/70 mt-2 font-medium">
-                              {new Date(notif.created_at).toLocaleDateString()} at {new Date(notif.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              {new Date(notif.created_at).toLocaleDateString()} {t('at')} {new Date(notif.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </p>
                           </div>
                         </div>

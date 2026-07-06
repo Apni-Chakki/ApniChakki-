@@ -124,14 +124,14 @@ export function Header() {
         )}
       </Button>
 
-      {/* Notifications Dropdown */}
+      {/* Notifications Dropdown — end-* classes are logical (flip with dir="rtl") */}
       {showNotificationsDropdown && (
-        <div 
-          className="absolute mt-2 bg-card border border-border rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden -right-[70px] sm:-right-[10px]" 
-          style={{ 
-            top: 'calc(100% + 5px)', 
-            width: '380px', 
-            maxWidth: 'calc(100vw - 32px)' 
+        <div
+          className="absolute mt-2 bg-card border border-border rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden -end-[70px] sm:-end-[10px]"
+          style={{
+            top: 'calc(100% + 5px)',
+            width: '380px',
+            maxWidth: 'calc(100vw - 32px)',
           }}
         >
           <div className="p-4 border-b bg-muted/20 flex justify-between items-center shrink-0">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Badge } from '../../components/common/badge';
 import { Button } from '../../components/common/button';
@@ -24,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { API_BASE_URL } from '../../config'; // <-- NEW: API Config
 
 export function InventoryManagement() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true); // <-- NEW: Loading State
@@ -162,7 +164,7 @@ export function InventoryManagement() {
     <div>
       <div className="mb-4 sm:mb-6 flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">Inventory Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">{t("Inventory Management")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">Track and manage stock levels for your products</p>
         </div>
 
