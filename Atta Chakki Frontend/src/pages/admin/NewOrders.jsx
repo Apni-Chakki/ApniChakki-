@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { OrdersTable } from './OrdersTable';
 import { Button } from '../../components/common/button';
@@ -43,6 +44,7 @@ import {
 } from "../../components/common/tooltip";
 
 export function NewOrders() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activePersonnel, setActivePersonnel] = useState([]);
@@ -309,7 +311,7 @@ export function NewOrders() {
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">New Orders</h1>
+            <h1 className="text-2xl font-bold">{t("New Orders")}</h1>
             <p className="text-sm text-muted-foreground">{orders.length} pending</p>
           </div>
           {heavyThreshold && (

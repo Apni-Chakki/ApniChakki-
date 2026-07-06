@@ -790,14 +790,19 @@ html, body {
 
 /* Trending Section Spacing */
 .trending-section {
-  padding-top: 5rem !important; /* Generous top padding for separation below hero */
-  padding-bottom: 0px !important; /* No bottom padding as requested */
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
 }
 
 /* Discounted Section Spacing */
 .discounted-section {
-  padding-top: 4rem !important;
-  padding-bottom: 5rem !important;
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+@media (min-width: 768px) {
+  .trending-section  { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .discounted-section { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
 }
 
 /* ============================================================

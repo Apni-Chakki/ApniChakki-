@@ -104,7 +104,14 @@ const SANDBOX_TEST_PHONES = {
 };
 
 // dukan ki jagah aur distance nikalne k liye yahan settings hain
-const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 }; 
+const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 };
+
+// When Google Maps isn't available, we fall back to the straight-line (Haversine)
+// distance. Real road distance in Lahore is typically ~1.3–1.5× the straight line,
+// so we scale the fallback up to approximate the driving distance the rider covers.
+// Google Maps' own DistanceMatrixService already returns true road km, so it is
+// NOT multiplied — this factor only applies to the fallback path.
+const ROAD_DISTANCE_FACTOR = 1.5;
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; 
@@ -294,9 +301,12 @@ export function Checkout() {
 
     if (gpsCoords && !isOutOfLahore) {
       const straightDist = calculateDistance(
-        SHOP_LOCATION.lat, SHOP_LOCATION.lng, 
+        SHOP_LOCATION.lat, SHOP_LOCATION.lng,
         gpsCoords.lat, gpsCoords.lng
       );
+      // Fallback estimate: Haversine underreports actual road distance,
+      // so scale it up for the paths that don't hit Google Maps.
+      const estimatedRoadDist = straightDist * ROAD_DISTANCE_FACTOR;
 
       const updateFee = (distVal) => {
         setDistanceKm(distVal);
@@ -325,18 +335,18 @@ export function Checkout() {
               if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
                 const element = response.rows[0].elements[0];
                 const roadDist = element.distance.value / 1000;
-                updateFee(roadDist);
+                updateFee(roadDist); // Google returns true road km — use as-is.
               } else {
-                updateFee(straightDist);
+                updateFee(estimatedRoadDist);
               }
             }
           );
         } catch (e) {
-          console.warn('Distance Matrix failed, using straight-line:', e);
-          updateFee(straightDist);
+          console.warn('Distance Matrix failed, using straight-line estimate:', e);
+          updateFee(estimatedRoadDist);
         }
       } else {
-        updateFee(straightDist);
+        updateFee(estimatedRoadDist);
       }
     } else {
       setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);

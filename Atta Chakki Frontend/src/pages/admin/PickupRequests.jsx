@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Badge } from '../../components/common/badge';
@@ -32,6 +33,7 @@ import {
 } from '../../components/common/table';
 
 export function PickupRequests() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activePersonnel, setActivePersonnel] = useState([]);
@@ -224,15 +226,15 @@ export function PickupRequests() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-amber-700 text-xs font-semibold uppercase tracking-wide mb-3">
-              Pickup Services
+              {t("Pickup Services")}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Pickup Requests</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t("Pickup Requests")}</h1>
             <p className="text-slate-500 mt-1 text-xs sm:text-sm">
-              Manage requests for services where the driver has to pick up items (Trip unit).
+              {t("Manage requests for services where the driver has to pick up items (Trip unit).")}
             </p>
           </div>
           <Badge variant="secondary" className="text-sm sm:text-base font-bold px-3 sm:px-4 py-1.5 sm:py-2 self-start sm:self-auto">
-            {orders.length} Active Requests
+            {orders.length} {t("Active Requests")}
           </Badge>
         </div>
       </div>

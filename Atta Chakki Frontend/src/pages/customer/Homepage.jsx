@@ -1,4 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import Autoplay from 'embla-carousel-autoplay';
 import { ServiceCard } from './ServiceCard';
 const UserReviews = lazy(() => import('./UserReviews').then(module => ({ default: module.UserReviews })));
 import { Card } from '../../components/common/card';
@@ -344,46 +345,6 @@ export function Homepage() {
         </div>
       )}
 
-      {/* Featured Products Section */}
-      {!loading && !selectedCategory && featuredProducts.length > 0 && (
-        <LazyAnimatedSection
-          type="fade-up"
-          placeholderHeight="450px"
-          className="trending-section px-4 bg-gradient-to-b from-background to-secondary/10"
-        >
-          <section className="container mx-auto max-w-6xl">
-            <div className="text-center mb-10 sm:mb-16">
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                {t('Trending Now')}
-              </h2>
-              <p className="premium-section-sub">
-                {t('Discover our most popular freshly ground products and premium spices, loved by our customers.')}
-              </p>
-            </div>
-            <motion.div
-              variants={{
-                hidden: {},
-                visible: { transition: { staggerChildren: 0.08 } }
-              }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
-            >
-              {featuredProducts.map((product) => (
-                <motion.div
-                  key={product.id}
-                  variants={itemVariants}
-                  className="transition-all duration-500 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
-                >
-                  <ServiceCard
-                    service={product}
-                    onAddToCart={() => handleAddToCart(product)}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
-          </section>
-        </LazyAnimatedSection>
-      )}
-
       {/* Discounted Products Section */}
       {!loading && !selectedCategory && discountedProducts.length > 0 && (
         <LazyAnimatedSection
@@ -391,9 +352,9 @@ export function Homepage() {
           placeholderHeight="400px"
           className="discounted-section px-4 bg-gradient-to-b from-secondary/5 to-background border-t border-border/40"
         >
-          <section className="container mx-auto max-w-6xl py-12">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-foreground mb-4">
+          <section className="container mx-auto max-w-6xl">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
                 {t('Special Offers')}
               </h2>
               <p className="premium-section-sub">
@@ -407,6 +368,9 @@ export function Homepage() {
                   align: "start",
                   loop: true,
                 }}
+                plugins={[
+                  Autoplay({ delay: 3000, stopOnInteraction: false, stopOnMouseEnter: true }),
+                ]}
                 className="w-full"
               >
                 <CarouselContent
@@ -457,7 +421,7 @@ export function Homepage() {
       <LazyAnimatedSection
         type="fade-up"
         placeholderHeight="500px"
-        className="py-8 sm:py-12 md:py-16 px-4 bg-background"
+        className="py-6 sm:py-8 md:py-10 px-4 bg-background"
       >
         <section className="container mx-auto max-w-6xl">
           {loading && (
@@ -468,7 +432,7 @@ export function Homepage() {
 
           {!loading && !selectedCategory && (
             <div>
-              <h2 className="text-center mb-6 sm:mb-8 md:mb-10 text-3xl font-bold text-foreground">
+              <h2 className="text-center mb-4 sm:mb-6 text-2xl sm:text-3xl font-bold text-foreground">
                 {t('Our Services')}
               </h2>
               {allCategories.length === 0 ? (
@@ -553,6 +517,46 @@ export function Homepage() {
           )}
         </section>
       </LazyAnimatedSection>
+
+      {/* Trending Now Section */}
+      {!loading && !selectedCategory && featuredProducts.length > 0 && (
+        <LazyAnimatedSection
+          type="fade-up"
+          placeholderHeight="450px"
+          className="trending-section px-4 bg-gradient-to-b from-background to-secondary/10"
+        >
+          <section className="container mx-auto max-w-6xl">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                {t('Trending Now')}
+              </h2>
+              <p className="premium-section-sub">
+                {t('Discover our most popular freshly ground products and premium spices, loved by our customers.')}
+              </p>
+            </div>
+            <motion.div
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.08 } }
+              }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+            >
+              {featuredProducts.map((product) => (
+                <motion.div
+                  key={product.id}
+                  variants={itemVariants}
+                  className="transition-all duration-500 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
+                >
+                  <ServiceCard
+                    service={product}
+                    onAddToCart={() => handleAddToCart(product)}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </section>
+        </LazyAnimatedSection>
+      )}
 
       {/* How It Works Section */}
       {!selectedCategory && (

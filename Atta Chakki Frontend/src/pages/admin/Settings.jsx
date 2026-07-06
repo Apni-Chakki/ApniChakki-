@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal, Map } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 
 export function Settings() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState({
     storeName: "Mughal Ata Chaki",
     phone: '+92 3228483029',
@@ -97,7 +99,7 @@ export function Settings() {
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Store Settings</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{t("Store Settings")}</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage your store information and customer announcements</p>
       </div>
 
@@ -125,7 +127,7 @@ export function Settings() {
       </Card>
 
       <Card className="p-4 sm:p-6">
-        <h2 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base">Basic Information</h2>
+        <h2 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base">{t("Basic Information")}</h2>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -179,7 +181,7 @@ export function Settings() {
       </Card>
 
       <Card className="p-4 sm:p-6">
-        <h2 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base">Business Hours</h2>
+        <h2 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base">{t("Business Hours")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="openingTime">Opening Time</Label>

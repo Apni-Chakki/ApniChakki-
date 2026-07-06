@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/card';
 import { Input } from '../../components/common/input';
 import { Button } from '../../components/common/button';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../../store/AuthContext';
 
 export function AdminComments() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,7 @@ export function AdminComments() {
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">Manage Comments</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{t("Manage Comments")}</h1>
         <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto">
           <Input
             placeholder="Search by user or comment..."
