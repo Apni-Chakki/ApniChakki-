@@ -8,7 +8,7 @@ $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "
 $full_url = $protocol . "://" . $host . $request_uri;
 
 // Default SEO Tags
-$title = "Apni Chakki - Pure & Fresh Chakki Atta";
+$title = "Suchi Chakki - Pure & Fresh Chakki Atta";
 $description = "Fresh, hygienic, and authentic Chakki Atta and premium spices delivered straight to your doorstep.";
 // Default fallback images
 $slider_images = [
@@ -47,19 +47,19 @@ $keywords = "chakki atta, fresh flour, pure spices, whole wheat, online chakki";
 
 // Route Specific Logic
 if (strpos($request_uri, '/checkout') !== false) {
-    $title = "Checkout - Apni Chakki";
-    $description = "Complete your order at Apni Chakki. Secure checkout for fresh flour and premium services.";
+    $title = "Checkout - Suchi Chakki";
+    $description = "Complete your order at Suchi Chakki. Secure checkout for fresh flour and premium services.";
 } elseif (strpos($request_uri, '/contact') !== false) {
-    $title = "Contact Us - Apni Chakki";
-    $description = "Get in touch with Apni Chakki for pure and fresh flour delivery.";
+    $title = "Contact Us - Suchi Chakki";
+    $description = "Get in touch with Suchi Chakki for pure and fresh flour delivery.";
 } elseif (strpos($request_uri, '/reviews') !== false) {
-    $title = "Customer Reviews - Apni Chakki";
+    $title = "Customer Reviews - Suchi Chakki";
     $description = "See what our happy customers are saying about our pure and fresh flour.";
 } elseif (strpos($request_uri, '/track-order') !== false) {
-    $title = "Track Order - Apni Chakki";
-    $description = "Track your Apni Chakki order in real-time.";
+    $title = "Track Order - Suchi Chakki";
+    $description = "Track your Suchi Chakki order in real-time.";
 } elseif (strpos($request_uri, '/login/customer') !== false) {
-    $title = "Login - Apni Chakki";
+    $title = "Login - Suchi Chakki";
 }
 
 $html_file = __DIR__ . '/index.html';

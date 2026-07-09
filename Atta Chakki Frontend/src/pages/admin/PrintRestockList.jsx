@@ -28,7 +28,7 @@ export function PrintRestockList({ items, open, onClose }) {
         .then(data => {
           if (data.success && data.settings) {
             setStoreSettings({
-              name: data.settings.storeName || "MUGHAL ATTA CHAKKI",
+              name: data.settings.storeName || "SUCHI CHAKKI",
               address: data.settings.address || "",
               phone: data.settings.phone || "",
               tagline: data.settings.tagline || ""

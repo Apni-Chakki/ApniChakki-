@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { API_BASE_URL } from './config';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { safeGetStorage } from './utils/projectProtection';
+import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
 
 // Importing all layouts
 const CustomerLayout = lazy(() => import('./layouts/CustomerLayout'));
@@ -75,7 +77,7 @@ function ProtectedAdminRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();
   
-  const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
+  const storedUser = user || safeGetStorage('user', null);
 
   if (!storedUser) console.warn("ProtectedRoute: No user found.");
   else if (storedUser.role && storedUser.role.toLowerCase() !== 'admin') console.warn(`ProtectedRoute: Role mismatch. Expected 'admin', got '${storedUser.role}'`);
@@ -92,7 +94,7 @@ function ProtectedDeliveryRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();
 
-  const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
+  const storedUser = user || safeGetStorage('user', null);
 
   const role = storedUser?.role ? storedUser.role.toLowerCase() : '';
   if (!storedUser || (role !== 'delivery' && role !== 'delivery_boy' && role !== 'admin')) {
@@ -104,7 +106,7 @@ function ProtectedDeliveryRoute({ children }) {
 // Guest route to prevent logged in users from visiting login page again
 function GuestRoute({ children, role, redirectTo }) {
   const { user } = useAuth();
-  const storedUser = user || JSON.parse(localStorage.getItem('user') || 'null');
+  const storedUser = user || safeGetStorage('user', null);
 
   if (storedUser && storedUser.role && storedUser.role.toLowerCase() === role) {
     return <Navigate to={redirectTo} replace />;
@@ -168,7 +170,7 @@ function PageTitleUpdater({ storeName }) {
   const location = useLocation();
 
   useEffect(() => {
-    let title = 'Apni Chakki';
+    let title = 'Suchi Chakki';
     
     if (location.pathname.startsWith('/order-confirmation/')) {
       title = 'Order Confirmation';
@@ -190,7 +192,7 @@ function PageTitleUpdater({ storeName }) {
 
 export default function App() {
   const { i18n } = useTranslation();
-  const [storeName, setStoreName] = useState('Apni Chakki');
+  const [storeName, setStoreName] = useState('Suchi Chakki');
 
   // Fetching store name from DB so it's dynamic
   useEffect(() => {
@@ -199,7 +201,46 @@ export default function App() {
         const response = await fetch(`${API_BASE_URL}/get_store_settings.php`);
         const data = await response.json();
         if (data.success && data.settings && data.settings.storeName) {
-          setStoreName(data.settings.storeName);
+          const name = data.settings.storeName;
+          setStoreName(name);
+
+          // Update PWA manifest name dynamically with store name
+          try {
+            let manifestLink = document.querySelector("link[rel='manifest']");
+            if (!manifestLink) {
+              manifestLink = document.createElement('link');
+              manifestLink.rel = 'manifest';
+              document.head.appendChild(manifestLink);
+            }
+            const origin = window.location.origin;
+            const updatedManifest = {
+              name: name,
+              short_name: name,
+              description: 'Fresh, hygienic, and authentic Chakki Atta and premium spices delivered straight to your doorstep.',
+              theme_color: '#8b6f47',
+              background_color: '#ffffff',
+              display: 'standalone',
+              start_url: origin + '/',
+              icons: [
+                {
+                  src: origin + '/pwa-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                  purpose: 'any maskable'
+                },
+                {
+                  src: origin + '/pwa-512x512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'any maskable'
+                }
+              ]
+            };
+            const blob = new Blob([JSON.stringify(updatedManifest)], { type: 'application/json' });
+            manifestLink.href = URL.createObjectURL(blob);
+          } catch (e) {
+            console.error("Could not update dynamic PWA manifest:", e);
+          }
         }
         
         // Changing the favicon dynamically here
@@ -245,6 +286,7 @@ export default function App() {
         <BrowserRouter>
           <MetaPixelTracker />
           <PageTitleUpdater storeName={storeName} />
+          <PWAInstallPrompt storeName={storeName} />
           <AuthProvider>
           <CartProvider>
             <Suspense fallback={<PageLoader />}>

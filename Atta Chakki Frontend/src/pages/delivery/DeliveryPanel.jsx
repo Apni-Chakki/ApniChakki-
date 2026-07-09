@@ -340,17 +340,17 @@ export function DeliveryPanel() {
     const isPickupReq = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
 
     const message = encodeURIComponent(
-      `🌟 *Apni Chakki — Order On The Way!* 🌟\n\n` +
+      `🌟 *Suchi Chakki — Order On The Way!* 🌟\n\n` +
       `Assalam-o-Alaikum! Your order *#${order.id}* has been dispatched and is on its way. 🚚💨\n\n` +
       `📦 *ORDER DETAILS:*\n` +
       `${itemsText}\n` +
       `-----------------------------------\n` +
       `${isPickupReq ? `❗ *Amount:* TBD (Pickup Request)\n` : `${priceBreakdown}\n`}` +
       `🚚 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
-      `🧑‍💼 *Rider:* ${user?.name || 'Apni Chakki Driver'}\n\n` +
+      `🧑‍💼 *Rider:* ${user?.name || 'Suchi Chakki Driver'}\n\n` +
       `${mapsLink ? `📍 *Driver's Static Location:*\n${mapsLink}\n\n` : ''}` +
       `Please keep your phone nearby so our rider can reach you easily.\n\n` +
-      `Thank you for choosing Apni Chakki! JazakAllah! 🙏🌾`
+      `Thank you for choosing Suchi Chakki! JazakAllah! 🙏🌾`
     );
 
     return `https://wa.me/${formattedPhone}?text=${message}`;
@@ -399,7 +399,7 @@ export function DeliveryPanel() {
     const isPickup = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
 
     const message = encodeURIComponent(
-      `🚚 *Apni Chakki — Rider On The Way!* 🚚\n\n` +
+      `🚚 *Suchi Chakki — Rider On The Way!* 🚚\n\n` +
       `Assalam-o-Alaikum *${order.customerName || 'Customer'}*! 👋\n\n` +
       `Aapka order *#${order.id}* dispatch ho gaya hai aur rider aapki taraf aa raha hai. 🛵💨\n\n` +
       `📦 *Order Summary:*\n${itemsText}\n` +
@@ -409,7 +409,7 @@ export function DeliveryPanel() {
           (advancePaid > 0 ? `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n` : '') +
           `❗ *Remaining Due:* Rs. ${remaining.toLocaleString()}\n`) +
       `\n📍 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
-      `🧑‍💼 *Rider:* ${user?.name || 'Apni Chakki Driver'}\n\n` +
+      `🧑‍💼 *Rider:* ${user?.name || 'Suchi Chakki Driver'}\n\n` +
       (mapsLink
         ? `🗺️ *Rider ki Live Location (Google Maps):*\n${mapsLink}\n\n`
         : '') +
@@ -604,17 +604,17 @@ export function DeliveryPanel() {
             }
 
             const deliveredMsg = encodeURIComponent(
-              `✅ *Apni Chakki — Order Delivered Successfully!* ✅\n\n` +
+              `✅ *Suchi Chakki — Order Delivered Successfully!* ✅\n\n` +
               `Assalam-o-Alaikum! Your order *#${order.id}* has been successfully delivered to you. 🎉\n\n` +
               `📦 *DELIVERED ITEMS:*\n` +
               `${itemsText}\n` +
               `-----------------------------------\n` +
               `${paymentMessage}\n` +
               `🚚 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
-              `🧑‍💼 *Delivered By:* ${user?.name || 'Apni Chakki Driver'}\n\n` +
+              `🧑‍💼 *Delivered By:* ${user?.name || 'Suchi Chakki Driver'}\n\n` +
               `We hope you are satisfied with our pure and fresh products. 🌾\n` +
               `If you have any feedback or queries, please feel free to reach out to us.\n\n` +
-              `Thank you for trusting Apni Chakki! JazakAllah! ⭐🙏`
+              `Thank you for trusting Suchi Chakki! JazakAllah! ⭐🙏`
             );
 
             setTimeout(() => {
@@ -787,9 +787,9 @@ export function DeliveryPanel() {
             }
 
             const msg = encodeURIComponent(
-              `🚚 *Apni Chakki — Pickup Update* 🚚\n\n` +
+              `🚚 *Suchi Chakki — Pickup Update* 🚚\n\n` +
               `Assalam-o-Alaikum ${cName || 'Customer'}!\n\n` +
-              `Our rider *${user?.name || 'Apni Chakki Rider'}* is currently on the way to your location to pick up your items. 🛵💨\n\n` +
+              `Our rider *${user?.name || 'Suchi Chakki Rider'}* is currently on the way to your location to pick up your items. 🛵💨\n\n` +
               `📦 *ITEMS TO BE PICKED UP:*\n` +
               `${itemsText}\n` +
               `📍 *Pickup Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +

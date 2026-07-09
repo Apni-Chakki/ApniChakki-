@@ -39,7 +39,7 @@ export function PrintSlip({ order, open, onClose }) {
         .then(data => {
           if (data.success && data.settings) {
             setStoreSettings({
-              name: data.settings.storeName || 'MUGHAL ATTA CHAKKI',
+              name: data.settings.storeName || 'SUCHI CHAKKI',
               address: data.settings.address || 'Main Bazaar, Lahore',
               phone: data.settings.phone || '+92 322 8483029',
               tagline: 'Pure & Fresh Processing'
@@ -498,7 +498,7 @@ export function PrintSlip({ order, open, onClose }) {
             {/* Footer */}
             <div className="text-center pt-3 border-t-2 border-dashed border-border">
               <p className="text-[9px] text-muted-foreground">🙏 Thank you for your order!</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">Visit Mughal Atta Chakki again</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Visit {storeSettings.name} again</p>
             </div>
           </div>
         </div>

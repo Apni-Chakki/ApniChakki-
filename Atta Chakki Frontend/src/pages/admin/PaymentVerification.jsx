@@ -146,7 +146,7 @@ export function PaymentVerification() {
             : customerPhone.startsWith('92') ? customerPhone : '92' + customerPhone;
 
           whatsappMsg = encodeURIComponent(
-            `❌ *Apni Chakki — Payment Rejection & COD Conversion* ❌\n\n` +
+            `❌ *Suchi Chakki — Payment Rejection & COD Conversion* ❌\n\n` +
             `Assalam-o-Alaikum ${result.customer_name || 'Customer'}!\n\n` +
             `We regret to inform you that your Bank Transfer payment of *Rs. ${result.amount?.toLocaleString()}* for *Order #${result.order_id}* (TXN ID: ${result.transaction_id || 'N/A'}) could not be verified and has been rejected.\n\n` +
             `⚠️ *Reason for Rejection:* ${result.reason || 'Incorrect transaction ID or amount not received'}\n\n` +

@@ -7,10 +7,10 @@ import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 import { API_BASE_URL } from '../../config';
 
 const DEFAULT_SETTINGS = {
-  storeName: "Apni Chakki",
-  phone: "+92 300 1234567",
-  email: "info@example.com",
-  address: "Lahore, Pakistan",
+  storeName: "Suchi Chakki",
+  phone: "+92 3228483029",
+  email: "suchichakki@gmail.com",
+  address: "Thokar Niaz Baig, Near Canal Road, Lahore",
   openingTime: "08:00",
   closingTime: "20:00",
   announcement: ""
@@ -39,7 +39,7 @@ export function Footer() {
     const handleSettingsUpdate = () => {
       fetchSettings();
     };
-    
+
     window.addEventListener('settingsUpdated', handleSettingsUpdate);
 
     return () => {

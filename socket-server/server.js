@@ -299,7 +299,7 @@ app.post('/send-password-reset', async (req, res) => {
     await transporter.sendMail({
       from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
       to: email,
-      subject: 'Apni Chakki - Password Reset OTP',
+      subject: 'Suchi Chakki - Password Reset OTP',
       html: htmlTemplate,
     });
 
@@ -484,7 +484,7 @@ app.post('/send-payment-rejection', async (req, res) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>❌ Apni Chakki - Payment Rejected ❌</h1>
+            <h1>❌ Suchi Chakki - Payment Rejected ❌</h1>
             <p>Verification Alert / ادائیگی کی تصدیق کا مسئلہ</p>
           </div>
           
@@ -530,7 +530,7 @@ app.post('/send-payment-rejection', async (req, res) => {
           </div>
           
           <div class="footer">
-            <p>🌾 Apni Chakki - Pure Atta & Grains, Delivered Fresh</p>
+            <p>🌾 Suchi Chakki - Pure Atta & Grains, Delivered Fresh</p>
             <p>📞 Helpline: +92 3228483029</p>
           </div>
         </div>
@@ -604,7 +604,7 @@ app.post('/send-order-status-update', async (req, res) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🌾 Apni Chakki - Order Update</h1>
+            <h1>🌾 Suchi Chakki - Order Update</h1>
             <p>Order Status Changed / آرڈر کی تازہ ترین صورتحال</p>
           </div>
           
@@ -636,8 +636,8 @@ app.post('/send-order-status-update', async (req, res) => {
           </div>
           
           <div class="footer">
-            <p>🌾 Apni Chakki - Pure Atta & Grains, Delivered Fresh</p>
-            <p>&copy; 2026 Apni Chakki. All rights reserved.</p>
+            <p>🌾 Suchi Chakki - Pure Atta & Grains, Delivered Fresh</p>
+            <p>&copy; 2026 Suchi Chakki. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -706,7 +706,7 @@ app.post('/send-vip-congratulations', async (req, res) => {
           
           <div class="body">
             <p>Assalam-o-Alaikum <strong>${customerName}</strong>,</p>
-            <p>We are delighted to promote you to a <strong>VIP Customer</strong> at Apni Chakki! As a token of our appreciation for your loyalty, we have enabled special privileges on your account.</p>
+            <p>We are delighted to promote you to a <strong>VIP Customer</strong> at Suchi Chakki! As a token of our appreciation for your loyalty, we have enabled special privileges on your account.</p>
             
             <h3>Your VIP Privileges:</h3>
             <ul class="privileges-list" style="padding-left: 20px;">
@@ -729,7 +729,7 @@ app.post('/send-vip-congratulations', async (req, res) => {
           </div>
           
           <div class="footer">
-            <p>🌾 Apni Chakki - Premium Quality Flour, Delivered with Care</p>
+            <p>🌾 Suchi Chakki - Premium Quality Flour, Delivered with Care</p>
             <p>📞 Helpline: +92 3228483029</p>
           </div>
         </div>
@@ -740,7 +740,7 @@ app.post('/send-vip-congratulations', async (req, res) => {
     const mailOptions = {
       from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
       to: customerEmail,
-      subject: '🌾 Congratulations! You are now an Apni Chakki VIP Customer',
+      subject: '🌾 Congratulations! You are now a Suchi Chakki VIP Customer',
       html: htmlTemplate,
     };
 
@@ -966,7 +966,7 @@ setInterval(() => {
 httpServer.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════╗
-║  🚚 Apni Chakki Tracking Server                      ║
+║  🚚 Suchi Chakki Tracking Server                      ║
 ║  ──────────────────────────────────────────────────── ║
 ║  Socket.io server running on port ${PORT}              ║
 ║  Health check: http://localhost:${PORT}/health          ║

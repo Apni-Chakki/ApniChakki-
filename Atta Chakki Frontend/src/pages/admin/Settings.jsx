@@ -12,7 +12,7 @@ import { API_BASE_URL } from '../../config';
 export function Settings() {
   const { t } = useTranslation();
   const [settings, setSettings] = useState({
-    storeName: "Mughal Ata Chaki",
+    storeName: "Suchi Chakki",
     phone: '+92 3228483029',
     email: 'info@gristmill.com',
     address: 'Lahore, Pakistan',

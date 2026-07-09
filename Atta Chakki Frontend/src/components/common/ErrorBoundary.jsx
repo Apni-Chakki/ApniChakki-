@@ -32,14 +32,30 @@ export class ErrorBoundary extends React.Component {
             <p className="text-muted-foreground mb-6 text-sm sm:text-base">
               We encountered an unexpected error while loading this page. Our team has been notified.
             </p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="w-full flex items-center justify-center gap-2"
-              size="lg"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh Page
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="w-full flex items-center justify-center gap-2"
+                size="lg"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh Page
+              </Button>
+              <Button 
+                onClick={() => {
+                  try {
+                    localStorage.removeItem('user');
+                    sessionStorage.clear();
+                    if ('caches' in window) caches.keys().then(names => names.forEach(n => caches.delete(n)));
+                  } catch(e) {}
+                  window.location.href = '/';
+                }} 
+                variant="outline"
+                className="w-full text-xs text-muted-foreground hover:text-destructive"
+              >
+                Reset & Go to Home (Fix Glitches)
+              </Button>
+            </div>
             
             {import.meta.env.DEV && (
               <div className="mt-6 p-4 bg-muted rounded-md text-left overflow-auto max-h-[200px] border border-border">

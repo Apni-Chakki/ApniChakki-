@@ -174,7 +174,7 @@ export function ActiveRentals() {
       ? `• Overdue Days: ${overdueDays} day(s)\n• Running Penalty: Rs. ${parseInt(runningPenalty).toLocaleString()}`
       : `• Days Remaining: ${getDaysRemaining(rental)} day(s)`;
 
-    const message = `*APNI CHAKKI* 🌾
+    const message = `*SUCHI CHAKKI* 🌾
 ───────────────────────────
 Hello *${rental.customer_name}*! 👋
 
@@ -204,7 +204,7 @@ ${isOverdue ? `• Total Amount Payable (with penalty): Rs. ${parseInt(remaining
 Please return the item promptly or contact us to extend your rental.
 
 Thank you! 🙏
-Apni Chakki - Fresh Flour Daily`.trim();
+Suchi Chakki - Fresh Flour Daily`.trim();
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');

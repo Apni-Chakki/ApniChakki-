@@ -1225,7 +1225,7 @@ export function Checkout() {
     <div style={{ position: 'relative', minHeight: '100vh' }}>
       <SEO 
         title="Checkout"
-        description="Complete your order at Apni Chakki. Secure checkout for fresh flour and premium services."
+        description="Complete your order at Suchi Chakki. Secure checkout for fresh flour and premium services."
       />
       {/* Background Carousel */}
       {CAROUSEL_SLIDES.map((slide, i) => (
@@ -1504,7 +1504,7 @@ export function Checkout() {
             <div>
               <p className="text-sm font-bold text-red-800">{t('Delivery Not Available')}</p>
               <p className="text-xs text-red-700 mt-1">
-                {t('Currently, Apni Chakki only delivers within Lahore. Please change your order type to "Pickup" or update your area.')}
+                {t('Currently, Suchi Chakki only delivers within Lahore. Please change your order type to "Pickup" or update your area.')}
               </p>
             </div>
           </div>
@@ -2112,7 +2112,7 @@ export function Checkout() {
                     <div className="bg-white rounded p-2 mt-2 space-y-1">
                       <p className="text-xs"><span className="text-muted-foreground">{t('Bank')}:</span> <strong>Meezan Bank</strong></p>
                       <p className="text-xs"><span className="text-muted-foreground">{t('Account')}:</span> <strong>0123-4567890</strong></p>
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Title')}:</span> <strong>Mughal Ata Chaki</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Title')}:</span> <strong>Suchi Chakki</strong></p>
                     </div>
                   </div>
                 </div>

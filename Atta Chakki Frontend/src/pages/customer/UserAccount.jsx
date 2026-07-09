@@ -72,7 +72,10 @@ export function UserAccount() {
         address: user.address || ''
       };
       setProfile(dbProfile);
-      setTempProfile(dbProfile);
+      // Only reset tempProfile if not in edit mode
+      if (!editMode) {
+        setTempProfile(dbProfile);
+      }
     }
   };
 
@@ -209,18 +212,25 @@ export function UserAccount() {
       const result = await response.json();
 
       if (result.success) {
-        // Update React Auth Context (this syncs the whole app)
-        setUser(prev => ({
-          ...prev,
+        // Build the updated user object
+        const updatedUser = {
+          ...user,
           full_name: tempProfile.name,
           name: tempProfile.name,
           phone: cleanPhone,
           address: tempProfile.address
-        }));
+        };
 
-        // 3. Update UI
+        // Update React Auth Context (this syncs the whole app)
+        setUser(updatedUser);
+
+        // Also directly update localStorage to ensure it's synced immediately
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        // Update local UI state
         const updatedProfile = { ...tempProfile, phone: cleanPhone };
         setProfile(updatedProfile);
+        setTempProfile(updatedProfile);
         setEditMode(false);
         toast.success(t('Profile updated successfully!'));
       } else {

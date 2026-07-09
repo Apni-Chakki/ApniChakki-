@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner'; 
+import { safeJSONParse } from '../utils/projectProtection';
 
 const CartContext = createContext(undefined);
 
@@ -65,7 +66,8 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('cart');
-      return saved ? normalizeCart(JSON.parse(saved)) : [];
+      const parsed = safeJSONParse(saved, [], 'cart');
+      return Array.isArray(parsed) ? normalizeCart(parsed) : [];
     }
     return [];
   });

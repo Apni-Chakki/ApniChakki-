@@ -31,8 +31,10 @@ function applyGlossaryCorrection(str, lang) {
       .replace(/اپنی چاکی/g, 'اپنی چکی')
       .replace(/اپنے چاکی/g, 'اپنی چکی')
       .replace(/چاکی/g, 'چکی')
-      .replace(/Apni Chakki/gi, 'اپنی چکی')
-      .replace(/G3 Apni Chakki/gi, 'جی تھری اپنی چکی')
+      .replace(/Apni Chakki/gi, 'سچی چکی')
+      .replace(/Suchi Chakki/gi, 'سچی چکی')
+      .replace(/G3 Apni Chakki/gi, 'جی تھری سچی چکی')
+      .replace(/G3 Suchi Chakki/gi, 'جی تھری سچی چکی')
       .replace(/Atta Chakki/gi, 'آٹا چکی')
       .replace(/\bChakki\b/gi, 'چکی');
   }

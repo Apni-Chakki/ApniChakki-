@@ -598,7 +598,7 @@ export function LiveTrackingPage() {
           {orderInfo?.driver_name && (
             <p className="delivered-driver">Delivered by <strong>{orderInfo.driver_name}</strong></p>
           )}
-          <p className="delivered-thanks">Thank you for choosing Apni Chakki! ⭐</p>
+          <p className="delivered-thanks">Thank you for choosing Suchi Chakki! ⭐</p>
         </div>
       </div>
     );
@@ -749,7 +749,7 @@ export function LiveTrackingPage() {
 
         {/* Branding Footer */}
         <div className="tracking-footer">
-          <p>🌾 Powered by <strong>Apni Chakki</strong></p>
+          <p>🌾 Powered by <strong>Suchi Chakki</strong></p>
         </div>
       </div>
     </div>

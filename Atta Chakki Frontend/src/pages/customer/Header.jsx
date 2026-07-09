@@ -13,11 +13,11 @@ import { API_BASE_URL } from '../../config';
 export function Header() {
   const { getTotalItems } = useCart();
   const { user } = useAuth();
-  const { t, tDynamic } = useDynamicTranslation();
+  const { t, tDynamic, translateBatch, language } = useDynamicTranslation();
   const itemCount = getTotalItems();
   const navigate = useNavigate();
   const location = useLocation();
-  const [storeName, setStoreName] = useState("Apni Chakki");
+  const [storeName, setStoreName] = useState("Suchi Chakki");
   const [settings, setSettings] = useState({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
@@ -86,6 +86,18 @@ export function Header() {
     window.addEventListener('settingsUpdated', handleSettingsUpdate);
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
+
+  // Pre-translate storeName, announcement & notification texts (just like Homepage does for products)
+  useEffect(() => {
+    if (language === 'en') return;
+    const texts = [
+      storeName,
+      settings.announcement,
+      ...notifications.map(n => n.title).filter(Boolean),
+      ...notifications.map(n => n.message).filter(Boolean),
+    ].filter(Boolean);
+    if (texts.length > 0) translateBatch(texts);
+  }, [storeName, settings.announcement, notifications, language]);
 
   // Close mobile menu on route change
   useEffect(() => {

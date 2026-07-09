@@ -38,7 +38,7 @@ export function PrintTaskList({ orders, title, open, onClose }) {
         .then(data => {
           if (data.success && data.settings) {
             setStoreSettings({
-              name: data.settings.storeName || "GRISTMILL'S",
+              name: data.settings.storeName || "SUCHI CHAKKI",
               address: data.settings.address || "",
               phone: data.settings.phone || "",
               tagline: data.settings.tagline || ""

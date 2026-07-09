@@ -1,8 +1,9 @@
 export const translations = {
   en: {
-    // Brand & General
-    "Apni Chakki": "Apni Chakki",
-    "G3 Apni Chakki": "G3 Apni Chakki",
+    "Apni Chakki": "Suchi Chakki",
+    "Suchi Chakki": "Suchi Chakki",
+    "G3 Apni Chakki": "G3 Suchi Chakki",
+    "G3 Suchi Chakki": "G3 Suchi Chakki",
     "Atta Chakki": "Atta Chakki",
     "Chakki": "Chakki",
     "Atta": "Atta",
@@ -60,9 +61,8 @@ export const translations = {
     Due: "Due",
     View: "View",
 
-    // Customer Header / Store name
-    "Apni Chakki": "Apni Chakki",
-    "Apni Chakki": "Apni Chakki",
+    "Apni Chakki": "Suchi Chakki",
+    "Suchi Chakki": "Suchi Chakki",
     "Mughal Ata Chakki": "Mughal Ata Chakki",
 
     // Admin Sidebar
@@ -419,7 +419,8 @@ export const translations = {
     "Update Review": "Update Review",
     Back: "Back",
     "What did you like about our products?": "What did you like about our products?",
-    "Why Choose Apni Atta Chakki?": "Why Choose Apni Atta Chakki?",
+    "Why Choose Apni Atta Chakki?": "Why Choose Suchi Chakki?",
+    "Why Choose Suchi Chakki?": "Why Choose Suchi Chakki?",
 
     // Common Phrases
     "Grains ground fresh daily with no additives.":
@@ -430,9 +431,17 @@ export const translations = {
       "Home pickup and delivery available.",
     "Premium quality flour, spices, and cotton services. Ground fresh daily.":
       "Premium quality flour, spices, and cotton services. Ground fresh daily.",
-    "Apka Bhrosa Apki Apni Chakki": "Apka Bhrosa Apki Apni Chakki",
+    "Apka Bhrosa Apki Apni Chakki": "Apka Bhrosa Apki Suchi Chakki",
+    "Apka Bhrosa Apki Suchi Chakki": "Apka Bhrosa Apki Suchi Chakki",
 
-    // Header / Notifications
+    // Header / Notifications / PWA
+    "Install": "Install",
+    "App": "App",
+    "Install App": "Install App",
+    "Install our app for fast order tracking, offline access & exclusive discounts.": "Install our app for fast order tracking, offline access & exclusive discounts.",
+    "Tap Share": "Tap Share",
+    "below, then tap": "below, then tap",
+    "Later": "Later",
     "Notifications": "Notifications",
     "No new notifications": "No new notifications",
     "at": "at",
@@ -461,7 +470,8 @@ export const translations = {
     "Happy Families": "Happy Families",
     "100% Pure & Authentic": "100% Pure & Authentic",
     "The Heritage of Pure Flour": "The Heritage of Pure Flour",
-    "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.",
+    "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.",
+    "At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.",
     "Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives\u2014just pure, wholesome goodness for your family.": "Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives\u2014just pure, wholesome goodness for your family.",
     "Read Our Reviews": "Read Our Reviews",
     "4.9/5 from Happy Customers": "4.9/5 from Happy Customers",
@@ -543,9 +553,10 @@ export const translations = {
     "Please enter your current password.": "Please enter your current password.",
   },
   ur: {
-    // Brand & General
-    "Apni Chakki": "اپنی چکی",
-    "G3 Apni Chakki": "جی تھری اپنی چکی",
+    "Apni Chakki": "سچی چکی",
+    "Suchi Chakki": "سچی چکی",
+    "G3 Apni Chakki": "جی تھری سچی چکی",
+    "G3 Suchi Chakki": "جی تھری سچی چکی",
     "Atta Chakki": "آٹا چکی",
     "Chakki": "چکی",
     "Atta": "آٹا",
@@ -603,9 +614,8 @@ export const translations = {
     Due: "بقیہ",
     View: "دیکھیں",
 
-    // Customer Header / Store name
-    "Apni Chakki": "اپنی چکی",
-    "Apni Chakki": "اپنی چکی",
+    "Apni Chakki": "سچی چکی",
+    "Suchi Chakki": "سچی چکی",
     "Mughal Ata Chakki": "مغل اٹہ چکی",
 
     // Admin Sidebar
@@ -962,7 +972,8 @@ export const translations = {
     "Update Review": "ریویو اپڈیٹ کریں",
     Back: "واپس",
     "What did you like about our products?": "آپ کو ہماری مصنوعات میں کیا پسند آیا؟",
-    "Why Choose Apni Atta Chakki?": "اپنی اٹہ چکی کیوں منتخب کریں؟",
+    "Why Choose Apni Atta Chakki?": "سچی چکی کیوں منتخب کریں؟",
+    "Why Choose Suchi Chakki?": "سچی چکی کیوں منتخب کریں؟",
 
     // Common Phrases
     "Grains ground fresh daily with no additives.":
@@ -972,9 +983,17 @@ export const translations = {
     "Home pickup and delivery available.": "گھر سے پک اپ اور ڈلیوری دستیاب ہے۔",
     "Premium quality flour, spices, and cotton services. Ground fresh daily.":
       "اعلیٰ معیار کا آٹا، مصالحے اور کپاس کی خدمات۔",
-    "Apka Bhrosa Apki Apni Chakki": "آپ کا بھروسہ، آپ کی اپنی چکی",
+    "Apka Bhrosa Apki Apni Chakki": "آپ کا بھروسہ، آپ کی سچی چکی",
+    "Apka Bhrosa Apki Suchi Chakki": "آپ کا بھروسہ، آپ کی سچی چکی",
 
-    // Header / Notifications
+    // Header / Notifications / PWA
+    "Install": "انسٹال کریں",
+    "App": "ایپ",
+    "Install App": "ایپ انسٹال کریں",
+    "Install our app for fast order tracking, offline access & exclusive discounts.": "تیز آرڈر ٹریکنگ، آف لائن رسائی اور خصوصی رعایت کے لیے ہماری ایپ انسٹال کریں۔",
+    "Tap Share": "نیچے شیئر پر کلک کریں",
+    "below, then tap": "پھر کلک کریں",
+    "Later": "بعد میں",
     "Notifications": "اطلاعات",
     "No new notifications": "کوئی نئی اطلاع نہیں",
     "at": "بجے",
@@ -1003,7 +1022,8 @@ export const translations = {
     "Happy Families": "خوش گھرانے",
     "100% Pure & Authentic": "100% خالص اور اصلی",
     "The Heritage of Pure Flour": "خالص آٹے کی وراثت",
-    "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "اپنی اٹہ چکی میں ہم پتھر پسائی کے روایتی فن کو برقرار رکھنے کے قائل ہیں۔ کاروباری چکیوں کے برعکس، ہمارا طریقہ اناج کے قدرتی تیل، چوکر اور ضروری غذائیت کو محفوظ رکھتا ہے۔",
+    "At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "سچی چکی میں ہم پتھر پسائی کے روایتی فن کو برقرار رکھنے کے قائل ہیں۔ کاروباری چکیوں کے برعکس، ہمارا طریقہ اناج کے قدرتی تیل، چوکر اور ضروری غذائیت کو محفوظ رکھتا ہے۔",
+    "At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.": "سچی چکی میں ہم پتھر پسائی کے روایتی فن کو برقرار رکھنے کے قائل ہیں۔ کاروباری چکیوں کے برعکس، ہمارا طریقہ اناج کے قدرتی تیل، چوکر اور ضروری غذائیت کو محفوظ رکھتا ہے۔",
     "Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives\u2014just pure, wholesome goodness for your family.": "ہر دانے کو احتیاط سے چھانا، صاف کیا اور آرڈر پر تازہ پیسا جاتا ہے۔ کوئی حافظ مادہ نہیں، کوئی ملاوٹ نہیں — صرف آپ کے خاندان کے لیے خالص اور صحت بخش خوراک۔",
     "Read Our Reviews": "ہمارے ریویوز پڑھیں",
     "4.9/5 from Happy Customers": "خوش صارفین کی جانب سے 4.9/5",

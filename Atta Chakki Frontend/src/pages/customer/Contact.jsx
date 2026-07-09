@@ -10,10 +10,10 @@ import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../../config';
 
 const DEFAULT_SETTINGS = {
-  storeName: "Apni Chakki",
-  phone: "+92 300 1234567",
-  email: "info@example.com",
-  address: "Lahore, Pakistan",
+  storeName: "Suchi Chakki",
+  phone: "+92 3228483029",
+  email: "suchichakki@gmail.com",
+  address: "Thokar Niaz Baig, Near Canal Road, Lahore, Pakistan",
   openingTime: "08:00",
   closingTime: "20:00"
 };

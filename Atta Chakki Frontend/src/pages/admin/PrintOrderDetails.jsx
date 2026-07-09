@@ -30,7 +30,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
         .then(data => {
           if (data.success && data.settings) {
             setStoreSettings({
-              name: data.settings.storeName || 'MUGHAL ATTA CHAKKI',
+              name: data.settings.storeName || 'SUCHI CHAKKI',
               address: data.settings.address || 'Main Bazaar, Lahore',
               phone: data.settings.phone || '+92 322 8483029',
               tagline: 'Pure & Fresh Processing'

@@ -52,7 +52,7 @@ export function TodaysWork() {
   const [splitBatches, setSplitBatches] = useState([]);
   const [isSplitting, setIsSplitting] = useState(false);
   const [heavyThreshold, setHeavyThreshold] = useState(100);
-  const [storeName, setStoreName] = useState('Mughal Atta Chakki');
+  const [storeName, setStoreName] = useState('Suchi Chakki');
 
   const processingOrders = orders.filter(order =>
     (order.items || []).some(item => {

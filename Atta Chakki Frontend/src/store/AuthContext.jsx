@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
+import { safeGetStorage } from '../utils/projectProtection';
 
 const AuthContext = createContext(undefined);
 
@@ -10,11 +11,7 @@ const ADMIN_CREDENTIALS = {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    }
-    return null;
+    return safeGetStorage('user', null);
   });
 
   const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);

@@ -22,7 +22,7 @@ import { SEO } from '../../components/common/SEO';
 const DEFAULT_HERO_SLIDES = [
   {
     image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
-    title: "Apka Bhrosa Apki Apni Chakki",
+    title: "Apka Bhrosa Apki Suchi Chakki",
     subtitle: "Premium quality flour, spices & cotton services. Ground fresh daily."
   },
   {
@@ -94,6 +94,7 @@ export function Homepage() {
   const [showCustomMixModal, setShowCustomMixModal] = useState(false);
   const [mixFormData, setMixFormData] = useState({ name: '', phone: '', details: '' });
   const [isSubmittingMix, setIsSubmittingMix] = useState(false);
+  const [storeName, setStoreName] = useState("Suchi Chakki");
   const { t, tDynamic, translateBatch, language } = useDynamicTranslation();
   const { addToCart } = useCart();
 
@@ -128,6 +129,9 @@ export function Homepage() {
         const settingsData = await settingsRes.json();
 
         if (settingsData.success && settingsData.settings) {
+          if (settingsData.settings.storeName) {
+            setStoreName(settingsData.settings.storeName);
+          }
           if (settingsData.settings.heroSlides) {
             try {
               setHeroSlides(JSON.parse(settingsData.settings.heroSlides));
@@ -725,7 +729,7 @@ export function Homepage() {
 
                         <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
                           <p>
-                            {t('At Apni Atta Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.')}
+                            {t('At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.').replace(/Suchi Chakki|Apni Atta Chakki/g, storeName)}
                           </p>
                           <p>
                             {t('Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives—just pure, wholesome goodness for your family.')}
@@ -767,7 +771,7 @@ export function Homepage() {
       >
         <section className="container mx-auto max-w-4xl text-center">
           <h2 className="mb-4 sm:mb-6 text-3xl font-bold text-foreground">
-            {t('Why Choose Apni Atta Chakki?')}
+            {t('Why Choose Suchi Chakki?').replace(/Suchi Chakki|Apni Atta Chakki/g, storeName)}
           </h2>
           <motion.div
             variants={{

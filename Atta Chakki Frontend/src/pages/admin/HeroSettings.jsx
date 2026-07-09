@@ -42,7 +42,7 @@ export function HeroSettings() {
           setSlides([
             {
               image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
-              title: "Apka Bhrosa Apki Apni Chakki",
+              title: "Apka Bhrosa Apki Suchi Chakki",
               subtitle: "Premium quality flour, spices & cotton services. Ground fresh daily."
             }
           ]);

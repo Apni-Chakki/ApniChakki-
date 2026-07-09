@@ -10,28 +10,42 @@ export default defineConfig({
     react(), 
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
-      filename: 'OneSignalSDKWorker.js',
+      registerType: 'prompt',
+      injectRegister: 'auto',
       workbox: {
         cleanupOutdatedCaches: true,
-        importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js']
+        skipWaiting: false,
+        clientsClaim: false
       },
       devOptions: {
         enabled: false,
       },
       manifest: {
-        name: 'Apni Chakki',
-        short_name: 'Apni Chakki',
+        name: 'Suchi Chakki',
+        short_name: 'Suchi Chakki',
         description: 'Fresh, hygienic, and authentic Chakki Atta and premium spices delivered straight to your doorstep.',
         theme_color: '#8b6f47',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/',
         icons: [
           {
-            src: 'logo.svg',
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/logo.svg',
             sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
           }
         ]
       }

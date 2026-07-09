@@ -8,7 +8,7 @@ async function fetchBrandSettings() {
     const data = await res.json();
     if (data.success && data.settings) {
       return {
-        name: data.settings.storeName || 'MUGHAL ATTA CHAKKI',
+        name: data.settings.storeName || 'SUCHI CHAKKI',
         tagline: 'Pure & Fresh Processing',
         address: data.settings.address || 'Main Bazaar, Lahore',
         phone: data.settings.phone || '+92 322 8483029',
@@ -18,7 +18,7 @@ async function fetchBrandSettings() {
     console.error('Error fetching brand settings for PDF:', err);
   }
   return {
-    name: 'MUGHAL ATTA CHAKKI',
+    name: 'SUCHI CHAKKI',
     tagline: 'Pure & Fresh Processing',
     address: 'Main Bazaar, Lahore',
     phone: '+92 322 8483029',

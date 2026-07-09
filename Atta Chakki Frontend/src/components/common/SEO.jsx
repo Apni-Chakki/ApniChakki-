@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 
 export function SEO({ title, description, keywords, image, url }) {
-  const siteName = 'Apni Chakki';
+  const siteName = 'Suchi Chakki';
   const defaultDescription = 'Fresh, hygienic, and authentic Chakki Atta delivered straight to your doorstep.';
   const defaultImage = '/logo.png'; // Make sure this exists in public folder
   const currentUrl = url || window.location.href;
