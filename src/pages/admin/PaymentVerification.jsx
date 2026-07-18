@@ -871,9 +871,7 @@ export function PaymentVerification() {
         </DialogContent>
       </Dialog>
 
-      {/* /}
       {/* DIALOG: PAYMENT DETAILS */}
-      {/* /}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
