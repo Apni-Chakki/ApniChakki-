@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /delivery
+Disallow: /checkout
+Disallow: /account
+
+Sitemap: https://apnichakki897.great-site.net/sitemap.xml
