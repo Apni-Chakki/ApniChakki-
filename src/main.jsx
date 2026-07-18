@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import "./index.css";
 import "./App.css";
 import "./i18n";
@@ -86,6 +87,7 @@ if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.lo
 createRoot(document.getElementById("root")).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "342629945290-s5jp9bljd9s4sardqeemtnrv3crorsa0.apps.googleusercontent.com"}>
     <App />
+    <SpeedInsights />
   </GoogleOAuthProvider>
 );
 
