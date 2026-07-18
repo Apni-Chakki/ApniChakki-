@@ -32,7 +32,7 @@ export function FinancialAnalytics() {
     fetchFinancials();
   }, []);
 
-  // --- NEW: FETCH FROM API ---
+  // NEW: FETCH FROM API
   const fetchFinancials = async () => {
     try {
       setLoading(true);

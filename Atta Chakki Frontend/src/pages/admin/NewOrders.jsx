@@ -52,12 +52,12 @@ export function NewOrders() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // ─── Heavy Order Split ───────────────────────────────────────────────────────
+  // Heavy Order Split
   const [splitOrder, setSplitOrder] = useState(null);      // order being split
   const [splitBatches, setSplitBatches] = useState([]);
   const [isSplitting, setIsSplitting] = useState(false);
   const [heavyThreshold, setHeavyThreshold] = useState(100); // default, fetched from settings
-  // ────────────────────────────────────────────────────────────────────────────
+  // 
 
   const navigate = useNavigate();
 
@@ -183,6 +183,22 @@ export function NewOrders() {
           toast.info("Driver assignment cleared.");
         } else {
           toast.success(`Assigned to ${personnelName} successfully!`);
+          let targetPhone = personnelPhone;
+          if (!targetPhone) {
+            const found = activePersonnel.find(p => p.name === personnelName);
+            if (found && found.phone) targetPhone = found.phone;
+          }
+          if (targetPhone) {
+            let cleanPhone = String(targetPhone).replace(/\D/g, '');
+            if (cleanPhone.startsWith('0')) {
+              cleanPhone = '92' + cleanPhone.slice(1);
+            } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
+              cleanPhone = '92' + cleanPhone;
+            }
+            const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se naya Order assign hua hai:\n📦 *Order #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par mukammal karein.\nShukriya!`;
+            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+          }
         }
       } else {
         toast.error("Failed to assign driver in database");
@@ -223,7 +239,7 @@ export function NewOrders() {
     }
   };
 
-  // ─── Open Split Modal ─────────────────────────────────────────────────────
+  // Open Split Modal
   const openSplitModal = (order) => {
     const totalKg = parseFloat(order.total_weight_kg || order.weightKg || 0);
     const suggested = totalKg > 0 ? Math.floor(totalKg / 2) : '';
@@ -244,7 +260,7 @@ export function NewOrders() {
     setSplitBatches([]);
   };
 
-  // ─── Execute Split ────────────────────────────────────────────────────────
+  // Execute Split
   const handleSplitOrder = async () => {
     if (!splitOrder) return;
 
@@ -300,7 +316,7 @@ export function NewOrders() {
       setIsSplitting(false);
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────
+  // 
 
   if (loading && orders.length === 0) {
     return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;
@@ -330,7 +346,7 @@ export function NewOrders() {
             return (
               <div className="flex items-center gap-1 flex-wrap">
 
-                {/* ── Heavy Order Warning + Split Button ── */}
+                {/* Heavy Order Warning + Split Button */}
                 {isHeavy && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -437,7 +453,7 @@ export function NewOrders() {
           )}
         />
 
-        {/* ─── Cancel Order Dialog ─────────────────────────────────────── */}
+        {/* Cancel Order Dialog */}
         <AlertDialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -465,7 +481,7 @@ export function NewOrders() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* ─── Split Order Modal ───────────────────────────────────────── */}
+        {/* Split Order Modal */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
         <DialogContent className="max-w-md max-h-[95vh] flex flex-col p-0 overflow-hidden">
           <div className="p-6 pb-2">

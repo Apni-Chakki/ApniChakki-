@@ -1,4 +1,4 @@
-/**
+/* 
  * Global Project Protection & Crash Prevention Shield
  * Prevents third-party script failures, storage corruption, unhandled promise rejections,
  * and JSON parse errors from breaking the Apni Chakki frontend.

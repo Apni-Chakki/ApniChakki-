@@ -46,7 +46,7 @@ export function DeliveryPanel() {
     });
   }, []);
 
-  // ─── Initialize Socket.io connection ───
+  // Initialize Socket.io connection
   useEffect(() => {
     if (!socketEnabled) {
       socketRef.current = null;
@@ -101,7 +101,7 @@ export function DeliveryPanel() {
     };
   }, []);
 
-  // --- 1. Fetch from Database ---
+  // Fetch from Database
   const loadOrders = async () => {
     try {
       const driverPhone = user?.phone || user?.username;
@@ -141,7 +141,7 @@ export function DeliveryPanel() {
     }
   };
 
-  // ─── Send GPS coordinates to backend + Socket.io ───
+  // Send GPS coordinates to backend + Socket.io
   const sendLocationToServer = useCallback(async (orderId, position) => {
     try {
       const { latitude, longitude, accuracy, speed, heading } = position.coords;
@@ -180,7 +180,7 @@ export function DeliveryPanel() {
     }
   }, [user]);
 
-  // ─── Start GPS tracking for an order ───
+  // Start GPS tracking for an order
   const startGpsTracking = useCallback((orderId) => {
     if (!navigator.geolocation) {
       toast.error(t('GPS not supported on this device'));
@@ -217,7 +217,7 @@ export function DeliveryPanel() {
     trackingIntervals.current[orderId] = intervalId;
   }, [sendLocationToServer, t, getCurrentPositionSafe]);
 
-  // ─── Stop GPS tracking for an order ───
+  // Stop GPS tracking for an order
   const stopGpsTracking = useCallback((orderId) => {
     // Clear watchPosition
     if (activeTracking[orderId]) {
@@ -236,7 +236,7 @@ export function DeliveryPanel() {
     }
   }, [activeTracking]);
 
-  // ─── Generate tracking link via API ───
+  // Generate tracking link via API
   const generateTrackingLink = useCallback(async (order) => {
     try {
       const baseUrl = window.location.origin;
@@ -268,7 +268,7 @@ export function DeliveryPanel() {
     return null;
   }, [user]);
 
-  // ─── Fallback WhatsApp link (Google Maps static location) ───
+  // Fallback WhatsApp link (Google Maps static location)
   const generateWhatsAppLink = useCallback((order, lat, lng) => {
     const customerPhone = order.phone || order.customer_phone || '';
     let formattedPhone = customerPhone.replace(/\D/g, '');
@@ -356,7 +356,7 @@ export function DeliveryPanel() {
     return `https://wa.me/${formattedPhone}?text=${message}`;
   }, [trackingLinks, user]);
 
-  // ─── Central helper: GPS → Google Maps Link → WhatsApp Customer ───
+  // Central helper: GPS → Google Maps Link → WhatsApp Customer
   const shareLocationViaWhatsApp = useCallback(async (order, lat, lng) => {
     const customerPhone = order.phone || order.customer_phone;
     if (!customerPhone) {
@@ -428,7 +428,7 @@ export function DeliveryPanel() {
     );
   }, [user]);
 
-  // --- 2. Update Status to Out-For-Delivery + Start Tracking ---
+  // Update Status to Out-For-Delivery + Start Tracking
   const handleStartDelivery = async (order) => {
     try {
       // 1. Get GPS position
@@ -491,7 +491,7 @@ export function DeliveryPanel() {
     }
   };
 
-  // --- 3. Update Status to Completed + Stop Tracking ---
+  // Update Status to Completed + Stop Tracking
   const handleCompleteDelivery = async (order) => {
     const execute = async () => {
       try {
@@ -1115,7 +1115,7 @@ export function DeliveryPanel() {
                     {isActionable && (
                       <div className="flex flex-col pt-3" style={{ borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-                        {/* ── STORE PICKUP: Customer comes to shop — only Complete button ── */}
+                        {/* STORE PICKUP: Customer comes to shop — only Complete button */}
                         {isStorePickup ? (
                           <>
                             <div

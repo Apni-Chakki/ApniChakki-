@@ -39,7 +39,7 @@ export function DigitalKhata() {
   });
   const [showPrintReport, setShowPrintReport] = useState(false);
 
-  // --- NEW: FETCH FROM API ---
+  // NEW: FETCH FROM API
   const fetchExpenses = async () => {
     try {
       setLoading(true);
@@ -89,7 +89,7 @@ export function DigitalKhata() {
     fetchProducts();
   }, []);
 
-  // --- NEW: SAVE TO API ---
+  // NEW: SAVE TO API
   const handleAddExpense = async () => {
     if (!amount || !category || (category === "Other" && !customCategory)) {
       toast.error('Please enter amount and category details');
@@ -154,7 +154,7 @@ export function DigitalKhata() {
     }
   };
 
-  // --- NEW: DELETE VIA API ---
+  // NEW: DELETE VIA API
   const handleDelete = async (id) => {
     const deleteEntry = async () => {
       try {

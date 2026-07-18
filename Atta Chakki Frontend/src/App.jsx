@@ -190,21 +190,44 @@ function PageTitleUpdater({ storeName }) {
   return null;
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth'
+    });
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   const { i18n } = useTranslation();
   const [storeName, setStoreName] = useState('Suchi Chakki');
+  const [storeLogo, setStoreLogo] = useState(null);
 
-  // Fetching store name from DB so it's dynamic
+  // Fetching store settings from DB so store name, logo & PWA manifest are dynamic
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/get_store_settings.php`);
         const data = await response.json();
-        if (data.success && data.settings && data.settings.storeName) {
-          const name = data.settings.storeName;
+        if (data.success && data.settings) {
+          const name = data.settings.storeName || 'Suchi Chakki';
+          const logo = data.settings.logo || null;
           setStoreName(name);
+          setStoreLogo(logo);
 
-          // Update PWA manifest name dynamically with store name
+          const origin = window.location.origin;
+          const logoUrl = logo || origin + '/pwa-192x192.png';
+          const absoluteLogoUrl = logoUrl.startsWith('http')
+            ? logoUrl
+            : (logoUrl.startsWith('/') ? origin + logoUrl : origin + '/' + logoUrl);
+
+          // 1. Update PWA manifest dynamically with store name & header logo
           try {
             let manifestLink = document.querySelector("link[rel='manifest']");
             if (!manifestLink) {
@@ -212,7 +235,6 @@ export default function App() {
               manifestLink.rel = 'manifest';
               document.head.appendChild(manifestLink);
             }
-            const origin = window.location.origin;
             const updatedManifest = {
               name: name,
               short_name: name,
@@ -223,16 +245,22 @@ export default function App() {
               start_url: origin + '/',
               icons: [
                 {
-                  src: origin + '/pwa-192x192.png',
+                  src: absoluteLogoUrl,
                   sizes: '192x192',
-                  type: 'image/png',
+                  type: absoluteLogoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png',
                   purpose: 'any maskable'
                 },
                 {
-                  src: origin + '/pwa-512x512.png',
+                  src: absoluteLogoUrl,
                   sizes: '512x512',
-                  type: 'image/png',
+                  type: absoluteLogoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png',
                   purpose: 'any maskable'
+                },
+                {
+                  src: absoluteLogoUrl,
+                  sizes: 'any',
+                  type: absoluteLogoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png',
+                  purpose: 'any'
                 }
               ]
             };
@@ -241,18 +269,39 @@ export default function App() {
           } catch (e) {
             console.error("Could not update dynamic PWA manifest:", e);
           }
+
+          // 2. Update Favicon dynamically with header logo
+          try {
+            let link = document.querySelector("link[rel~='icon']");
+            if (!link) {
+              link = document.createElement('link');
+              link.rel = 'icon';
+              document.head.appendChild(link);
+            }
+            if (logo) {
+              link.href = logo;
+            } else {
+              link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="%238b6f47"/><g transform="translate(8,8)" fill="none" stroke="%23fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/></g></svg>';
+            }
+
+            // 3. Update Apple Touch Icon dynamically for iOS Add to Home Screen
+            let appleLink = document.querySelector("link[rel='apple-touch-icon']");
+            if (!appleLink) {
+              appleLink = document.createElement('link');
+              appleLink.rel = 'apple-touch-icon';
+              document.head.appendChild(appleLink);
+            }
+            if (logo) {
+              appleLink.href = logo;
+            } else {
+              appleLink.href = '/pwa-192x192.png';
+            }
+          } catch (e) {
+            console.error("Could not update dynamic icons:", e);
+          }
         }
-        
-        // Changing the favicon dynamically here
-        let link = document.querySelector("link[rel~='icon']");
-        if (!link) {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          document.head.appendChild(link);
-        }
-        link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="%238b6f47"/><g transform="translate(8,8)" fill="none" stroke="%23fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/></g></svg>';
       } catch (error) {
-        console.error("Could not load store settings for title:", error);
+        console.error("Could not load store settings for title & logo:", error);
       }
     };
     
@@ -284,9 +333,10 @@ export default function App() {
     <HelmetProvider>
       <ErrorBoundary>
         <BrowserRouter>
+          <ScrollToTop />
           <MetaPixelTracker />
           <PageTitleUpdater storeName={storeName} />
-          <PWAInstallPrompt storeName={storeName} />
+          <PWAInstallPrompt storeName={storeName} storeLogo={storeLogo} />
           <AuthProvider>
           <CartProvider>
             <Suspense fallback={<PageLoader />}>

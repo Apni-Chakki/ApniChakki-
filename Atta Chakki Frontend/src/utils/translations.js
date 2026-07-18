@@ -63,7 +63,7 @@ export const translations = {
 
     "Apni Chakki": "Suchi Chakki",
     "Suchi Chakki": "Suchi Chakki",
-    "Mughal Ata Chakki": "Mughal Ata Chakki",
+    "Mughal Ata Chakki": "Suchi Chakki",
 
     // Admin Sidebar
     "Admin Panel": "Admin Panel",
@@ -616,7 +616,7 @@ export const translations = {
 
     "Apni Chakki": "سچی چکی",
     "Suchi Chakki": "سچی چکی",
-    "Mughal Ata Chakki": "مغل اٹہ چکی",
+    "Mughal Ata Chakki": "سچی چکی",
 
     // Admin Sidebar
     "Admin Panel": "ایڈمن پینل",

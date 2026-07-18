@@ -34,7 +34,7 @@ export function UpdateWeightModal({ order, open, onClose, onOrderUpdated }) {
     }));
   };
 
-  // --- SAVE VIA API ---
+  // SAVE VIA API
   const handleSave = async () => {
     if (!order) return;
     setIsSaving(true);

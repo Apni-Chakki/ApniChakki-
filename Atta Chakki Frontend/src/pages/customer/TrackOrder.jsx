@@ -234,7 +234,7 @@ export function TrackOrder() {
     </div>
   );
 
-  /* ── NOT LOGGED IN ── */
+  /* NOT LOGGED IN */
   if (!user) {
     return (
       <section style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -273,10 +273,10 @@ export function TrackOrder() {
     );
   }
 
-  /* ── LOGGED IN ── */
+  /* LOGGED IN */
   return (
     <>
-      {/* ── Hero section: carousel bg + search ── */}
+      {/* Hero section: carousel bg + search */}
       <section style={{
         position: 'relative',
         overflow: 'hidden',
@@ -386,7 +386,7 @@ export function TrackOrder() {
         </div>
       </section>
 
-      {/* ── Results section: plain background, only renders when needed ── */}
+      {/* Results section: plain background, only renders when needed */}
       {orders.length > 0 && (
         <div className="py-8 px-4 sm:px-6 bg-slate-50">
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>

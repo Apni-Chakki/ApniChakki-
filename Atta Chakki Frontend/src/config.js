@@ -1,8 +1,8 @@
 // Localhost Defaults:
 // Frontend connects to local PHP backend and local Socket server by default.
 // Production:
-// - Socket Server is hosted on Render: https://apnichakki.onrender.com
-// - PHP Backend is hosted on InfinityFree. Replace the domain below with your actual InfinityFree domain.
+// Socket Server is hosted on Render: https://apnichakki.onrender.com
+// PHP Backend is hosted on InfinityFree. Replace the domain below with your actual InfinityFree domain.
 const PRODUCTION_API_URL = window.location.origin + "/Atta_Chakki_API";
 
 

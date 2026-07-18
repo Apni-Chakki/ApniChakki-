@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal, Map } from 'lucide-react';
+import { Save, Clock, MapPin, Phone, Mail, Megaphone, SplitSquareHorizontal, Map, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
 import { Textarea } from '../../components/common/textarea';
 import { Card } from '../../components/common/card';
+import { ImageUploadInput } from '../../components/common/ImageUploadInput';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 
@@ -13,6 +14,7 @@ export function Settings() {
   const { t } = useTranslation();
   const [settings, setSettings] = useState({
     storeName: "Suchi Chakki",
+    logo: "",
     phone: '+92 3228483029',
     email: 'info@gristmill.com',
     address: 'Lahore, Pakistan',
@@ -102,6 +104,55 @@ export function Settings() {
         <h1 className="text-xl sm:text-2xl font-bold">{t("Store Settings")}</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage your store information and customer announcements</p>
       </div>
+
+      {/* App & Header Logo Settings */}
+      <Card className="p-4 sm:p-6 border-amber-200/60 bg-gradient-to-r from-amber-50/40 to-card">
+        <h2 className="mb-2 flex items-center gap-2 font-semibold text-foreground text-sm sm:text-base">
+          <ImageIcon className="h-5 w-5 shrink-0 text-primary" />
+          App & Header Logo (PWA Icon)
+        </h2>
+        <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+          Upload your store logo here. This will automatically update both the website Header Logo and the PWA App Icon across mobile and desktop devices.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-20 w-20 rounded-2xl border-2 border-primary/20 bg-card p-1.5 flex items-center justify-center overflow-hidden shadow-md">
+              {settings.logo ? (
+                <img src={settings.logo} alt="Store Logo" className="h-full w-full object-contain rounded-xl" />
+              ) : (
+                <img src="/logo.svg" alt="Default Logo" className="h-full w-full object-contain rounded-xl" />
+              )}
+            </div>
+            {settings.logo && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSettings({ ...settings, logo: '' })}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Remove Logo
+              </Button>
+            )}
+          </div>
+
+          <div className="flex-1 w-full">
+            <ImageUploadInput
+              label="Upload New Logo"
+              hint="JPG, PNG, WebP or SVG (Square logo recommended for PWA Icon)"
+              folder="store"
+              onImageUpload={(data) => {
+                if (data && data.url) {
+                  setSettings(prev => ({ ...prev, logo: data.url }));
+                } else {
+                  setSettings(prev => ({ ...prev, logo: '' }));
+                }
+              }}
+            />
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-4 sm:p-6 border-amber-200 bg-amber-50/50">
         <h2 className="mb-3 sm:mb-4 flex items-center gap-2 font-semibold text-amber-900 text-sm sm:text-base">

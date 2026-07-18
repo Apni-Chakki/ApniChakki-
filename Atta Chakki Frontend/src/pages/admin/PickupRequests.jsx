@@ -100,6 +100,22 @@ export function PickupRequests() {
           toast.info('Driver assignment cleared.');
         } else {
           toast.success(`Assigned to ${personnelName} successfully!`);
+          let targetPhone = personnelPhone;
+          if (!targetPhone) {
+            const found = activePersonnel.find(p => p.name === personnelName);
+            if (found && found.phone) targetPhone = found.phone;
+          }
+          if (targetPhone) {
+            let cleanPhone = String(targetPhone).replace(/\D/g, '');
+            if (cleanPhone.startsWith('0')) {
+              cleanPhone = '92' + cleanPhone.slice(1);
+            } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
+              cleanPhone = '92' + cleanPhone;
+            }
+            const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se nayi Pickup Request assign hui hai:\n📦 *Pickup Request #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par pickup mukammal karein.\nShukriya!`;
+            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+          }
         }
         fetchOrders();
       } else {

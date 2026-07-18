@@ -113,7 +113,7 @@ export function Homepage() {
     return () => clearInterval(timer);
   }, [storySlides.length]);
 
-  // --- CHANGED: Fetch from PHP Backend instead of LocalStorage ---
+  // CHANGED: Fetch from PHP Backend instead of LocalStorage
   useEffect(() => {
     const fetchData = async () => {
       try {

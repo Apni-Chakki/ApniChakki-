@@ -39,7 +39,7 @@ export function InventoryManagement() {
   const [updateQuantity, setUpdateQuantity] = useState('');
   const [updateNotes, setUpdateNotes] = useState('');
 
-  // --- Filters ---
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
@@ -47,7 +47,7 @@ export function InventoryManagement() {
     fetchInventory(); 
   }, []);
 
-  // --- NEW: FETCH FROM API ---
+  // NEW: FETCH FROM API
   const fetchInventory = async () => {
     try {
       setLoading(true);
@@ -67,7 +67,7 @@ export function InventoryManagement() {
     }
   };
 
-  // --- NEW: UPDATE VIA API ---
+  // NEW: UPDATE VIA API
   const handleUpdateStock = async () => {
     if (!selectedProduct || !updateQuantity) {
       toast.error('Please enter quantity');

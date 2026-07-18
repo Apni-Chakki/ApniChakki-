@@ -141,6 +141,7 @@ export function Checkout() {
   const [houseDetails, setHouseDetails] = useState(''); 
 
   const [locationStatus, setLocationStatus] = useState('');
+  const [addressSuggestion, setAddressSuggestion] = useState(null); // { corrected: '...', original: '...' }
   const [gpsCoords, setGpsCoords] = useState(null); 
   const [showMap, setShowMap] = useState(false);
   const [mapCenter, setMapCenter] = useState(null); 
@@ -293,66 +294,81 @@ export function Checkout() {
 
   // maths ka sara kaam yahan ho raha hai (fees wagera)
   useEffect(() => {
-    if (orderType !== 'delivery') {
-      setDeliveryFee(0);
-      setIsOutOfLahore(false);
-      return;
-    }
+    const calcDeliveryFee = async () => {
+      if (orderType !== 'delivery') {
+        setDeliveryFee(0);
+        setIsOutOfLahore(false);
+        return;
+      }
 
-    if (gpsCoords && !isOutOfLahore) {
-      const straightDist = calculateDistance(
-        SHOP_LOCATION.lat, SHOP_LOCATION.lng,
-        gpsCoords.lat, gpsCoords.lng
-      );
-      // Fallback estimate: Haversine underreports actual road distance,
-      // so scale it up for the paths that don't hit Google Maps.
-      const estimatedRoadDist = straightDist * ROAD_DISTANCE_FACTOR;
+      if (gpsCoords && !isOutOfLahore) {
+        const straightDist = calculateDistance(
+          SHOP_LOCATION.lat, SHOP_LOCATION.lng,
+          gpsCoords.lat, gpsCoords.lng
+        );
+        // Fallback estimate: Haversine underreports actual road distance
+        const estimatedRoadDist = straightDist * ROAD_DISTANCE_FACTOR;
 
-      const updateFee = (distVal) => {
-        setDistanceKm(distVal);
-        if (user?.vip_free_shipping) {
-          setDeliveryFee(0);
-          return;
-        }
-        let fee = deliveryConfig.base_fare;
-        if (distVal > deliveryConfig.base_distance) {
-          fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
-        }
-        setDeliveryFee(fee);
-      };
+        const updateFee = (distVal) => {
+          setDistanceKm(distVal);
+          if (user?.vip_free_shipping) {
+            setDeliveryFee(0);
+            return;
+          }
+          let fee = deliveryConfig.base_fare;
+          if (distVal > deliveryConfig.base_distance) {
+            fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
+          }
+          setDeliveryFee(fee);
+        };
 
-      if (USE_GOOGLE_MAPS && window.google?.maps?.DistanceMatrixService) {
-        try {
-          const service = new window.google.maps.DistanceMatrixService();
-          service.getDistanceMatrix(
-            {
-              origins: [new window.google.maps.LatLng(SHOP_LOCATION.lat, SHOP_LOCATION.lng)],
-              destinations: [new window.google.maps.LatLng(gpsCoords.lat, gpsCoords.lng)],
-              travelMode: window.google.maps.TravelMode.DRIVING,
-              unitSystem: window.google.maps.UnitSystem.METRIC,
-            },
-            (response, status) => {
-              if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
-                const element = response.rows[0].elements[0];
-                const roadDist = element.distance.value / 1000;
-                updateFee(roadDist); // Google returns true road km — use as-is.
+        // Routes API: RouteMatrix — actual road distance (replaces deprecated DistanceMatrix)
+        if (USE_GOOGLE_MAPS && GOOGLE_MAPS_API_KEY) {
+          try {
+            const body = JSON.stringify({
+              origins: [{ waypoint: { location: { latLng: { latitude: SHOP_LOCATION.lat, longitude: SHOP_LOCATION.lng } } } }],
+              destinations: [{ waypoint: { location: { latLng: { latitude: gpsCoords.lat, longitude: gpsCoords.lng } } } }],
+              travelMode: 'DRIVE',
+            });
+            const res = await fetch(
+              `https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix?key=${GOOGLE_MAPS_API_KEY}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters,status',
+                },
+                body,
+              }
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const element = Array.isArray(data) ? data[0] : null;
+              if (element && element.distanceMeters) {
+                // True road km from Google Routes API
+                updateFee(element.distanceMeters / 1000);
               } else {
                 updateFee(estimatedRoadDist);
               }
+            } else {
+              updateFee(estimatedRoadDist);
             }
-          );
-        } catch (e) {
-          console.warn('Distance Matrix failed, using straight-line estimate:', e);
+          } catch (e) {
+            console.warn('RouteMatrix failed, using estimate:', e);
+            updateFee(estimatedRoadDist);
+          }
+        } else {
           updateFee(estimatedRoadDist);
         }
       } else {
-        updateFee(estimatedRoadDist);
+        setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);
+        setDistanceKm(0);
       }
-    } else {
-      setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);
-      setDistanceKm(0);
-    }
+    };
+    calcDeliveryFee();
   }, [gpsCoords, isOutOfLahore, orderType, deliveryConfig, user?.vip_free_shipping]);
+
+
 
   useEffect(() => {
     if (hasTripItem) setOrderType('delivery');
@@ -671,7 +687,9 @@ export function Checkout() {
             const lat = res.geometry.location.lat();
             const lng = res.geometry.location.lng();
             const isOfficiallyLahore = checkIsLahore(q || res.formatted_address, lat, lng, res.address_components);
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            // Capture Google's corrected formatted address for suggestion
+            const googleFormatted = res.formatted_address || null;
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: googleFormatted };
             break;
           }
         }
@@ -692,7 +710,7 @@ export function Checkout() {
             const lat = res.geometry.location.lat();
             const lng = res.geometry.location.lng();
             const isOfficiallyLahore = checkIsLahore(q || res.formatted_address, lat, lng, null);
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: res.formatted_address || null };
             break;
           }
         }
@@ -709,7 +727,7 @@ export function Checkout() {
             const result = data.results[0];
             const { lat, lng } = result.geometry.location;
             const isOfficiallyLahore = checkIsLahore(q || result.formatted_address, lat, lng, result.address_components);
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
+            foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: result.formatted_address || null };
             break;
           }
         } catch (e) { console.warn('Google forward geocode HTTP failed', e); }
@@ -738,11 +756,57 @@ export function Checkout() {
       setMapCenter([foundLocation.lat, foundLocation.lng]);
       setShowMap(true);
       setDeliveryArea(addressToSearch);
-      
       setIsOutOfLahore(!foundLocation.isLahore);
+      setAddressSuggestion(null); // reset old suggestion
 
       if (foundLocation.isLahore) {
         setLocationStatus(`✅ ${t('Area verified & mapped!')}`);
+
+        // Suggestion from Geocoder formatted_address (most reliable for Pakistan)
+        if (foundLocation.formatted) {
+          // Extract just area + city (drop country and postal code)
+          const gParts = foundLocation.formatted.split(',').map(p => p.trim());
+          const withoutCountry = gParts
+            .filter(p => p.toLowerCase() !== 'pakistan' && !/^\d{5}$/.test(p))
+            .join(', ');
+          // Normalize: lowercase + remove all non-alphanumeric (handles spelling like "Twon" vs "Town")
+          const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g, '');
+          // Show suggestion if normalized versions differ — e.g., "iqbaltwon" vs "iqbaltown"
+          if (withoutCountry && normalize(withoutCountry) !== normalize(addressToSearch)) {
+            setAddressSuggestion({ corrected: withoutCountry, original: addressToSearch });
+          }
+        }
+
+        // Address Validation API — extra confirmation badge only
+        if (USE_GOOGLE_MAPS && !foundLocation.formatted) {
+          try {
+            const valRes = await fetch(
+              `https://addressvalidation.googleapis.com/v1:validateAddress?key=${GOOGLE_MAPS_API_KEY}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  address: { addressLines: [addressToSearch], regionCode: 'PK', locality: 'Lahore' },
+                  enableUspsCass: false,
+                }),
+              }
+            );
+            if (valRes.ok) {
+              const valData = await valRes.json();
+              const formattedAddr = valData.result?.address?.formattedAddress;
+              if (formattedAddr) {
+                const parts = formattedAddr.split(',').map(p => p.trim()).filter(p => p.toLowerCase() !== 'pakistan');
+                const suggestion = parts.slice(0, 2).join(', ');
+                const normalizeStr = (s) => s.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g, '');
+                if (suggestion && normalizeStr(suggestion) !== normalizeStr(addressToSearch)) {
+                  setAddressSuggestion({ corrected: suggestion, original: addressToSearch });
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Address Validation API error:', e);
+          }
+        }
       } else {
         setLocationStatus(`❌ ${t('Out of city service not available')}`);
       }
@@ -756,6 +820,7 @@ export function Checkout() {
     if (orderType !== 'delivery') return;
     if (!houseDetails || houseDetails.trim().length < 6) return;
     if (houseDetails === deliveryArea) return;
+    setAddressSuggestion(null); // clear suggestion when user types new address
 
     const delayDebounceFn = setTimeout(() => {
       searchTypedAddress(houseDetails);
@@ -796,6 +861,21 @@ export function Checkout() {
     setGpsCoords(null);
     setShowMap(false);
 
+    // Try Google Geolocation API (WiFi+Cell — fast & indoor)
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders/geolocation.php`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.lat && data.lng) {
+          await processLocationFix(data.lat, data.lng, data.accuracy || 500, 'Network');
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Google Geolocation API unavailable, trying browser GPS:', e);
+    }
+
+    // Fallback: Browser GPS
     if (!navigator.geolocation) {
       fallbackToManualLocation();
       return;
@@ -804,7 +884,7 @@ export function Checkout() {
     try {
       const position = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true, timeout: 15000, maximumAge: 0, 
+          enableHighAccuracy: true, timeout: 15000, maximumAge: 0,
         });
       });
       const { latitude: lat, longitude: lng, accuracy } = position.coords;
@@ -879,7 +959,7 @@ export function Checkout() {
   };
 
   const processOnlinePayment = async () => {
-    // ── Payment validation checks ──
+    // Payment validation checks
     if (paymentMethod === 'jazzcash') {
       if (!mobileNumber || mobileNumber.trim() === '') {
         toast.error(t('Please enter your JazzCash mobile number'));
@@ -1511,7 +1591,7 @@ export function Checkout() {
         )}
 
         <div className="space-y-5">
-          {/* ── MAP SECTION — Always visible, user picks location here ── */}
+          {/* MAP SECTION — Always visible, user picks location here */}
           <div className="border-2 border-primary/20 rounded-xl overflow-hidden bg-primary/5">
             <div className="px-4 py-3 border-b border-primary/10 bg-primary/5">
               <p className="text-sm font-bold text-primary flex items-center gap-2">
@@ -1570,6 +1650,40 @@ export function Checkout() {
               </div>
             )}
 
+            {/* Address Suggestion Banner (Google Address Validation) */}
+            {addressSuggestion && (
+              <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2 min-w-0">
+                  <span className="text-amber-500 text-base shrink-0 mt-0.5">💡</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-amber-800">{t('Did you mean?')}</p>
+                    <p className="text-xs text-amber-700 truncate">{addressSuggestion.corrected}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryArea(addressSuggestion.corrected);
+                      setHouseDetails(addressSuggestion.corrected);
+                      setAddressSuggestion(null);
+                      searchTypedAddress(addressSuggestion.corrected);
+                    }}
+                    className="text-[11px] font-semibold px-2.5 py-1 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                  >
+                    ✓ {t('Use This')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddressSuggestion(null)}
+                    className="text-[11px] px-2 py-1 bg-white border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Map — Always rendered */}
             <div className="relative">
               {USE_GOOGLE_MAPS ? (
@@ -1624,7 +1738,7 @@ export function Checkout() {
             )}
           </div>
 
-          {/* ── HOUSE DETAILS SECTION ── */}
+          {/* HOUSE DETAILS SECTION */}
           <div className="p-4 border-2 border-primary/20 rounded-xl bg-primary/5">
             <Label htmlFor="houseDetails" className="text-primary font-bold flex items-center gap-2">
               <Building2 className="h-4 w-4" />
@@ -2025,6 +2139,8 @@ export function Checkout() {
                       <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="cardNumber"
+                        name="cardnumber"
+                        autoComplete="cc-number"
                         placeholder="4242 4242 4242 4242"
                         value={cardNumber}
                         onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
@@ -2043,6 +2159,8 @@ export function Checkout() {
                     <Label htmlFor="cardName">{t('Cardholder Name')}</Label>
                     <Input
                       id="cardName"
+                      name="ccname"
+                      autoComplete="cc-name"
                       placeholder="JOHN DOE"
                       value={cardName}
                       onChange={(e) => setCardName(e.target.value.toUpperCase())}
@@ -2055,6 +2173,8 @@ export function Checkout() {
                       <Label htmlFor="cardExpiry">{t('Expiry Date')}</Label>
                       <Input
                         id="cardExpiry"
+                        name="ccexp"
+                        autoComplete="cc-exp"
                         placeholder="MM/YY"
                         value={cardExpiry}
                         onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
@@ -2067,6 +2187,8 @@ export function Checkout() {
                       <div className="relative mt-1">
                         <Input
                           id="cardCvv"
+                          name="cvv"
+                          autoComplete="cc-csc"
                           type="password"
                           placeholder="•••"
                           value={cardCvv}

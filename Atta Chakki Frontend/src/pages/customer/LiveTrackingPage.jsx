@@ -4,14 +4,11 @@ import { MapPin, Phone, Navigation, Clock, Truck, Radio, Shield, Star, Loader2, 
 import { API_BASE_URL, GOOGLE_MAPS_API_KEY, SOCKET_URL } from '../../config';
 import '../../styles/LiveTrackingPage.css';
 
-// ============================================================
 // Socket.io Client
-// ============================================================
 import { io } from 'socket.io-client';
 
-// ============================================================
 // Google Maps Script Loader
-// ============================================================
+
 let googleMapsLoadPromise = null;
 
 function loadGoogleMapsScript() {
@@ -44,13 +41,11 @@ function loadGoogleMapsScript() {
   return googleMapsLoadPromise;
 }
 
-// ============================================================
-// Helper: Animate marker smoothly between two points
-// ============================================================
+// Function to animate driver marker smoothly
 function animateMarkerTo(marker, newPosition, duration = 1000) {
-  const startPos = marker.getPosition();
-  const startLat = startPos.lat();
-  const startLng = startPos.lng();
+  const startPos = marker.position || marker.getPosition();
+  const startLat = typeof startPos.lat === 'function' ? startPos.lat() : startPos.lat;
+  const startLng = typeof startPos.lng === 'function' ? startPos.lng() : startPos.lng;
   const endLat = newPosition.lat;
   const endLng = newPosition.lng;
   const startTime = Date.now();
@@ -58,26 +53,28 @@ function animateMarkerTo(marker, newPosition, duration = 1000) {
   function step() {
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / duration, 1);
-    
+
     // Ease-out cubic
     const eased = 1 - Math.pow(1 - progress, 3);
-    
+
     const lat = startLat + (endLat - startLat) * eased;
     const lng = startLng + (endLng - startLng) * eased;
-    
-    marker.setPosition({ lat, lng });
-    
+
+    if (marker.setPosition) {
+      marker.setPosition({ lat, lng });
+    } else {
+      marker.position = { lat, lng };
+    }
+
     if (progress < 1) {
       requestAnimationFrame(step);
     }
   }
-  
+
   requestAnimationFrame(step);
 }
 
-// ============================================================
 // Helper: Create rotated car SVG icon
-// ============================================================
 function createCarIcon(heading = 0, color = '#2563eb') {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
@@ -101,12 +98,10 @@ function createCarIcon(heading = 0, color = '#2563eb') {
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
-// ============================================================
 // LiveTrackingPage — InDrive-style customer tracking page
-// ============================================================
 export function LiveTrackingPage() {
   const { token } = useParams();
-  
+
   // State
   const [orderInfo, setOrderInfo] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
@@ -120,6 +115,11 @@ export function LiveTrackingPage() {
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [destinationCoords, setDestinationCoords] = useState(null);
 
+  // Save driver location in ref so we don't call Google API too much
+  useEffect(() => {
+    driverLocRef.current = driverLocation;
+  }, [driverLocation]);
+
   // Refs
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -130,9 +130,11 @@ export function LiveTrackingPage() {
   const socketRef = useRef(null);
   const etaIntervalRef = useRef(null);
   const previousHeadingRef = useRef(0);
+  const driverLocRef = useRef(null);
+  const routeDrawnRef = useRef(false);
   const socketEnabled = import.meta.env.VITE_ENABLE_SOCKET === 'true' && !!SOCKET_URL;
 
-  // ─── 1. Validate token & fetch order info ───
+  // Validate token & fetch order info
   useEffect(() => {
     if (!token) {
       setError('No tracking token provided');
@@ -147,7 +149,7 @@ export function LiveTrackingPage() {
 
         if (data.success) {
           setOrderInfo(data);
-          
+
           if (data.current_location) {
             setDriverLocation({
               lat: parseFloat(data.current_location.latitude),
@@ -174,7 +176,7 @@ export function LiveTrackingPage() {
     validateToken();
   }, [token]);
 
-  // ─── 2. Connect Socket.io ───
+  // Connect Socket.io
   useEffect(() => {
     if (!orderInfo || isDelivered || !socketEnabled) return;
 
@@ -236,7 +238,7 @@ export function LiveTrackingPage() {
     };
   }, [orderInfo, isDelivered]);
 
-  // ─── 3. Fallback polling (in case socket fails) ───
+  // Fallback polling (in case socket fails)
   useEffect(() => {
     if (!orderInfo || isDelivered) return;
 
@@ -244,7 +246,7 @@ export function LiveTrackingPage() {
       try {
         const res = await fetch(`${API_BASE_URL}/get_driver_location.php?order_id=${orderInfo.order_id}`);
         const data = await res.json();
-        
+
         if (data.success && data.location) {
           const loc = data.location;
           setDriverLocation(prev => {
@@ -261,7 +263,7 @@ export function LiveTrackingPage() {
             return prev;
           });
         }
-      } catch(e) {
+      } catch (e) {
         // Silent fail for polling
       }
     };
@@ -270,7 +272,7 @@ export function LiveTrackingPage() {
     return () => clearInterval(interval);
   }, [orderInfo, isDelivered, lastUpdateTime]);
 
-  // ─── 4. Initialize Google Map ───
+  // Initialize Google Map
   useEffect(() => {
     if (!GOOGLE_MAPS_API_KEY || !orderInfo) return;
 
@@ -287,26 +289,19 @@ export function LiveTrackingPage() {
           }
         });
 
-        const defaultCenter = driverLocation 
+        const defaultCenter = driverLocation
           ? { lat: driverLocation.lat, lng: driverLocation.lng }
           : { lat: 31.5204, lng: 74.3587 }; // Lahore
 
         const map = new window.google.maps.Map(mapContainerRef.current, {
           center: defaultCenter,
           zoom: 15,
+          mapId: 'DEMO_MAP_ID', // Map ID for new Google Maps markers
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: true,
           zoomControl: true,
           gestureHandling: 'greedy',
-          styles: [
-            { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-            { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c8e6f5' }] },
-            { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#f0f4f0' }] },
-            { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#ffd54f' }] },
-            { featureType: 'road.arterial', elementType: 'geometry.fill', stylers: [{ color: '#ffffff' }] },
-          ],
         });
 
         mapRef.current = map;
@@ -317,52 +312,57 @@ export function LiveTrackingPage() {
       });
 
     return () => {
-      if (driverMarkerRef.current) driverMarkerRef.current.setMap(null);
-      if (destMarkerRef.current) destMarkerRef.current.setMap(null);
+      if (driverMarkerRef.current) driverMarkerRef.current.map = null;
+      if (destMarkerRef.current) destMarkerRef.current.map = null;
       if (routePolylineRef.current) routePolylineRef.current.setMap(null);
       if (directionsRendererRef.current) directionsRendererRef.current.setMap(null);
     };
   }, [orderInfo]);
 
-  // ─── 5. Update driver marker on map when location changes ───
+  // Update driver marker on map when location changes
   useEffect(() => {
     if (!mapRef.current || !driverLocation || !window.google) return;
 
     const pos = { lat: driverLocation.lat, lng: driverLocation.lng };
     const heading = driverLocation.heading || 0;
 
+    // Draw route first time driver location is loaded
+    if (!routeDrawnRef.current && destinationCoords) {
+      routeDrawnRef.current = true;
+      drawRoute();
+    }
+
     if (driverMarkerRef.current) {
-      // Smooth animation to new position
+      // Animate car smoothly
       animateMarkerTo(driverMarkerRef.current, pos, 800);
-      
-      // Update icon rotation
+
+      // Rotate car icon
       if (Math.abs(heading - previousHeadingRef.current) > 5) {
-        driverMarkerRef.current.setIcon({
-          url: createCarIcon(heading),
-          scaledSize: new window.google.maps.Size(60, 60),
-          anchor: new window.google.maps.Point(30, 30),
-        });
+        const img = driverMarkerRef.current.content.querySelector('img');
+        if (img) {
+          img.src = createCarIcon(heading);
+        }
         previousHeadingRef.current = heading;
       }
     } else {
-      // Create new marker
-      const marker = new window.google.maps.Marker({
+      // Create HTML element for the marker
+      const element = document.createElement('div');
+      element.innerHTML = `<img src="${createCarIcon(heading)}" style="width: 60px; height: 60px; pointer-events: none;" />`;
+
+      // Put marker on map
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: pos,
         map: mapRef.current,
         title: orderInfo?.driver_name || 'Driver',
-        icon: {
-          url: createCarIcon(heading),
-          scaledSize: new window.google.maps.Size(60, 60),
-          anchor: new window.google.maps.Point(30, 30),
-        },
+        content: element,
         zIndex: 100,
       });
       driverMarkerRef.current = marker;
       previousHeadingRef.current = heading;
     }
-  }, [driverLocation, mapReady]);
+  }, [driverLocation, mapReady, destinationCoords, drawRoute]);
 
-  // ─── 6. Place destination marker ───
+  // Place destination marker
   useEffect(() => {
     if (!mapRef.current || !destinationCoords || !window.google) return;
 
@@ -382,150 +382,192 @@ export function LiveTrackingPage() {
         </svg>
       `;
 
-      const marker = new window.google.maps.Marker({
+      const element = document.createElement('div');
+      element.innerHTML = `<img src="data:image/svg+xml,${encodeURIComponent(destIcon)}" style="width: 48px; height: 60px; pointer-events: none;" />`;
+
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: destinationCoords,
         map: mapRef.current,
         title: 'Delivery Destination',
-        icon: {
-          url: 'data:image/svg+xml,' + encodeURIComponent(destIcon),
-          scaledSize: new window.google.maps.Size(48, 60),
-          anchor: new window.google.maps.Point(24, 60),
-        },
+        content: element,
         zIndex: 50,
       });
       destMarkerRef.current = marker;
     }
   }, [destinationCoords, mapReady]);
 
-  // ─── 7. Draw route polyline using Directions API ───
-  const drawRoute = useCallback(() => {
-    if (!mapRef.current || !driverLocation || !destinationCoords || !window.google) return;
+  // Draw route lines
+  const drawRoute = useCallback(async () => {
+    const loc = driverLocRef.current;
+    if (!mapRef.current || !loc || !destinationCoords || !window.google) return;
 
+    // Function to draw route lines
+    const renderPolylines = (fullPath) => {
+      if (routePolylineRef.current) routePolylineRef.current.setMap(null);
+
+      const borderPolyline = new window.google.maps.Polyline({
+        path: fullPath, geodesic: true,
+        strokeColor: '#1e40af', strokeOpacity: 0.18, strokeWeight: 14,
+        map: mapRef.current, zIndex: 1,
+      });
+      const mainPolyline = new window.google.maps.Polyline({
+        path: fullPath, geodesic: true,
+        strokeColor: '#2563eb', strokeOpacity: 0.95, strokeWeight: 6,
+        map: mapRef.current, zIndex: 2,
+      });
+      routePolylineRef.current = { setMap: (m) => { borderPolyline.setMap(m); mainPolyline.setMap(m); } };
+      const bounds = new window.google.maps.LatLngBounds();
+      bounds.extend({ lat: loc.lat, lng: loc.lng });
+      bounds.extend(destinationCoords);
+      mapRef.current.fitBounds(bounds, { padding: 80 });
+    };
+
+    // Try to get route path from server API
+    try {
+      const body = JSON.stringify({
+        origin: { location: { latLng: { latitude: loc.lat, longitude: loc.lng } } },
+        destination: { location: { latLng: { latitude: destinationCoords.lat, longitude: destinationCoords.lng } } },
+        travelMode: 'DRIVE',
+        routingPreference: 'TRAFFIC_AWARE',
+        computeAlternativeRoutes: false,
+        routeModifiers: { avoidTolls: false, avoidHighways: false },
+      });
+      const res = await fetch(
+        `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GOOGLE_MAPS_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.duration,routes.distanceMeters,routes.travelAdvisory',
+          },
+          body,
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const encoded = data.routes?.[0]?.polyline?.encodedPolyline;
+        if (encoded) {
+          // Convert route path to coordinates
+          const path = window.google.maps.geometry.encoding.decodePath(encoded);
+          renderPolylines(path);
+
+          // Save distance and time values
+          const dur = data.routes[0].duration; // e.g. "480s"
+          const durSec = dur ? parseInt(dur.replace('s', ''), 10) : null;
+          const distM = data.routes[0].distanceMeters || null;
+          if (durSec) {
+            const mins = Math.round(durSec / 60);
+            setEta({ text: mins <= 1 ? '1 min' : `${mins} mins`, value: durSec });
+          }
+          if (distM) {
+            const km = (distM / 1000).toFixed(1);
+            setDistance({ text: `${km} km`, value: distM });
+          }
+          return; // success — skip fallback
+        }
+      }
+    } catch (e) {
+      console.warn('Routes API failed, falling back to DirectionsService:', e);
+    }
+
+    // Use fallback if server API fails
     const directionsService = new window.google.maps.DirectionsService();
-
     directionsService.route(
       {
-        origin: { lat: driverLocation.lat, lng: driverLocation.lng },
+        origin: { lat: loc.lat, lng: loc.lng },
         destination: destinationCoords,
         travelMode: window.google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: false,
       },
       (result, status) => {
         if (status === 'OK') {
-          // Remove old polylines
-          if (routePolylineRef.current) {
-            routePolylineRef.current.setMap(null);
-          }
-
-          // Use detailed step paths for road-accurate route (not overview_path)
-          const legs = result.routes[0].legs;
           const fullPath = [];
-          legs.forEach(leg => {
-            leg.steps.forEach(step => {
-              step.path.forEach(pt => fullPath.push(pt));
-            });
-          });
-
-          // === BORDER GLOW ===
-          const borderPolyline = new window.google.maps.Polyline({
-            path: fullPath,
-            geodesic: true,
-            strokeColor: '#1e40af',
-            strokeOpacity: 0.18,
-            strokeWeight: 14,
-            map: mapRef.current,
-            zIndex: 1,
-          });
-
-          // === MAIN BLUE ROUTE (Uber style with white tick dashes) ===
-          const mainPolyline = new window.google.maps.Polyline({
-            path: fullPath,
-            geodesic: true,
-            strokeColor: '#2563eb',
-            strokeOpacity: 0.95,
-            strokeWeight: 6,
-            map: mapRef.current,
-            zIndex: 2,
-            icons: [{
-              icon: {
-                path: 'M 0,-1 0,1',
-                strokeOpacity: 1,
-                scale: 3,
-                strokeColor: '#ffffff',
-                strokeWeight: 1,
-              },
-              offset: '0',
-              repeat: '18px',
-            }],
-          });
-
-          // Store refs for cleanup
-          routePolylineRef.current = {
-            setMap: (map) => {
-              borderPolyline.setMap(map);
-              mainPolyline.setMap(map);
-            }
-          };
-
-          // Fit bounds to show both markers
-          const bounds = new window.google.maps.LatLngBounds();
-          bounds.extend({ lat: driverLocation.lat, lng: driverLocation.lng });
-          bounds.extend(destinationCoords);
-          mapRef.current.fitBounds(bounds, { padding: 80 });
+          result.routes[0].legs.forEach(leg => leg.steps.forEach(step => step.path.forEach(pt => fullPath.push(pt))));
+          renderPolylines(fullPath);
         }
       }
     );
-  }, [driverLocation, destinationCoords]);
+  }, [destinationCoords]);
 
-  // Redraw route every 30 seconds or when destination/driver first appear
+  // Refresh route every 30 seconds
   useEffect(() => {
-    if (!driverLocation || !destinationCoords || !mapReady) return;
+    if (!destinationCoords || !mapReady) return;
 
-    drawRoute();
-    const interval = setInterval(drawRoute, 30000);
+    if (driverLocRef.current) {
+      routeDrawnRef.current = true;
+      drawRoute();
+    }
+
+    const interval = setInterval(() => {
+      if (driverLocRef.current) {
+        drawRoute();
+      }
+    }, 30000);
     return () => clearInterval(interval);
-  }, [destinationCoords, mapReady]); // Only re-setup on destination/map ready
+  }, [destinationCoords, mapReady, drawRoute]);
 
-  // ─── 8. Fetch ETA & Distance using Distance Matrix API ───
-  const fetchEtaDistance = useCallback(() => {
-    if (!driverLocation || !destinationCoords || !window.google) return;
+  // Get ETA and Distance
+  const fetchEtaDistance = useCallback(async () => {
+    const loc = driverLocRef.current;
+    if (!loc || !destinationCoords || !window.google) return;
 
-    const service = new window.google.maps.DistanceMatrixService();
-    service.getDistanceMatrix(
-      {
-        origins: [{ lat: driverLocation.lat, lng: driverLocation.lng }],
-        destinations: [destinationCoords],
-        travelMode: window.google.maps.TravelMode.DRIVING,
-        unitSystem: window.google.maps.UnitSystem.METRIC,
-      },
-      (response, status) => {
-        if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
-          const element = response.rows[0].elements[0];
-          setEta({
-            text: element.duration.text,
-            value: element.duration.value
-          });
-          setDistance({
-            text: element.distance.text,
-            value: element.distance.value
-          });
+    try {
+      const body = JSON.stringify({
+        origins: [{
+          waypoint: { location: { latLng: { latitude: loc.lat, longitude: loc.lng } } }
+        }],
+        destinations: [{
+          waypoint: { location: { latLng: { latitude: destinationCoords.lat, longitude: destinationCoords.lng } } }
+        }],
+        travelMode: 'DRIVE',
+      });
+      const res = await fetch(
+        `https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix?key=${GOOGLE_MAPS_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters,status',
+          },
+          body,
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const element = Array.isArray(data) ? data[0] : null;
+        if (element && element.distanceMeters) {
+          const durSec = element.duration ? parseInt(element.duration.replace('s', ''), 10) : null;
+          if (durSec) {
+            const mins = Math.round(durSec / 60);
+            setEta({ text: mins <= 1 ? '1 min' : `${mins} mins`, value: durSec });
+          }
+          const km = (element.distanceMeters / 1000).toFixed(1);
+          setDistance({ text: `${km} km`, value: element.distanceMeters });
         }
       }
-    );
-  }, [driverLocation, destinationCoords]);
+    } catch (e) {
+      console.warn('RouteMatrix ETA fetch failed:', e);
+    }
+  }, [destinationCoords]);
 
-  // Update ETA every 15 seconds
+  // Update ETA timer
   useEffect(() => {
-    if (!driverLocation || !destinationCoords || !mapReady) return;
+    if (!destinationCoords || !mapReady) return;
 
-    fetchEtaDistance();
-    etaIntervalRef.current = setInterval(fetchEtaDistance, 15000);
+    if (driverLocRef.current) {
+      fetchEtaDistance();
+    }
+    etaIntervalRef.current = setInterval(() => {
+      if (driverLocRef.current) {
+        fetchEtaDistance();
+      }
+    }, 20000);
     return () => {
       if (etaIntervalRef.current) clearInterval(etaIntervalRef.current);
     };
-  }, [driverLocation, destinationCoords, mapReady, fetchEtaDistance]);
+  }, [destinationCoords, mapReady, fetchEtaDistance]);
 
-  // ─── 9. Snap to Road (optional — when accuracy is low) ───
+  // Snap coordinates to road
   const snapToRoad = useCallback(async (lat, lng) => {
     try {
       const res = await fetch(`${API_BASE_URL}/snap_to_road.php?path=${lat},${lng}`);
@@ -536,13 +578,13 @@ export function LiveTrackingPage() {
           lng: data.snappedPoints[0].longitude
         };
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('Snap to road failed:', e);
     }
     return { lat, lng }; // Return original if snap fails
   }, []);
 
-  // ─── Time ago helper ───
+  // Time ago helper
   const timeAgo = (timestamp) => {
     if (!timestamp) return '';
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -552,14 +594,14 @@ export function LiveTrackingPage() {
     return `${Math.floor(seconds / 3600)}h ago`;
   };
 
-  // ─── Speed formatting ───
+  // Speed formatting
   const formatSpeed = (speedMs) => {
     if (!speedMs || speedMs < 0.5) return 'Stopped';
     const kmh = (speedMs * 3.6).toFixed(0);
     return `${kmh} km/h`;
   };
 
-  // ─── Loading State ───
+  // Loading State
   if (loading) {
     return (
       <div className="live-tracking-loading">
@@ -572,7 +614,7 @@ export function LiveTrackingPage() {
     );
   }
 
-  // ─── Error State ───
+  // Error State
   if (error) {
     return (
       <div className="live-tracking-error">
@@ -585,7 +627,7 @@ export function LiveTrackingPage() {
     );
   }
 
-  // ─── Delivered State ───
+  // Delivered State
   if (isDelivered) {
     return (
       <div className="live-tracking-delivered">
@@ -604,10 +646,10 @@ export function LiveTrackingPage() {
     );
   }
 
-  // ─── Main Tracking UI ───
+  // Main Tracking UI
   return (
     <div className="live-tracking-page">
-      {/* ─── Map Container ─── */}
+      {/* Map Container */}
       <div className="tracking-map-container">
         {GOOGLE_MAPS_API_KEY ? (
           <div ref={mapContainerRef} className="tracking-map" />
@@ -633,7 +675,7 @@ export function LiveTrackingPage() {
         )}
       </div>
 
-      {/* ─── Bottom Sheet (InDrive-style) ─── */}
+      {/* Bottom Sheet (InDrive-style) */}
       <div className="tracking-bottom-sheet">
         {/* ETA Header */}
         <div className="eta-header">
@@ -663,7 +705,7 @@ export function LiveTrackingPage() {
               <div>
                 <p className="eta-label">Estimated Arrival</p>
                 <p className="eta-value">
-                  {eta 
+                  {eta
                     ? `Driver is ${distance?.text || '...'} away — ${eta.text} to arrive`
                     : 'Calculating route...'
                   }
@@ -710,9 +752,9 @@ export function LiveTrackingPage() {
                   <span>Call Driver</span>
                 </a>
               )}
-              <a 
-                href={driverLocation 
-                  ? `https://www.google.com/maps?q=${driverLocation.lat},${driverLocation.lng}` 
+              <a
+                href={driverLocation
+                  ? `https://www.google.com/maps?q=${driverLocation.lat},${driverLocation.lng}`
                   : '#'
                 }
                 target="_blank"
@@ -760,10 +802,10 @@ export function LiveTrackingPage() {
 function Package(props) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="m7.5 4.27 9 5.15"/>
-      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-      <path d="m3.3 7 8.7 5 8.7-5"/>
-      <path d="M12 22V12"/>
+      <path d="m7.5 4.27 9 5.15" />
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
     </svg>
   );
 }

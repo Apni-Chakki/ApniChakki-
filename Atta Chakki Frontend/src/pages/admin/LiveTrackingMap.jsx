@@ -13,7 +13,7 @@ import { API_BASE_URL, GOOGLE_MAPS_API_KEY, SOCKET_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
 import { io } from 'socket.io-client';
 
-// ─── Google Maps Loader ─────────────────────────────────────
+// Google Maps Loader
 let googleMapsLoadPromise = null;
 function loadGoogleMapsScript() {
   if (googleMapsLoadPromise) return googleMapsLoadPromise;
@@ -30,7 +30,7 @@ function loadGoogleMapsScript() {
   return googleMapsLoadPromise;
 }
 
-// ─── Colors ─────────────────────────────────────────────────
+// Colors
 const ROUTE_COLORS = [
   { main: '#2563eb', glow: '#1e40af' },
   { main: '#16a34a', glow: '#14532d' },
@@ -45,7 +45,7 @@ function getDriverColor(orderId) {
   return colorCache[orderId];
 }
 
-// ─── SVG Icons ───────────────────────────────────────────────
+// SVG Icons
 function createCarIcon(heading = 0, speed = 0, color = '#7c3aed') {
   const moving = speed > 0.5;
   return 'data:image/svg+xml,' + encodeURIComponent(`
@@ -83,15 +83,22 @@ function createDestIcon(color = '#ef4444', label = '') {
     </svg>`);
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
+// Helpers
 function animateMarker(marker, pos, dur = 800) {
-  const s = marker.getPosition();
-  const sLat = s.lat(), sLng = s.lng();
+  const s = marker.position || marker.getPosition();
+  const sLat = typeof s.lat === 'function' ? s.lat() : s.lat;
+  const sLng = typeof s.lng === 'function' ? s.lng() : s.lng;
   const t0 = Date.now();
   const step = () => {
     const t = Math.min((Date.now() - t0) / dur, 1);
     const e = 1 - Math.pow(1 - t, 3);
-    marker.setPosition({ lat: sLat + (pos.lat - sLat) * e, lng: sLng + (pos.lng - sLng) * e });
+    const nextLat = sLat + (pos.lat - sLat) * e;
+    const nextLng = sLng + (pos.lng - sLng) * e;
+    if (marker.setPosition) {
+      marker.setPosition({ lat: nextLat, lng: nextLng });
+    } else {
+      marker.position = { lat: nextLat, lng: nextLng };
+    }
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -126,7 +133,7 @@ function fmtCountdown(s) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-// ─── Notification types ───────────────────────────────────────
+// Notification types
 const NOTIF_TYPES = {
   STOPPED:   { icon: '🛑', color: 'bg-red-100 text-red-800',    label: 'Driver Stopped'    },
   OFF_ROUTE: { icon: '🗺️', color: 'bg-orange-100 text-orange-800', label: 'Off Route'      },
@@ -136,14 +143,14 @@ const NOTIF_TYPES = {
   ARRIVED:   { icon: '🎉', color: 'bg-green-100 text-green-800',  label: 'Near Destination' },
 };
 
-// ════════════════════════════════════════════════════════════
+// 
 //  MAIN COMPONENT
-// ════════════════════════════════════════════════════════════
+// 
 export function LiveTrackingMap() {
   const [activeTab, setActiveTab] = useState('live');
   const { t } = useTranslation();
 
-  // ── Live tab state ──
+  // Live tab state
   const [drivers, setDrivers] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDetail, setOrderDetail] = useState(null);
@@ -157,14 +164,14 @@ export function LiveTrackingMap() {
   const [nearDestination, setNearDestination] = useState({});
   const [liveCountdown, setLiveCountdown] = useState({});
 
-  // ── Smart Notifications ──
+  // Smart Notifications
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notifTimestampsRef = useRef({}); // prevent duplicate notifs
   const prevPositionsRef = useRef({});   // for stopped detection
 
-  // ── Geofence state ──
+  // Geofence state
   const [geofenceRadius, setGeofenceRadius] = useState(5000); // 5km default (city delivery range)
   const [geofenceEnabled, setGeofenceEnabled] = useState(true);
   const [shopCoords, setShopCoords] = useState(null);
@@ -173,7 +180,7 @@ export function LiveTrackingMap() {
   const geofenceMapRef = useRef(null);
   const geofenceMapContainerRef = useRef(null);
 
-  // ── Replay state ──
+  // Replay state
   const [replayOrderId, setReplayOrderId] = useState('');
   const [replayTrail, setReplayTrail] = useState([]);
   const [replayIdx, setReplayIdx] = useState(0);
@@ -187,18 +194,21 @@ export function LiveTrackingMap() {
   const replayIntervalRef = useRef(null);
   const replayHeadingRef = useRef(0);
 
-  // ── Route Planner state ──
+  // Route Planner state
   const [plannerOrders, setPlannerOrders] = useState([]);
   const [plannerSelected, setPlannerSelected] = useState([]);
   const [plannerResult, setPlannerResult] = useState(null);
   const [plannerLoading, setPlannerLoading] = useState(false);
   const [plannerMapReady, setPlannerMapReady] = useState(false);
+  // Route Optimization
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizedResult, setOptimizedResult] = useState(null);
   const plannerMapContainerRef = useRef(null);
   const plannerMapRef = useRef(null);
   const plannerMarkersRef = useRef([]);
   const plannerRouteRef = useRef(null);
 
-  // ── Main map refs ──
+  // Main map refs
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
@@ -215,9 +225,9 @@ export function LiveTrackingMap() {
   const socketRef = useRef(null);
   const autoFollowRef = useRef(false);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  SMART NOTIFICATIONS
-  // ════════════════════════════════════════════════════════
+  // 
   const addNotification = useCallback((type, orderId, driverName, extra = '') => {
     const key = `${type}-${orderId}`;
     const now = Date.now();
@@ -283,13 +293,13 @@ export function LiveTrackingMap() {
     return () => clearInterval(interval);
   }, [drivers, liveCountdown, driverETAs, nearDestination, geofenceEnabled, shopCoords, geofenceRadius, addNotification]);
 
-  // ── Countdown ticker ──
+  // Countdown ticker
   useEffect(() => {
     const tick = setInterval(() => setLiveCountdown(p => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Math.max(0, v - 1)]))), 1000);
     return () => clearInterval(tick);
   }, []);
 
-  // ── Fetch store settings (for geofence center) ──
+  // Fetch store settings (for geofence center)
   useEffect(() => {
     fetch(`${API_BASE_URL}/admin/get_store_settings.php`)
       .then(r => r.json())
@@ -300,9 +310,9 @@ export function LiveTrackingMap() {
       }).catch(() => {});
   }, []);
 
-  // ── Geocode store address for geofence ──
+  // Geocode store address for geofence
   useEffect(() => {
-    if (!storeAddress || !window.google) return;
+    if (!storeAddress || !window.google?.maps?.Geocoder) return;
     new window.google.maps.Geocoder().geocode({ address: storeAddress }, (results, status) => {
       if (status === 'OK' && results[0]) {
         const loc = results[0].geometry.location;
@@ -311,9 +321,9 @@ export function LiveTrackingMap() {
     });
   }, [storeAddress, mapReady]);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  SOCKET.IO
-  // ════════════════════════════════════════════════════════
+  // 
   useEffect(() => {
     const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
     socket.on('connect', () => { socket.emit('admin:subscribe'); setSocketConnected(true); });
@@ -330,7 +340,8 @@ export function LiveTrackingMap() {
         const h = data.heading || 0;
         if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
           const color = getDriverColor(orderId).main;
-          markersRef.current[orderId].setIcon({ url: createCarIcon(h, data.speed || 0, color), scaledSize: new window.google.maps.Size(56, 56), anchor: new window.google.maps.Point(28, 28) });
+          const img = markersRef.current[orderId].content.querySelector('img');
+          if (img) img.src = createCarIcon(h, data.speed || 0, color);
           previousHeadingsRef.current[orderId] = h;
         }
         const now = Date.now();
@@ -355,9 +366,9 @@ export function LiveTrackingMap() {
     return () => { if (socket) socket.disconnect(); };
   }, []);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  ROUTE LOGIC (updateRemainingRoute, drawDirectionsRoute)
-  // ════════════════════════════════════════════════════════
+  // 
   const updateRemainingRoute = useCallback((orderId, driverPos) => {
     if (!mapRef.current || !window.google) return;
     const fullPath = routePathRef.current[orderId];
@@ -368,7 +379,14 @@ export function LiveTrackingMap() {
     fullPath.forEach((pt, i) => { const d = window.google.maps.geometry.spherical.computeDistanceBetween(dLL, pt); if (d < minD) { minD = d; ci = i; } });
     if (minD > 80) {
       const dest = destCoordsRef.current[orderId];
-      if (dest) { routeDrawnRef.current.delete(orderId); drawDirectionsRoute(orderId, driverPos, dest); return; }
+      if (dest) {
+        const now = Date.now();
+        if (now - (routeLastDrawRef.current[orderId] || 0) > 45000) {
+          routeDrawnRef.current.delete(orderId);
+          drawDirectionsRoute(orderId, driverPos, dest);
+        }
+        return;
+      }
     }
     lines.completed?.setPath(fullPath.slice(0, ci + 1));
     lines.remaining?.setPath(fullPath.slice(ci));
@@ -379,32 +397,78 @@ export function LiveTrackingMap() {
     setNearDestination(prev => ({ ...prev, [orderId]: distToDest < 300 }));
   }, []);
 
-  const drawDirectionsRoute = useCallback((orderId, origin, destination) => {
+  const drawDirectionsRoute = useCallback(async (orderId, origin, destination) => {
     if (!mapRef.current || !window.google) return;
     const color = getDriverColor(orderId);
+
+    const applyPolylines = (fullPath) => {
+      polylinesRef.current[orderId]?.border?.setMap(null);
+      polylinesRef.current[orderId]?.remaining?.setMap(null);
+      polylinesRef.current[orderId]?.completed?.setMap(null);
+      routePathRef.current[orderId] = fullPath;
+      routeLastDrawRef.current[orderId] = Date.now();
+      const border    = new window.google.maps.Polyline({ path: fullPath, geodesic: true, strokeColor: color.glow, strokeOpacity: 0.18, strokeWeight: 14, map: mapRef.current, zIndex: 1 });
+      const remaining = new window.google.maps.Polyline({ path: fullPath, geodesic: true, strokeColor: color.main, strokeOpacity: 0.95, strokeWeight: 6, map: mapRef.current, zIndex: 2 });
+      const completed = new window.google.maps.Polyline({ path: [], geodesic: true, strokeColor: '#94a3b8', strokeOpacity: 0.5, strokeWeight: 4, map: mapRef.current, zIndex: 1 });
+      polylinesRef.current[orderId] = { border, remaining, completed };
+      routeDrawnRef.current.add(orderId);
+    };
+
+    // Try to get route path from server API
+    try {
+      const body = JSON.stringify({
+        origin:      { location: { latLng: { latitude: origin.lat  ?? origin.lat(),  longitude: origin.lng  ?? origin.lng()  } } },
+        destination: { location: { latLng: { latitude: destination.lat ?? destination.lat(), longitude: destination.lng ?? destination.lng() } } },
+        travelMode:  'DRIVE',
+        routingPreference: 'TRAFFIC_AWARE',
+        computeAlternativeRoutes: false,
+      });
+      const res = await fetch(
+        `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GOOGLE_MAPS_API_KEY}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.duration,routes.distanceMeters' }, body }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const encoded = data.routes?.[0]?.polyline?.encodedPolyline;
+        if (encoded) {
+          const path = window.google.maps.geometry.encoding.decodePath(encoded);
+          applyPolylines(path);
+          // Save distance and time values
+          const durSec = data.routes[0].duration ? parseInt(data.routes[0].duration.replace('s',''),10) : null;
+          const distM  = data.routes[0].distanceMeters || null;
+          if (durSec || distM) {
+            setDriverETAs(prev => ({
+              ...prev,
+              [orderId]: {
+                ...(prev[orderId] || {}),
+                ...(durSec ? { eta: `${Math.round(durSec/60)} mins`, etaValue: durSec, arrivalTime: formatArrivalTime(durSec) } : {}),
+                ...(distM  ? { distance: `${(distM/1000).toFixed(1)} km` } : {}),
+              }
+            }));
+            if (durSec) setLiveCountdown(prev => ({ ...prev, [orderId]: durSec }));
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Routes API failed, fallback to DirectionsService:', e);
+    }
+
+    // Use fallback if server API fails
     new window.google.maps.DirectionsService().route(
       { origin, destination, travelMode: window.google.maps.TravelMode.DRIVING, provideRouteAlternatives: false },
       (result, status) => {
         if (status !== 'OK') return;
-        polylinesRef.current[orderId]?.border?.setMap(null);
-        polylinesRef.current[orderId]?.remaining?.setMap(null);
-        polylinesRef.current[orderId]?.completed?.setMap(null);
         const fullPath = [];
         result.routes[0].legs.forEach(leg => leg.steps.forEach(step => step.path.forEach(pt => fullPath.push(pt))));
-        routePathRef.current[orderId] = fullPath;
-        routeLastDrawRef.current[orderId] = Date.now();
-        const border = new window.google.maps.Polyline({ path: fullPath, geodesic: true, strokeColor: color.glow, strokeOpacity: 0.18, strokeWeight: 14, map: mapRef.current, zIndex: 1 });
-        const remaining = new window.google.maps.Polyline({ path: fullPath, geodesic: true, strokeColor: color.main, strokeOpacity: 0.95, strokeWeight: 6, map: mapRef.current, zIndex: 2, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3, strokeColor: '#ffffff', strokeWeight: 1 }, offset: '0', repeat: '18px' }] });
-        const completed = new window.google.maps.Polyline({ path: [], geodesic: true, strokeColor: '#94a3b8', strokeOpacity: 0.5, strokeWeight: 4, map: mapRef.current, zIndex: 1 });
-        polylinesRef.current[orderId] = { border, remaining, completed };
-        routeDrawnRef.current.add(orderId);
+        applyPolylines(fullPath);
       }
     );
   }, []);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  DRIVER DATA FETCHING
-  // ════════════════════════════════════════════════════════
+  // 
   const fetchDriverETA = useCallback((driver) => {
     if (!window.google || !driver.shipping_address) return;
     const orderId = String(driver.order_id);
@@ -435,21 +499,44 @@ export function LiveTrackingMap() {
       destCoordsRef.current[orderId] = dest;
       if (!destMarkersRef.current[orderId] && mapRef.current) {
         const color = getDriverColor(orderId).main;
-        destMarkersRef.current[orderId] = new window.google.maps.Marker({ position: dest, map: mapRef.current, icon: { url: createDestIcon(color), scaledSize: new window.google.maps.Size(40, 52), anchor: new window.google.maps.Point(20, 52) }, zIndex: 30 });
+        const element = document.createElement('div');
+        element.innerHTML = `<img src="${createDestIcon(color)}" style="width: 40px; height: 52px; pointer-events: none;" />`;
+        destMarkersRef.current[orderId] = new window.google.maps.marker.AdvancedMarkerElement({
+          position: dest,
+          map: mapRef.current,
+          content: element,
+          zIndex: 30,
+        });
       }
-      new window.google.maps.DistanceMatrixService().getDistanceMatrix(
-        { origins: [driverPos], destinations: [dest], travelMode: window.google.maps.TravelMode.DRIVING, unitSystem: window.google.maps.UnitSystem.METRIC },
-        (response, ms) => {
-          if (ms === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
-            const el = response.rows[0].elements[0];
-            setDriverETAs(prev => ({ ...prev, [orderId]: { eta: el.duration.text, etaValue: el.duration.value, distance: el.distance.text, arrivalTime: formatArrivalTime(el.duration.value) } }));
-            setLiveCountdown(prev => ({ ...prev, [orderId]: el.duration.value }));
-          }
+      // Routes API RouteMatrix (replaces deprecated DistanceMatrixService)
+      fetch(
+        `https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix?key=${GOOGLE_MAPS_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters,status',
+          },
+          body: JSON.stringify({
+            origins: [{ waypoint: { location: { latLng: { latitude: driverPos.lat, longitude: driverPos.lng } } } }],
+            destinations: [{ waypoint: { location: { latLng: { latitude: dest.lat, longitude: dest.lng } } } }],
+            travelMode: 'DRIVE',
+          }),
         }
-      );
+      ).then(r => r.json()).then(data => {
+        const el = Array.isArray(data) ? data[0] : null;
+        if (el && el.distanceMeters) {
+          const durSec = el.duration ? parseInt(el.duration.replace('s', ''), 10) : 0;
+          const distText = `${(el.distanceMeters / 1000).toFixed(1)} km`;
+          const mins = Math.round(durSec / 60);
+          setDriverETAs(prev => ({ ...prev, [orderId]: { eta: `${mins} mins`, etaValue: durSec, distance: distText, arrivalTime: formatArrivalTime(durSec) } }));
+          setLiveCountdown(prev => ({ ...prev, [orderId]: durSec }));
+        }
+      }).catch(e => console.warn('RouteMatrix admin failed:', e));
       drawDirectionsRoute(orderId, driverPos, dest);
     });
   }, [updateRemainingRoute, drawDirectionsRoute]);
+
 
   const fetchDriverLocations = useCallback(async () => {
     try {
@@ -478,10 +565,12 @@ export function LiveTrackingMap() {
     const activeIds = new Set(driverList.map(d => String(d.order_id)));
     Object.keys(markersRef.current).forEach(id => {
       if (!activeIds.has(id)) {
-        markersRef.current[id].setMap(null); delete markersRef.current[id];
+        if (markersRef.current[id]) markersRef.current[id].map = null;
+        delete markersRef.current[id];
         delete routePathRef.current[id]; delete routeLastDrawRef.current[id];
         routeDrawnRef.current.delete(id);
-        destMarkersRef.current[id]?.setMap(null); delete destMarkersRef.current[id];
+        if (destMarkersRef.current[id]) destMarkersRef.current[id].map = null;
+        delete destMarkersRef.current[id];
         polylinesRef.current[id]?.border?.setMap(null); polylinesRef.current[id]?.remaining?.setMap(null); polylinesRef.current[id]?.completed?.setMap(null); delete polylinesRef.current[id];
       }
     });
@@ -493,12 +582,27 @@ export function LiveTrackingMap() {
       if (markersRef.current[orderId]) {
         animateMarker(markersRef.current[orderId], pos);
         if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
-          markersRef.current[orderId].setIcon({ url: createCarIcon(h, spd, color), scaledSize: new window.google.maps.Size(56, 56), anchor: new window.google.maps.Point(28, 28) });
+          const img = markersRef.current[orderId].content.querySelector('img');
+          if (img) img.src = createCarIcon(h, spd, color);
           previousHeadingsRef.current[orderId] = h;
         }
       } else {
-        const marker = new window.google.maps.Marker({ position: pos, map: mapRef.current, title: `${driver.driver_name} — #${driver.order_id}`, icon: { url: createCarIcon(h, spd, color), scaledSize: new window.google.maps.Size(56, 56), anchor: new window.google.maps.Point(28, 28) }, animation: window.google.maps.Animation.DROP, zIndex: 100 });
-        marker.addListener('click', () => { setSelectedOrder(driver.order_id); autoFollowRef.current = true; const ei = driverETAs[orderId]; infoWindowRef.current?.setContent(`<div style="padding:12px;min-width:220px;font-family:Inter,sans-serif"><p style="margin:0 0 6px;font-weight:800;color:${color}">🚚 ${driver.driver_name}</p><p style="font-size:12px;margin:3px 0">Order #${driver.order_id}</p>${ei ? `<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px"><p style="margin:0;font-weight:700;color:#1e40af">📍 ${ei.distance} — ${ei.eta}</p>${ei.arrivalTime ? `<p style="margin:4px 0 0;font-size:11px;color:#3b82f6">Arrives ${ei.arrivalTime}</p>` : ''}</div>` : ''}</div>`); infoWindowRef.current?.open(mapRef.current, marker); });
+        const element = document.createElement('div');
+        element.innerHTML = `<img src="${createCarIcon(h, spd, color)}" style="width: 56px; height: 56px; pointer-events: none;" />`;
+        const marker = new window.google.maps.marker.AdvancedMarkerElement({
+          position: pos,
+          map: mapRef.current,
+          title: `${driver.driver_name} — #${driver.order_id}`,
+          content: element,
+          zIndex: 100,
+        });
+        marker.addListener('click', () => {
+          setSelectedOrder(driver.order_id);
+          autoFollowRef.current = true;
+          const ei = driverETAs[orderId];
+          infoWindowRef.current?.setContent(`<div style="padding:12px;min-width:220px;font-family:Inter,sans-serif"><p style="margin:0 0 6px;font-weight:800;color:${color}">🚚 ${driver.driver_name}</p><p style="font-size:12px;margin:3px 0">Order #${driver.order_id}</p>${ei ? `<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px"><p style="margin:0;font-weight:700;color:#1e40af">📍 ${ei.distance} — ${ei.eta}</p>${ei.arrivalTime ? `<p style="margin:4px 0 0;font-size:11px;color:#3b82f6">Arrives ${ei.arrivalTime}</p>` : ''}</div>` : ''}</div>`);
+          infoWindowRef.current?.open({ anchor: marker, map: mapRef.current });
+        });
         markersRef.current[orderId] = marker;
         previousHeadingsRef.current[orderId] = h;
       }
@@ -523,13 +627,13 @@ export function LiveTrackingMap() {
     if (orderDetail?.trail?.length > 1) {
       trailPolylineRef.current?.setMap(null);
       const path = orderDetail.trail.map(p => ({ lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }));
-      trailPolylineRef.current = new window.google.maps.Polyline({ path, geodesic: true, strokeColor: '#64748b', strokeOpacity: 0, strokeWeight: 1, map: mapRef.current, zIndex: 3, icons: [{ icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 2, fillColor: '#64748b', fillOpacity: 0.4, strokeOpacity: 0 }, offset: '0', repeat: '22px' }] });
+      trailPolylineRef.current = new window.google.maps.Polyline({ path, geodesic: true, strokeColor: '#64748b', strokeOpacity: 0.6, strokeWeight: 5, map: mapRef.current, zIndex: 3 });
     } else if (!orderDetail) { trailPolylineRef.current?.setMap(null); trailPolylineRef.current = null; }
   }, [orderDetail]);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  INITIALIZE MAIN MAP
-  // ════════════════════════════════════════════════════════
+  // 
   const MAP_STYLES = [
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
@@ -544,36 +648,50 @@ export function LiveTrackingMap() {
     if (!GOOGLE_MAPS_API_KEY) return;
     loadGoogleMapsScript().then(() => {
       if (!mapContainerRef.current) return;
-      const map = new window.google.maps.Map(mapContainerRef.current, { center: { lat: 31.5204, lng: 74.3587 }, zoom: 13, mapTypeControl: false, streetViewControl: false, fullscreenControl: true, zoomControl: true, gestureHandling: 'greedy', styles: MAP_STYLES });
+      const map = new window.google.maps.Map(mapContainerRef.current, { center: { lat: 31.5204, lng: 74.3587 }, zoom: 13, mapTypeControl: false, streetViewControl: false, fullscreenControl: true, zoomControl: true, gestureHandling: 'greedy', mapId: 'DEMO_MAP_ID' });
       mapRef.current = map;
       infoWindowRef.current = new window.google.maps.InfoWindow();
       setMapReady(true);
     }).catch(err => toast.error('Failed to load Google Maps'));
     return () => {
-      Object.values(markersRef.current).forEach(m => m.setMap(null));
-      Object.values(destMarkersRef.current).forEach(m => m.setMap(null));
+      Object.values(markersRef.current).forEach(m => { if (m) m.map = null; });
+      Object.values(destMarkersRef.current).forEach(m => { if (m) m.map = null; });
       Object.values(polylinesRef.current).forEach(p => { p.border?.setMap(null); p.remaining?.setMap(null); p.completed?.setMap(null); });
       trailPolylineRef.current?.setMap(null);
     };
   }, []);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  GEOFENCE MAP
-  // ════════════════════════════════════════════════════════
+  // 
   useEffect(() => {
     if (activeTab !== 'geofence' || !GOOGLE_MAPS_API_KEY) return;
     loadGoogleMapsScript().then(() => {
       if (!geofenceMapContainerRef.current || geofenceMapRef.current) return;
       const center = shopCoords || { lat: 31.5204, lng: 74.3587 };
-      const map = new window.google.maps.Map(geofenceMapContainerRef.current, { center, zoom: 12, mapTypeControl: false, streetViewControl: false, styles: MAP_STYLES });
+      const map = new window.google.maps.Map(geofenceMapContainerRef.current, { center, zoom: 12, mapTypeControl: false, streetViewControl: false, mapId: 'DEMO_MAP_ID' });
       geofenceMapRef.current = map;
       // Shop marker
-      new window.google.maps.Marker({ position: center, map, title: 'Store Location', icon: { url: createDestIcon('#7c3aed', '🏪'), scaledSize: new window.google.maps.Size(44, 58), anchor: new window.google.maps.Point(22, 58) } });
+      const shopEl = document.createElement('div');
+      shopEl.innerHTML = `<img src="${createDestIcon('#7c3aed', '🏪')}" style="width: 44px; height: 58px; pointer-events: none;" />`;
+      new window.google.maps.marker.AdvancedMarkerElement({
+        position: center,
+        map,
+        title: 'Store Location',
+        content: shopEl
+      });
       // Geofence circle
       geofenceCircleRef.current = new window.google.maps.Circle({ center, radius: geofenceRadius, map, fillColor: '#7c3aed', fillOpacity: 0.08, strokeColor: '#7c3aed', strokeOpacity: 0.6, strokeWeight: 2 });
       // Active drivers on geofence map
       drivers.forEach(d => {
-        new window.google.maps.Marker({ position: { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude) }, map, title: d.driver_name, icon: { url: createCarIcon(0, 0, getDriverColor(String(d.order_id)).main), scaledSize: new window.google.maps.Size(44, 44), anchor: new window.google.maps.Point(22, 22) } });
+        const driverEl = document.createElement('div');
+        driverEl.innerHTML = `<img src="${createCarIcon(0, 0, getDriverColor(String(d.order_id)).main)}" style="width: 44px; height: 44px; pointer-events: none;" />`;
+        new window.google.maps.marker.AdvancedMarkerElement({
+          position: { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude) },
+          map,
+          title: d.driver_name,
+          content: driverEl
+        });
       });
     });
   }, [activeTab, shopCoords, geofenceRadius]);
@@ -583,14 +701,14 @@ export function LiveTrackingMap() {
     if (geofenceCircleRef.current) geofenceCircleRef.current.setRadius(geofenceRadius);
   }, [geofenceRadius]);
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  DELIVERY REPLAY
-  // ════════════════════════════════════════════════════════
+  // 
   useEffect(() => {
     if (activeTab !== 'replay' || !GOOGLE_MAPS_API_KEY) return;
     loadGoogleMapsScript().then(() => {
       if (!replayMapContainerRef.current || replayMapRef.current) return;
-      replayMapRef.current = new window.google.maps.Map(replayMapContainerRef.current, { center: { lat: 31.5204, lng: 74.3587 }, zoom: 14, mapTypeControl: false, streetViewControl: false, styles: MAP_STYLES });
+      replayMapRef.current = new window.google.maps.Map(replayMapContainerRef.current, { center: { lat: 31.5204, lng: 74.3587 }, zoom: 14, mapTypeControl: false, streetViewControl: false, mapId: 'DEMO_MAP_ID' });
     });
   }, [activeTab]);
 
@@ -598,7 +716,8 @@ export function LiveTrackingMap() {
     if (!replayOrderId.trim()) return;
     setReplayLoading(true); setReplayPlaying(false); setReplayIdx(0); setReplayTrail([]);
     clearInterval(replayIntervalRef.current);
-    replayMarkerRef.current?.setMap(null); replayMarkerRef.current = null;
+    if (replayMarkerRef.current) replayMarkerRef.current.map = null;
+    replayMarkerRef.current = null;
     replayRouteRef.current?.setMap(null); replayRouteRef.current = null;
     try {
       const res = await fetch(`${API_BASE_URL}/get_driver_location.php?order_id=${replayOrderId}`);
@@ -613,9 +732,13 @@ export function LiveTrackingMap() {
           // Draw full route outline
           replayRouteRef.current = new window.google.maps.Polyline({ path: trail, geodesic: true, strokeColor: '#94a3b8', strokeOpacity: 0.4, strokeWeight: 3, map: replayMapRef.current });
           // Destination marker
-          new window.google.maps.Marker({ position: trail[trail.length - 1], map: replayMapRef.current, icon: { url: createDestIcon('#ef4444'), scaledSize: new window.google.maps.Size(36, 48), anchor: new window.google.maps.Point(18, 48) } });
+          const destEl = document.createElement('div');
+          destEl.innerHTML = `<img src="${createDestIcon('#ef4444')}" style="width: 36px; height: 48px; pointer-events: none;" />`;
+          new window.google.maps.marker.AdvancedMarkerElement({ position: trail[trail.length - 1], map: replayMapRef.current, content: destEl });
           // Driver start marker
-          replayMarkerRef.current = new window.google.maps.Marker({ position: trail[0], map: replayMapRef.current, icon: { url: createCarIcon(trail[0].heading || 0, 5, '#2563eb'), scaledSize: new window.google.maps.Size(56, 56), anchor: new window.google.maps.Point(28, 28) }, zIndex: 100 });
+          const driverEl = document.createElement('div');
+          driverEl.innerHTML = `<img src="${createCarIcon(trail[0].heading || 0, 5, '#2563eb')}" style="width: 56px; height: 56px; pointer-events: none;" />`;
+          replayMarkerRef.current = new window.google.maps.marker.AdvancedMarkerElement({ position: trail[0], map: replayMapRef.current, content: driverEl, zIndex: 100 });
         }
         toast.success(`${trail.length} GPS points loaded for Order #${replayOrderId}`);
       } else {
@@ -635,7 +758,8 @@ export function LiveTrackingMap() {
         const pt = replayTrail[next];
         if (replayMarkerRef.current) {
           animateMarker(replayMarkerRef.current, pt, 400 / replaySpeed);
-          replayMarkerRef.current.setIcon({ url: createCarIcon(pt.heading || 0, 10, '#2563eb'), scaledSize: new window.google.maps.Size(56, 56), anchor: new window.google.maps.Point(28, 28) });
+          const img = replayMarkerRef.current.content.querySelector('img');
+          if (img) img.src = createCarIcon(pt.heading || 0, 10, '#2563eb');
         }
         if (replayMapRef.current) replayMapRef.current.panTo(pt);
         return next;
@@ -647,12 +771,12 @@ export function LiveTrackingMap() {
   const resetReplay = () => {
     clearInterval(replayIntervalRef.current);
     setReplayPlaying(false); setReplayIdx(0);
-    if (replayTrail[0] && replayMarkerRef.current) { replayMarkerRef.current.setPosition(replayTrail[0]); replayMapRef.current?.panTo(replayTrail[0]); }
+    if (replayTrail[0] && replayMarkerRef.current) { replayMarkerRef.current.position = replayTrail[0]; replayMapRef.current?.panTo(replayTrail[0]); }
   };
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  ROUTE PLANNER (Multi-Stop)
-  // ════════════════════════════════════════════════════════
+  // 
   useEffect(() => {
     if (activeTab !== 'planner') return;
     // Fetch today's ready/out-for-delivery orders
@@ -673,7 +797,7 @@ export function LiveTrackingMap() {
 
     loadGoogleMapsScript().then(() => {
       if (!plannerMapContainerRef.current || plannerMapRef.current) return;
-      plannerMapRef.current = new window.google.maps.Map(plannerMapContainerRef.current, { center: { lat: 31.5204, lng: 74.3587 }, zoom: 13, mapTypeControl: false, streetViewControl: false, styles: MAP_STYLES });
+      plannerMapRef.current = new window.google.maps.Map(plannerMapContainerRef.current, { center: { lat: 31.5204, lng: 74.3587 }, zoom: 13, mapTypeControl: false, streetViewControl: false, mapId: 'DEMO_MAP_ID' });
       setPlannerMapReady(true);
     });
   }, [activeTab]);
@@ -682,7 +806,7 @@ export function LiveTrackingMap() {
     if (plannerSelected.length < 2 || !plannerMapRef.current || !window.google) return;
     setPlannerLoading(true);
     // Clear old markers/routes
-    plannerMarkersRef.current.forEach(m => m.setMap(null)); plannerMarkersRef.current = [];
+    plannerMarkersRef.current.forEach(m => { if (m) m.map = null; }); plannerMarkersRef.current = [];
     plannerRouteRef.current?.setMap(null);
 
     const geocodedStops = [];
@@ -716,7 +840,7 @@ export function LiveTrackingMap() {
       });
 
       if (!loc) {
-        toast.error(`Could not locate address on map for Order #${order.id}: "${order.shipping_address?.substring(0, 30)}..."`);
+        toast.error(`Could not geocode address: ${order.shipping_address}`);
         setPlannerLoading(false);
         return;
       }
@@ -744,7 +868,15 @@ export function LiveTrackingMap() {
         result.routes[0].legs.forEach((leg, i) => {
           totalDist += leg.distance.value; totalTime += leg.duration.value;
           const pos = leg.end_location;
-          const marker = new window.google.maps.Marker({ position: { lat: pos.lat(), lng: pos.lng() }, map: plannerMapRef.current, label: { text: String(i + 1), color: 'white', fontWeight: 'bold' }, icon: { url: createDestIcon('#2563eb', ''), scaledSize: new window.google.maps.Size(36, 48), anchor: new window.google.maps.Point(18, 48) } });
+          const labelText = String(i + 1);
+          const stopEl = document.createElement('div');
+          stopEl.innerHTML = `<img src="${createDestIcon('#2563eb', labelText)}" style="width: 36px; height: 48px; pointer-events: none;" />`;
+          const marker = new window.google.maps.marker.AdvancedMarkerElement({
+            position: { lat: pos.lat(), lng: pos.lng() },
+            map: plannerMapRef.current,
+            title: `Stop ${labelText}`,
+            content: stopEl
+          });
           plannerMarkersRef.current.push(marker);
         });
         const bounds = new window.google.maps.LatLngBounds();
@@ -755,9 +887,9 @@ export function LiveTrackingMap() {
     );
   };
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  HELPERS
-  // ════════════════════════════════════════════════════════
+  // 
   const copyTrackingLink = async (orderId) => {
     try { const res = await fetch(`${API_BASE_URL}/generate_tracking_link.php?order_id=${orderId}`); const data = await res.json(); if (data.success && data.token) { await navigator.clipboard.writeText(`${window.location.origin}/track/${data.token}`); toast.success('Link copied!'); } else toast.error('No link available'); } catch { toast.error('Failed'); }
   };
@@ -785,12 +917,12 @@ export function LiveTrackingMap() {
     { id: 'geofence', label: 'Geofence', icon: <Shield className="h-3.5 w-3.5" /> },
   ];
 
-  // ════════════════════════════════════════════════════════
+  // 
   //  RENDER
-  // ════════════════════════════════════════════════════════
+  // 
   return (
     <div className="space-y-4">
-      {/* ── Header + Tabs ── */}
+      {/* Header + Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -835,6 +967,54 @@ export function LiveTrackingMap() {
           <Button variant="outline" size="sm" onClick={fetchDriverLocations} className="gap-1">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
+          {/* Route Optimization Button */}
+          {drivers.length > 1 && (
+            <Button
+              variant="outline" size="sm"
+              className="gap-1 border-purple-300 text-purple-700 hover:bg-purple-50"
+              disabled={optimizing}
+              onClick={async () => {
+                setOptimizing(true);
+                setOptimizedResult(null);
+                try {
+                  // Geocode all driver destinations
+                  const geocodeAddr = (addr) => new Promise(resolve => {
+                    const gpsMatch = String(addr || '').match(/\[?GPS:\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)\]?/i);
+                    if (gpsMatch) return resolve({ lat: parseFloat(gpsMatch[1]), lng: parseFloat(gpsMatch[2]) });
+                    if (!window.google?.maps?.Geocoder) return resolve(null);
+                    new window.google.maps.Geocoder().geocode({ address: addr + ', Lahore, Pakistan' }, (r, s) => {
+                      if (s === 'OK' && r[0]) { const l = r[0].geometry.location; resolve({ lat: l.lat(), lng: l.lng() }); }
+                      else resolve(null);
+                    });
+                  });
+                  const orders = [];
+                  for (const d of drivers) {
+                    if (!d.shipping_address) continue;
+                    const coords = await geocodeAddr(d.shipping_address);
+                    if (coords) orders.push({ id: d.order_id, lat: coords.lat, lng: coords.lng, address: d.shipping_address, driver: d.driver_name });
+                  }
+                  if (orders.length < 2) { toast.error('Need at least 2 orders with addresses to optimize'); setOptimizing(false); return; }
+                  const depot = shopCoords || { lat: 31.4973551, lng: 74.2446932 };
+                  const res = await fetch(`${API_BASE_URL}/orders/optimize_routes.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ depot, orders }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    setOptimizedResult(data);
+                    toast.success(`✨ Optimized! ${data.totalOrders} orders • ${data.totalDistanceKm} km • ~${data.totalTimeMin} min`);
+                  } else {
+                    toast.error('Route Optimization failed: ' + (data.message || 'Unknown error'));
+                  }
+                } catch (e) {
+                  toast.error('Optimization error: ' + e.message);
+                } finally { setOptimizing(false); }
+              }}
+            >
+              {optimizing ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Optimizing...</> : <><Zap className="h-3.5 w-3.5" /> Optimize Routes</>}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -849,7 +1029,7 @@ export function LiveTrackingMap() {
         ))}
       </div>
 
-      {/* ════════════ TAB: LIVE ════════════ */}
+      {/* TAB: LIVE */}
       {activeTab === 'live' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
@@ -953,7 +1133,7 @@ export function LiveTrackingMap() {
         </div>
       )}
 
-      {/* ════════════ TAB: ROUTE PLANNER ════════════ */}
+      {/* TAB: ROUTE PLANNER */}
       {activeTab === 'planner' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
@@ -1036,7 +1216,7 @@ export function LiveTrackingMap() {
         </div>
       )}
 
-      {/* ════════════ TAB: REPLAY ════════════ */}
+      {/* TAB: REPLAY */}
       {activeTab === 'replay' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
@@ -1113,7 +1293,7 @@ export function LiveTrackingMap() {
         </div>
       )}
 
-      {/* ════════════ TAB: GEOFENCE ════════════ */}
+      {/* TAB: GEOFENCE */}
       {activeTab === 'geofence' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">

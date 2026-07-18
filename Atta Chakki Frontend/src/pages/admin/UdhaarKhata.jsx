@@ -28,7 +28,7 @@ export function UdhaarKhata() {
     loadLedgers();
   }, []);
 
-  // --- FETCH FROM API ---
+  // FETCH FROM API
   const loadLedgers = async () => {
     try {
       setLoading(true);
@@ -49,7 +49,7 @@ export function UdhaarKhata() {
     }
   };
 
-  // --- SETTLE PAYMENT VIA API ---
+  // SETTLE PAYMENT VIA API
   const handleReceivePayment = async () => {
     if (!selectedCustomer || !paymentAmount) return;
 

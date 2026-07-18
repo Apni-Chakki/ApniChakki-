@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../../config';
 
-/* ─── Shared SVG Logo ─────────────────────────────────────────── */
+/* Shared SVG Logo */
 const LogoSVG = ({ size = 48 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="32" cy="32" r="32" fill="#78350f" />
@@ -26,7 +26,7 @@ const LogoSVG = ({ size = 48 }) => (
 
 export function PrintSlip({ order, open, onClose }) {
   const [storeSettings, setStoreSettings] = useState({
-    name: 'MUGHAL ATTA CHAKKI',
+    name: 'SUCHI CHAKKI',
     address: 'Main Bazaar, Lahore',
     phone: '+92 322 8483029',
     tagline: 'Pure & Fresh Processing'
@@ -83,7 +83,7 @@ export function PrintSlip({ order, open, onClose }) {
   const dateStr = new Date().toLocaleDateString('en-GB');
   const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-  /* ── Build items rows HTML ── */
+  /* Build items rows HTML */
   const itemsHTML = order.items.map(item => {
     if (item.isWeightPending) {
       return `
@@ -123,7 +123,7 @@ export function PrintSlip({ order, open, onClose }) {
       </div>`;
   }).join('');
 
-  /* ── Full print HTML ── */
+  /* Full print HTML */
   const buildPrintHTML = () => {
     const logoHTMLForPrint = \`
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:12px 0 8px;">

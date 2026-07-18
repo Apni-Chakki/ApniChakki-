@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
 
-/**
+/* 
  * Custom caption that renders the month/year label flanked by clearly visible
  * < and > navigation buttons. Replaces react-day-picker's built-in nav, whose
  * IconLeft/IconRight components were not rendering reliably in this build.

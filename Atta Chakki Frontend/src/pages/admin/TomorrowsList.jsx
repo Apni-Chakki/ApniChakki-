@@ -156,6 +156,25 @@ export function TomorrowsList() {
           toast.info('Driver assignment cleared.');
         } else {
           toast.success(`Assigned to ${personnelName} successfully!`);
+          let targetPhone = personnelPhone;
+          if (!targetPhone) {
+            const found = activePersonnel.find(p => p.name === personnelName);
+            if (found && found.phone) targetPhone = found.phone;
+          }
+          if (targetPhone) {
+            let cleanPhone = String(targetPhone).replace(/\D/g, '');
+            if (cleanPhone.startsWith('0')) {
+              cleanPhone = '92' + cleanPhone.slice(1);
+            } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
+              cleanPhone = '92' + cleanPhone;
+            }
+            const orderObj = orders.find(o => o.id === orderId);
+            const isPickup = orderObj && (orderObj.type === 'pickup' || orderObj.order_type === 'pickup');
+            const typeLabel = isPickup ? 'Pickup Request' : 'Order';
+            const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se naya ${typeLabel} assign hua hai:\n📦 *${typeLabel} #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par mukammal karein.\nShukriya!`;
+            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+          }
         }
       } else {
         toast.error('Failed to assign driver in database');

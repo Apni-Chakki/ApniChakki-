@@ -14,8 +14,8 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         cleanupOutdatedCaches: true,
-        skipWaiting: false,
-        clientsClaim: false
+        skipWaiting: true,
+        clientsClaim: true
       },
       devOptions: {
         enabled: false,

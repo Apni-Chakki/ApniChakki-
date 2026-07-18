@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { GOOGLE_MAPS_API_KEY } from '../../config';
 
-// ============================================================
+// 
 // Google Maps Script Loader — Loads the API script dynamically
-// ============================================================
+// 
 let googleMapsLoadPromise = null;
 
 function loadGoogleMapsScript() {
@@ -32,10 +32,10 @@ function loadGoogleMapsScript() {
   return googleMapsLoadPromise;
 }
 
-// ============================================================
+// 
 // GoogleMapPicker Component
 // A draggable marker on Google Maps with Places Autocomplete
-// ============================================================
+// 
 export function GoogleMapPicker({ position, onPositionChange, onAddressChange, height = '350px', showSearch = true }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -52,7 +52,7 @@ export function GoogleMapPicker({ position, onPositionChange, onAddressChange, h
 
   // Reverse geocode — Nominatim (FREE) primary, Google client-side fallback
   const reverseGeocode = useCallback(async (lat, lng) => {
-    // ── 1. Try Nominatim (FREE — no billing needed) ──
+    // Try Nominatim (FREE — no billing needed)
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
       const response = await fetch(url, {
@@ -78,8 +78,8 @@ export function GoogleMapPicker({ position, onPositionChange, onAddressChange, h
       console.warn('Nominatim reverse geocode failed:', e);
     }
 
-    // ── 2. Fallback to Google client-side Geocoder ──
-    if (!window.google) return null;
+    // Fallback to Google client-side Geocoder
+    if (!window.google?.maps?.Geocoder) return null;
     try {
       const geocoder = new window.google.maps.Geocoder();
       const response = await geocoder.geocode({ location: { lat, lng } });

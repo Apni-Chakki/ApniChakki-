@@ -11,7 +11,7 @@ import { initGlobalErrorProtection } from "./utils/projectProtection";
 // Initialize global crash & third-party error shield
 initGlobalErrorProtection();
 
-// --- EMERGENCY SAFEGUARD AGAINST INFINITE AUTO-REFRESH LOOPS ON LIVE SITE ---
+// EMERGENCY SAFEGUARD AGAINST INFINITE AUTO-REFRESH LOOPS ON LIVE SITE
 try {
   const RELOAD_KEY = 'apni_chakki_reload_count';
   const TIME_KEY = 'apni_chakki_reload_time';

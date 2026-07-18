@@ -1,7 +1,7 @@
 // src/utils/inventoryUtils.js
 import { API_BASE_URL } from '../config';
 
-/**
+/* 
  * Deduct order items from inventory when order is completed
  */
 export async function deductFromInventory(order) {
@@ -27,7 +27,7 @@ export async function deductFromInventory(order) {
   }
 }
 
-/**
+/* 
  * Restore order items to inventory when order is cancelled
  */
 export async function restoreToInventory(order) {
@@ -51,7 +51,7 @@ export async function restoreToInventory(order) {
   }
 }
 
-/**
+/* 
  * Check if there's enough inventory for an order (Frontend Check)
  * Note: To do this perfectly requires a live DB fetch, but we can bypass 
  * it for now or implement a specific 'check_stock.php' if needed.

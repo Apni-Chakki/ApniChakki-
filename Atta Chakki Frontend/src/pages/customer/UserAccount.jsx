@@ -178,7 +178,7 @@ export function UserAccount() {
     setEditMode(false);
   };
 
-  // --- NEW: API Connected Save Function ---
+  // NEW: API Connected Save Function
   const handleSave = async () => {
     if (!tempProfile.name.trim()) {
       toast.error(t('Name is required'));

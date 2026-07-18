@@ -26,15 +26,18 @@ export function Header() {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const fetchNotifications = async () => {
+    if (!user) return;
     try {
       const response = await fetch(`${API_BASE_URL}/users/get_global_notifications.php`);
       const data = await response.json();
       if (data.success) {
-        setNotifications(data.notifications);
+        const dismissedIds = (JSON.parse(localStorage.getItem('dismissed_notifications') || '[]')).map(String);
+        const visibleNotifs = (data.notifications || []).filter(n => !dismissedIds.includes(String(n.id)));
+        setNotifications(visibleNotifs);
         
         // Count unread based on local storage
-        const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-        const unread = data.notifications.filter(n => !readIds.includes(n.id)).length;
+        const readIds = (JSON.parse(localStorage.getItem('read_notifications') || '[]')).map(String);
+        const unread = visibleNotifs.filter(n => !readIds.includes(String(n.id))).length;
         setUnreadCount(unread);
       }
     } catch (error) {
@@ -43,15 +46,22 @@ export function Header() {
   };
 
   useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const handleNotificationClick = () => {
-    setShowNotificationsDropdown(!showNotificationsDropdown);
-    if (!showNotificationsDropdown && unreadCount > 0) {
-      const allIds = notifications.map(n => n.id);
+    const nextState = !showNotificationsDropdown;
+    setShowNotificationsDropdown(nextState);
+    if (nextState && notifications.length > 0) {
+      const readIds = (JSON.parse(localStorage.getItem('read_notifications') || '[]')).map(String);
+      const allIds = Array.from(new Set([...readIds, ...notifications.map(n => String(n.id))]));
       localStorage.setItem('read_notifications', JSON.stringify(allIds));
       setUnreadCount(0);
     }
@@ -59,7 +69,27 @@ export function Header() {
 
   const handleNotificationNavigation = (notif) => {
     setShowNotificationsDropdown(false);
-    if (notif.type === 'coupon') {
+
+    // Add to dismissed_notifications so it disappears from the list
+    const dismissedIds = (JSON.parse(localStorage.getItem('dismissed_notifications') || '[]')).map(String);
+    if (!dismissedIds.includes(String(notif.id))) {
+      dismissedIds.push(String(notif.id));
+      localStorage.setItem('dismissed_notifications', JSON.stringify(dismissedIds));
+    }
+
+    // Immediately remove from notifications state
+    setNotifications(prev => prev.filter(n => String(n.id) !== String(notif.id)));
+
+    // Mark as read if not already
+    const readIds = (JSON.parse(localStorage.getItem('read_notifications') || '[]')).map(String);
+    if (!readIds.includes(String(notif.id))) {
+      readIds.push(String(notif.id));
+      localStorage.setItem('read_notifications', JSON.stringify(readIds));
+    }
+
+    if (notif.link) {
+      navigate(notif.link);
+    } else if (notif.type === 'coupon') {
       navigate('/checkout'); // They can use the coupon here
     } else if (notif.type === 'product') {
       navigate('/');
@@ -125,9 +155,11 @@ export function Header() {
     </Link>
   );
 
-  const NotificationIcon = () => (
-    <div className="relative inline-flex items-center justify-center">
-      <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10 text-foreground hover:bg-muted" onClick={handleNotificationClick} aria-label="Notifications">
+  const NotificationIcon = () => {
+    if (!user) return null;
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10 text-foreground hover:bg-muted" onClick={handleNotificationClick} aria-label="Notifications">
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <Badge className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center p-0 bg-red-600 text-white text-[10px] font-bold rounded-full border-none shadow-sm pointer-events-none">
@@ -157,7 +189,8 @@ export function Header() {
               <div className="p-4 text-center text-sm text-muted-foreground">{t('No new notifications')}</div>
             ) : (
               notifications.map(notif => {
-                const isRead = JSON.parse(localStorage.getItem('read_notifications') || '[]').includes(notif.id);
+                const readIds = (JSON.parse(localStorage.getItem('read_notifications') || '[]')).map(String);
+                const isRead = readIds.includes(String(notif.id));
                 return (
                   <div 
                     key={notif.id} 
@@ -183,6 +216,7 @@ export function Header() {
       )}
     </div>
   );
+  };
 
   return (
     <header className="fixed top-0 left-0 w-full flex flex-col shadow-sm" style={{ position: 'fixed', zIndex: 110 }}>
@@ -215,9 +249,17 @@ export function Header() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
         <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-90">
-          <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
-            <Wheat className="h-6 w-6 text-primary-foreground" />
-          </div>
+          {settings.logo ? (
+            <img 
+              src={settings.logo} 
+              alt={storeName} 
+              className="h-10 w-10 rounded-full object-cover shadow-sm border border-border/40 bg-card shrink-0" 
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-sm shrink-0">
+              <Wheat className="h-6 w-6 text-primary-foreground" />
+            </div>
+          )}
           <span className="text-xl font-bold text-foreground tracking-tight">
             {tDynamic(storeName)}
           </span>

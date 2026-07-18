@@ -136,7 +136,7 @@ export function PaymentVerification() {
         setShowRejectDialog(false);
         setRejectReason('');
         
-        // ── Formulate WhatsApp redirection message ──
+        // Formulate WhatsApp redirection message
         let formattedPhone = '';
         let whatsappMsg = '';
         if (result.customer_phone) {
@@ -425,9 +425,9 @@ export function PaymentVerification() {
         ))}
       </div>
 
-      {/* ====================================== */}
+      {/* /}
       {/* TAB: PENDING VERIFICATION */}
-      {/* ====================================== */}
+      {/* /}
       {activeTab === 'pending' && (
         <div className="space-y-4">
           {pendingTransfers.length === 0 ? (
@@ -491,9 +491,9 @@ export function PaymentVerification() {
         </div>
       )}
 
-      {/* ====================================== */}
+      {/* /}
       {/* TAB: PAYMENT HISTORY */}
-      {/* ====================================== */}
+      {/* /}
       {activeTab === 'history' && (
         <div className="space-y-3 sm:space-y-4">
           {/* Filters */}
@@ -572,9 +572,9 @@ export function PaymentVerification() {
         </div>
       )}
 
-      {/* ====================================== */}
+      {/* /}
       {/* TAB: WALLET LOG */}
-      {/* ====================================== */}
+      {/* /}
       {activeTab === 'wallet' && (
         <div className="space-y-3 sm:space-y-4">
           <Card className="p-4 sm:p-6">
@@ -617,9 +617,9 @@ export function PaymentVerification() {
         </div>
       )}
 
-      {/* ====================================== */}
+      {/* /}
       {/* TAB: MANAGE METHODS */}
-      {/* ====================================== */}
+      {/* /}
       {activeTab === 'settings' && (
         <div className="space-y-3 sm:space-y-4">
           <Card className="p-4 sm:p-6">
@@ -697,9 +697,9 @@ export function PaymentVerification() {
         </div>
       )}
 
-      {/* ====================================== */}
+      {/* /}
       {/* DIALOG: VERIFY PAYMENT */}
-      {/* ====================================== */}
+      {/* /}
       <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
@@ -755,9 +755,9 @@ export function PaymentVerification() {
         </DialogContent>
       </Dialog>
 
-      {/* ====================================== */}
+      {/* /}
       {/* DIALOG: REJECT PAYMENT */}
-      {/* ====================================== */}
+      {/* /}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
@@ -871,9 +871,9 @@ export function PaymentVerification() {
         </DialogContent>
       </Dialog>
 
-      {/* ====================================== */}
+      {/* /}
       {/* DIALOG: PAYMENT DETAILS */}
-      {/* ====================================== */}
+      {/* /}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>

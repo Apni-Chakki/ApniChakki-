@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, X, Share2, PlusSquare } from 'lucide-react';
 import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 
-export function PWAInstallPrompt({ storeName = "Suchi Chakki" }) {
+export function PWAInstallPrompt({ storeName = "Suchi Chakki", storeLogo = null }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -90,7 +90,7 @@ export function PWAInstallPrompt({ storeName = "Suchi Chakki" }) {
         <div className="flex items-start gap-3.5 pr-6">
           <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden p-1.5 shadow-sm">
             <img 
-              src="/pwa-192x192.png" 
+              src={storeLogo || "/pwa-192x192.png"} 
               alt={storeName} 
               className="w-full h-full object-contain"
               onError={(e) => { e.target.src = '/logo.svg'; }}

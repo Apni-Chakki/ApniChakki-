@@ -158,6 +158,25 @@ export function TodaysWork() {
           toast.info('Driver assignment cleared.');
         } else {
           toast.success(`Assigned to ${personnelName} successfully!`);
+          let targetPhone = personnelPhone;
+          if (!targetPhone) {
+            const found = activePersonnel.find(p => p.name === personnelName);
+            if (found && found.phone) targetPhone = found.phone;
+          }
+          if (targetPhone) {
+            let cleanPhone = String(targetPhone).replace(/\D/g, '');
+            if (cleanPhone.startsWith('0')) {
+              cleanPhone = '92' + cleanPhone.slice(1);
+            } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
+              cleanPhone = '92' + cleanPhone;
+            }
+            const orderObj = orders.find(o => o.id === orderId);
+            const isPickup = orderObj && (orderObj.type === 'pickup' || orderObj.order_type === 'pickup');
+            const typeLabel = isPickup ? 'Pickup Request' : 'Order';
+            const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se naya ${typeLabel} assign hua hai:\n📦 *${typeLabel} #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par mukammal karein.\nShukriya!`;
+            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+          }
         }
       } else {
         toast.error('Failed to assign driver in database');
@@ -432,7 +451,7 @@ export function TodaysWork() {
     }
 
     const message = `
-*MUGHAL ATTA CHAKKI* - Fresh Flour Daily 🌾
+*SUCHI CHAKKI* - Fresh Flour Daily 🌾
 -----------------------------------
 Assalam-o-Alaikum / Hello *${order.customer_name}*! 👋
 Your order is now *READY* for ${orderType}.
@@ -446,7 +465,7 @@ ${itemsText}-----------------------------------
 ${priceBreakdown}
 ${addressSection}-----------------------------------
 Thank you for your business!
-Mughal Atta Chakki — Pure & Fresh Processing
+Suchi Chakki — Pure & Fresh Processing
 `.trim();
     
     const encodedMessage = encodeURIComponent(message);
@@ -739,7 +758,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
         </tbody>
       </table>
       <div style="margin-top: 20px; border-top: 1px dashed #000; padding-top: 6px; font-size: 8px; text-align: center; color: #555;">
-        End of Today's Work List • Mughal Atta Chakki Software System
+        End of Today's Work List • Suchi Chakki Software System
       </div>
     `;
 
@@ -892,7 +911,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
           </div>
         </div>
 
-        {/* ── Sibling Batch Status (only for split orders) ──────────────── */}
+        {/* Sibling Batch Status (only for split orders) */}
         {isSplitBatch && order.siblings && order.siblings.length > 0 && (
           <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3">
             <div className="flex items-center gap-2 mb-2">
@@ -1493,7 +1512,7 @@ Mughal Atta Chakki — Pure & Fresh Processing
           </DialogContent>
         </Dialog>
 
-        {/* ─── Split Order Modal ───────────────────────────────────────── */}
+        {/* Split Order Modal */}
         <Dialog open={!!splitOrder} onOpenChange={closeSplitModal}>
         <DialogContent
           className="max-w-md p-0 gap-0 [&>button]:top-5 [&>button]:right-5"

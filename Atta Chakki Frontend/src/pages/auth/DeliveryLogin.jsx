@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, Lock, Phone, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/common/button';
@@ -16,6 +16,22 @@ export function DeliveryLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="robots"]');
+    const prev = meta ? meta.getAttribute('content') : null;
+    if (meta) {
+      meta.setAttribute('content', 'noindex, nofollow');
+    } else {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      meta.content = 'noindex, nofollow';
+      document.head.appendChild(meta);
+    }
+    return () => {
+      if (meta && prev) meta.setAttribute('content', prev);
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,7 +89,9 @@ export function DeliveryLogin() {
                   <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="phone"
+                    name="username"
                     type="tel"
+                    autoComplete="username"
                     placeholder="03XX XXXXXXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -89,7 +107,9 @@ export function DeliveryLogin() {
                   <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder={t('Enter your password')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -104,7 +124,7 @@ export function DeliveryLogin() {
               </Button>
               <div className="text-xs text-center text-muted-foreground mt-4">
                 <p>{t('Contact admin if you forgot your password')}</p>
-                <p className="mt-1 text-primary/80">{t('Default password: 123456')}</p>
+                <p className="mt-1 text-primary/80">{t('Authorized delivery staff portal. Contact admin for credentials.')}</p>
               </div>
             </form>
           </CardContent>

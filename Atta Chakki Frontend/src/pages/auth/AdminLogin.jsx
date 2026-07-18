@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wheat, Lock, Phone, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/common/button';
@@ -15,6 +15,22 @@ export function AdminLogin() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="robots"]');
+    const prev = meta ? meta.getAttribute('content') : null;
+    if (meta) {
+      meta.setAttribute('content', 'noindex, nofollow');
+    } else {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      meta.content = 'noindex, nofollow';
+      document.head.appendChild(meta);
+    }
+    return () => {
+      if (meta && prev) meta.setAttribute('content', prev);
+    };
+  }, []);
   
   // RESTORED THIS: We need to tell the app globally that you are logged in
   const { setUser } = useAuth();
@@ -86,7 +102,9 @@ export function AdminLogin() {
                   <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="phone"
+                    name="username"
                     type="tel"
+                    autoComplete="username"
                     placeholder="03001234567"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -102,7 +120,9 @@ export function AdminLogin() {
                   <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder={t('Enter your password')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

@@ -232,11 +232,11 @@ export function PrintTaskList({ orders, title, open, onClose }) {
           </div>
         </DialogHeader>
 
-        {/* ── Scrollable Preview ── */}
+        {/* Scrollable Preview */}
         <div className="overflow-y-auto bg-stone-50" style={{ maxHeight: '70vh' }}>
           <div className="p-4 sm:p-6 lg:p-8">
             <div id="printable-list" className="font-mono text-sm space-y-6 bg-white text-black p-6 sm:p-8 rounded-xl shadow-md border border-stone-300 max-w-3xl mx-auto">
-              {/* ==== HEADER ==== */}
+              {/* HEADER */}
           <div className="text-center border-b-2 border-dashed border-black pb-4">
             <div className="flex justify-center mb-2">
               <LogoSVG size={56} />
@@ -248,7 +248,7 @@ export function PrintTaskList({ orders, title, open, onClose }) {
             <p className="text-xs mt-2">Printed on: {formatDate(new Date())}</p>
           </div>
 
-          {/* ==== SUMMARY ==== */}
+          {/* SUMMARY */}
           <div className="border-2 border-dashed border-black p-5 bg-gray-50/50 rounded">
             <h4 className="text-center font-bold mb-3 text-base">SUMMARY</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -279,7 +279,7 @@ export function PrintTaskList({ orders, title, open, onClose }) {
             </div>
           </div>
 
-          {/* ==== ORDERS ==== */}
+          {/* ORDERS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {orders.map((order, idx) => {
                 const remainingBalance = order.total - (order.advancePayment || 0); 
@@ -375,7 +375,7 @@ export function PrintTaskList({ orders, title, open, onClose }) {
             })} 
           </div>
 
-          {/* ==== FOOTER ==== */}
+          {/* FOOTER */}
           <div className="text-center text-xs text-gray-500 pt-6 border-t-2 border-dashed border-black">
             <p className="font-medium">End of {title}</p>
           </div>
@@ -383,7 +383,7 @@ export function PrintTaskList({ orders, title, open, onClose }) {
           </div>
         </div>
 
-        {/* ── Sticky Action Buttons ── */}
+        {/* Sticky Action Buttons */}
         <div className="flex gap-2.5 px-6 py-4 border-t border-border/50 bg-background">
           <Button onClick={handlePrint} className="flex-1 bg-primary hover:bg-primary/90 text-sm h-9">
             <Printer className="h-4 w-4 mr-2" />

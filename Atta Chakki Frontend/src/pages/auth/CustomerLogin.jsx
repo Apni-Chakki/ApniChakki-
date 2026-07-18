@@ -150,7 +150,7 @@ export function CustomerLogin() {
         zIndex: 1,
       }} />
 
-      {/* ── Top bar — never overlaps card ── */}
+      {/* Top bar — never overlaps card */}
       <div style={{ position: 'relative', zIndex: 3, padding: '0.875rem 1rem', flexShrink: 0 }}>
         <button
           onClick={() => navigate('/')}
@@ -174,7 +174,7 @@ export function CustomerLogin() {
         </button>
       </div>
 
-      {/* ── Center — card ── */}
+      {/* Center — card */}
       <div style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '0.5rem 1rem', position: 'relative', zIndex: 2,
@@ -217,6 +217,8 @@ export function CustomerLogin() {
                     <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="phone"
+                      name="username"
+                      autoComplete="username"
                       type="tel"
                       placeholder="03001234567"
                       value={phone}
@@ -237,6 +239,8 @@ export function CustomerLogin() {
                     <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="password"
+                      name="password"
+                      autoComplete="current-password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder={t('Enter your password')}
                       value={password}
@@ -327,7 +331,7 @@ export function CustomerLogin() {
         </div>
       </div>
 
-      {/* ── Slide dots — always at bottom ──
+      {/* Slide dots — always at bottom
       <div style={{
         position: 'relative', zIndex: 3,
         padding: '0.875rem',

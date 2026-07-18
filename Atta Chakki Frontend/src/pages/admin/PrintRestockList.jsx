@@ -19,7 +19,7 @@ const LogoSVG = ({ size = 48 }) => (
 );
 
 export function PrintRestockList({ items, open, onClose }) {
-  const [storeSettings, setStoreSettings] = useState({ name: "MUGHAL ATTA CHAKKI", address: "", phone: "", tagline: "" });
+  const [storeSettings, setStoreSettings] = useState({ name: "SUCHI CHAKKI", address: "", phone: "", tagline: "" });
 
   useEffect(() => {
     if (open) {

@@ -1,4 +1,4 @@
-/**
+/* 
  * Compresses an image file before uploading to keep file sizes small
  * and avoid HTTP timeouts/network failures.
  * 

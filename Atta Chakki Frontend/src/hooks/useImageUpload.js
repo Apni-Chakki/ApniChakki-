@@ -1,4 +1,4 @@
-/**
+/* 
  * Image Upload Hook for React
  * Handles direct image uploads to Cloudinary (unsigned)
  */

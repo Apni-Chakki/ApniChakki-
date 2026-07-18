@@ -5,21 +5,17 @@ const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   let [resource, config] = args;
   
-  if (typeof resource === 'string' && resource.includes(API_BASE_URL)) {
+  if (typeof resource === 'string' && (resource.includes(API_BASE_URL) || resource.includes('/Atta_Chakki_API/'))) {
+    config = config || {};
+    config.credentials = 'include';
     const token = localStorage.getItem('token');
     if (token) {
-      config = config || {};
-      
-      // Prevent overriding FormData headers, let browser set boundary
-      const isFormData = config.body instanceof FormData;
-      
       config.headers = {
         ...config.headers,
         'Authorization': `Bearer ${token}`
       };
-      
-      args[1] = config;
     }
+    args[1] = config;
   }
   const response = await originalFetch.apply(this, args);
   
@@ -42,7 +38,20 @@ window.fetch = async function (...args) {
       const text = await response.clone().text();
       // If server returned HTML (like 403 Forbidden, 502 Gateway, or InfinityFree security challenge)
       if (text.trim().startsWith('<') || text.includes('<html>') || text.includes('<!DOCTYPE')) {
-        console.warn('⚠️ Server returned HTML instead of JSON! (Likely WAF/ModSecurity or Free Hosting Challenge)', text.substring(0, 200));
+        console.warn('⚠️ Server returned HTML instead of JSON! Retrying once after short delay...');
+        if (config && !config._retryAttempted) {
+          config._retryAttempted = true;
+          await new Promise(r => setTimeout(r, 800));
+          try {
+            const retryResp = await originalFetch.call(window, resource, config);
+            const retryText = await retryResp.clone().text();
+            if (!retryText.trim().startsWith('<') && !retryText.includes('<html>')) {
+              return JSON.parse(retryText);
+            }
+          } catch (retryErr) {
+            console.error('Retry attempt failed:', retryErr);
+          }
+        }
         return {
           success: false,
           message: 'Server blocked this request (WAF/Security Challenge). Received HTML instead of JSON.',

@@ -47,6 +47,14 @@ export function Footer() {
     };
   }, []);
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <>
       {/* Main Footer Content */}
@@ -57,9 +65,10 @@ export function Footer() {
             <div>
               <h4 className="mb-4 font-bold uppercase tracking-wider text-primary-foreground/70">{t('Quick Links')}</h4>
               <div className="space-y-2 opacity-90">
-                <Link to="/" className="block hover:translate-x-1 transition-transform">{t('Home')}</Link>
-                <Link to="/track-order" className="block hover:translate-x-1 transition-transform">{t('Track Order')}</Link>
-                <Link to="/contact" className="block hover:translate-x-1 transition-transform">{t('Contact Us')}</Link>
+                <Link to="/" onClick={scrollToTop} className="block hover:translate-x-1 transition-transform">{t('Home')}</Link>
+                <Link to="/track-order" onClick={scrollToTop} className="block hover:translate-x-1 transition-transform">{t('Track Order')}</Link>
+                <Link to="/reviews" onClick={scrollToTop} className="block hover:translate-x-1 transition-transform">{t('Reviews')}</Link>
+                <Link to="/contact" onClick={scrollToTop} className="block hover:translate-x-1 transition-transform">{t('Contact Us')}</Link>
               </div>
             </div>
 
@@ -103,8 +112,15 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="mt-12 pt-8 border-t border-primary-foreground/10 text-center">
+          <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm opacity-50">&copy; {new Date().getFullYear()} {tDynamic(settings.storeName)}. {t('All rights reserved.')}</p>
+            <button
+              type="button"
+              onClick={scrollToTop}
+              className="text-xs opacity-75 hover:opacity-100 underline transition-opacity cursor-pointer"
+            >
+              {t('Back to top ↑')}
+            </button>
           </div>
         </div>
       </footer>

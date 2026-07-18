@@ -104,7 +104,7 @@ async function fetchBatch(texts, lang) {
   }
 }
 
-/**
+/* 
  * Drop-in replacement for useTranslation that also handles dynamic DB content.
  *
  * - t(key)        → static i18n dictionary (UI labels, buttons, etc.)

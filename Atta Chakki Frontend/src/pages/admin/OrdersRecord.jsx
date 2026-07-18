@@ -62,7 +62,7 @@ export function OrdersRecord() {
     return () => clearInterval(interval);
   }, []);
 
-  // --- NEW: FETCH FROM API ---
+  // NEW: FETCH FROM API
   const loadOrders = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/get_all_orders.php`);
@@ -219,7 +219,7 @@ export function OrdersRecord() {
     }
   }
 
-  // --- Export to Real Excel (.xlsx) ---
+  // Export to Real Excel (.xlsx)
   const handleExportCSV = () => {
     if (filteredOrders.length === 0) {
       toast.error('No orders to export');
@@ -276,7 +276,7 @@ export function OrdersRecord() {
     toast.success('Excel file downloaded successfully');
   };
 
-  // --- Record payment via API ---
+  // Record payment via API
   const handleSavePayment = async () => {
     if (!paymentOrder) return;
     

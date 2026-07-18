@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
-import { useImageUpload } from '../hooks/useImageUpload';
-import { transformImage, IMAGE_TRANSFORMS } from '../config/cloudinary';
+import { useImageUpload } from '../../hooks/useImageUpload';
+import { transformImage, IMAGE_TRANSFORMS } from '../../config/cloudinary';
 import './ImageUploadInput.css';
 
-/**
+/* 
  * Image Upload Component
  * Provides file input and preview for image uploads
  */

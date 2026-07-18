@@ -155,7 +155,7 @@ export function ManageServices() {
 
   const isTracked = formData.category !== 'service';
 
-  // --- Customization helpers ---
+  // Customization helpers
   const addCustomization = () => {
     setFormData(prev => ({
       ...prev,
@@ -178,7 +178,7 @@ export function ManageServices() {
     }));
   };
 
-  // --- Mix Items helpers ---
+  // Mix Items helpers
   const addMixItem = () => {
     setFormData(prev => ({
       ...prev,
@@ -201,7 +201,7 @@ export function ManageServices() {
     }));
   };
 
-  // --- Build payload for API ---
+  // Build payload for API
   const buildPayload = () => {
     const payload = {
       name: formData.name,
@@ -662,7 +662,7 @@ export function ManageServices() {
               </div>
             </div>
 
-            {/* ===== DYNAMIC SERVICE CUSTOMIZATIONS ===== */}
+            {/* DYNAMIC SERVICE CUSTOMIZATIONS */}
             <div className="flex flex-col gap-4 pt-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -855,7 +855,7 @@ export function ManageServices() {
                 </div>
               )}
 
-              {/* ===== RENTAL TOGGLE ===== */}
+              {/* RENTAL TOGGLE */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_rental"
@@ -932,7 +932,7 @@ export function ManageServices() {
               )}
             </div>
 
-            {/* ===== DISCOUNT & BADGE ===== */}
+            {/* DISCOUNT & BADGE */}
             <div className="p-4 bg-rose-50/50 rounded-lg border border-rose-200 space-y-3">
               <p className="text-sm font-bold text-rose-700">🏷️ Discount & Badge (Optional)</p>
 

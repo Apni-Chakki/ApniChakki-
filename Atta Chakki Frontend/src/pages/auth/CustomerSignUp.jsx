@@ -237,6 +237,8 @@ export function CustomerSignUp() {
                     <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="phone"
+                      name="username"
+                      autoComplete="username"
                       type="tel"
                       placeholder="03001234567"
                       value={phone}
@@ -275,6 +277,8 @@ export function CustomerSignUp() {
                     <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <Input
                       id="password"
+                      name="password"
+                      autoComplete="new-password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder={t('Create a password')}
                       value={password}

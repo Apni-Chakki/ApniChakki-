@@ -4,7 +4,7 @@ import { Printer, X, ClipboardList, Languages, Wheat, MessageCircle } from 'luci
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../../config';
 
-/* ─── Header-style Logo (Wheat icon in primary circle — same as app header) ─── */
+/* Header-style Logo (Wheat icon in primary circle — same as app header) */
 const HeaderLogo = ({ size = 40 }) => (
   <div
     className="rounded-full bg-primary flex items-center justify-center shadow-sm flex-shrink-0"
@@ -17,7 +17,7 @@ const HeaderLogo = ({ size = 40 }) => (
 export function PrintOrderDetails({ order, open, onClose }) {
   const [lang, setLang] = useState('en');
   const [storeSettings, setStoreSettings] = useState({
-    name: 'MUGHAL ATTA CHAKKI',
+    name: 'SUCHI CHAKKI',
     address: 'Main Bazaar, Lahore',
     phone: '+92 322 8483029',
     tagline: 'Pure & Fresh Processing'
@@ -76,7 +76,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
     const clean = text.trim();
     
     const dict = {
-      "MUGHAL ATTA CHAKKI": "مغل آٹا چکی",
+      "SUCHI CHAKKI": "سچی چکی",
       "Main Bazaar, Lahore": "مین بازار، لاہور",
       "Pure & Fresh Processing": "خالص اور تازہ پروسیسنگ",
       "Pure Grains, Fresh Quality": "خالص اناج، بہترین معیار",
@@ -637,7 +637,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
           </div>
         </DialogHeader>
 
-        {/* ── Scrollable Bill Preview ── */}
+        {/* Scrollable Bill Preview */}
         <div className="overflow-y-auto" style={{ maxHeight: '65vh' }}>
           <div
             className={`${lang === 'en' ? 'font-mono' : ''} text-sm px-3 sm:px-6 py-4 sm:py-5 space-y-4`}
@@ -929,7 +929,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
           </div>
         </div>
 
-        {/* ── Sticky Action Buttons ── */}
+        {/* Sticky Action Buttons */}
         <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-2.5 px-3 sm:px-6 py-3 sm:py-4 border-t border-border/50 bg-background" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
           <Button onClick={handlePrint} className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-sm h-9">
             <Printer className={`h-4 w-4 ${lang === 'ur' ? 'ml-2' : 'mr-2'}`} />

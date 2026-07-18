@@ -1,5 +1,5 @@
 export const services = [
-  // --- 1. CORE GRAIN PROCESSING ---
+  // CORE GRAIN PROCESSING
   {
     id: "1",
     name: "Wheat Grinding (Desi Atta)",
@@ -53,7 +53,7 @@ export const services = [
       "https://images.unsplash.com/photo-1459156212016-c812468e2115?auto=format&fit=crop&w=800&q=80",
   },
 
-  // --- 2. SPECIALTY & VALUE-ADDED ---
+  // SPECIALTY & VALUE-ADDED
   {
     id: "6",
     name: "Spice Grinding (Haldi/Chili)",
@@ -85,7 +85,7 @@ export const services = [
       "https://images.unsplash.com/photo-1580913428706-c811d6712653?auto=format&fit=crop&w=800&q=80",
   },
 
-  // --- 3. COTTON & QUILT SERVICES ---
+  // COTTON & QUILT SERVICES
   {
     id: "9",
     name: "Cotton Fluffing (Roi Penja)",
@@ -117,7 +117,7 @@ export const services = [
       "https://plus.unsplash.com/premium_photo-1676968002767-1f9a032d88c2?auto=format&fit=crop&w=800&q=80",
   },
 
-  // --- 4. RETAIL PRODUCTS ---
+  // RETAIL PRODUCTS
   {
     id: "12",
     name: "Chakki Fresh Atta (10kg)",
@@ -179,7 +179,7 @@ export const services = [
       "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=800&q=80",
   },
 
-  // --- 5. CONVENIENCE SERVICES ---
+  // CONVENIENCE SERVICES
   {
     id: "18",
     name: "Home Pickup Service",
