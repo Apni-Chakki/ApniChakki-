@@ -25,7 +25,6 @@ export function ForgotPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentBg, setCurrentBg] = useState(0);
-  const [debugOtp, setDebugOtp] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -53,13 +52,7 @@ export function ForgotPassword() {
 
       if (data.success) {
         setStep(2);
-        // In development mode (local XAMPP), OTP may be in response
-        if (data.debug && data.otp) {
-          setDebugOtp(data.otp);
-          toast.success(`${t('OTP generated')} — ${data.otp}`, { duration: 15000 });
-        } else {
-          toast.success(t('OTP has been sent to your email address.'));
-        }
+        toast.success(t('OTP has been sent to your email address.'));
       } else {
         toast.error(data.message || t('Failed to send OTP.'));
       }
@@ -250,24 +243,6 @@ export function ForgotPassword() {
                 </form>
               ) : (
                 <form onSubmit={handleResetPassword} className="space-y-4">
-                  {/* Show debug OTP (only on localhost when email can't be sent) */}
-                  {debugOtp && (
-                    <div style={{
-                      background: 'rgba(0,0,0,0.05)',
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      textAlign: 'center',
-                      fontSize: '0.85rem',
-                    }}>
-                      <p style={{ color: 'var(--muted-foreground)', marginBottom: '0.25rem' }}>
-                        {t('Your OTP (dev mode)')}:
-                      </p>
-                      <p style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '0.3rem', color: 'var(--primary)' }}>
-                        {debugOtp}
-                      </p>
-                    </div>
-                  )}
-
                   {/* Email shown (read-only) */}
                   <div style={{
                     background: 'rgba(0,0,0,0.03)',
