@@ -291,3 +291,13 @@
 .group:hover .animate-marquee {
   animation-play-state: paused;
 }
+
+/* Performance rendering optimizations for Mobile and Desktop */
+html {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  content-visibility: auto;
+}

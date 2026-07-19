@@ -9,12 +9,11 @@ import { useAuth } from '../../store/AuthContext';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useGoogleLogin } from '@react-oauth/google';
-import loginBg from '../../assets/login-page bg.jpg';
 
 const BG_IMAGES = [
-  loginBg,
-  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1400&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&auto=format&fit=crop&q=70",
+  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=70",
+  "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=800&auto=format&fit=crop&q=70",
 ];
 
 export function CustomerSignUp() {
