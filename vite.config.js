@@ -57,6 +57,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    headers: {
+      // Google OAuth popup ke liye zarori hai — bina is ke COOP popup block kar deta hai
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
+    },
+  },
   build: {
     rollupOptions: {
       output: {

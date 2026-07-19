@@ -912,7 +912,7 @@ export function Checkout() {
     }
 
     const cleanPhone = phone.replace(/\s/g, '');
-    const isPlaceholder = cleanPhone.startsWith('G-') || cleanPhone.startsWith('G') || !/^\d{11}$/.test(cleanPhone);
+    const isPlaceholder = cleanPhone.startsWith('G-') || !/^\d{11}$/.test(cleanPhone);
     if (isPlaceholder) {
       toast.error(
         t('Please update your phone number in account settings to proceed with orders!'),

@@ -42,29 +42,33 @@ export function CustomerLogin() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setIsLoading(true);
+    console.log('[Google Login] credentialResponse:', credentialResponse);
     try {
       // credentialResponse.credential is a Google ID token (JWT)
       const loggedUser = await googleLogin(credentialResponse.credential);
+      console.log('[Google Login] loggedUser returned:', loggedUser);
       if (loggedUser) {
         toast.success(t('Welcome back!'));
         const phoneVal = loggedUser.phone || '';
-        const isPlaceholder = phoneVal.startsWith('G-') || phoneVal.startsWith('G') || !/^\d{11}$/.test(phoneVal.replace(/\s/g, ''));
+        const isPlaceholder = phoneVal.startsWith('G-') || !/^\d{11}$/.test(phoneVal.replace(/\s/g, ''));
         if (isPlaceholder) {
           setShowPhoneUpdateModal(true);
         } else {
           navigate(from, { replace: true });
         }
       } else {
-        toast.error(t('Google login failed.'));
+        toast.error(t('Google login failed. Please try again.'));
       }
     } catch (err) {
+      console.error('[Google Login] Error:', err);
       toast.error(t('Google login failed.'));
     }
     setIsLoading(false);
   };
 
-  const handleGoogleError = () => {
-    toast.error(t('Google Login Failed'));
+  const handleGoogleError = (error) => {
+    console.error('[Google Login] OAuth Error:', error);
+    toast.error(t('Google Login Failed. Please try again or use phone/password.'));
   };
 
   useEffect(() => {
