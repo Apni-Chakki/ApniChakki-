@@ -13,14 +13,14 @@
     <meta name="robots" content="index, follow">
     <meta name="language" content="English">
 
-    <!-- Preconnect to Asset Origins -->
-    <link rel="preconnect" href="https://res.cloudinary.com">
+    <!-- Preconnect & DNS-Prefetch to Asset Origins -->
     <link rel="preconnect" href="https://images.unsplash.com">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
     
     <!-- Preload first hero image for LCP -->
-    <link rel="preload" href="https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779346834/apni-chakki/other/oa0f5tgym9p912fylepy.jpg" as="image" fetchpriority="high">
+    <link rel="preload" href="https://images.unsplash.com/photo-1731082300550-8093311708ef?w=800&auto=format&fit=crop&q=75" as="image" type="image/jpg" fetchpriority="high">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -54,9 +54,6 @@
       }
     }
     </script>
-    <!-- Leaflet CSS for map in checkout - Deferred to avoid render blocking -->
-    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
     <!-- Dynamic Favicon is set via App.jsx -->
     <!-- Meta Pixel: add your real Pixel ID here when ready -->
     <!-- fbq('init', 'YOUR_REAL_PIXEL_ID'); -->
