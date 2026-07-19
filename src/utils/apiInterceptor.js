@@ -5,7 +5,12 @@ const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   let [resource, config] = args;
   
-  if (typeof resource === 'string' && (resource.includes(API_BASE_URL) || resource.includes('/Atta_Chakki_API/'))) {
+  if (typeof resource === 'string' && (
+    resource.includes(API_BASE_URL) || 
+    resource.includes('/Atta_Chakki_API/') || 
+    resource.includes('herokuapp.com') ||
+    resource.endsWith('.php')
+  )) {
     config = config || {};
     config.credentials = 'include';
     const token = localStorage.getItem('token');
@@ -20,13 +25,11 @@ window.fetch = async function (...args) {
   const response = await originalFetch.apply(this, args);
   
   if (response.status === 401) {
-    // Token is invalid or missing, clear session
-    const hadToken = localStorage.getItem('token');
+    // Token is invalid or missing on a protected route, clear stale session
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     window.dispatchEvent(new Event('auth-change'));
-    // Only redirect if a token was present and we aren't already on the homepage or login page
-    if (hadToken && window.location.pathname !== '/' && !window.location.pathname.includes('/login')) {
+    if (window.location.pathname !== '/' && !window.location.pathname.includes('/login')) {
       window.location.href = '/';
     }
   }

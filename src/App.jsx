@@ -78,11 +78,12 @@ function ProtectedAdminRoute({ children }) {
   const location = useLocation();
   
   const storedUser = user || safeGetStorage('user', null);
+  const storedToken = localStorage.getItem('token');
 
   if (!storedUser) console.warn("ProtectedRoute: No user found.");
   else if (storedUser.role && storedUser.role.toLowerCase() !== 'admin') console.warn(`ProtectedRoute: Role mismatch. Expected 'admin', got '${storedUser.role}'`);
 
-  if (!storedUser || (storedUser.role && storedUser.role.toLowerCase() !== 'admin')) {
+  if (!storedUser || !storedToken || (storedUser.role && storedUser.role.toLowerCase() !== 'admin')) {
     return <Navigate to="/" replace />;
   }
   
