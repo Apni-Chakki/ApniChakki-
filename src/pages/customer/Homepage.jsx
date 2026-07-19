@@ -294,13 +294,17 @@ export function Homepage() {
         keywords="chakki atta, fresh flour, pure spices, whole wheat, custom mix atta, online chakki"
       />
       {/* Hero Section */}
-      <section className="relative overflow-hidden w-full" style={{ height: '65vh', minHeight: '400px' }}>
+      <section className="relative overflow-hidden w-full bg-muted" style={{ height: '65vh', minHeight: '400px' }}>
         {heroSlides.map((slide, i) => (
-          <div
+          <img
             key={i}
-            className="absolute inset-0 bg-cover bg-center"
+            src={slide.image}
+            alt={slide.title || "Suchi Chakki Hero"}
+            fetchpriority={i === 0 ? "high" : "auto"}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
             style={{
-              backgroundImage: `url(${slide.image})`,
               opacity: i === currentSlide ? 1 : 0,
               transition: 'opacity 1.2s ease-in-out',
             }}
