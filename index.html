@@ -20,7 +20,7 @@
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
     
     <!-- Preload first hero image for LCP -->
-    <link rel="preload" href="https://images.unsplash.com/photo-1731082300550-8093311708ef?w=800&auto=format&fit=crop&q=75" as="image" type="image/jpg" fetchpriority="high">
+    <link rel="preload" href="https://images.unsplash.com/photo-1731082300550-8093311708ef?w=600&auto=format&fit=crop&q=70&fm=webp" as="image" type="image/webp" fetchpriority="high">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -61,7 +61,7 @@
     <!-- OneSignal Web SDK - Delayed execution for fast mobile load -->
     <script>
       window.addEventListener('load', function() {
-        setTimeout(function() {
+        var loadOS = function() {
           var s = document.createElement('script');
           s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
           s.async = true;
@@ -76,7 +76,12 @@
             });
             OneSignal.Slidedown.promptPush();
           });
-        }, 2500);
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { setTimeout(loadOS, 4000); });
+        } else {
+          setTimeout(loadOS, 5000);
+        }
       });
     </script>
     <!-- End OneSignal Web SDK -->

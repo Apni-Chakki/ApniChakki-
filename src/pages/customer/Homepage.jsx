@@ -21,25 +21,25 @@ import { SEO } from '../../components/common/SEO';
 
 const DEFAULT_HERO_SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=800&auto=format&fit=crop&q=75",
+    image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=600&auto=format&fit=crop&q=70&fm=webp",
     title: "Apka Bhrosa Apki Suchi Chakki",
     subtitle: "Premium quality flour, spices & cotton services. Ground fresh daily."
   },
   {
-    image: "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=800&auto=format&fit=crop&q=75",
+    image: "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=600&auto=format&fit=crop&q=70&fm=webp",
     title: "Pure & Fresh, Every Time",
     subtitle: "Grains ground with no additives — just the way nature intended."
   },
   {
-    image: "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=800&auto=format&fit=crop&q=75",
+    image: "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=600&auto=format&fit=crop&q=70&fm=webp",
     title: "Traditional Services, Modern Convenience",
     subtitle: "Expert Cotton Penja, Quilt filling & home delivery — all in one place."
   }
 ];
 
 const DEFAULT_STORY_SLIDES = [
-  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1606822350882-a54cb0eb8de8?w=600&auto=format&fit=crop&q=80"
+  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1606822350882-a54cb0eb8de8?w=500&auto=format&fit=crop&q=75&fm=webp"
 ];
 
 const sectionVariants = {
@@ -92,42 +92,30 @@ function HeroSection({ heroSlides, tDynamic }) {
     return () => clearInterval(timer);
   }, [heroSlides]);
 
+  const activeSlide = heroSlides[currentSlide] || heroSlides[0];
+
   return (
-    <section className="relative overflow-hidden w-full bg-muted" style={{ height: '65vh', minHeight: '400px' }}>
-      {heroSlides.map((slide, i) => (
+    <section className="relative overflow-hidden w-full bg-muted aspect-[16/9] sm:aspect-[21/9] min-h-[340px] max-h-[550px]">
+      {activeSlide && (
         <img
-          key={i}
-          src={slide.image}
-          alt={slide.title || "Suchi Chakki Hero"}
-          fetchpriority={i === 0 ? "high" : "auto"}
-          loading={i === 0 ? "eager" : "lazy"}
+          key={currentSlide}
+          src={activeSlide.image}
+          alt={activeSlide.title || "Suchi Chakki Hero"}
+          fetchpriority={currentSlide === 0 ? "high" : "auto"}
+          loading={currentSlide === 0 ? "eager" : "lazy"}
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: i === currentSlide ? 1 : 0,
-            transition: 'opacity 1.2s ease-in-out',
-          }}
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
         />
-      ))}
+      )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
 
       <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight"
-        >
-          {heroSlides[currentSlide] ? tDynamic(heroSlides[currentSlide].title) : ''}
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="text-white/90 text-base sm:text-lg md:text-xl max-w-2xl px-4"
-        >
-          {heroSlides[currentSlide] ? tDynamic(heroSlides[currentSlide].subtitle) : ''}
-        </motion.p>
+        <h1 className="text-white text-2xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight">
+          {activeSlide ? tDynamic(activeSlide.title) : ''}
+        </h1>
+        <p className="text-white/90 text-sm sm:text-lg md:text-xl max-w-2xl px-4">
+          {activeSlide ? tDynamic(activeSlide.subtitle) : ''}
+        </p>
       </div>
     </section>
   );

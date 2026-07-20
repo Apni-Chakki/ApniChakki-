@@ -518,11 +518,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   };
 
   return (
-    <motion.div
-      variants={cardVariants} 
-      whileHover={{ y: -5 }} 
-      className="h-full"
-    >
+    <div className="h-full transition-transform duration-200 hover:-translate-y-1">
       <Card className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow h-full relative">
         <div className="relative w-full h-48 sm:h-52 md:h-56 overflow-hidden bg-muted">
           {service.image_url || service.imageUrl ? (
@@ -1021,6 +1017,6 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </div>
   );
 });
