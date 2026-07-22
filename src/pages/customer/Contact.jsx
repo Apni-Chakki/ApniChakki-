@@ -26,6 +26,7 @@ export function Contact() {
     name: '',
     email: '',
     phone: '',
+    subject: 'General Inquiry',
     message: ''
   });
 
@@ -56,7 +57,7 @@ export function Contact() {
       const data = await response.json();
       if (data.success) {
         toast.success(data.message || 'Message sent! We will get back to you soon.');
-        setFormData({ name: '', email: '', phone: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', subject: 'General Inquiry', message: '' });
       } else {
         toast.error(data.message || 'Failed to send message');
       }
