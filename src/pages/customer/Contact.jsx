@@ -112,7 +112,14 @@ export function Contact() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">{t('Address')}</p>
-                    <p className="font-medium">{settings.address}</p>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium hover:underline hover:text-primary transition-colors block"
+                    >
+                      {settings.address}
+                    </a>
                   </div>
                 </div>
 
