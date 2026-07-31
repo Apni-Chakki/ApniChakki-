@@ -617,11 +617,11 @@ export function PrintOrderDetails({ order, open, onClose }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className={`max-w-lg p-0 gap-0 overflow-hidden w-[95vw] ${lang === 'ur' ? 'text-right' : 'text-left'}`}
+        className={`max-w-lg p-0 gap-0 overflow-hidden w-[95vw] max-h-[85vh] sm:max-h-[90vh] flex flex-col rounded-2xl shadow-2xl ${lang === 'ur' ? 'text-right' : 'text-left'}`}
         hideCloseButton
       >
         {/* Dialog Header with Logo */}
-        <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5">
+        <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5 shrink-0">
           <div className="flex items-center justify-between" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
             <div className="flex items-center gap-3 min-w-0">
               <HeaderLogo size={40} />
@@ -638,7 +638,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
         </DialogHeader>
 
         {/* Scrollable Bill Preview */}
-        <div className="overflow-y-auto" style={{ maxHeight: '65vh' }}>
+        <div className="flex-1 overflow-y-auto custom-modal-scrollbar min-h-0">
           <div
             className={`${lang === 'en' ? 'font-mono' : ''} text-sm px-3 sm:px-6 py-4 sm:py-5 space-y-4`}
             dir={lang === 'ur' ? 'rtl' : 'ltr'}
@@ -930,7 +930,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
         </div>
 
         {/* Sticky Action Buttons */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-2.5 px-3 sm:px-6 py-3 sm:py-4 border-t border-border/50 bg-background" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-2.5 px-3 sm:px-6 py-3 sm:py-4 border-t border-border/50 bg-background shrink-0" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
           <Button onClick={handlePrint} className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-sm h-9">
             <Printer className={`h-4 w-4 ${lang === 'ur' ? 'ml-2' : 'mr-2'}`} />
             {lang === 'ur' ? 'پرنٹ کریں' : 'Print Details'}

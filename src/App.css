@@ -9,11 +9,13 @@
   align-items: center;
   gap: 0.5rem;
 }
+
 .nav-mobile-btn {
   display: none;
   align-items: center;
   gap: 0.5rem;
 }
+
 .nav-mobile-menu {
   display: none;
   position: absolute;
@@ -28,9 +30,11 @@
   z-index: 49;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
+
 .nav-mobile-menu.open {
   display: flex;
 }
+
 .nav-mobile-link {
   display: flex;
   align-items: center;
@@ -42,9 +46,11 @@
   text-decoration: none;
   transition: background 0.15s;
 }
+
 .nav-mobile-link:hover {
   background: var(--accent);
 }
+
 .nav-mobile-divider {
   border: none;
   border-top: 1px solid var(--border);
@@ -52,8 +58,13 @@
 }
 
 @media (max-width: 767px) {
-  .nav-desktop-actions { display: none !important; }
-  .nav-mobile-btn { display: flex; }
+  .nav-desktop-actions {
+    display: none !important;
+  }
+
+  .nav-mobile-btn {
+    display: flex;
+  }
 }
 
 /* ---- Admin Sidebar: Full sidebar on desktop, drawer on mobile ---- */
@@ -62,6 +73,7 @@
   flex-shrink: 0;
   background-color: #ffffff !important;
 }
+
 .admin-sidebar-overlay {
   display: none;
   position: fixed;
@@ -70,9 +82,11 @@
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(2px);
 }
+
 .admin-sidebar-overlay.visible {
   display: block;
 }
+
 .admin-mobile-topbar {
   display: none;
   align-items: center;
@@ -82,6 +96,7 @@
   background: var(--card);
   flex-shrink: 0;
 }
+
 .admin-sidebar-close {
   display: none;
 }
@@ -98,12 +113,22 @@
     background-color: #ffffff !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
   }
+
   .admin-sidebar-el.sidebar-open {
     transform: translateX(0);
   }
-  .admin-mobile-topbar { display: flex; }
-  .admin-sidebar-close { display: flex; }
-  .admin-mobile-menu-btn { display: flex !important; }
+
+  .admin-mobile-topbar {
+    display: flex;
+  }
+
+  .admin-sidebar-close {
+    display: flex;
+  }
+
+  .admin-mobile-menu-btn {
+    display: flex !important;
+  }
 }
 
 /* ---- Category cards: responsive height & subtle animations ---- */
@@ -121,13 +146,21 @@
 }
 
 @media (min-width: 480px) {
-  .category-card-responsive { height: 210px; }
+  .category-card-responsive {
+    height: 210px;
+  }
 }
+
 @media (min-width: 768px) {
-  .category-card-responsive { height: 260px; }
+  .category-card-responsive {
+    height: 260px;
+  }
 }
+
 @media (min-width: 1024px) {
-  .category-card-responsive { height: 300px; }
+  .category-card-responsive {
+    height: 300px;
+  }
 }
 
 /* ---- Category grid: 1 col < 375px, 2 col 375-767px, 3 col 768px+ ---- */
@@ -136,12 +169,14 @@
   grid-template-columns: 1fr;
   gap: 1rem;
 }
+
 @media (min-width: 375px) {
   .category-grid-responsive {
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
   }
 }
+
 @media (min-width: 768px) {
   .category-grid-responsive {
     grid-template-columns: repeat(3, 1fr);
@@ -157,17 +192,24 @@
   min-width: 0;
   background-color: #FBF6F0;
 }
+
 .admin-main-inner {
   flex: 1;
   padding: 2rem;
   overflow: auto;
   background-color: #f1eeee;
 }
+
 @media (max-width: 767px) {
-  .admin-main-inner { padding: 1rem; }
+  .admin-main-inner {
+    padding: 1rem;
+  }
 }
+
 @media (min-width: 768px) and (max-width: 1023px) {
-  .admin-main-inner { padding: 1.5rem; }
+  .admin-main-inner {
+    padding: 1.5rem;
+  }
 }
 
 /* ---- Admin top header bar ---- */
@@ -184,6 +226,7 @@
   top: 0;
   z-index: 30;
 }
+
 .admin-topbar-title {
   font-size: 0.875rem;
   font-weight: 800;
@@ -191,11 +234,13 @@
   text-transform: uppercase;
   color: #1a1a1a;
 }
+
 .admin-topbar-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
+
 .admin-topbar-avatar {
   width: 2.25rem;
   height: 2.25rem;
@@ -220,15 +265,18 @@
   padding: 0.8rem 1.4rem;
   border-radius: 0.85rem;
 }
+
 .btn-brand-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #7a6240 0%, #8b6f47 100%);
   box-shadow: 0 4px 12px rgba(139, 111, 71, 0.3), 0 2px 4px rgba(0, 0, 0, 0.06);
   transform: translateY(-1px);
 }
+
 .btn-brand-primary:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(139, 111, 71, 0.25);
 }
+
 .btn-brand-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -254,6 +302,7 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
   background-color: #ffffff;
   flex-shrink: 0;
 }
+
 .admin-brand-title {
   font-family: inherit;
   font-size: 0.95rem;
@@ -263,6 +312,7 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
   line-height: 1.15;
   margin: 0;
 }
+
 .admin-brand-subtitle {
   font-family: inherit;
   font-size: 0.6rem;
@@ -293,10 +343,12 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
   background: transparent;
   width: 100%;
 }
+
 .admin-nav-link:hover {
   background-color: #faf5ee;
   color: #18181b;
 }
+
 .admin-nav-link-active,
 .admin-nav-link-active:hover {
   background: linear-gradient(90deg, #8b6f47, #a0845c) !important;
@@ -304,6 +356,7 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(139, 111, 71, 0.25);
 }
+
 .admin-nav-icon {
   height: 1.05rem;
   width: 1.05rem;
@@ -311,18 +364,23 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
   color: #71717a;
   stroke-width: 2;
 }
+
 .admin-nav-link-active .admin-nav-icon {
   color: #ffffff;
 }
+
 .admin-nav-label {
   flex: 1;
 }
+
 .admin-nav-logout {
   color: #b54040;
 }
+
 .admin-nav-logout .admin-nav-icon {
   color: #b54040;
 }
+
 .admin-nav-logout:hover {
   background-color: #fef2f2;
   color: #991b1b;
@@ -332,19 +390,23 @@ button:not([class*="px-"]):not([class*="py-"]):not(.rounded-full) {
 .admin-nav-scroll::-webkit-scrollbar {
   width: 4px;
 }
+
 .admin-nav-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .admin-nav-scroll::-webkit-scrollbar-thumb {
   background: #e5e0d6;
   border-radius: 2px;
 }
+
 .admin-nav-scroll::-webkit-scrollbar-thumb:hover {
   background: #c9bfac;
 }
 
 /* ---- Global: prevent horizontal overflow on all screens ---- */
-html, body {
+html,
+body {
   overflow-x: hidden;
 }
 
@@ -362,9 +424,11 @@ html, body {
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -373,6 +437,7 @@ html, body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -409,6 +474,7 @@ html, body {
 .eod-row-pending {
   border-color: #e5d9c4;
 }
+
 .eod-row-pending:hover {
   border-color: #b8987a;
 }
@@ -554,8 +620,8 @@ html, body {
 }
 
 /* ---- Remove focus ring from Dialog X close button ---- */
-[data-slot="dialog-content"] > button:focus,
-[data-slot="dialog-content"] > button:focus-visible {
+[data-slot="dialog-content"]>button:focus,
+[data-slot="dialog-content"]>button:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -570,6 +636,7 @@ html, body {
     height: 0;
     opacity: 0;
   }
+
   to {
     height: var(--radix-accordion-content-height);
     opacity: 1;
@@ -582,6 +649,7 @@ html, body {
     height: var(--radix-accordion-content-height);
     opacity: 1;
   }
+
   to {
     height: 0;
     opacity: 0;
@@ -700,7 +768,8 @@ html, body {
 /* FAQ Section Custom Layout Spacing */
 .faq-section {
   padding-top: 5rem !important;
-  padding-bottom: 7.5rem !important; /* Generous gap between the last accordion card and the footer */
+  padding-bottom: 7.5rem !important;
+  /* Generous gap between the last accordion card and the footer */
 }
 
 /* FAQ Title and Badge Prominence */
@@ -722,7 +791,8 @@ html, body {
 
 .faq-title-heading {
   font-size: 2.6rem !important;
-  font-weight: 900 !important; /* Black font weight */
+  font-weight: 900 !important;
+  /* Black font weight */
   color: #27272a !important;
   letter-spacing: -0.03em !important;
   line-height: 1.2 !important;
@@ -747,7 +817,8 @@ html, body {
 /* Custom Mix Banner Card Padding & Spacing */
 .custom-mix-card {
   padding-top: 2.5rem !important;
-  padding-bottom: 3.5rem !important; /* Extra padding-bottom for visual balance below button */
+  padding-bottom: 3.5rem !important;
+  /* Extra padding-bottom for visual balance below button */
   padding-left: 1.5rem !important;
   padding-right: 1.5rem !important;
 }
@@ -764,7 +835,8 @@ html, body {
 /* Premium Reusable Section Headings */
 .premium-section-heading {
   font-size: 2.6rem !important;
-  font-weight: 800 !important; /* Extra bold */
+  font-weight: 800 !important;
+  /* Extra bold */
   color: #27272a !important;
   letter-spacing: -0.025em !important;
   line-height: 1.25 !important;
@@ -799,13 +871,20 @@ html, body {
 }
 
 @media (min-width: 768px) {
-  .trending-section  { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
-  .discounted-section { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .trending-section {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+
+  .discounted-section {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
 }
 
-/* ============================================================
+/* 
    PREMIUM HOW IT WORKS SECTION STYLES
-   ============================================================ */
+    */
 
 .how-it-works-grid {
   display: grid !important;
@@ -826,7 +905,8 @@ html, body {
 /* Connecting Line on Desktop */
 .how-it-works-connector {
   position: absolute !important;
-  top: 5.5rem !important; /* Align with center of icons */
+  top: 5.5rem !important;
+  /* Align with center of icons */
   left: 10% !important;
   right: 10% !important;
   height: 2px !important;
@@ -869,7 +949,8 @@ html, body {
   box-shadow: 0 4px 12px rgba(139, 111, 71, 0.1) !important;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
   z-index: 2 !important;
-  background-color: #FAF6F0 !important; /* Soft secondary-ish background */
+  background-color: #FAF6F0 !important;
+  /* Soft secondary-ish background */
 }
 
 /* Hover effects for the icon and card wrapper details */
@@ -884,6 +965,7 @@ html, body {
 .how-it-works-card:nth-child(2) .how-it-works-icon-wrapper {
   background-color: #FCF7F2 !important;
 }
+
 .how-it-works-card:nth-child(2):hover .how-it-works-icon-wrapper {
   background-color: #d4a574 !important;
   color: #ffffff !important;
@@ -892,6 +974,7 @@ html, body {
 .how-it-works-card:nth-child(3) .how-it-works-icon-wrapper {
   background-color: #FAF6F0 !important;
 }
+
 .how-it-works-card:nth-child(3):hover .how-it-works-icon-wrapper {
   background-color: #8b6f47 !important;
   color: #ffffff !important;
@@ -928,4 +1011,3 @@ html {
     transform: rotate(360deg);
   }
 }
-
