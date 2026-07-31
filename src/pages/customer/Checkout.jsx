@@ -211,7 +211,7 @@ export function Checkout() {
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discount_amount : 0;
   const vipDiscountAmount = user?.vip_discount ? (total - couponDiscount) * 0.10 : 0;
-  const grandTotal = Math.max(0, total + deliveryFee - couponDiscount - vipDiscountAmount);
+  const grandTotal = Math.max(0, Math.round(total + deliveryFee - couponDiscount - vipDiscountAmount));
 
   // Show warning if coupon is applied to items with product discounts
   const hasMixedDiscounts = couponDiscount > 0 && productDiscount > 0;
