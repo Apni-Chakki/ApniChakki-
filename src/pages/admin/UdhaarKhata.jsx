@@ -10,6 +10,7 @@ import { Badge } from '../../components/common/badge';
 import { Search, Phone, ChevronRight, History, CheckCircle, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
+import { Pagination } from '../../components/common/Pagination';
 
 export function UdhaarKhata() {
   const { t } = useTranslation();
@@ -17,6 +18,9 @@ export function UdhaarKhata() {
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   
@@ -208,7 +212,9 @@ export function UdhaarKhata() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLedgers.map((customer) => (
+              filteredLedgers
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map((customer) => (
                 <TableRow key={customer.phone}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -247,6 +253,17 @@ export function UdhaarKhata() {
             )}
           </TableBody>
         </Table>
+
+        {filteredLedgers.length > 0 && (
+          <Pagination
+            currentPage={page}
+            totalItems={filteredLedgers.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            className="mt-4"
+          />
+        )}
       </Card>
 
       {/* Detail & Settle Dialog */}

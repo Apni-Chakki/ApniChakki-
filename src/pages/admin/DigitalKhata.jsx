@@ -16,6 +16,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '../../components/common/utils';
 import { PrintExpenseReport } from './PrintExpenseReport'; 
 import { API_BASE_URL } from '../../config'; // <-- NEW: Import API Config
+import { Pagination } from '../../components/common/Pagination';
 
 export function DigitalKhata() {
   const { t } = useTranslation();
@@ -24,6 +25,9 @@ export function DigitalKhata() {
   const [backendTotals, setBackendTotals] = useState({ today: 0, month: 0 }); // <-- Store DB totals
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -558,7 +562,9 @@ export function DigitalKhata() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredExpenses.map((expense) => (
+                filteredExpenses
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell className="font-medium">
                       {new Date(expense.date).toLocaleDateString()} <br/>
@@ -592,6 +598,17 @@ export function DigitalKhata() {
             </TableBody>
           </Table>
         </div>
+
+        {filteredExpenses.length > 0 && (
+          <Pagination
+            currentPage={page}
+            totalItems={filteredExpenses.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            className="mt-4"
+          />
+        )}
 
         {/* Footer Total for Filtered View */}
         {filteredExpenses.length > 0 && (

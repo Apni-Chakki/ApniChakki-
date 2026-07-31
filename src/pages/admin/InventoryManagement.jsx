@@ -23,6 +23,7 @@ import { useAuth } from '../../store/AuthContext';
 import { PrintRestockList } from './PrintRestockList';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/common/select';
 import { API_BASE_URL } from '../../config'; // <-- NEW: API Config
+import { Pagination } from '../../components/common/Pagination';
 
 export function InventoryManagement() {
   const { t } = useTranslation();
@@ -30,6 +31,9 @@ export function InventoryManagement() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true); // <-- NEW: Loading State
   const [isUpdating, setIsUpdating] = useState(false); // To disable buttons while saving
+  
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -253,7 +257,9 @@ export function InventoryManagement() {
         <>
           {/* Mobile: card list (below md) */}
           <div className="md:hidden space-y-3">
-            {filteredInventory.map((item) => {
+            {filteredInventory
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((item) => {
               const status = getStockStatus(item);
               return (
                 <Card key={item.id} className="p-3 space-y-3">
@@ -320,15 +326,16 @@ export function InventoryManagement() {
                 <TableRow className="bg-muted/50">
                   <TableHead>Product Name</TableHead>
                   <TableHead>Current Stock</TableHead>
-                  <TableHead>Min Level</TableHead>
-                  <TableHead>Max Level</TableHead>
+                  <TableHead>Min / Max Level</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInventory.map((item) => {
+                {filteredInventory
+                  .slice((page - 1) * pageSize, page * pageSize)
+                  .map((item) => {
                   const status = getStockStatus(item);
                   return (
                     <TableRow key={item.id}>
@@ -389,6 +396,17 @@ export function InventoryManagement() {
               </TableBody>
             </Table>
           </Card>
+
+          {filteredInventory.length > 0 && (
+            <Pagination
+              currentPage={page}
+              totalItems={filteredInventory.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+              className="mt-4"
+            />
+          )}
         </>
       )}
 

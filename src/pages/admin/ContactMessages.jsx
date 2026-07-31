@@ -8,11 +8,15 @@ import { API_BASE_URL } from '../../config';
 import { Loader2, Trash2, Mail, Phone, Calendar, User, MessageSquare, AlertCircle, RefreshCw, Send, X, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { Pagination } from '../../components/common/Pagination';
 
 export function ContactMessages() {
   const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   
   // Modal State
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -163,7 +167,9 @@ export function ContactMessages() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {messages.map((msg) => (
+          {messages
+            .slice((page - 1) * pageSize, page * pageSize)
+            .map((msg) => (
             <Card key={msg.id} className={`overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow ${msg.status === 'replied' ? 'opacity-90' : ''}`}>
               <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
@@ -260,6 +266,17 @@ export function ContactMessages() {
             </Card>
           ))}
         </div>
+      )}
+
+      {messages.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={messages.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          className="mt-4"
+        />
       )}
 
       {/* Reply Modal */}

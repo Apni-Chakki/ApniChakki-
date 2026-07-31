@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
+import { Pagination } from '../../components/common/Pagination';
 
 export function ManageCustomers() {
   const { t } = useTranslation();
@@ -15,6 +16,9 @@ export function ManageCustomers() {
   const [privileges, setPrivileges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   // VIP assign Modal states
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -358,7 +362,9 @@ export function ManageCustomers() {
           <>
           {/* Mobile: card list (below md) */}
           <div className="md:hidden space-y-3">
-            {filteredCustomers.map((customer) => (
+            {filteredCustomers
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((customer) => (
               <div key={customer.id} className="border rounded-lg p-3 bg-card space-y-2.5">
                 {/* Top row: name + status badge */}
                 <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
@@ -477,8 +483,10 @@ export function ManageCustomers() {
                   <th className="p-4 text-center">{t('Actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
-                {filteredCustomers.map((customer) => (
+              <tbody className="divide-y divide-gray-200">
+              {filteredCustomers
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-4">
                       <div className="font-semibold text-gray-900">{customer.full_name}</div>
@@ -592,6 +600,17 @@ export function ManageCustomers() {
               </tbody>
             </table>
           </div>
+
+          {filteredCustomers.length > 0 && (
+            <Pagination
+              currentPage={page}
+              totalItems={filteredCustomers.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+              className="mt-4"
+            />
+          )}
           </>
         )}
       </Card>

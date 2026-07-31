@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { API_BASE_URL, SOCKET_URL } from '../../config';
 import { io } from 'socket.io-client';
+import { Pagination } from '../../components/common/Pagination';
 
 export function DeliveryPanel() {
   const [orders, setOrders] = useState([]);
@@ -22,6 +23,9 @@ export function DeliveryPanel() {
   const trackingIntervals = useRef({}); // { [orderId]: intervalId }
   const socketRef = useRef(null);
   const socketEnabled = import.meta.env.VITE_ENABLE_SOCKET === 'true' && !!SOCKET_URL;
+  
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   
   // Confirmation Dialog States
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -742,10 +746,10 @@ export function DeliveryPanel() {
       if (result.success) {
         toast.success('Status updated to Coming for Pickup! GPS tracking started.');
         
-        // GPS tracking shuru karo takay admin location dekh sake
+        // Start GPS tracking for live driver location
         startGpsTracking(order.id);
 
-        // Tracking link generate karo
+        // Generate customer live tracking link
         const trackingData = await generateTrackingLink(order);
 
         const cPhone = result.customer_phone || order.phone;
@@ -757,7 +761,7 @@ export function DeliveryPanel() {
             ? '92' + customerPhone.substring(1) 
             : customerPhone.startsWith('92') ? customerPhone : '92' + customerPhone;
 
-          // Agar tracking link mil gayi to use karo, warna simple message
+          // Construct WhatsApp notification message with live tracking link fallback
           let whatsappUrl;
           if (trackingData?.whatsapp_url) {
             whatsappUrl = trackingData.whatsapp_url;
@@ -814,7 +818,7 @@ export function DeliveryPanel() {
   const handleArrivedAtShopForPickup = async (order) => {
     const execute = async () => {
       try {
-        // GPS tracking band karo
+        // Stop active GPS location tracking
         stopGpsTracking(order.id);
 
         const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
@@ -922,7 +926,9 @@ export function DeliveryPanel() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => {
+            {orders
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((order) => {
               // isStorePickup = customer comes to shop themselves (no driver needed)
               const isStorePickup = order.orderType === 'pickup';
               const isPickupRequest = ['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0;
@@ -1311,6 +1317,17 @@ export function DeliveryPanel() {
                 </Card>
               );
             })}
+
+            {orders.length > 0 && (
+              <Pagination
+                currentPage={page}
+                totalItems={orders.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+                className="mt-4"
+              />
+            )}
           </div>
         )}
       </div>

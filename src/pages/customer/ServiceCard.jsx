@@ -236,7 +236,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   // dual_unit products support both pickup (trip) and kg modes from one card
   const isDualUnit = service.dual_unit === 1 || service.dual_unit === true;
   const isPickupEligible = isDualUnit || isOnlyPickup;
-  // Trip waly products out of stock nahi hoty kabhi bhi
+  // Pickup/Trip products always remain available for booking
   const isOutOfStock = isPickupEligible ? false : stock <= 0;
 
   // Quick quantity options from admin (works for ALL units)

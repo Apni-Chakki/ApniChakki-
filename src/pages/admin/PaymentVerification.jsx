@@ -15,6 +15,7 @@ import { API_BASE_URL } from '../../config';
 import { useAuth } from '../../store/AuthContext';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { Pagination } from '../../components/common/Pagination';
 
 export function PaymentVerification() {
   const { user } = useAuth();
@@ -33,6 +34,9 @@ export function PaymentVerification() {
   const [methodFilter, setMethodFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Dialog states
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
@@ -539,8 +543,11 @@ export function PaymentVerification() {
               <p className="text-sm sm:text-base text-muted-foreground">{t('No payment transactions found')}</p>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {filteredHistory.map(payment => (
+            <>
+              <div className="space-y-2">
+                {filteredHistory
+                  .slice((page - 1) * pageSize, page * pageSize)
+                  .map(payment => (
                 <Card key={payment.id} className="p-3 sm:p-4 hover:bg-secondary/30 transition-colors cursor-pointer"
                   onClick={() => { setSelectedPayment(payment); setShowDetailsDialog(true); }}
                 >
@@ -568,8 +575,20 @@ export function PaymentVerification() {
                 </Card>
               ))}
             </div>
-          )}
-        </div>
+
+            {filteredHistory.length > 0 && (
+              <Pagination
+                currentPage={page}
+                totalItems={filteredHistory.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+                className="mt-4"
+              />
+            )}
+          </>
+        )}
+      </div>
       )}
 
       {/* */}

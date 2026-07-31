@@ -103,7 +103,7 @@ const SANDBOX_TEST_PHONES = {
   timeout: '03999999999',
 };
 
-// dukan ki jagah aur distance nikalne k liye yahan settings hain
+// Shop location coordinates for distance calculations
 const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 };
 
 // When Google Maps isn't available, we fall back to the straight-line (Haversine)
@@ -136,7 +136,7 @@ export function Checkout() {
   const [phone, setPhone] = useState('');
   const [orderType, setOrderType] = useState('pickup');
   
-  // ghar ka pata save karne k liye variables
+  // Delivery address details state
   const [deliveryArea, setDeliveryArea] = useState(''); 
   const [houseDetails, setHouseDetails] = useState(''); 
 
@@ -160,6 +160,7 @@ export function Checkout() {
   const [paymentStep, setPaymentStep] = useState('input'); 
   const [paymentResult, setPaymentResult] = useState(null);
   const [showSandboxHelper, setShowSandboxHelper] = useState(false);
+  const [isSandboxEnv, setIsSandboxEnv] = useState(true);
   const [paySettings, setPaySettings] = useState({
     pay_method_cod_enabled: '1',
     pay_method_jazzcash_enabled: '1',
@@ -203,7 +204,7 @@ export function Checkout() {
   const [schedulePreview, setSchedulePreview] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
-  // delivery ki fees aur map k variables
+  // Delivery fee and distance calculation state
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
   const [isOutOfLahore, setIsOutOfLahore] = useState(false);
@@ -215,7 +216,7 @@ export function Checkout() {
   // Show warning if coupon is applied to items with product discounts
   const hasMixedDiscounts = couponDiscount > 0 && productDiscount > 0;
 
-  // delivery k rates db se nikal rahe han hum yahan
+  // Dynamic delivery rates configuration
   const [deliveryConfig, setDeliveryConfig] = useState({ 
     base_fare: 50, 
     base_distance: 10, 
@@ -259,6 +260,16 @@ export function Checkout() {
       } catch (err) {
         console.warn('Failed to load payment settings.');
       }
+
+      try {
+        const pRes = await fetch(`${API_BASE_URL}/payments/get_payment_config.php`);
+        const pData = await pRes.json();
+        if (pData.success && typeof pData.is_sandbox === 'boolean') {
+          setIsSandboxEnv(pData.is_sandbox);
+        }
+      } catch (err) {
+        console.warn('Failed to load payment gateway config.');
+      }
     };
     fetchPaySettings();
 
@@ -292,7 +303,7 @@ export function Checkout() {
     return () => clearInterval(timer);
   }, []);
 
-  // maths ka sara kaam yahan ho raha hai (fees wagera)
+  // Calculate delivery fee and distance rules
   useEffect(() => {
     const calcDeliveryFee = async () => {
       if (orderType !== 'delivery') {
@@ -564,7 +575,7 @@ export function Checkout() {
     }
   }, [reverseGeocode, t, houseDetails]);
 
-  // pata khud se bharne k liye logic — pehle GPS try karo, phir fallback
+  // Auto-fill address logic: primary GPS resolution with network fallback
   useEffect(() => {
     if (orderType === 'delivery' && !deliveryArea && !gpsCoords) {
       const initLocation = async () => {
@@ -580,7 +591,7 @@ export function Checkout() {
             });
             const { latitude: lat, longitude: lng, accuracy } = position.coords;
             await processLocationFix(lat, lng, accuracy, 'GPS');
-            return; // GPS mil gaya, fallback ki zaroorat nahi
+            return; // GPS resolved successfully
           } catch (geoError) {
             console.warn('GPS failed on init, using fallback:', geoError.message);
           }
@@ -1797,7 +1808,7 @@ export function Checkout() {
                     <div>
                       <p className="flex items-center gap-2">
                         JazzCash
-                        <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>
+                        {isSandboxEnv && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>}
                       </p>
                       <p className="text-sm text-muted-foreground">{t('Pay via JazzCash mobile wallet')}</p>
                     </div>
@@ -1815,7 +1826,7 @@ export function Checkout() {
                     <div>
                       <p className="flex items-center gap-2">
                         {t('Credit / Debit Card')}
-                        <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>
+                        {isSandboxEnv && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>}
                       </p>
                       <p className="text-sm text-muted-foreground">{t('Visa, Mastercard accepted')}</p>
                     </div>
@@ -2053,13 +2064,15 @@ export function Checkout() {
                 )}
               </div>
 
-              <button
-                onClick={() => setShowSandboxHelper(!showSandboxHelper)}
-                className="w-full flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg py-2 px-3 transition-colors"
-              >
-                <TestTube2 className="h-3.5 w-3.5" />
-                {showSandboxHelper ? t('Hide Sandbox Test Data') : t('Show Sandbox Test Data')}
-              </button>
+              {isSandboxEnv && (
+                <button
+                  onClick={() => setShowSandboxHelper(!showSandboxHelper)}
+                  className="w-full flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg py-2 px-3 transition-colors"
+                >
+                  <TestTube2 className="h-3.5 w-3.5" />
+                  {showSandboxHelper ? t('Hide Sandbox Test Data') : t('Show Sandbox Test Data')}
+                </button>
+              )}
 
               {paymentMethod === 'jazzcash' && (
                 <div className="space-y-3">
@@ -2203,7 +2216,7 @@ export function Checkout() {
 
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded-lg p-2.5">
                     <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span>{t('Your card information is encrypted and secure. Sandbox mode - no real charges.')}</span>
+                    <span>{isSandboxEnv ? t('Your card information is encrypted and secure. Sandbox mode - no real charges.') : t('Your card information is encrypted and processed securely.')}</span>
                   </div>
                 </div>
               )}
