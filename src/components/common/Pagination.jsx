@@ -16,6 +16,19 @@ export function Pagination({
   const startItem = totalItems === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1;
   const endItem = Math.min(validCurrentPage * pageSize, totalItems);
 
+  // Handle page change with auto scroll-to-top
+  const handlePageChange = (newPage) => {
+    if (!onPageChange || newPage === validCurrentPage || newPage < 1 || newPage > totalPages) return;
+    onPageChange(newPage);
+
+    // Auto scroll smoothly to the top of window and admin container
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const adminContainer = document.querySelector('.admin-main-inner');
+    if (adminContainer) {
+      adminContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   // Generate exact visible page numbers without extra empty ovals
   const getPageNumbers = () => {
     const pages = [];
@@ -58,7 +71,10 @@ export function Pagination({
             <select
               id="pageSizeSelect"
               value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              onChange={(e) => {
+                onPageSizeChange(Number(e.target.value));
+                handlePageChange(1);
+              }}
               className="bg-background border border-input rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
             >
               {pageSizeOptions.map((option) => (
@@ -76,7 +92,7 @@ export function Pagination({
         {/* First Page Button */}
         <button
           type="button"
-          onClick={() => onPageChange(1)}
+          onClick={() => handlePageChange(1)}
           disabled={validCurrentPage === 1}
           className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="First Page"
@@ -87,7 +103,7 @@ export function Pagination({
         {/* Previous Page Button */}
         <button
           type="button"
-          onClick={() => onPageChange(validCurrentPage - 1)}
+          onClick={() => handlePageChange(validCurrentPage - 1)}
           disabled={validCurrentPage === 1}
           className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="Previous Page"
@@ -103,7 +119,7 @@ export function Pagination({
               <button
                 key={pageNum}
                 type="button"
-                onClick={() => onPageChange(pageNum)}
+                onClick={() => handlePageChange(pageNum)}
                 className={`h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center text-xs rounded-lg font-bold transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-sm border border-primary'
@@ -119,7 +135,7 @@ export function Pagination({
         {/* Next Page Button */}
         <button
           type="button"
-          onClick={() => onPageChange(validCurrentPage + 1)}
+          onClick={() => handlePageChange(validCurrentPage + 1)}
           disabled={validCurrentPage === totalPages}
           className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="Next Page"
@@ -130,7 +146,7 @@ export function Pagination({
         {/* Last Page Button */}
         <button
           type="button"
-          onClick={() => onPageChange(totalPages)}
+          onClick={() => handlePageChange(totalPages)}
           disabled={validCurrentPage === totalPages}
           className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="Last Page"
