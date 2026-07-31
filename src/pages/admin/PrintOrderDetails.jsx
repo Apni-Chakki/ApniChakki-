@@ -49,6 +49,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
   // Calculate discounts for both print and preview
   let itemDiscountsTotal = 0;
   let originalSubtotal = 0;
+  let itemsSubtotal = 0;
   
   order.items.forEach(item => {
     if (!item.isWeightPending) {
@@ -57,6 +58,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
       const qty = parseFloat(item.quantity) || 0;
       const hasItemDiscount = origPrice && origPrice > itemPrice;
       
+      itemsSubtotal += itemPrice * qty;
       if (hasItemDiscount) {
         itemDiscountsTotal += (origPrice - itemPrice) * qty;
         originalSubtotal += origPrice * qty;
@@ -66,6 +68,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
     }
   });
 
+  const deliveryFee = parseFloat(order.deliveryFee || order.delivery_fee) || 0;
   const couponDiscount = parseFloat(order.couponDiscount) || 0;
   const totalDiscount = itemDiscountsTotal + couponDiscount;
   const hasDiscount = totalDiscount > 0;
@@ -416,33 +419,26 @@ export function PrintOrderDetails({ order, open, onClose }) {
 
       <!-- Totals -->
       <div style="border-top:2.5px dashed #333;margin-top:10px;padding-top:10px;">
-        ${hasDiscount ? `
-          <div class="total-row">
-            <span>${originalSubtotalLabel}</span>
-            <span>Rs.${Number(originalSubtotal).toLocaleString()}${hasPendingItems ? (isUrdu ? ' + تصدیق طلب' : ' + TBD') : ''}</span>
+        <div class="row" style="color:#555;font-weight:600;">
+          <span>${isUrdu ? 'آئٹمز سب ٹوٹل' : 'ITEMS SUBTOTAL'}</span>
+          <span>Rs.${Number(itemsSubtotal || (order.total - deliveryFee)).toLocaleString()}${hasPendingItems ? (isUrdu ? ' + تصدیق طلب' : ' + TBD') : ''}</span>
+        </div>
+        ${deliveryFee > 0 ? `
+          <div class="row" style="color:#555;font-weight:600;margin-top:4px;">
+            <span>${isUrdu ? 'ڈیلیوری چارجز' : 'DELIVERY FEE'}</span>
+            <span>+ Rs.${Number(deliveryFee).toLocaleString()}</span>
           </div>
-          ${itemDiscountsTotal > 0 ? `
-            <div class="row" style="color:#15803d;margin-top:5px;font-weight:700;">
-              <span>${itemDiscountLabel}</span>
-              <span>- Rs.${Number(itemDiscountsTotal).toLocaleString()}</span>
-            </div>
-          ` : ''}
-          ${couponDiscount > 0 ? `
-            <div class="row" style="color:#15803d;margin-top:5px;font-weight:700;">
-              <span>${couponDiscountLabel}</span>
-              <span>- Rs.${Number(couponDiscount).toLocaleString()}</span>
-            </div>
-          ` : ''}
-          <div class="total-row" style="border-top:1px dashed #ccc;padding-top:7px;margin-top:7px;font-size:14px;color:#15803d;font-weight:900;">
-            <span>${grandTotalAfterDiscountLabel}</span>
-            <span>Rs.${Number(order.total).toLocaleString()}</span>
+        ` : ''}
+        ${couponDiscount > 0 ? `
+          <div class="row" style="color:#15803d;font-weight:700;margin-top:4px;">
+            <span>${couponDiscountLabel}</span>
+            <span>- Rs.${Number(couponDiscount).toLocaleString()}</span>
           </div>
-        ` : `
-          <div class="total-row">
-            <span>${subtotalLabel}</span>
-            <span>Rs.${Number(order.total).toLocaleString()}${hasPendingItems ? (isUrdu ? ' + تصدیق طلب' : ' + TBD') : ''}</span>
-          </div>
-        `}
+        ` : ''}
+        <div class="total-row" style="border-top:1px dashed #ccc;padding-top:7px;margin-top:7px;font-size:14px;color:#15803d;font-weight:900;">
+          <span>${grandTotalLabel}</span>
+          <span>Rs.${Number(order.total).toLocaleString()}</span>
+        </div>
         ${order.advancePayment && order.advancePayment > 0 ? `
           <div class="row advance-row" style="margin-top:5px;">
             <span>${advancePaidLabel}</span>
@@ -827,44 +823,36 @@ export function PrintOrderDetails({ order, open, onClose }) {
             </div>
 
             {/* Totals */}
+            {/* Bill Summary Breakout */}
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
-              {hasDiscount ? (
-                <>
-                  <div className="flex justify-between text-[13px] font-bold text-muted-foreground">
-                    <span>{lang === 'ur' ? 'سب ٹوٹل (اصل قیمت)' : 'SUBTOTAL (ORIGINAL PRICE)'}</span>
-                    <span className="whitespace-nowrap">
-                      Rs.{Number(originalSubtotal).toLocaleString()}
-                      {hasPendingItems && <span className="text-orange-500">{lang === 'ur' ? ' + تصدیق طلب' : ' + TBD'}</span>}
-                    </span>
-                  </div>
-                  {itemDiscountsTotal > 0 && (
-                    <div className="flex justify-between text-[12px] text-green-600 font-bold">
-                      <span>{lang === 'ur' ? 'پروڈکٹ ڈسکاؤنٹ' : 'PRODUCT DISCOUNT'}</span>
-                      <span className="whitespace-nowrap">- Rs.{Number(itemDiscountsTotal).toLocaleString()}</span>
-                    </div>
-                  )}
-                  {couponDiscount > 0 && (
-                    <div className="flex justify-between text-[12px] text-green-600 font-bold">
-                      <span>
-                        {lang === 'ur' ? `کوپن ڈسکاؤنٹ (${order.couponCode || 'PROMO'})` : `COUPON DISCOUNT (${order.couponCode || 'PROMO'})`}
-                      </span>
-                      <span className="whitespace-nowrap">- Rs.{Number(couponDiscount).toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-[14px] font-black pt-2 border-t border-dashed border-border text-green-700">
-                    <span>{lang === 'ur' ? 'کل رقم (ڈسکاؤنٹ کے بعد)' : 'GRAND TOTAL (AFTER DISCOUNT)'}</span>
-                    <span className="whitespace-nowrap">Rs.{Number(order.total).toLocaleString()}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-between text-[13px] font-bold">
-                  <span>{lang === 'ur' ? 'سب ٹوٹل' : 'SUBTOTAL'}</span>
-                  <span className="whitespace-nowrap">
-                    Rs.{Number(order.total).toLocaleString()}
-                    {hasPendingItems && <span className="text-orange-500">{lang === 'ur' ? ' + تصدیق طلب' : ' + TBD'}</span>}
-                  </span>
+              <div className="flex justify-between text-[13px] font-bold text-muted-foreground">
+                <span>{lang === 'ur' ? 'آئٹمز سب ٹوٹل' : 'ITEMS SUBTOTAL'}</span>
+                <span className="whitespace-nowrap">
+                  Rs.{Number(itemsSubtotal || (order.total - deliveryFee)).toLocaleString()}
+                  {hasPendingItems && <span className="text-orange-500">{lang === 'ur' ? ' + تصدیق طلب' : ' + TBD'}</span>}
+                </span>
+              </div>
+
+              {deliveryFee > 0 && (
+                <div className="flex justify-between text-[12px] text-muted-foreground font-semibold">
+                  <span>{lang === 'ur' ? 'ڈیلیوری چارجز' : 'DELIVERY FEE'}</span>
+                  <span className="whitespace-nowrap">+ Rs.{Number(deliveryFee).toLocaleString()}</span>
                 </div>
               )}
+
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-[12px] text-green-600 font-bold">
+                  <span>
+                    {lang === 'ur' ? `کوپن ڈسکاؤنٹ (${order.couponCode || 'PROMO'})` : `COUPON DISCOUNT (${order.couponCode || 'PROMO'})`}
+                  </span>
+                  <span className="whitespace-nowrap">- Rs.{Number(couponDiscount).toLocaleString()}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between text-[15px] font-black pt-2 border-t border-dashed border-border text-green-700">
+                <span>{lang === 'ur' ? 'کل رقم (Grand Total)' : 'GRAND TOTAL'}</span>
+                <span className="whitespace-nowrap">Rs.{Number(order.total).toLocaleString()}</span>
+              </div>
 
               {parseFloat(order.advancePayment) > 0 && (
                 <div className="flex justify-between text-[12px]">
