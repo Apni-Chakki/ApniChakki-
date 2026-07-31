@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { Button } from './button';
 
 export function Pagination({
   currentPage = 1,
@@ -17,7 +16,7 @@ export function Pagination({
   const startItem = totalItems === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1;
   const endItem = Math.min(validCurrentPage * pageSize, totalItems);
 
-  // Generate page range
+  // Generate exact visible page numbers without extra empty ovals
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
@@ -30,7 +29,7 @@ export function Pagination({
 
       if (validCurrentPage <= 3) {
         start = 1;
-        end = 5;
+        end = maxVisible;
       } else if (validCurrentPage >= totalPages - 2) {
         start = totalPages - 4;
         end = totalPages;
@@ -41,26 +40,26 @@ export function Pagination({
     return pages;
   };
 
-  if (totalItems <= 0) return null;
+  if (totalItems <= 0 || totalPages <= 1) return null;
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 bg-card border border-border rounded-xl text-sm ${className}`}>
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 py-3 px-4 bg-card border border-border rounded-xl text-sm shadow-sm ${className}`}>
       {/* Item Range Summary & Page Size Select */}
-      <div className="flex items-center gap-3 text-muted-foreground text-xs sm:text-sm">
+      <div className="flex items-center gap-3 text-muted-foreground text-xs sm:text-sm flex-wrap">
         <span>
-          Showing <strong className="text-foreground font-semibold">{startItem}</strong> to{' '}
-          <strong className="text-foreground font-semibold">{endItem}</strong> of{' '}
-          <strong className="text-foreground font-semibold">{totalItems}</strong> entries
+          Showing <strong className="text-foreground font-bold">{startItem}</strong> to{' '}
+          <strong className="text-foreground font-bold">{endItem}</strong> of{' '}
+          <strong className="text-foreground font-bold">{totalItems}</strong> entries
         </span>
 
         {onPageSizeChange && (
-          <div className="flex items-center gap-1.5 ml-2">
+          <div className="flex items-center gap-1.5 ml-1">
             <label htmlFor="pageSizeSelect" className="text-xs">Show:</label>
             <select
               id="pageSizeSelect"
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="bg-background border border-input rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              className="bg-background border border-input rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
             >
               {pageSizeOptions.map((option) => (
                 <option key={option} value={option}>
@@ -72,68 +71,72 @@ export function Pagination({
         )}
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex items-center gap-1.5">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 rounded-lg"
+      {/* Page Navigation Controls */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {/* First Page Button */}
+        <button
+          type="button"
           onClick={() => onPageChange(1)}
           disabled={validCurrentPage === 1}
+          className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="First Page"
         >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
+          <ChevronsLeft className="h-4 w-4 shrink-0" />
+        </button>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 rounded-lg"
+        {/* Previous Page Button */}
+        <button
+          type="button"
           onClick={() => onPageChange(validCurrentPage - 1)}
           disabled={validCurrentPage === 1}
+          className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="Previous Page"
         >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+          <ChevronLeft className="h-4 w-4 shrink-0" />
+        </button>
 
         {/* Numeric Page Buttons */}
         <div className="flex items-center gap-1">
-          {getPageNumbers().map((pageNum) => (
-            <Button
-              key={pageNum}
-              variant={pageNum === validCurrentPage ? 'default' : 'outline'}
-              size="sm"
-              className={`h-8 w-8 p-0 text-xs rounded-lg font-medium ${
-                pageNum === validCurrentPage ? 'shadow-sm' : ''
-              }`}
-              onClick={() => onPageChange(pageNum)}
-            >
-              {pageNum}
-            </Button>
-          ))}
+          {getPageNumbers().map((pageNum) => {
+            const isActive = pageNum === validCurrentPage;
+            return (
+              <button
+                key={pageNum}
+                type="button"
+                onClick={() => onPageChange(pageNum)}
+                className={`h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center text-xs rounded-lg font-bold transition-all ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm border border-primary'
+                    : 'bg-background text-foreground hover:bg-accent border border-input'
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
         </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 rounded-lg"
+        {/* Next Page Button */}
+        <button
+          type="button"
           onClick={() => onPageChange(validCurrentPage + 1)}
           disabled={validCurrentPage === totalPages}
+          className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="Next Page"
         >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+          <ChevronRight className="h-4 w-4 shrink-0" />
+        </button>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 rounded-lg"
+        {/* Last Page Button */}
+        <button
+          type="button"
           onClick={() => onPageChange(totalPages)}
           disabled={validCurrentPage === totalPages}
+          className="h-8 w-8 min-h-0 min-w-[32px] p-0 flex items-center justify-center rounded-lg border border-input bg-background text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="Last Page"
         >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
+          <ChevronsRight className="h-4 w-4 shrink-0" />
+        </button>
       </div>
     </div>
   );
