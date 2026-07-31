@@ -2001,7 +2001,7 @@ export function Checkout() {
               <div className="w-full bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Amount')}:</span>
-                  <span className="font-bold">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
+                  <span className="font-bold">Rs. {grandTotal}{hasPendingWeightItem && " + TBD"}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Method')}:</span>
@@ -2055,7 +2055,7 @@ export function Checkout() {
           {paymentStep === 'input' && (
             <div className="space-y-3 sm:space-y-4">
               <div className="text-center py-2.5 sm:py-3 bg-secondary/30 rounded-lg">
-                <p className="text-2xl sm:text-3xl font-bold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-foreground">Rs. {grandTotal}{hasPendingWeightItem && " + TBD"}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">{t('Amount to pay')}</p>
                 {hasPendingWeightItem && (
                   <p className="text-xs text-primary mt-1 px-2">
@@ -2240,7 +2240,7 @@ export function Checkout() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                     <p className="text-xs font-semibold text-blue-800">{t('Bank Transfer Instructions')}:</p>
                     <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                      <li>{t('Transfer Rs.')} {total}{hasPendingWeightItem && " + TBD"} {t('to the account below')}</li>
+                      <li>{t('Transfer Rs.')} {grandTotal}{hasPendingWeightItem && " + TBD"} {t('to the account below')}</li>
                       <li>{t('Your order will be confirmed after admin verification')}</li>
                       <li>{t('Please keep the transfer receipt for reference')}</li>
                     </ol>
@@ -2273,9 +2273,9 @@ export function Checkout() {
                   </>
                 ) : (
                   <>
-                    {paymentMethod === 'jazzcash' && `Pay Rs. ${total} via JazzCash`}
-                    {paymentMethod === 'card' && `${t('Pay')} Rs. ${total} ${t('via Card')}`}
-                    {paymentMethod === 'bank' && `${t('Confirm Transfer')} Rs. ${total}`}
+                    {paymentMethod === 'jazzcash' && `Pay Rs. ${grandTotal} via JazzCash`}
+                    {paymentMethod === 'card' && `${t('Pay')} Rs. ${grandTotal} ${t('via Card')}`}
+                    {paymentMethod === 'bank' && `${t('Confirm Transfer')} Rs. ${grandTotal}`}
                   </>
                 )}
               </Button>
