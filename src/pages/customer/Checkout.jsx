@@ -1884,7 +1884,7 @@ export function Checkout() {
               
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-4 w-4 text-primary" />
                   <span>{t('Expected')}: <strong>{schedulePreview.estimated_completion_display}</strong></span>
                 </div>
                 {!schedulePreview.is_today && (
@@ -1894,6 +1894,10 @@ export function Checkout() {
                   </div>
                 )}
               </div>
+
+              <p className="mt-2 text-[11px] text-amber-900/90 bg-amber-100/60 px-2 py-1 rounded border border-amber-300/40 font-medium">
+                ℹ️ {t('Expected processing completion time only. Delivery time may vary.')}
+              </p>
 
               {!schedulePreview.is_today && schedulePreview.reason_code !== 'today' && (
                 <p className="mt-2 text-xs text-amber-700 bg-amber-100/50 p-2 rounded border border-amber-200/50 italic">
