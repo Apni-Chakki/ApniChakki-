@@ -68,8 +68,14 @@ export function PrintOrderDetails({ order, open, onClose }) {
     }
   });
 
-  const deliveryFee = parseFloat(order.deliveryFee || order.delivery_fee) || 0;
   const couponDiscount = parseFloat(order.couponDiscount) || 0;
+
+  // Resolve delivery fee: check direct prop, or calculate from total - (itemsSubtotal - couponDiscount)
+  let deliveryFee = parseFloat(order.deliveryFee ?? order.delivery_fee ?? order.shipping_cost ?? order.delivery_cost ?? 0) || 0;
+  if (!deliveryFee && (order.type === 'delivery' || order.shipping_address || order.deliveryAddress) && order.total > (itemsSubtotal - couponDiscount)) {
+    deliveryFee = Math.max(0, Math.round(order.total - (itemsSubtotal - couponDiscount)));
+  }
+
   const totalDiscount = itemDiscountsTotal + couponDiscount;
   const hasDiscount = totalDiscount > 0;
 
