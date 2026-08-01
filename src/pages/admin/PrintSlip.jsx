@@ -128,7 +128,7 @@ export function PrintSlip({ order, open, onClose }) {
 
   /* Full print HTML */
   const buildPrintHTML = () => {
-    const logoHTMLForPrint = \`
+    const logoHTMLForPrint = `
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:12px 0 8px;">
         <svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="32" cy="32" r="32" fill="#78350f"/>
