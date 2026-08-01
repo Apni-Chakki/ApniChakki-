@@ -420,13 +420,13 @@ export function PrintOrderDetails({ order, open, onClose }) {
       <!-- Totals -->
       <div style="border-top:2.5px dashed #333;margin-top:10px;padding-top:10px;">
         <div class="row" style="color:#555;font-weight:600;">
-          <span>${isUrdu ? 'آئٹمز سب ٹوٹل' : 'ITEMS SUBTOTAL'}</span>
-          <span>Rs.${Number(itemsSubtotal || (order.total - deliveryFee)).toLocaleString()}${hasPendingItems ? (isUrdu ? ' + تصدیق طلب' : ' + TBD') : ''}</span>
+          <span>${isUrdu ? 'پروڈکٹ سب ٹوٹل (قیمت)' : 'PRODUCTS SUBTOTAL'}</span>
+          <span>Rs.${Number(itemsSubtotal || (order.total - deliveryFee + couponDiscount)).toLocaleString()}${hasPendingItems ? (isUrdu ? ' + تصدیق طلب' : ' + TBD') : ''}</span>
         </div>
-        ${deliveryFee > 0 ? `
-          <div class="row" style="color:#555;font-weight:600;margin-top:4px;">
-            <span>${isUrdu ? 'ڈیلیوری چارجز' : 'DELIVERY FEE'}</span>
-            <span>+ Rs.${Number(deliveryFee).toLocaleString()}</span>
+        ${itemDiscountsTotal > 0 ? `
+          <div class="row" style="color:#15803d;font-weight:700;margin-top:4px;">
+            <span>${isUrdu ? 'پروڈکٹ ڈسکاؤنٹ' : 'PRODUCT DISCOUNT'}</span>
+            <span>- Rs.${Number(itemDiscountsTotal).toLocaleString()}</span>
           </div>
         ` : ''}
         ${couponDiscount > 0 ? `
@@ -435,7 +435,11 @@ export function PrintOrderDetails({ order, open, onClose }) {
             <span>- Rs.${Number(couponDiscount).toLocaleString()}</span>
           </div>
         ` : ''}
-        <div class="total-row" style="border-top:1px dashed #ccc;padding-top:7px;margin-top:7px;font-size:14px;color:#15803d;font-weight:900;">
+        <div class="row" style="color:#555;font-weight:600;margin-top:4px;">
+          <span>${isUrdu ? 'ڈیلیوری فیس' : 'DELIVERY FEE'}</span>
+          <span>${deliveryFee > 0 ? `+ Rs.${Number(deliveryFee).toLocaleString()}` : (order.type === 'delivery' ? (isUrdu ? 'مفت (Rs. 0)' : 'Rs. 0 (FREE)') : 'Rs. 0')}</span>
+        </div>
+        <div class="total-row" style="border-top:1.5px dashed #333;padding-top:7px;margin-top:7px;font-size:14px;color:#15803d;font-weight:900;">
           <span>${grandTotalLabel}</span>
           <span>Rs.${Number(order.total).toLocaleString()}</span>
         </div>
@@ -826,17 +830,17 @@ export function PrintOrderDetails({ order, open, onClose }) {
             {/* Bill Summary Breakout */}
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
               <div className="flex justify-between text-[13px] font-bold text-muted-foreground">
-                <span>{lang === 'ur' ? 'آئٹمز سب ٹوٹل' : 'ITEMS SUBTOTAL'}</span>
+                <span>{lang === 'ur' ? 'پروڈکٹ سب ٹوٹل (قیمت)' : 'PRODUCTS SUBTOTAL'}</span>
                 <span className="whitespace-nowrap">
-                  Rs.{Number(itemsSubtotal || (order.total - deliveryFee)).toLocaleString()}
+                  Rs.{Number(itemsSubtotal || (order.total - deliveryFee + couponDiscount)).toLocaleString()}
                   {hasPendingItems && <span className="text-orange-500">{lang === 'ur' ? ' + تصدیق طلب' : ' + TBD'}</span>}
                 </span>
               </div>
 
-              {deliveryFee > 0 && (
-                <div className="flex justify-between text-[12px] text-muted-foreground font-semibold">
-                  <span>{lang === 'ur' ? 'ڈیلیوری چارجز' : 'DELIVERY FEE'}</span>
-                  <span className="whitespace-nowrap">+ Rs.{Number(deliveryFee).toLocaleString()}</span>
+              {itemDiscountsTotal > 0 && (
+                <div className="flex justify-between text-[12px] text-green-600 font-bold">
+                  <span>{lang === 'ur' ? 'پروڈکٹ ڈسکاؤنٹ' : 'PRODUCT DISCOUNT'}</span>
+                  <span className="whitespace-nowrap">- Rs.{Number(itemDiscountsTotal).toLocaleString()}</span>
                 </div>
               )}
 
@@ -849,8 +853,15 @@ export function PrintOrderDetails({ order, open, onClose }) {
                 </div>
               )}
 
+              <div className="flex justify-between text-[12px] text-muted-foreground font-semibold">
+                <span>{lang === 'ur' ? 'ڈیلیوری فیس' : 'DELIVERY FEE'}</span>
+                <span className="whitespace-nowrap">
+                  {deliveryFee > 0 ? `+ Rs.${Number(deliveryFee).toLocaleString()}` : (order.type === 'delivery' ? (lang === 'ur' ? 'مفت (Rs. 0)' : 'Rs. 0 (FREE)') : 'Rs. 0')}
+                </span>
+              </div>
+
               <div className="flex justify-between text-[15px] font-black pt-2 border-t border-dashed border-border text-green-700">
-                <span>{lang === 'ur' ? 'کل رقم (Grand Total)' : 'GRAND TOTAL'}</span>
+                <span>{lang === 'ur' ? 'کل رقم (GRAND TOTAL)' : 'GRAND TOTAL'}</span>
                 <span className="whitespace-nowrap">Rs.{Number(order.total).toLocaleString()}</span>
               </div>
 
