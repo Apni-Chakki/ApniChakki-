@@ -55,6 +55,16 @@ export function PaymentVerification() {
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
 
+  // Bank Account edit state
+  const [showBankEditDialog, setShowBankEditDialog] = useState(false);
+  const [editBankForm, setEditBankForm] = useState({
+    bank_name: '',
+    account_name: '',
+    account_number: '',
+    iban: ''
+  });
+  const [isUpdatingBank, setIsUpdatingBank] = useState(false);
+
   // API helper
   const apiCall = useCallback(async (action, extraData = {}) => {
     const response = await fetch(`${API_BASE_URL}/manage_wallets.php`, {
@@ -212,6 +222,28 @@ export function PaymentVerification() {
       toast.error(t('Network error'));
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const handleSaveBankDetails = async () => {
+    if (!editBankForm.bank_name || !editBankForm.account_name || !editBankForm.account_number) {
+      toast.error(t('Bank Name, Account Title, and Account Number are required'));
+      return;
+    }
+    setIsUpdatingBank(true);
+    try {
+      const res = await apiCall('update_bank_details', editBankForm);
+      if (res.success) {
+        toast.success(res.message || t('Bank transfer details updated successfully'));
+        setShowBankEditDialog(false);
+        fetchData();
+      } else {
+        toast.error(res.message || t('Failed to update bank details'));
+      }
+    } catch (err) {
+      toast.error(t('Network error while updating bank details'));
+    } finally {
+      setIsUpdatingBank(false);
     }
   };
 
@@ -597,8 +629,27 @@ export function PaymentVerification() {
       {activeTab === 'wallet' && (
         <div className="space-y-3 sm:space-y-4">
           <Card className="p-4 sm:p-6">
-            <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">{t('Business Account Details')}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+              <h3 className="font-semibold text-sm sm:text-base">{t('Business Account Details')}</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditBankForm({
+                    bank_name: walletBalance?.bank_name || '',
+                    account_name: walletBalance?.account_name || '',
+                    account_number: walletBalance?.account_number || '',
+                    iban: walletBalance?.iban || ''
+                  });
+                  setShowBankEditDialog(true);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Settings2 className="h-4 w-4 mr-1.5" />
+                {t('Edit Bank Details')}
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <p className="text-[11px] sm:text-xs text-muted-foreground">{t('Account Name')}</p>
                 <p className="font-medium text-sm sm:text-base break-words">{walletBalance?.account_name || '-'}</p>
@@ -612,8 +663,8 @@ export function PaymentVerification() {
                 <p className="font-medium font-mono text-sm sm:text-base break-all">{walletBalance?.account_number || '-'}</p>
               </div>
               <div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground">{t('Current Balance')}</p>
-                <p className="font-bold text-lg sm:text-xl text-green-700 break-all">Rs. {(walletBalance?.balance || 0).toLocaleString()}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground">{t('IBAN Number')}</p>
+                <p className="font-medium font-mono text-sm sm:text-base break-all">{walletBalance?.iban || '-'}</p>
               </div>
             </div>
           </Card>
@@ -673,29 +724,50 @@ export function PaymentVerification() {
                         <p className="text-xs text-muted-foreground leading-snug mt-0.5">{method.desc}</p>
                       </div>
                     </div>
-                    {isEnabled ? (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleUpdatePaySettings(method.key, false)}
-                        disabled={settingsLoading}
-                        className="w-full sm:w-auto px-4 shrink-0"
-                      >
-                        <XCircle className="h-4 w-4 mr-1.5" />
-                        {t('Disable')}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleUpdatePaySettings(method.key, true)}
-                        disabled={settingsLoading}
-                        className="w-full sm:w-auto px-4 shrink-0 bg-green-600 hover:bg-green-700 text-white border-green-700"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                        {t('Enable')}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                      {method.key === 'pay_method_bank_enabled' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditBankForm({
+                              bank_name: walletBalance?.bank_name || '',
+                              account_name: walletBalance?.account_name || '',
+                              account_number: walletBalance?.account_number || '',
+                              iban: walletBalance?.iban || ''
+                            });
+                            setShowBankEditDialog(true);
+                          }}
+                          className="w-full sm:w-auto"
+                        >
+                          <Settings2 className="h-4 w-4 mr-1.5" />
+                          {t('Edit Bank Details')}
+                        </Button>
+                      )}
+                      {isEnabled ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleUpdatePaySettings(method.key, false)}
+                          disabled={settingsLoading}
+                          className="w-full sm:w-auto px-4 shrink-0"
+                        >
+                          <XCircle className="h-4 w-4 mr-1.5" />
+                          {t('Disable')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleUpdatePaySettings(method.key, true)}
+                          disabled={settingsLoading}
+                          className="w-full sm:w-auto px-4 shrink-0 bg-green-600 hover:bg-green-700 text-white border-green-700"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                          {t('Enable')}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -946,6 +1018,77 @@ export function PaymentVerification() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: EDIT BANK ACCOUNT INFO */}
+      <Dialog open={showBankEditDialog} onOpenChange={setShowBankEditDialog}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Building2 className="h-5 w-5 text-primary shrink-0" />
+              {t('Edit Bank Transfer Account')}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              {t('Update bank account details displayed to customers during direct bank transfer checkout.')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="editBankName">{t('Bank Name')}</Label>
+              <Input
+                id="editBankName"
+                placeholder="e.g. Meezan Bank"
+                value={editBankForm.bank_name}
+                onChange={(e) => setEditBankForm(prev => ({ ...prev, bank_name: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editAccountName">{t('Account Title')}</Label>
+              <Input
+                id="editAccountName"
+                placeholder="e.g. Suchi Chakki"
+                value={editBankForm.account_name}
+                onChange={(e) => setEditBankForm(prev => ({ ...prev, account_name: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editAccountNumber">{t('Account Number')}</Label>
+              <Input
+                id="editAccountNumber"
+                placeholder="e.g. 0123-4567890"
+                value={editBankForm.account_number}
+                onChange={(e) => setEditBankForm(prev => ({ ...prev, account_number: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editIban">{t('IBAN Number')}</Label>
+              <Input
+                id="editIban"
+                placeholder="e.g. PK00 MEZN 0000 0000 0000 0000"
+                value={editBankForm.iban}
+                onChange={(e) => setEditBankForm(prev => ({ ...prev, iban: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowBankEditDialog(false)} disabled={isUpdatingBank}>
+              {t('Cancel')}
+            </Button>
+            <Button onClick={handleSaveBankDetails} disabled={isUpdatingBank}>
+              {isUpdatingBank ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {t('Save Changes')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

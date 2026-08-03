@@ -167,6 +167,12 @@ export function Checkout() {
     pay_method_card_enabled: '1',
     pay_method_bank_enabled: '1',
   });
+  const [bankDetails, setBankDetails] = useState({
+    bank_name: 'Meezan Bank',
+    account_name: 'Suchi Chakki',
+    account_number: '0123-4567890',
+    iban: 'PK00 MEZN 0000 0000 0000 0000'
+  });
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -269,6 +275,20 @@ export function Checkout() {
         }
       } catch (err) {
         console.warn('Failed to load payment gateway config.');
+      }
+
+      try {
+        const bRes = await fetch(`${API_BASE_URL}/manage_wallets.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_bank_details' })
+        });
+        const bData = await bRes.json();
+        if (bData.success && bData.bank_details) {
+          setBankDetails(bData.bank_details);
+        }
+      } catch (err) {
+        console.warn('Failed to load bank transfer details.');
       }
     };
     fetchPaySettings();
@@ -2233,7 +2253,7 @@ export function Checkout() {
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="bankAccountNumber"
-                        placeholder="PK00 XXXX 0000 0000 0000 0000"
+                        placeholder={bankDetails.iban || "PK00 XXXX 0000 0000 0000 0000"}
                         value={bankAccountNumber}
                         onChange={(e) => setBankAccountNumber(e.target.value)}
                         className="pl-10"
@@ -2249,9 +2269,12 @@ export function Checkout() {
                       <li>{t('Please keep the transfer receipt for reference')}</li>
                     </ol>
                     <div className="bg-white rounded p-2 mt-2 space-y-1">
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Bank')}:</span> <strong>Meezan Bank</strong></p>
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Account')}:</span> <strong>0123-4567890</strong></p>
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Title')}:</span> <strong>Suchi Chakki</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Bank')}:</span> <strong>{bankDetails.bank_name}</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Account')}:</span> <strong>{bankDetails.account_number}</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Title')}:</span> <strong>{bankDetails.account_name}</strong></p>
+                      {bankDetails.iban && (
+                        <p className="text-xs"><span className="text-muted-foreground">{t('IBAN')}:</span> <strong className="break-all">{bankDetails.iban}</strong></p>
+                      )}
                     </div>
                   </div>
                 </div>
