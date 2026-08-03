@@ -1,12 +1,15 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
-require_admin();
+$payload = require_auth();
 
 require_once __DIR__ . '/../../config/connect.php';
 
 try {
     $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
+    if (isset($payload['role']) && $payload['role'] !== 'admin') {
+        $user_id = intval($payload['id']);
+    }
 
     $sql = "SELECT 
                 r.*, 

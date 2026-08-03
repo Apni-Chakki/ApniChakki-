@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * OneSignal Push Notification Helper
  */
 
@@ -12,7 +12,7 @@ class OneSignalHelper {
         ];
     }
 
-    /**
+    /* 
      * Send a notification to specific user(s) or all users.
      * 
      * @param string $heading The title of the notification.

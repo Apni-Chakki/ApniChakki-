@@ -46,10 +46,16 @@ while ($row = $result->fetch_assoc()) {
     $item_res = $conn->query("SELECT id, quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding FROM order_items WHERE order_id = '$order_id'");
     while($i = $item_res->fetch_assoc()) {
          $order_item_id = $i['id'];
-         $cust_res = $conn->query("SELECT option_name, option_price FROM order_item_customizations WHERE order_item_id = '$order_item_id'");
          $customizations = [];
-         while ($cust_row = $cust_res->fetch_assoc()) {
-             $customizations[] = $cust_row;
+         try {
+             $cust_res = $conn->query("SELECT option_name, option_price FROM order_item_customizations WHERE order_item_id = '$order_item_id'");
+             if ($cust_res) {
+                 while ($cust_row = $cust_res->fetch_assoc()) {
+                     $customizations[] = $cust_row;
+                 }
+             }
+         } catch (Throwable $t) {
+             // Table might be initializing
          }
          $i['customizations'] = $customizations;
 

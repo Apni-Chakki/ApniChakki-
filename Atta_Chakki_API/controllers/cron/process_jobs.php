@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Cron Job file for background tasks.
  * Run this using a cron job every 5-10 mins.
  */

@@ -1,19 +1,70 @@
 <?php
-// sari requests yahan se guzar kar jati hain
+// Main Front Controller and API Router - GZIP High Speed Enabled
+if (!ob_start("ob_gzhandler")) ob_start();
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/error_log.txt');
 error_reporting(E_ALL);
-header('Access-Control-Allow-Origin: *');
+
+set_exception_handler(function ($e) {
+    error_log("Uncaught Exception: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+    }
+    echo json_encode([
+        "success" => false,
+        "message" => "Server error occurred.",
+        "error" => $e->getMessage(),
+        "file" => $e->getFile(),
+        "line" => $e->getLine()
+    ]);
+    exit;
+});
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_CORE_ERROR || $error['type'] === E_COMPILE_ERROR)) {
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . " on line " . $error['line']);
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+        }
+        echo json_encode([
+            "success" => false,
+            "message" => "Fatal server error occurred.",
+            "error" => $error['message']
+        ]);
+    }
+});
+
+$allowed_origins = [
+    'https://suchi-chakki.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost',
+];
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
 $request_uri = $_SERVER['REQUEST_URI'];
-// URL me se base path nikal rahay hain (case-insensitive)
+// Extract base API route path
 $base_path = '/atta_chakki_api/';
 $pos = stripos($request_uri, $base_path);
 if ($pos !== false) {
@@ -25,11 +76,11 @@ $path = explode('?', $path)[0];
 $path = trim($path, '/');
 
 if (empty($path)) {
-    echo json_encode(["message" => "Welcome to Apni Chakki API MVC"]);
+    echo json_encode(["message" => "Welcome to Suchi Chakki API MVC"]);
     exit;
 }
 
-// purani files ko redirect karne k liye mapping
+// Route mapping for core endpoints
 $mapping = [
     'login.php' => 'controllers/auth/login.php',
     'google_login.php' => 'controllers/auth/google_login.php',
@@ -72,7 +123,7 @@ if (isset($mapping[$path])) {
     exit;
 }
 
-// utils folder k liye alag se check
+// Utility route handling
 if (strpos($path, 'utils/') === 0) {
     $util_path = str_replace('utils/', '', $path);
     $target = __DIR__ . "/utils/$util_path";
@@ -82,10 +133,10 @@ if (strpos($path, 'utils/') === 0) {
     }
 }
 
-// domain folders me file dhund rahay hain
+// Domain controller resolution
 $domains = ['admin', 'auth', 'orders', 'delivery', 'products', 'reviews', 'expenses', 'inventory', 'payments', 'cart', 'users', 'coupons', 'dashboard'];
 
-// Pehle check karo agar path me domain prefix hai (e.g. "products/upload_image.php")
+// Check for explicit domain prefix in route
 foreach ($domains as $domain) {
     $prefix = $domain . '/';
     if (stripos($path, $prefix) === 0) {
@@ -98,7 +149,7 @@ foreach ($domains as $domain) {
     }
 }
 
-// Phir plain filename se match karo
+// Fallback to domain search
 foreach ($domains as $domain) {
     $target = __DIR__ . "/controllers/$domain/$path";
     if (file_exists($target)) {
@@ -107,14 +158,14 @@ foreach ($domains as $domain) {
     }
 }
 
-// controllers k main folder me check
+// Check root controllers directory
 $root_target = __DIR__ . "/controllers/$path";
 if (file_exists($root_target)) {
     require_once $root_target;
     exit;
 }
 
-// agar kahin nahi mili to puray folder me search kar rahay hain
+// Recursive search for unmapped controller files
 $it = new RecursiveDirectoryIterator(__DIR__ . "/controllers");
 foreach (new RecursiveIteratorIterator($it) as $file) {
     if ($file->getFilename() === $path) {
@@ -123,7 +174,7 @@ foreach (new RecursiveIteratorIterator($it) as $file) {
     }
 }
 
-// 404
+// 404 Route Not Found
 http_response_code(404);
 header('Content-Type: application/json');
 echo json_encode(["success" => false, "message" => "Endpoint not found: $path"]);

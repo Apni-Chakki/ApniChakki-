@@ -1,18 +1,28 @@
 <?php
-/**
- * Get products with optional category filter
+/* 
+ * Get products with optional category filter (Optimized with Bulk Batch Queries & Caching)
  * API Endpoint: GET /get_products.php?category=wheat
  */
 
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 try {
-    $category = isset($_GET['category']) ? $_GET['category'] : null;
+    $category = isset($_GET['category']) && trim($_GET['category']) !== '' ? trim($_GET['category']) : null;
+    $cache_key = 'products_' . ($category ? strtolower($category) : 'all');
+
+    // Return cached response if available
+    $cached = get_api_cache($cache_key, 300);
+    if ($cached !== false) {
+        http_response_code(200);
+        echo $cached;
+        exit;
+    }
     
     if ($category) {
-        // Filter by category name
         $sql = "SELECT p.*, c.name as category
                 FROM products p IGNORE INDEX (idx_products_is_active)
                 LEFT JOIN categories c ON p.category_id = c.id
@@ -28,7 +38,6 @@ try {
         $stmt->execute();
         $result = $stmt->get_result();
     } else {
-        // Get all products
         $sql = "SELECT p.*, c.name as category
                 FROM products p IGNORE INDEX (idx_products_is_active)
                 LEFT JOIN categories c ON p.category_id = c.id
@@ -41,44 +50,59 @@ try {
         }
     }
     
-    $products = [];
-    
+    $raw_products = [];
+    $product_ids = [];
     while ($row = $result->fetch_assoc()) {
+        $raw_products[] = $row;
+        $product_ids[] = (int)$row['id'];
+    }
+
+    $customizations_map = [];
+    $mix_items_map = [];
+
+    // BULK BATCH QUERY 1: Fetch all customizations for retrieved products in 1 query
+    if (!empty($product_ids)) {
+        $in_clause = implode(',', array_map('intval', $product_ids));
+        
+        $cust_res = $conn->query("SELECT product_id, id, option_name, option_price, sort_order FROM product_customizations WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
+        if ($cust_res) {
+            while ($c_row = $cust_res->fetch_assoc()) {
+                $pid = (int)$c_row['product_id'];
+                if (!isset($customizations_map[$pid])) {
+                    $customizations_map[$pid] = [];
+                }
+                $customizations_map[$pid][] = [
+                    'id' => (int)$c_row['id'],
+                    'option_name' => $c_row['option_name'],
+                    'option_price' => floatval($c_row['option_price']),
+                    'sort_order' => (int)$c_row['sort_order']
+                ];
+            }
+        }
+
+        // BULK BATCH QUERY 2: Fetch all mix items for retrieved products in 1 query
+        $mix_res = $conn->query("SELECT product_id, id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
+        if ($mix_res) {
+            while ($m_row = $mix_res->fetch_assoc()) {
+                $pid = (int)$m_row['product_id'];
+                if (!isset($mix_items_map[$pid])) {
+                    $mix_items_map[$pid] = [];
+                }
+                $mix_items_map[$pid][] = [
+                    'id' => (int)$m_row['id'],
+                    'item_name' => $m_row['item_name'],
+                    'price_per_kg' => floatval($m_row['price_per_kg']),
+                    'default_ratio' => floatval($m_row['default_ratio']),
+                    'sort_order' => (int)$m_row['sort_order']
+                ];
+            }
+        }
+    }
+    
+    $products = [];
+    foreach ($raw_products as $row) {
         $product_id = (int)$row['id'];
         
-        // Fetch customizations
-        $cust_stmt = $conn->prepare("SELECT id, option_name, option_price, sort_order FROM product_customizations WHERE product_id = ? ORDER BY sort_order ASC");
-        $cust_stmt->bind_param("i", $product_id);
-        $cust_stmt->execute();
-        $cust_res = $cust_stmt->get_result();
-        $customizations = [];
-        while ($cust_row = $cust_res->fetch_assoc()) {
-            $customizations[] = [
-                'id' => (int)$cust_row['id'],
-                'option_name' => $cust_row['option_name'],
-                'option_price' => floatval($cust_row['option_price']),
-                'sort_order' => (int)$cust_row['sort_order']
-            ];
-        }
-        $cust_stmt->close();
-
-        // Fetch mix items
-        $mix_stmt = $conn->prepare("SELECT id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id = ? ORDER BY sort_order ASC");
-        $mix_stmt->bind_param("i", $product_id);
-        $mix_stmt->execute();
-        $mix_res = $mix_stmt->get_result();
-        $mix_items = [];
-        while ($mix_row = $mix_res->fetch_assoc()) {
-            $mix_items[] = [
-                'id' => (int)$mix_row['id'],
-                'item_name' => $mix_row['item_name'],
-                'price_per_kg' => floatval($mix_row['price_per_kg']),
-                'default_ratio' => floatval($mix_row['default_ratio']),
-                'sort_order' => (int)$mix_row['sort_order']
-            ];
-        }
-        $mix_stmt->close();
-
         $weight_options_raw = $row['weight_options'] ?? '[]';
         $weight_options = json_decode($weight_options_raw, true);
         if (!is_array($weight_options)) {
@@ -115,17 +139,21 @@ try {
             'cleaning_price' => floatval($row['cleaning_price'] ?? 0),
             'grinding_price' => floatval($row['grinding_price'] ?? 0),
             'min_stock_level' => floatval($row['min_stock_level'] ?? 0),
-            'customizations' => $customizations,
-            'mix_items' => $mix_items
+            'customizations' => $customizations_map[$product_id] ?? [],
+            'mix_items' => $mix_items_map[$product_id] ?? []
         ];
     }
     
-    http_response_code(200);
-    echo json_encode([
+    $response_data = json_encode([
         'success' => true,
         'products' => $products,
         'count' => count($products)
     ]);
+
+    set_api_cache($cache_key, $response_data);
+    
+    http_response_code(200);
+    echo $response_data;
     
 } catch (Exception $e) {
     error_log('Get Products Error: ' . $e->getMessage());
@@ -137,4 +165,3 @@ try {
 }
 
 $conn->close();
-

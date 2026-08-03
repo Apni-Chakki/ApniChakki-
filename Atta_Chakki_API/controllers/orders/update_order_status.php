@@ -109,7 +109,7 @@ try {
             'cancellationReason' => $reason
         ];
 
-        $ch = curl_init('http://localhost:3001/send-order-status-update');
+        $ch = curl_init(EMAIL_SERVER_URL . '/send-order-status-update');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));

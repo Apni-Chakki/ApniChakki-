@@ -1,6 +1,7 @@
 <?php
 // update product api
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
@@ -123,6 +124,7 @@ try {
             $mix_stmt->close();
         }
 
+        clear_api_cache();
         http_response_code(200);
         echo json_encode(["success" => true, "message" => "Updated successfully"]);
     } else {

@@ -15,13 +15,16 @@ try {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(50) DEFAULT NULL,
-        subject VARCHAR(500) DEFAULT NULL,
+        subject VARCHAR(500) DEFAULT 'General Inquiry',
         message TEXT NOT NULL,
         status ENUM('new','read','replied') DEFAULT 'new',
         reply_message TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Ensure subject column allows NULL / has default in existing table
+    @$conn->query("ALTER TABLE contact_messages MODIFY subject VARCHAR(500) NULL DEFAULT 'General Inquiry'");
 
     $data = json_decode(file_get_contents("php://input"), true);
 
@@ -32,8 +35,8 @@ try {
 
     $name = trim($data['name']);
     $email = trim($data['email']);
-    $phone = isset($data['phone']) ? trim($data['phone']) : null;
-    $subject = isset($data['subject']) ? trim($data['subject']) : null;
+    $phone = isset($data['phone']) && trim($data['phone']) !== '' ? trim($data['phone']) : null;
+    $subject = (isset($data['subject']) && trim($data['subject']) !== '') ? trim($data['subject']) : 'General Inquiry';
     $message = trim($data['message']);
 
     $stmt = $conn->prepare("INSERT INTO contact_messages (name, email, phone, subject, message) VALUES (?, ?, ?, ?, ?)");

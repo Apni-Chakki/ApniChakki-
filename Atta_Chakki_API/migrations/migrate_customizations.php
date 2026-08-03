@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Migration: Dynamic Service Customizations
  * Creates product_customizations and order_item_customizations tables.
  * Also migrates existing hardcoded cleaning/grinding data into the new dynamic system.

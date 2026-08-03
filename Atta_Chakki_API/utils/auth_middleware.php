@@ -8,11 +8,13 @@ function get_bearer_token() {
         $headers = trim($_SERVER["Authorization"]);
     } else if (isset($_SERVER['HTTP_AUTHORIZATION'])) { // Nginx or fast CGI
         $headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
+    } else if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) { // Apache redirect
+        $headers = trim($_SERVER["REDIRECT_HTTP_AUTHORIZATION"]);
     } elseif (function_exists('apache_request_headers')) {
         $requestHeaders = apache_request_headers();
-        $requestHeaders = array_combine(array_map('ucwords', array_keys($requestHeaders)), array_values($requestHeaders));
-        if (isset($requestHeaders['Authorization'])) {
-            $headers = trim($requestHeaders['Authorization']);
+        $requestHeaders = array_change_key_case($requestHeaders, CASE_LOWER);
+        if (isset($requestHeaders['authorization'])) {
+            $headers = trim($requestHeaders['authorization']);
         }
     }
     

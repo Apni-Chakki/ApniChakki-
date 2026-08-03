@@ -59,8 +59,10 @@ function applyDomainTerms($str, $to) {
         'اپنی چاکی' => 'اپنی چکی',
         'اپنے چاکی' => 'اپنی چکی',
         'چاکی' => 'چکی',
-        'Apni Chakki' => 'اپنی چکی',
-        'G3 Apni Chakki' => 'جی تھری اپنی چکی',
+        'Apni Chakki' => 'سچی چکی',
+        'Suchi Chakki' => 'سچی چکی',
+        'G3 Apni Chakki' => 'جی تھری سچی چکی',
+        'G3 Suchi Chakki' => 'جی تھری سچی چکی',
         'Atta Chakki' => 'آٹا چکی',
         'Chakki' => 'چکی',
         'Atta' => 'آٹا'
@@ -68,12 +70,14 @@ function applyDomainTerms($str, $to) {
     return strtr($str, $replacements);
 }
 
-// --- Translation function using MyMemory API ---
+// Translation function using MyMemory API
 function translateText($text, $from, $to) {
     if ($to === 'ur') {
         $exactDict = [
-            'Apni Chakki' => 'اپنی چکی',
-            'G3 Apni Chakki' => 'جی تھری اپنی چکی',
+            'Apni Chakki' => 'سچی چکی',
+            'Suchi Chakki' => 'سچی چکی',
+            'G3 Apni Chakki' => 'جی تھری سچی چکی',
+            'G3 Suchi Chakki' => 'جی تھری سچی چکی',
             'Atta Chakki' => 'آٹا چکی',
             'Chakki' => 'چکی',
             'Atta' => 'آٹا'

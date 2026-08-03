@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Process online payment - proxy to controller
  * API Endpoint: POST /payments/process_online_payment.php
  */

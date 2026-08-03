@@ -1,81 +1,94 @@
 <?php
-// get user orders api
+// get_user_orders.php - Optimized Batch Query
 include __DIR__ . '/../../config/connect.php';
 
+if (!ob_start("ob_gzhandler")) ob_start();
+header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
 $payload = require_auth();
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    // Extract user_id from token instead of GET param
-    $user_id = $payload['id'];
+    $user_id = (int)$payload['id'];
 
     if (!$user_id) {
         echo json_encode(["success" => false, "message" => "Missing user_id in token"]);
         exit;
     }
 
-    $orders = [];
-    $sql = "SELECT * FROM orders WHERE user_id = '$user_id' ORDER BY created_at DESC";
-    $result = $conn->query($sql);
-
-    if ($result) {
-        while($row = $result->fetch_assoc()) {
-            // getting customer info
-            $user_res = $conn->query("SELECT full_name, phone FROM users WHERE id = '$user_id'");
-            if ($user_row = $user_res->fetch_assoc()) {
-                $row['customer_name'] = $user_row['full_name'];
-                $row['customer_phone'] = $user_row['phone'];
-            } else {
-                $row['customer_name'] = "Unknown Customer";
-                $row['customer_phone'] = "No Phone";
-            }
-
-            // getting items
-            $order_id = $row['id'];
-            $items = [];
-            $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding, is_weight_pending FROM order_items WHERE order_id = '$order_id'");
-            while($i = $item_res->fetch_assoc()) {
-                 $pid = $i['product_id'];
-                 $prod_res = $conn->query("SELECT name FROM products WHERE id = '$pid'");
-                 if ($p = $prod_res->fetch_assoc()) {
-                     $i['name'] = $p['name'];
-                 } else {
-                     $i['name'] = "Item #$pid";
-                 }
-                 $items[] = $i;
-            }
-            $row['items'] = $items;
+    // 1. Fetch user orders with single JOIN for user details
+    $sql = "SELECT o.*, 
+                   COALESCE(u.full_name, 'Unknown Customer') as customer_name, 
+                   COALESCE(u.phone, 'No Phone') as customer_phone 
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE o.user_id = ? 
+            ORDER BY o.created_at DESC";
             
-            // mapping for frontend
-            $row['total'] = $row['total_amount'];
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-            // Get payment rejection details if unpaid
-            $pt_stmt = $conn->prepare("
-                SELECT error_message, updated_at 
-                FROM payment_transactions 
-                WHERE order_id = ? AND payment_status = 'failed' 
-                ORDER BY created_at DESC LIMIT 1
-            ");
-            $pt_stmt->bind_param("i", $order_id);
-            $pt_stmt->execute();
-            $pt_res = $pt_stmt->get_result();
-            if ($pt_row = $pt_res->fetch_assoc()) {
-                $row['payment_reject_reason'] = $pt_row['error_message'];
-                $row['payment_reject_date'] = $pt_row['updated_at'];
-            } else {
-                $row['payment_reject_reason'] = null;
-                $row['payment_reject_date'] = null;
+    $ordersMap = [];
+    $orderIds = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $id = (int)$row['id'];
+        $row['items'] = [];
+        $row['total'] = $row['total_amount'];
+        $row['payment_reject_reason'] = null;
+        $row['payment_reject_date'] = null;
+        $ordersMap[$id] = $row;
+        $orderIds[] = $id;
+    }
+    $stmt->close();
+
+    if (!empty($orderIds)) {
+        $idList = implode(',', array_map('intval', $orderIds));
+        
+        // 2. Batch fetch ALL items for ALL user orders
+        $itemSql = "SELECT oi.order_id, oi.quantity, oi.product_id, oi.price_at_purchase, 
+                           oi.is_cleaning, oi.is_grinding, oi.is_weight_pending, p.name as prod_name
+                    FROM order_items oi
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id IN ($idList)";
+        $itemRes = $conn->query($itemSql);
+
+        while ($i = $itemRes->fetch_assoc()) {
+            $orderId = (int)$i['order_id'];
+            $i['name'] = $i['prod_name'] ?? "Item #{$i['product_id']}";
+            if (isset($ordersMap[$orderId])) {
+                $ordersMap[$orderId]['items'][] = $i;
             }
-            $pt_stmt->close();
-            
-            $orders[] = $row;
+        }
+
+        // 3. Batch fetch payment rejection logs if any
+        try {
+            $paySql = "SELECT order_id, error_message, updated_at 
+                       FROM payment_transactions 
+                       WHERE order_id IN ($idList) AND payment_status = 'failed'";
+            $payRes = $conn->query($paySql);
+            if ($payRes) {
+                while ($p = $payRes->fetch_assoc()) {
+                    $orderId = (int)$p['order_id'];
+                    if (isset($ordersMap[$orderId])) {
+                        $ordersMap[$orderId]['payment_reject_reason'] = $p['error_message'];
+                        $ordersMap[$orderId]['payment_reject_date'] = $p['updated_at'];
+                    }
+                }
+            }
+        } catch (Throwable $t) {
+            // Ignore if table initializing
         }
     }
 
+    $orders = array_values($ordersMap);
     echo json_encode(["success" => true, "orders" => $orders]);
 
 } catch (Exception $e) {
+    http_response_code(500);
     echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
 }
+?>

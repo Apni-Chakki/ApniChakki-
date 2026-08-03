@@ -117,7 +117,7 @@ try {
                     'vipFreeShipping' => intval($vip_free_shipping)
                 ];
                 
-                $ch = curl_init('http://localhost:3001/send-vip-congratulations');
+                $ch = curl_init(EMAIL_SERVER_URL . '/send-vip-congratulations');
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
                 curl_setopt($ch, CURLOPT_POST, true);

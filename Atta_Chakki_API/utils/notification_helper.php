@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Helper to insert notifications for admin dashboard
  */
 function addAdminNotification($conn, $title, $message, $type, $related_id = null) {

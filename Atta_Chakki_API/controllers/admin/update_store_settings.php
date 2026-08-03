@@ -1,6 +1,7 @@
 <?php
 // update store settings
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
@@ -38,6 +39,7 @@ try {
         }
     }
     
+    clear_api_cache();
     echo json_encode([
         "success" => true,
         "message" => "Settings updated successfully"

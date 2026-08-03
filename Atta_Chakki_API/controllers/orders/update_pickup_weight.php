@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Controller: update actual weights for pickup items, recalc order totals and schedule
  */
 include __DIR__ . '/../../config/connect.php';

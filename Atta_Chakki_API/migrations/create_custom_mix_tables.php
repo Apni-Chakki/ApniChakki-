@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Migration: Create tables for Custom Mix product feature
  * - product_mix_items: stores ingredients for mix products
  * - custom_mix_requests: stores customer custom mix requests

@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * API Endpoint: Check Schedule Availability
  * 
  * Called from frontend checkout to determine if a new order will be processed 

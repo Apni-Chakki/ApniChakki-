@@ -1,6 +1,7 @@
 <?php
 // add product api
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
 
@@ -136,6 +137,7 @@ try {
             $mix_stmt->close();
         }
 
+        clear_api_cache();
         http_response_code(201);
         echo json_encode(["success" => true, "message" => "Product added successfully", "id" => $product_id]);
     } else {

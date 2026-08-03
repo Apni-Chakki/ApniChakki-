@@ -120,7 +120,7 @@ try {
         $remaining_due = $total_amount - $amount_paid;
 
         // whatsapp message text
-        $whatsapp_message = "🚚 *APNI CHAKKI — DISPATCH UPDATE* 🚚\n"
+        $whatsapp_message = "🚚 *SUCHI CHAKKI — DISPATCH UPDATE* 🚚\n"
             . "───────────────────────────\n"
             . "Assalam-o-Alaikum *{$order['customer_name']}*! 👋\n\n"
             . "Your order *#{$order_id}* is on the way! 🚀\n\n"
@@ -130,11 +130,11 @@ try {
             . "✅ *Advance Paid:* Rs. " . number_format($amount_paid) . "\n"
             . "💵 *Remaining Due:* Rs. " . number_format($remaining_due) . "\n"
             . "📍 *Delivery Address:* " . ($order['shipping_address'] ?: 'Provided Address') . "\n"
-            . "🧑‍💼 *Rider:* " . ($driver_name ?: 'Apni Chakki Driver') . "\n\n"
+            . "🧑‍💼 *Rider:* " . ($driver_name ?: 'Suchi Chakki Driver') . "\n\n"
             . "🗺️ *LIVE TRACK YOUR RIDER:*\n"
             . $tracking_url . "\n\n"
             . "Click the link above to view your rider's live location on the map. Please keep the remaining amount ready if applicable. 💵\n\n"
-            . "JazakAllah for choosing Apni Chakki! 🙏🌾";
+            . "JazakAllah for choosing Suchi Chakki! 🙏🌾";
 
         // formatting phone for whatsapp
         $customer_phone = $order['customer_phone'] ?? '';

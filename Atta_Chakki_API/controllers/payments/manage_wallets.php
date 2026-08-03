@@ -7,32 +7,43 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 $action = isset($data['action']) ? $data['action'] : 'get_balance';
 
+// Public actions that do not require admin verification
+$public_actions = ['get_bank_details'];
+
 // checking if admin
 $user_id = isset($data['user_id']) ? intval($data['user_id']) : 0;
 
-if ($user_id > 0) {
-    $user_stmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
-    $user_stmt->bind_param("i", $user_id);
-    $user_stmt->execute();
-    $user_result = $user_stmt->get_result();
+if (!in_array($action, $public_actions)) {
+    if ($user_id > 0) {
+        $user_stmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+        $user_stmt->bind_param("i", $user_id);
+        $user_stmt->execute();
+        $user_result = $user_stmt->get_result();
 
-    if ($user_result->num_rows === 0) {
-        echo json_encode(["success" => false, "message" => "User not found"]);
+        if ($user_result->num_rows === 0) {
+            echo json_encode(["success" => false, "message" => "User not found"]);
+            $user_stmt->close();
+            exit;
+        }
+
+        $user = $user_result->fetch_assoc();
         $user_stmt->close();
-        exit;
-    }
 
-    $user = $user_result->fetch_assoc();
-    $user_stmt->close();
-
-    if (strtolower($user['role']) !== 'admin') {
-        echo json_encode(["success" => false, "message" => "Unauthorized access"]);
-        exit;
+        if (strtolower($user['role']) !== 'admin') {
+            echo json_encode(["success" => false, "message" => "Unauthorized access"]);
+            exit;
+        }
     }
 }
 
 // routing actions
 switch ($action) {
+    case 'get_bank_details':
+        getBankDetails();
+        break;
+    case 'update_bank_details':
+        updateBankDetails();
+        break;
     case 'get_balance':
         getBusinessBalance();
         break;
@@ -58,11 +69,89 @@ switch ($action) {
         echo json_encode(["success" => false, "message" => "Unknown action: $action"]);
 }
 
+// getting bank account details for checkout/admin
+function getBankDetails() {
+    global $conn;
+    
+    $stmt = $conn->prepare("SELECT id, account_name, bank_name, account_number, iban FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        echo json_encode([
+            "success" => true,
+            "bank_details" => [
+                "bank_name" => "Meezan Bank",
+                "account_name" => "Suchi Chakki",
+                "account_number" => "0123-4567890",
+                "iban" => "PK00 MEZN 0000 0000 0000 0000"
+            ]
+        ]);
+        $stmt->close();
+        return;
+    }
+    
+    $row = $result->fetch_assoc();
+    $stmt->close();
+    
+    echo json_encode([
+        "success" => true,
+        "bank_details" => [
+            "id" => intval($row['id']),
+            "bank_name" => !empty($row['bank_name']) ? $row['bank_name'] : "Meezan Bank",
+            "account_name" => !empty($row['account_name']) ? $row['account_name'] : "Suchi Chakki",
+            "account_number" => !empty($row['account_number']) ? $row['account_number'] : "0123-4567890",
+            "iban" => !empty($row['iban']) ? $row['iban'] : "PK00 MEZN 0000 0000 0000 0000"
+        ]
+    ]);
+}
+
+// updating bank account details (Admin only)
+function updateBankDetails() {
+    global $conn, $data;
+    
+    $bank_name = isset($data['bank_name']) ? trim($data['bank_name']) : '';
+    $account_name = isset($data['account_name']) ? trim($data['account_name']) : '';
+    $account_number = isset($data['account_number']) ? trim($data['account_number']) : '';
+    $iban = isset($data['iban']) ? trim($data['iban']) : '';
+    
+    if (empty($bank_name) || empty($account_name) || empty($account_number)) {
+        echo json_encode(["success" => false, "message" => "Bank Name, Account Title, and Account Number are required."]);
+        return;
+    }
+    
+    $check_stmt = $conn->prepare("SELECT id FROM business_accounts WHERE is_primary = 1 LIMIT 1");
+    $check_stmt->execute();
+    $res = $check_stmt->get_result();
+    
+    if ($res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        $account_id = $row['id'];
+        $check_stmt->close();
+        
+        $update_stmt = $conn->prepare("UPDATE business_accounts SET bank_name = ?, account_name = ?, account_number = ?, iban = ? WHERE id = ?");
+        $update_stmt->bind_param("ssssi", $bank_name, $account_name, $account_number, $iban, $account_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+    } else {
+        $check_stmt->close();
+        $insert_stmt = $conn->prepare("INSERT INTO business_accounts (bank_name, account_name, account_number, iban, balance, is_primary, is_active) VALUES (?, ?, ?, ?, 0.00, 1, 1)");
+        $insert_stmt->bind_param("ssss", $bank_name, $account_name, $account_number, $iban);
+        $insert_stmt->execute();
+        $insert_stmt->close();
+    }
+    
+    echo json_encode([
+        "success" => true,
+        "message" => "Bank account transfer details updated successfully!"
+    ]);
+}
+
 // getting business balance
 function getBusinessBalance() {
     global $conn;
     
-    $stmt = $conn->prepare("SELECT id, account_name, balance, account_number, bank_name FROM business_accounts WHERE is_primary = 1 AND is_active = 1");
+    $stmt = $conn->prepare("SELECT id, account_name, balance, account_number, bank_name, iban FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
     $stmt->execute();
     $result = $stmt->get_result();
     
@@ -103,6 +192,7 @@ function getBusinessBalance() {
         "balance" => floatval($account['balance']),
         "account_number" => $account['account_number'],
         "bank_name" => $account['bank_name'],
+        "iban" => $account['iban'] ?? '',
         "today_received" => floatval($today['today_received']),
         "total_online_received" => floatval($total_online_row['total_online']),
         "pending_verification_count" => intval($pending_row['pending_count'])
@@ -505,9 +595,9 @@ function rejectBankPayment() {
         
         $conn->commit();
 
-        // ── cURL to Node.js Email Server ──
+        // cURL to Node.js Email Server
         if (!empty($payment['customer_email'])) {
-            $emailServerUrl = 'http://localhost:3001/send-payment-rejection';
+            $emailServerUrl = EMAIL_SERVER_URL . '/send-payment-rejection';
             $dataToSend = [
                 'customerEmail' => $payment['customer_email'],
                 'customerName' => $payment['customer_name'],

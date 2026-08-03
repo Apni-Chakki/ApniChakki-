@@ -34,15 +34,31 @@ try {
         $msg_stmt->close();
 
         if ($msg_row && !empty($msg_row['email'])) {
+            $storePhone = "+92 3228483029";
+            $storeName = "Suchi Chakki";
+            $settings_res = $conn->query("SELECT setting_key, setting_value FROM store_settings WHERE setting_key IN ('phone', 'storeName')");
+            if ($settings_res) {
+                while ($s_row = $settings_res->fetch_assoc()) {
+                    if ($s_row['setting_key'] === 'phone' && !empty($s_row['setting_value'])) {
+                        $storePhone = $s_row['setting_value'];
+                    }
+                    if ($s_row['setting_key'] === 'storeName' && !empty($s_row['setting_value'])) {
+                        $storeName = $s_row['setting_value'];
+                    }
+                }
+            }
+
             $emailData = [
                 'customerEmail' => $msg_row['email'],
                 'customerName' => $msg_row['name'],
                 'originalSubject' => $msg_row['subject'],
                 'originalMessage' => $msg_row['message'],
-                'replyMessage' => $reply
+                'replyMessage' => $reply,
+                'storePhone' => $storePhone,
+                'storeName' => $storeName
             ];
 
-            $ch = curl_init('http://localhost:3001/send-contact-reply');
+            $ch = curl_init(EMAIL_SERVER_URL . '/send-contact-reply');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));

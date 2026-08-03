@@ -9,6 +9,7 @@ $payload = require_auth();
 $data = json_decode(file_get_contents("php://input"));
 $user_id = $payload['id']; // IDOR fixed
 
+if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
     $address = isset($data->address) ? $data->address : "No address provided";
     $latitude = isset($data->latitude) && is_numeric($data->latitude) ? floatval($data->latitude) : null;
     $longitude = isset($data->longitude) && is_numeric($data->longitude) ? floatval($data->longitude) : null;
@@ -128,7 +129,16 @@ $user_id = $payload['id']; // IDOR fixed
     }
 
     // trip items k liye logic
-    $total_amount = $non_trip_total;
+    $passed_total = isset($data->total) ? floatval($data->total) : 0;
+    $delivery_fee_input = isset($data->delivery_fee) ? floatval($data->delivery_fee) : 0;
+
+    if ($passed_total > 0 && !$has_trip_item) {
+        $total_amount = round($passed_total);
+    } elseif ($delivery_fee_input > 0 && !$has_trip_item) {
+        $total_amount = round($non_trip_total + $delivery_fee_input - $coupon_discount);
+    } else {
+        $total_amount = $non_trip_total;
+    }
 
     // Coupon validation and discount application
     $coupon_discount = 0;
@@ -170,7 +180,7 @@ $user_id = $payload['id']; // IDOR fixed
                     $coupon_discount = $discount_value;
                 }
                 $coupon_discount = min($coupon_discount, $total_amount);
-                $total_amount = $total_amount - $coupon_discount;
+                // total_amount is already passed as grandTotal from frontend if applicable
             }
         } else {
             $coupon_stmt->close();
@@ -186,8 +196,6 @@ $user_id = $payload['id']; // IDOR fixed
         $is_pickup_request = true;
         $is_kg_order = false;
     } else if ($is_kg_order || !$is_pickup_request) {
-        // Kg order: weight is known, price is calculated immediately
-        // total_amount already has the correct non-trip total
         $is_pickup_request = false;
         $is_kg_order = true;
     }
@@ -197,7 +205,7 @@ $user_id = $payload['id']; // IDOR fixed
         exit();
     }
 
-    // payment status kya hoga wo dekh rahe han yahan
+    // payment status kya hoga 
     if ($total_amount <= 0 && $has_pending_weight_item) {
         // when total is zero but items are pending, it stays pending until weight is added
         $final_payment_status = 'pending';
@@ -346,16 +354,28 @@ $user_id = $payload['id']; // IDOR fixed
                 ];
             }
 
+            $store_phone = "+92 3080099664";
+            $store_name = "Suchi Chakki";
+            $settingsRes = $conn->query("SELECT setting_key, setting_value FROM store_settings WHERE setting_key IN ('phone', 'storeName', 'organizationName')");
+            if ($settingsRes) {
+                while ($sRow = $settingsRes->fetch_assoc()) {
+                    if ($sRow['setting_key'] === 'phone' && !empty($sRow['setting_value'])) $store_phone = $sRow['setting_value'];
+                    if (($sRow['setting_key'] === 'storeName' || $sRow['setting_key'] === 'organizationName') && !empty($sRow['setting_value'])) $store_name = $sRow['setting_value'];
+                }
+            }
+
             $emailData = [
                 'customerEmail' => $user_row['email'],
                 'customerName' => $user_row['full_name'],
                 'orderId' => $order_id,
                 'orderItems' => $email_items,
                 'totalPrice' => $total_amount,
-                'deliveryAddress' => $address
+                'deliveryAddress' => $address,
+                'storePhone' => $store_phone,
+                'storeName' => $store_name
             ];
 
-            $ch = curl_init('http://localhost:3001/send-order-confirmation');
+            $ch = curl_init(EMAIL_SERVER_URL . '/send-order-confirmation');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));

@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Update a category
  * API Endpoint: POST /update_category.php
  * Request body: { "id": 1, "name": "...", "image_url": "..." }

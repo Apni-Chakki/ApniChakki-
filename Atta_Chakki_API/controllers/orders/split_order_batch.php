@@ -31,7 +31,7 @@ try {
         throw new Exception("At least one batch is required.");
     }
 
-    // ── 1. Get original order details ──────────────────────────────────────────
+    // Get original order details
     $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
     $stmt->bind_param("i", $order_id);
     $stmt->execute();
@@ -47,11 +47,11 @@ try {
         throw new Exception("Order #$order_id is already split.");
     }
 
-    // ── 2. Get processing speed from settings ─────────────────────────────────
+    // Get processing speed from settings
     $hours = getOperationalHours($conn);
     $processing_speed = floatval($hours['processing_time_per_kg'] ?? 2);
 
-    // ── 3. Mark original order as split_parent ────────────────────────────────
+    // Mark original order as split_parent
     $conn->begin_transaction();
 
     $upd = $conn->prepare("UPDATE orders SET status = 'split_parent', updated_at = NOW() WHERE id = ?");
@@ -59,7 +59,7 @@ try {
     $upd->execute();
     $upd->close();
 
-    // ── 4. Create child orders ─────────────────────────────────────────────────
+    // Create child orders
     $today    = date('Y-m-d');
     $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $new_ids  = [];

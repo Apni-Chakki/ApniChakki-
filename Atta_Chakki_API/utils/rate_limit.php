@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Simple rate limiting utility to stop spam and bots.
  */
 

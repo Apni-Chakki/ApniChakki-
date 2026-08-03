@@ -54,7 +54,7 @@ try {
         'name' => $customer_name,
         'otp' => $otp
     ];
-    $ch = curl_init('http://localhost:3001/send-password-reset');
+    $ch = curl_init(EMAIL_SERVER_URL . '/send-password-reset');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
@@ -63,12 +63,9 @@ try {
     curl_exec($ch);
     curl_close($ch);
 
-    // Return the response, including OTP in debug mode for local testing
     echo json_encode([
         'success' => true,
-        'message' => 'OTP has been sent to your email address.',
-        'debug' => true,
-        'otp' => $otp
+        'message' => 'OTP has been sent to your email address.'
     ]);
 
 } catch (Exception $e) {

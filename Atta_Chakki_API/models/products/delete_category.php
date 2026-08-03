@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Delete a category
  * API Endpoint: POST /delete_category.php
  * Request body: { "id": 1 }

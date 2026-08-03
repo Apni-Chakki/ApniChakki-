@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Add a new category
  * API Endpoint: POST /add_category.php
  * Request body: { "name": "...", "image_url": "..." }

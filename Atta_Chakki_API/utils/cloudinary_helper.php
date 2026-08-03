@@ -1,8 +1,8 @@
 <?php
-// cloudinary upload helper functions
+// Cloudinary Image Service Helper Functions
 require_once __DIR__ . '/../config/cloudinary.php';
 
-// uploading image to cloudinary
+// Upload image file to Cloudinary cloud storage
 function uploadToCloudinary($file, $folder = 'products') {
     if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
         return [
@@ -79,10 +79,10 @@ function uploadToCloudinary($file, $folder = 'products') {
     
     $errorMessage = $result['error']['message'] ?? ($result['error'] ?? 'Unknown error');
     error_log('Cloudinary Upload Error: ' . json_encode(['httpCode' => $httpCode, 'error' => $errorMessage, 'cloudName' => CLOUDINARY_CLOUD_NAME, 'preset' => CLOUDINARY_UPLOAD_PRESET, 'response' => $response]));
-    return ['success' => false, 'message' => 'Cloudinary error: ' . $errorMessage . ' (Check that Cloud Name is correct - should be lowercase without spaces)'];
+    return ['success' => false, 'message' => 'Cloudinary error: ' . $errorMessage];
 }
 
-// deleting image from cloudinary
+// Delete image resource from Cloudinary storage
 function deleteFromCloudinary($publicId) {
     if (empty($publicId)) {
         return [
@@ -133,7 +133,7 @@ function deleteFromCloudinary($publicId) {
     }
 }
 
-// extracting public id from cloudinary url
+// Parse public ID from full Cloudinary URL
 function extractCloudinaryPublicIdFromUrl($url) {
     if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
         return null;
@@ -184,7 +184,7 @@ function extractCloudinaryPublicIdFromUrl($url) {
     return implode('/', $assetSegments);
 }
 
-// deleting cloudinary image by url
+// Delete Cloudinary image resource directly using URL
 function deleteCloudinaryImageByUrl($url) {
     $publicId = extractCloudinaryPublicIdFromUrl($url);
 
@@ -198,7 +198,7 @@ function deleteCloudinaryImageByUrl($url) {
     return deleteFromCloudinary($publicId);
 }
 
-// getting upload error message
+// Map PHP file upload error codes to readable messages
 function getUploadErrorMessage($errorCode) {
     $errors = [
         UPLOAD_ERR_OK => 'No error',
@@ -213,3 +213,4 @@ function getUploadErrorMessage($errorCode) {
     
     return $errors[$errorCode] ?? 'No image uploaded';
 }
+?>

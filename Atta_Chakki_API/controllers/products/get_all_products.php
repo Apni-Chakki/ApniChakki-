@@ -1,15 +1,23 @@
 <?php
-// Fix path to connect.php (up two levels from controllers/products)
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 try {
     if (!$conn) {
         throw new Exception("Database connection failed");
     }
 
-    // FIXED: Use correct field names from database schema and prefix ambiguous columns
+    $cache_key = 'all_products_admin';
+    $cached = get_api_cache($cache_key, 300);
+    if ($cached !== false) {
+        http_response_code(200);
+        echo $cached;
+        exit;
+    }
+
     $sql = "SELECT p.*, p.image_url AS image, c.name as category_name FROM products p 
             LEFT JOIN categories c ON p.category_id = c.id 
             ORDER BY p.priority DESC, p.created_at DESC";
@@ -19,58 +27,70 @@ try {
         throw new Exception("Query failed: " . $conn->error);
     }
     
-    $products = [];
-
+    $raw_products = [];
+    $product_ids = [];
     while ($row = $result->fetch_assoc()) {
+        $raw_products[] = $row;
+        $product_ids[] = (int)$row['id'];
+    }
+
+    $customizations_map = [];
+    $mix_items_map = [];
+
+    // BULK BATCH QUERY 1: Customizations
+    if (!empty($product_ids)) {
+        $in_clause = implode(',', array_map('intval', $product_ids));
+        
+        $cust_res = $conn->query("SELECT product_id, id, option_name, option_price, sort_order FROM product_customizations WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
+        if ($cust_res) {
+            while ($c_row = $cust_res->fetch_assoc()) {
+                $pid = (int)$c_row['product_id'];
+                if (!isset($customizations_map[$pid])) {
+                    $customizations_map[$pid] = [];
+                }
+                $customizations_map[$pid][] = [
+                    'id' => (int)$c_row['id'],
+                    'option_name' => $c_row['option_name'],
+                    'option_price' => floatval($c_row['option_price']),
+                    'sort_order' => (int)$c_row['sort_order']
+                ];
+            }
+        }
+
+        // BULK BATCH QUERY 2: Mix items
+        $mix_res = $conn->query("SELECT product_id, id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
+        if ($mix_res) {
+            while ($m_row = $mix_res->fetch_assoc()) {
+                $pid = (int)$m_row['product_id'];
+                if (!isset($mix_items_map[$pid])) {
+                    $mix_items_map[$pid] = [];
+                }
+                $mix_items_map[$pid][] = [
+                    'id' => (int)$m_row['id'],
+                    'item_name' => $m_row['item_name'],
+                    'price_per_kg' => floatval($m_row['price_per_kg']),
+                    'default_ratio' => floatval($m_row['default_ratio']),
+                    'sort_order' => (int)$m_row['sort_order']
+                ];
+            }
+        }
+    }
+
+    $products = [];
+    foreach ($raw_products as $row) {
         $product_id = (int)$row['id'];
-
-        // Fetch customizations
-        $cust_stmt = $conn->prepare("SELECT id, option_name, option_price, sort_order FROM product_customizations WHERE product_id = ? ORDER BY sort_order ASC");
-        $cust_stmt->bind_param("i", $product_id);
-        $cust_stmt->execute();
-        $cust_res = $cust_stmt->get_result();
-        $customizations = [];
-        while ($cust_row = $cust_res->fetch_assoc()) {
-            $customizations[] = [
-                'id' => (int)$cust_row['id'],
-                'option_name' => $cust_row['option_name'],
-                'option_price' => floatval($cust_row['option_price']),
-                'sort_order' => (int)$cust_row['sort_order']
-            ];
-        }
-        $cust_stmt->close();
-
-        // Fetch mix items
-        $mix_stmt = $conn->prepare("SELECT id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id = ? ORDER BY sort_order ASC");
-        $mix_stmt->bind_param("i", $product_id);
-        $mix_stmt->execute();
-        $mix_res = $mix_stmt->get_result();
-        $mix_items = [];
-        while ($mix_row = $mix_res->fetch_assoc()) {
-            $mix_items[] = [
-                'id' => (int)$mix_row['id'],
-                'item_name' => $mix_row['item_name'],
-                'price_per_kg' => floatval($mix_row['price_per_kg']),
-                'default_ratio' => floatval($mix_row['default_ratio']),
-                'sort_order' => (int)$mix_row['sort_order']
-            ];
-        }
-        $mix_stmt->close();
-
         $weight_options_raw = $row['weight_options'] ?? '[]';
         $weight_options = json_decode($weight_options_raw, true);
         if (!is_array($weight_options)) {
             $weight_options = [];
         }
 
-        // Map database fields to expected output format
         $row['price'] = floatval($row['price']);
         $row['stock'] = intval($row['stock_quantity'] ?? 0);
         $row['stock_quantity'] = floatval($row['stock_quantity'] ?? 0);
         $row['is_grinding_service'] = (int)($row['is_grinding_service'] ?? 0);
         $row['cleaning_price'] = floatval($row['cleaning_price'] ?? 0);
         $row['grinding_price'] = floatval($row['grinding_price'] ?? 0);
-        // Rental fields
         $row['is_rental'] = (int)($row['is_rental'] ?? 0);
         $row['rental_price_per_day'] = floatval($row['rental_price_per_day'] ?? 0);
         $row['security_deposit'] = floatval($row['security_deposit'] ?? 0);
@@ -86,17 +106,22 @@ try {
         $row['is_custom_mix'] = (int)($row['is_custom_mix'] ?? 0);
         $row['track_inventory'] = (int)($row['track_inventory'] ?? 1);
         $row['min_stock_level'] = floatval($row['min_stock_level'] ?? 0);
-        $row['customizations'] = $customizations;
-        $row['mix_items'] = $mix_items;
+        $row['customizations'] = $customizations_map[$product_id] ?? [];
+        $row['mix_items'] = $mix_items_map[$product_id] ?? [];
 
         $products[] = $row;
     }
     
+    $response_data = json_encode(["success" => true, "products" => $products]);
+    set_api_cache($cache_key, $response_data);
+
     http_response_code(200);
-    echo json_encode(["success" => true, "products" => $products]);
+    echo $response_data;
     
 } catch (Exception $e) {
     http_response_code(500);
     error_log('get_all_products.php error: ' . $e->getMessage());
     echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
 }
+
+$conn->close();

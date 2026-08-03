@@ -20,8 +20,18 @@ try {
         exit;
     }
 
-    // Call Google's userinfo endpoint to verify token and get user profile
-    $url = 'https://www.googleapis.com/oauth2/v3/userinfo?access_token=' . urlencode($accessToken);
+    // Frontend can send either a Google ID token (credential) or access_token
+    // GoogleLogin component sends ID token → verify via tokeninfo
+    // Detect: ID tokens are JWTs (contain dots), access tokens are opaque strings
+    $isIdToken = (substr_count($accessToken, '.') === 2);
+
+    if ($isIdToken) {
+        // Verify Google ID token
+        $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($accessToken);
+    } else {
+        // Verify Google access token
+        $url = 'https://www.googleapis.com/oauth2/v3/userinfo?access_token=' . urlencode($accessToken);
+    }
     
     // Use curl for better reliability and control over timeouts/errors
     $ch = curl_init();
@@ -73,9 +83,20 @@ try {
             exit;
         }
 
+        // Generate JWT Token
+        require_once __DIR__ . '/../../utils/jwt_helper.php';
+        $payload = [
+            'id' => $user['id'],
+            'email' => $user['email'],
+            'phone' => $user['phone'],
+            'role' => $user['role']
+        ];
+        $token = generate_jwt($payload);
+
         echo json_encode([
             'success' => true,
             'message' => 'Login successful',
+            'token' => $token,
             'user' => [
                 'id' => $user['id'],
                 'name' => $user['full_name'],
@@ -101,9 +122,20 @@ try {
             $user_id = $stmt->insert_id;
             $stmt->close();
 
+            // Generate JWT Token
+            require_once __DIR__ . '/../../utils/jwt_helper.php';
+            $payload = [
+                'id' => $user_id,
+                'email' => $email,
+                'phone' => $placeholder_phone,
+                'role' => 'customer'
+            ];
+            $token = generate_jwt($payload);
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Registration and login successful',
+                'token' => $token,
                 'user' => [
                     'id' => $user_id,
                     'name' => $full_name,

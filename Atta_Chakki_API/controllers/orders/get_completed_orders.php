@@ -1,56 +1,61 @@
 <?php
+// get_completed_orders.php - High Speed Optimized Batch Query
 include __DIR__ . '/../../config/connect.php';
 
+if (!ob_start("ob_gzhandler")) ob_start();
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
 require_admin();
 
-
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    $sql = "SELECT * FROM orders WHERE TRIM(LOWER(status)) = 'completed' ORDER BY created_at DESC";
+    // 1. Single JOIN query to get completed orders + user details
+    $sql = "SELECT o.*, 
+                   COALESCE(u.full_name, 'Unknown Customer') as customer_name, 
+                   COALESCE(u.phone, 'No Phone') as customer_phone 
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE TRIM(LOWER(o.status)) = 'completed' 
+            ORDER BY o.created_at DESC";
+            
     $result = $conn->query($sql);
-    $orders = [];
+    $ordersMap = [];
+    $orderIds = [];
 
     if ($result) {
-        while($row = $result->fetch_assoc()) {
-            $user_id = $row['user_id'];
-            if ($user_id > 0) {
-                $user_res = $conn->query("SELECT full_name, phone FROM users WHERE id = '$user_id'");
-                if ($user_row = $user_res->fetch_assoc()) {
-                    $row['customer_name'] = $user_row['full_name'];
-                    $row['customer_phone'] = $user_row['phone'];
-                } else {
-                    $row['customer_name'] = "Unknown Customer";
-                    $row['customer_phone'] = "No Phone";
-                }
-            } else {
-                $row['customer_name'] = "Unknown Customer";
-                $row['customer_phone'] = "Unknown";
-            }
-
-            $order_id = $row['id'];
-            $items = [];
-            $item_res = $conn->query("SELECT quantity, product_id, price_at_purchase FROM order_items WHERE order_id = '$order_id'");
-            while($i = $item_res->fetch_assoc()) {
-                 $pid = $i['product_id'];
-                 $prod_res = $conn->query("SELECT name FROM products WHERE id = '$pid'");
-                 if ($p = $prod_res->fetch_assoc()) {
-                     $i['name'] = $p['name'];
-                 } else {
-                     $i['name'] = "Item #$pid";
-                 }
-                 $items[] = $i;
-            }
-            $row['items'] = $items;
+        while ($row = $result->fetch_assoc()) {
+            $id = (int)$row['id'];
+            $row['items'] = [];
             $row['total'] = $row['total_amount'];
-            $orders[] = $row;
+            $ordersMap[$id] = $row;
+            $orderIds[] = $id;
         }
     }
 
+    // 2. Batch fetch ALL items for ALL orders in 1 query
+    if (!empty($orderIds)) {
+        $idList = implode(',', array_map('intval', $orderIds));
+        $itemSql = "SELECT oi.order_id, oi.quantity, oi.product_id, oi.price_at_purchase, p.name as prod_name
+                    FROM order_items oi
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id IN ($idList)";
+        $itemRes = $conn->query($itemSql);
+
+        while ($i = $itemRes->fetch_assoc()) {
+            $orderId = (int)$i['order_id'];
+            $i['name'] = $i['prod_name'] ?? "Item #{$i['product_id']}";
+            if (isset($ordersMap[$orderId])) {
+                $ordersMap[$orderId]['items'][] = $i;
+            }
+        }
+    }
+
+    $orders = array_values($ordersMap);
     echo json_encode(["success" => true, "orders" => $orders]);
 
 } catch (Exception $e) {
+    http_response_code(500);
     echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
 }
+?>
