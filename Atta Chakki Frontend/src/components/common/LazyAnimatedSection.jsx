@@ -38,44 +38,24 @@ export function LazyAnimatedSection({
   children,
   type = 'fade-up',
   delay = 0,
-  duration = 0.7,
-  margin = '250px 0px',
+  duration = 0.5,
+  margin = '200px 0px',
   className = '',
   id,
-  placeholderHeight = '180px'
+  placeholderHeight
 }) {
   const ref = useRef(null);
-  // once: true ensures that the section stays loaded once visited
   const isInView = useInView(ref, { once: true, margin });
-
-  const selectedVariants = animationVariants[type] || animationVariants['fade-up'];
 
   return (
     <div
       ref={ref}
       id={id}
-      className={className}
-      style={!isInView ? { minHeight: placeholderHeight } : {}}
+      className={`${className} transition-all duration-500 ease-out ${
+        isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+      }`}
     >
-      {isInView ? (
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={selectedVariants}
-          transition={{
-            duration,
-            delay,
-            ease: [0.16, 1, 0.3, 1] // Custom snappy cubic bezier curve
-          }}
-        >
-          {children}
-        </motion.div>
-      ) : (
-        // A clean, soft loader/placeholder while waiting for intersection
-        <div className="w-full h-full flex items-center justify-center opacity-0 transition-opacity duration-300 pointer-events-none" style={{ minHeight: placeholderHeight }}>
-          <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
-      )}
+      {children}
     </div>
   );
 }

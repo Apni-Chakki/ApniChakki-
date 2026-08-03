@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { PrintOrderDetails } from './PrintOrderDetails';
 import { downloadBillPDF } from '../../utils/billPdfUtils';
+import { Pagination } from '../../components/common/Pagination';
 
 export function ActiveRentals() {
   const { t } = useTranslation();
@@ -37,6 +38,11 @@ export function ActiveRentals() {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [printOrder, setPrintOrder] = useState(null);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   const mapRentalToOrder = (rental) => {
     const isOverdue = rental.status === 'overdue';
@@ -295,9 +301,12 @@ Suchi Chakki - Fresh Flour Daily`.trim();
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {rentals.map((rental) => {
-            const isOverdue = rental.status === 'overdue';
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {rentals
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((rental) => {
+              const isOverdue = rental.status === 'overdue';
             const overdueDays = getOverdueDays(rental);
             const daysRemaining = getDaysRemaining(rental);
             const runningPenalty = isOverdue ? overdueDays * parseFloat(rental.late_penalty_per_day || 0) : 0;
@@ -445,7 +454,18 @@ Suchi Chakki - Fresh Flour Daily`.trim();
               </Card>
             );
           })}
-        </div>
+          </div>
+          {rentals.length > 0 && (
+            <Pagination
+              currentPage={page}
+              totalItems={rentals.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+              className="mt-4"
+            />
+          )}
+        </>
       )}
 
       {/* History Section */}
@@ -470,7 +490,9 @@ Suchi Chakki - Fresh Flour Daily`.trim();
             </Card>
           ) : (
             <div className="space-y-3">
-              {history.map((h) => (
+              {history
+                .slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize)
+                .map((h) => (
                 <Card key={h.id} className={`border-l-4 ${
                   h.status === 'returned' ? 'border-l-green-400' :
                   h.status === 'active' ? 'border-l-teal-400' :
@@ -512,6 +534,17 @@ Suchi Chakki - Fresh Flour Daily`.trim();
                 </Card>
               ))}
             </div>
+          )}
+
+          {history.length > 0 && (
+            <Pagination
+              currentPage={historyPage}
+              totalItems={history.length}
+              pageSize={historyPageSize}
+              onPageChange={setHistoryPage}
+              onPageSizeChange={(s) => { setHistoryPageSize(s); setHistoryPage(1); }}
+              className="mt-4"
+            />
           )}
         </div>
       )}

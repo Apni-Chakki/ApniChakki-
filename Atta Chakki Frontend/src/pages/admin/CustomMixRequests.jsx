@@ -10,12 +10,16 @@ import { API_BASE_URL } from '../../config';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/common/dialog';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
+import { Pagination } from '../../components/common/Pagination';
 
 export default function CustomMixRequests() {
   const { t } = useTranslation();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   // Convert to order state variables
   const [convertingRequest, setConvertingRequest] = useState(null);
@@ -223,7 +227,9 @@ export default function CustomMixRequests() {
             No custom mix requests found.
           </div>
         ) : (
-          requests.map(request => (
+          requests
+            .slice((page - 1) * pageSize, page * pageSize)
+            .map(request => (
             <motion.div
               key={request.id}
               initial={{ opacity: 0, y: 20 }}
@@ -341,6 +347,17 @@ export default function CustomMixRequests() {
           ))
         )}
       </div>
+
+      {requests.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={requests.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          className="mt-4"
+        />
+      )}
 
       {/* Dialog for converting request to manual order */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

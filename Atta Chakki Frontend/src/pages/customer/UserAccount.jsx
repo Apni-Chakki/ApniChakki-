@@ -22,11 +22,17 @@ import { toast } from 'sonner';
 import { useAuth } from '../../store/AuthContext';
 import { API_BASE_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
+import { Pagination } from '../../components/common/Pagination';
 
 export function UserAccount() {
   const { user, setUser, logout } = useAuth(); 
   const navigate = useNavigate();
   const { t } = useTranslation();
+  
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersPageSize, setOrdersPageSize] = useState(5);
+  const [rentalsPage, setRentalsPage] = useState(1);
+  const [rentalsPageSize, setRentalsPageSize] = useState(5);
   
   const [profile, setProfile] = useState({
     name: '',
@@ -764,7 +770,9 @@ export function UserAccount() {
                   <p className="text-muted-foreground">{t('When you place an order, it will appear here')}</p>
                 </Card>
               ) : (
-                orders.map((order) => {
+                orders
+                  .slice((ordersPage - 1) * ordersPageSize, ordersPage * ordersPageSize)
+                  .map((order) => {
                   const hasPending = order.items.some(i => i.isWeightPending);
                   return (
                   <Card key={order.id} className="p-6">
@@ -880,6 +888,20 @@ export function UserAccount() {
               })
             )}
             </div>
+
+            {orders.length > 0 && (
+              <Pagination
+                currentPage={ordersPage}
+                totalItems={orders.length}
+                pageSize={ordersPageSize}
+                onPageChange={setOrdersPage}
+                onPageSizeChange={(size) => {
+                  setOrdersPageSize(size);
+                  setOrdersPage(1);
+                }}
+                className="mt-4"
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="rentals">
@@ -936,7 +958,9 @@ export function UserAccount() {
                   <p className="text-muted-foreground">{t('When you rent an item, it will appear here')}</p>
                 </Card>
               ) : (
-                rentals.map((rental) => {
+                rentals
+                  .slice((rentalsPage - 1) * rentalsPageSize, rentalsPage * rentalsPageSize)
+                  .map((rental) => {
                   const imageSrc = rental.product_image
                     ? (rental.product_image.startsWith('http') || rental.product_image.startsWith('/')
                       ? rental.product_image
@@ -1067,6 +1091,20 @@ export function UserAccount() {
                 })
               )}
             </div>
+
+            {rentals.length > 0 && (
+              <Pagination
+                currentPage={rentalsPage}
+                totalItems={rentals.length}
+                pageSize={rentalsPageSize}
+                onPageChange={setRentalsPage}
+                onPageSizeChange={(size) => {
+                  setRentalsPageSize(size);
+                  setRentalsPage(1);
+                }}
+                className="mt-4"
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>

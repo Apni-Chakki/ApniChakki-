@@ -573,6 +573,7 @@ Suchi Chakki — Pure & Fresh Processing
       source: (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
       deliveryPersonnel: order.driver_name || null,
       deliveryAddress: order.shipping_address,
+      deliveryFee: parseFloat(order.delivery_fee || order.deliveryFee || order.shipping_cost || 0),
       cancellationReason: null,
       cancelledBy: null,
       couponCode: order.coupon_code || '',

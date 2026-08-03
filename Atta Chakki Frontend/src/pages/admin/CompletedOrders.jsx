@@ -5,6 +5,7 @@ import { Badge } from '../../components/common/badge';
 import { CheckCircle, Calendar, User, Package, Search, Monitor, Store } from 'lucide-react';
 import { Input } from '../../components/common/input';
 import { API_BASE_URL } from '../../config';
+import { Pagination } from '../../components/common/Pagination';
 
 export function CompletedOrders() {
   const { t } = useTranslation();
@@ -12,6 +13,9 @@ export function CompletedOrders() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   useEffect(() => {
     fetchCompletedOrders();
@@ -78,7 +82,9 @@ export function CompletedOrders() {
         {filteredOrders.length === 0 ? (
           <p className="col-span-full text-center text-muted-foreground py-10">No completed orders found.</p>
         ) : (
-          filteredOrders.map((order) => {
+          filteredOrders
+            .slice((page - 1) * pageSize, page * pageSize)
+            .map((order) => {
             const isManual = (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id);
             return (
             <Card key={order.id} className="border-t-4 border-t-green-500 hover:shadow-lg transition-shadow">
@@ -137,6 +143,17 @@ export function CompletedOrders() {
           })
         )}
       </div>
+
+      {filteredOrders.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={filteredOrders.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          className="mt-4"
+        />
+      )}
     </div>
   );
 }

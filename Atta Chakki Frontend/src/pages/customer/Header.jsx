@@ -225,7 +225,7 @@ export function Header() {
         <div className="bg-primary text-primary-foreground py-1.5 px-4 flex items-center justify-between w-full" style={{ zIndex: 110 }}>
            <div className="overflow-hidden flex-1 relative flex items-center group">
               <div className="flex w-max">
-                 {[...Array(6)].map((_, i) => (
+                 {[...Array(2)].map((_, i) => (
                    <div key={i} className="animate-marquee flex shrink-0 items-center whitespace-nowrap" style={{ paddingRight: '4rem' }} aria-hidden={i > 0 ? "true" : "false"}>
                      <Megaphone className="h-4 w-4 mr-2 animate-pulse flex-shrink-0 text-primary-foreground/80"/>
                      <span className="text-sm font-medium tracking-wide pr-4">{tDynamic(settings.announcement)}</span>

@@ -21,25 +21,25 @@ import { SEO } from '../../components/common/SEO';
 
 const DEFAULT_HERO_SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=600&auto=format&fit=crop&q=70&fm=webp",
     title: "Apka Bhrosa Apki Suchi Chakki",
     subtitle: "Premium quality flour, spices & cotton services. Ground fresh daily."
   },
   {
-    image: "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=1400&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=600&auto=format&fit=crop&q=70&fm=webp",
     title: "Pure & Fresh, Every Time",
     subtitle: "Grains ground with no additives — just the way nature intended."
   },
   {
-    image: "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=1400&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=600&auto=format&fit=crop&q=70&fm=webp",
     title: "Traditional Services, Modern Convenience",
     subtitle: "Expert Cotton Penja, Quilt filling & home delivery — all in one place."
   }
 ];
 
 const DEFAULT_STORY_SLIDES = [
-  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1606822350882-a54cb0eb8de8?w=600&auto=format&fit=crop&q=80"
+  "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1606822350882-a54cb0eb8de8?w=500&auto=format&fit=crop&q=75&fm=webp"
 ];
 
 const sectionVariants = {
@@ -81,13 +81,157 @@ const itemVariants = {
   }
 };
 
+function HeroSection({ heroSlides, tDynamic }) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    if (!heroSlides || heroSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroSlides]);
+
+  const activeSlide = heroSlides[currentSlide] || heroSlides[0];
+
+  return (
+    <section className="relative overflow-hidden w-full bg-muted aspect-[16/9] sm:aspect-[21/9] min-h-[340px] max-h-[550px]">
+      {activeSlide && (
+        <img
+          key={currentSlide}
+          src={activeSlide.image}
+          alt={activeSlide.title || "Suchi Chakki Hero"}
+          fetchpriority={currentSlide === 0 ? "high" : "auto"}
+          loading={currentSlide === 0 ? "eager" : "lazy"}
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+
+      <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
+        <h1 className="text-white text-2xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight">
+          {activeSlide ? tDynamic(activeSlide.title) : ''}
+        </h1>
+        <p className="text-white/90 text-sm sm:text-lg md:text-xl max-w-2xl px-4">
+          {activeSlide ? tDynamic(activeSlide.subtitle) : ''}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function StorySection({ storySlides, storeName, t }) {
+  const [currentStorySlide, setCurrentStorySlide] = useState(0);
+
+  useEffect(() => {
+    if (!storySlides || storySlides.length === 0) return;
+    const timer = setInterval(() => {
+      setCurrentStorySlide((prev) => (prev + 1) % storySlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [storySlides]);
+
+  return (
+    <LazyAnimatedSection
+      type="fade-up"
+      placeholderHeight="550px"
+      className="py-20 px-4 bg-secondary/10 relative overflow-hidden"
+    >
+      <section>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl -z-10" />
+
+        <div className="container mx-auto max-w-7xl">
+          <div className="bg-card rounded-[2.5rem] shadow-xl border border-border/50 p-8 md:p-10 lg:p-16 relative z-10 overflow-hidden">
+            <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 items-center w-full">
+              {(() => {
+                const content = [
+                  <motion.div
+                    layout
+                    key="image-col"
+                    variants={{
+                      hidden: { opacity: 0, x: -30 },
+                      visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
+                    }}
+                    className="flex-1 w-full"
+                  >
+                    <div className={`relative w-full max-w-[280px] sm:max-w-md mx-auto group ${currentStorySlide % 2 !== 0 ? 'sm:ml-auto sm:mr-0' : 'sm:ml-0 sm:mr-auto'}`}>
+                      <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-[2.5rem] blur-xl transform scale-105 transition-transform duration-700 group-hover:scale-110" />
+
+                      <div className="absolute -top-6 -right-6 md:-top-8 md:-right-8 bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl z-20 flex flex-col items-center animate-bounce" style={{ animationDuration: '3s' }}>
+                        <span className="text-2xl font-black text-primary block leading-none mb-1">10k+</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{t('Happy Families')}</span>
+                      </div>
+
+                      <div className="relative w-full rounded-[2.5rem] shadow-2xl -rotate-1 transition-transform duration-700 group-hover:rotate-0 overflow-hidden" style={{ aspectRatio: '4/3' }}>
+                        {storySlides.map((slide, i) => (
+                          <div
+                            key={i}
+                            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+                            style={{
+                              backgroundImage: `url("${slide}")`,
+                              opacity: i === currentStorySlide ? 1 : 0,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>,
+
+                  <motion.div
+                    layout
+                    key="text-col"
+                    variants={{
+                      hidden: { opacity: 0, x: 30 },
+                      visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
+                    }}
+                    className="flex-1 w-full space-y-8 text-center sm:text-left"
+                  >
+                    <div className="inline-flex items-center justify-center gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-full font-bold tracking-wider text-sm uppercase shadow-sm border border-primary/20 sm:justify-start">
+                      <ShieldCheck className="w-5 h-5" /> {t('100% Pure & Authentic')}
+                    </div>
+
+                    <h2 className="text-3xl font-bold text-foreground leading-tight tracking-tight">
+                      {t('The Heritage of Pure Flour')}
+                    </h2>
+
+                    <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
+                      <p>
+                        {t('At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.').replace(/Suchi Chakki|Apni Atta Chakki/g, storeName)}
+                      </p>
+                      <p>
+                        {t('Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives—just pure, wholesome goodness for your family.')}
+                      </p>
+                    </div>
+
+                    <div className="pt-6 flex flex-col sm:flex-row items-center gap-6 justify-center sm:justify-start">
+                      <Button size="lg" className="bg-primary hover:bg-primary/90 text-white rounded-full px-10 py-6 text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-105 w-full sm:w-auto" onClick={() => window.location.href = '/reviews'}>
+                        {t('Read Our Reviews')}
+                      </Button>
+                      <div className="flex items-center gap-2 text-muted-foreground font-medium bg-secondary/10 px-4 py-2 rounded-full">
+                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        <span>{t('4.9/5 from Happy Customers')}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ];
+                
+                return currentStorySlide % 2 !== 0 ? content.reverse() : content;
+              })()}
+            </div>
+          </div>
+        </div>
+      </section>
+    </LazyAnimatedSection>
+  );
+}
+
 export function Homepage() {
   const [services, setServices] = useState([]);
   const [dbCategories, setDbCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [currentStorySlide, setCurrentStorySlide] = useState(0);
   const [heroSlides, setHeroSlides] = useState(DEFAULT_HERO_SLIDES);
   const [storySlides, setStorySlides] = useState(DEFAULT_STORY_SLIDES);
   const [featuredCoupons, setFeaturedCoupons] = useState([]);
@@ -97,21 +241,6 @@ export function Homepage() {
   const [storeName, setStoreName] = useState("Suchi Chakki");
   const { t, tDynamic, translateBatch, language } = useDynamicTranslation();
   const { addToCart } = useCart();
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [heroSlides.length]);
-
-  useEffect(() => {
-    if (storySlides.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrentStorySlide((prev) => (prev + 1) % storySlides.length);
-    }, 6000); // Increased from 4000ms for slower, smoother view
-    return () => clearInterval(timer);
-  }, [storySlides.length]);
 
   // CHANGED: Fetch from PHP Backend instead of LocalStorage
   useEffect(() => {
@@ -294,45 +423,14 @@ export function Homepage() {
         keywords="chakki atta, fresh flour, pure spices, whole wheat, custom mix atta, online chakki"
       />
       {/* Hero Section */}
-      <section className="relative overflow-hidden w-full" style={{ height: '65vh', minHeight: '400px' }}>
-        {heroSlides.map((slide, i) => (
-          <div
-            key={i}
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${slide.image})`,
-              opacity: i === currentSlide ? 1 : 0,
-              transition: 'opacity 1.2s ease-in-out',
-            }}
-          />
-        ))}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-
-        <div className="relative h-full container mx-auto px-4 sm:px-6 flex flex-col items-center justify-center text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-4 px-4 font-bold tracking-tight"
-          >
-            {heroSlides[currentSlide] ? tDynamic(heroSlides[currentSlide].title) : ''}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="text-white/90 text-base sm:text-lg md:text-xl max-w-2xl px-4"
-          >
-            {heroSlides[currentSlide] ? tDynamic(heroSlides[currentSlide].subtitle) : ''}
-          </motion.p>
-        </div>
-      </section>
+      <HeroSection heroSlides={heroSlides} tDynamic={tDynamic} />
 
       {/* Auto-sliding Coupon Bar Below Hero */}
-      {featuredCoupons.length > 0 && (
-        <div className="bg-primary text-primary-foreground py-2.5 px-4 flex items-center w-full overflow-hidden shadow-sm border-b border-primary-foreground/10 group">
-          <div className="flex w-max">
-            {[...Array(6)].map((_, i) => (
+      <div className="min-h-[46px]">
+        {featuredCoupons.length > 0 && (
+          <div className="bg-primary text-primary-foreground py-2.5 px-4 flex items-center w-full overflow-hidden shadow-sm border-b border-primary-foreground/10 group">
+            <div className="flex w-max">
+              {[...Array(4)].map((_, i) => (
               <div key={i} className="animate-marquee flex shrink-0 items-center whitespace-nowrap" style={{ paddingRight: '4rem' }} aria-hidden={i > 0 ? "true" : "false"}>
                 {featuredCoupons.map((coupon, j) => (
                   <div key={`${i}-${j}`} className="flex items-center mr-10 bg-black/10 border border-primary-foreground/20 px-4 py-1.5 rounded-full">
@@ -348,6 +446,7 @@ export function Homepage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Discounted Products Section */}
       {!loading && !selectedCategory && discountedProducts.length > 0 && (
@@ -661,100 +760,7 @@ export function Homepage() {
 
       {/* Our Story Section */}
       {!selectedCategory && (
-        <LazyAnimatedSection
-          type="fade-up"
-          placeholderHeight="550px"
-          className="py-20 px-4 bg-secondary/10 relative overflow-hidden"
-        >
-          <section>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl -z-10" />
-
-            <div className="container mx-auto max-w-7xl">
-              <div className="bg-card rounded-[2.5rem] shadow-xl border border-border/50 p-8 md:p-10 lg:p-16 relative z-10 overflow-hidden">
-                <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 items-center w-full">
-                  {(() => {
-                    const content = [
-                      <motion.div
-                        layout
-                        key="image-col"
-                        variants={{
-                          hidden: { opacity: 0, x: -50 },
-                          visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 90, damping: 15 } }
-                        }}
-                        transition={{ layout: { type: "spring", stiffness: 45, damping: 15, duration: 1.2 } }}
-                        className="flex-1 w-full"
-                      >
-                        <div className={`relative w-full max-w-[280px] sm:max-w-md mx-auto group ${currentStorySlide % 2 !== 0 ? 'sm:ml-auto sm:mr-0' : 'sm:ml-0 sm:mr-auto'}`}>
-                          <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-[2.5rem] blur-xl transform scale-105 transition-transform duration-700 group-hover:scale-110" />
-
-                          {/* Floating Badge */}
-                          <div className="absolute -top-6 -right-6 md:-top-8 md:-right-8 bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl z-20 flex flex-col items-center animate-bounce" style={{ animationDuration: '3s' }}>
-                            <span className="text-2xl font-black text-primary block leading-none mb-1">10k+</span>
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{t('Happy Families')}</span>
-                          </div>
-
-                          <div className="relative w-full rounded-[2.5rem] shadow-2xl -rotate-1 transition-transform duration-700 group-hover:rotate-0 overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                            {storySlides.map((slide, i) => (
-                              <div
-                                key={i}
-                                className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-                                style={{
-                                  backgroundImage: `url("${slide}")`,
-                                  opacity: i === currentStorySlide ? 1 : 0,
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>,
-
-                      <motion.div
-                        layout
-                        key="text-col"
-                        variants={{
-                          hidden: { opacity: 0, x: 50 },
-                          visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 90, damping: 15 } }
-                        }}
-                        transition={{ layout: { type: "spring", stiffness: 45, damping: 15, duration: 1.2 } }}
-                        className="flex-1 w-full space-y-8 text-center sm:text-left"
-                      >
-                        <div className="inline-flex items-center justify-center gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-full font-bold tracking-wider text-sm uppercase shadow-sm border border-primary/20 sm:justify-start">
-                          <ShieldCheck className="w-5 h-5" /> {t('100% Pure & Authentic')}
-                        </div>
-
-                        <h2 className="text-3xl font-bold text-foreground leading-tight tracking-tight">
-                          {t('The Heritage of Pure Flour')}
-                        </h2>
-
-                        <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
-                          <p>
-                            {t('At Suchi Chakki, we believe in preserving the traditional art of stone grinding. Unlike commercial mills, our process retains the natural oils, bran, and essential nutrients of the grain.').replace(/Suchi Chakki|Apni Atta Chakki/g, storeName)}
-                          </p>
-                          <p>
-                            {t('Every grain is carefully sorted, cleaned, and ground fresh on order. No preservatives, no additives—just pure, wholesome goodness for your family.')}
-                          </p>
-                        </div>
-
-                        <div className="pt-6 flex flex-col sm:flex-row items-center gap-6 justify-center sm:justify-start">
-                          <Button size="lg" className="bg-primary hover:bg-primary/90 text-white rounded-full px-10 py-6 text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-105 w-full sm:w-auto" onClick={() => window.location.href = '/reviews'}>
-                            {t('Read Our Reviews')}
-                          </Button>
-                          <div className="flex items-center gap-2 text-muted-foreground font-medium bg-secondary/10 px-4 py-2 rounded-full">
-                            <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                            <span>{t('4.9/5 from Happy Customers')}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ];
-                    
-                    return currentStorySlide % 2 !== 0 ? content.reverse() : content;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </section>
-        </LazyAnimatedSection>
+        <StorySection storySlides={storySlides} storeName={storeName} t={t} />
       )}
 
       <LazyAnimatedSection

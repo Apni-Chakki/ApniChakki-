@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner'; 
 import * as XLSX from 'xlsx';
 import { API_BASE_URL } from '../../config'; // <-- NEW: Added API Config
+import { Pagination } from '../../components/common/Pagination';
 
 export function OrdersRecord() {
   const { t } = useTranslation();
@@ -47,6 +48,9 @@ export function OrdersRecord() {
   
   const [printOrder, setPrintOrder] = useState(null);
   const [showPrintList, setShowPrintList] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [showAdvanceOnly, setShowAdvanceOnly] = useState(false);
   const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
@@ -554,7 +558,9 @@ export function OrdersRecord() {
         <>
         {/* Mobile card view (below md) */}
         <div className="md:hidden space-y-3">
-          {filteredOrders.map((order) => {
+          {filteredOrders
+            .slice((page - 1) * pageSize, page * pageSize)
+            .map((order) => {
             const remainingBalance = order.total - (order.advancePayment || 0);
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
             const isOverdue = (Date.now() - new Date(order.createdAt).getTime() > sevenDaysMs) &&
@@ -647,21 +653,24 @@ export function OrdersRecord() {
         {/* Desktop table (md and up) */}
         <div className="hidden md:block overflow-x-auto">
           <Card className="overflow-hidden">
-            <Table className="text-xs sm:text-sm">
+            <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="whitespace-nowrap">Order ID</TableHead>
-                  <TableHead className="whitespace-nowrap">Date</TableHead>
-                  <TableHead className="whitespace-nowrap">Customer</TableHead>
-                  <TableHead className="whitespace-nowrap">Items</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
-                  <TableHead className="whitespace-nowrap">Payment</TableHead>
-                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableRow>
+                  <TableHead className="w-[100px]">Order ID</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Payment</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => {
+                {filteredOrders
+                  .slice((page - 1) * pageSize, page * pageSize)
+                  .map((order) => {
                   const remainingBalance = order.total - (order.advancePayment || 0);
                   
                   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -749,9 +758,16 @@ export function OrdersRecord() {
         </>
       )}
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        Showing {filteredOrders.length} of {orders.length} orders
-      </div>
+      {filteredOrders.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={filteredOrders.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          className="mt-4"
+        />
+      )}
       
       <PrintOrderDetails
         order={printOrder}

@@ -103,7 +103,7 @@ const SANDBOX_TEST_PHONES = {
   timeout: '03999999999',
 };
 
-// dukan ki jagah aur distance nikalne k liye yahan settings hain
+// Shop location coordinates for distance calculations
 const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 };
 
 // When Google Maps isn't available, we fall back to the straight-line (Haversine)
@@ -136,7 +136,7 @@ export function Checkout() {
   const [phone, setPhone] = useState('');
   const [orderType, setOrderType] = useState('pickup');
   
-  // ghar ka pata save karne k liye variables
+  // Delivery address details state
   const [deliveryArea, setDeliveryArea] = useState(''); 
   const [houseDetails, setHouseDetails] = useState(''); 
 
@@ -160,11 +160,18 @@ export function Checkout() {
   const [paymentStep, setPaymentStep] = useState('input'); 
   const [paymentResult, setPaymentResult] = useState(null);
   const [showSandboxHelper, setShowSandboxHelper] = useState(false);
+  const [isSandboxEnv, setIsSandboxEnv] = useState(true);
   const [paySettings, setPaySettings] = useState({
     pay_method_cod_enabled: '1',
     pay_method_jazzcash_enabled: '1',
     pay_method_card_enabled: '1',
     pay_method_bank_enabled: '1',
+  });
+  const [bankDetails, setBankDetails] = useState({
+    bank_name: 'Meezan Bank',
+    account_name: 'Suchi Chakki',
+    account_number: '0123-4567890',
+    iban: 'PK00 MEZN 0000 0000 0000 0000'
   });
 
   const [couponCode, setCouponCode] = useState('');
@@ -203,19 +210,19 @@ export function Checkout() {
   const [schedulePreview, setSchedulePreview] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
-  // delivery ki fees aur map k variables
+  // Delivery fee and distance calculation state
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
   const [isOutOfLahore, setIsOutOfLahore] = useState(false);
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discount_amount : 0;
   const vipDiscountAmount = user?.vip_discount ? (total - couponDiscount) * 0.10 : 0;
-  const grandTotal = Math.max(0, total + deliveryFee - couponDiscount - vipDiscountAmount);
+  const grandTotal = Math.max(0, Math.round(total + deliveryFee - couponDiscount - vipDiscountAmount));
 
   // Show warning if coupon is applied to items with product discounts
   const hasMixedDiscounts = couponDiscount > 0 && productDiscount > 0;
 
-  // delivery k rates db se nikal rahe han hum yahan
+  // Dynamic delivery rates configuration
   const [deliveryConfig, setDeliveryConfig] = useState({ 
     base_fare: 50, 
     base_distance: 10, 
@@ -259,6 +266,30 @@ export function Checkout() {
       } catch (err) {
         console.warn('Failed to load payment settings.');
       }
+
+      try {
+        const pRes = await fetch(`${API_BASE_URL}/payments/get_payment_config.php`);
+        const pData = await pRes.json();
+        if (pData.success && typeof pData.is_sandbox === 'boolean') {
+          setIsSandboxEnv(pData.is_sandbox);
+        }
+      } catch (err) {
+        console.warn('Failed to load payment gateway config.');
+      }
+
+      try {
+        const bRes = await fetch(`${API_BASE_URL}/manage_wallets.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_bank_details' })
+        });
+        const bData = await bRes.json();
+        if (bData.success && bData.bank_details) {
+          setBankDetails(bData.bank_details);
+        }
+      } catch (err) {
+        console.warn('Failed to load bank transfer details.');
+      }
     };
     fetchPaySettings();
 
@@ -292,7 +323,7 @@ export function Checkout() {
     return () => clearInterval(timer);
   }, []);
 
-  // maths ka sara kaam yahan ho raha hai (fees wagera)
+  // Calculate delivery fee and distance rules
   useEffect(() => {
     const calcDeliveryFee = async () => {
       if (orderType !== 'delivery') {
@@ -564,7 +595,7 @@ export function Checkout() {
     }
   }, [reverseGeocode, t, houseDetails]);
 
-  // pata khud se bharne k liye logic — pehle GPS try karo, phir fallback
+  // Auto-fill address logic: primary GPS resolution with network fallback
   useEffect(() => {
     if (orderType === 'delivery' && !deliveryArea && !gpsCoords) {
       const initLocation = async () => {
@@ -580,7 +611,7 @@ export function Checkout() {
             });
             const { latitude: lat, longitude: lng, accuracy } = position.coords;
             await processLocationFix(lat, lng, accuracy, 'GPS');
-            return; // GPS mil gaya, fallback ki zaroorat nahi
+            return; // GPS resolved successfully
           } catch (geoError) {
             console.warn('GPS failed on init, using fallback:', geoError.message);
           }
@@ -912,7 +943,7 @@ export function Checkout() {
     }
 
     const cleanPhone = phone.replace(/\s/g, '');
-    const isPlaceholder = cleanPhone.startsWith('G-') || cleanPhone.startsWith('G') || !/^\d{11}$/.test(cleanPhone);
+    const isPlaceholder = cleanPhone.startsWith('G-') || !/^\d{11}$/.test(cleanPhone);
     if (isPlaceholder) {
       toast.error(
         t('Please update your phone number in account settings to proceed with orders!'),
@@ -1797,7 +1828,7 @@ export function Checkout() {
                     <div>
                       <p className="flex items-center gap-2">
                         JazzCash
-                        <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>
+                        {isSandboxEnv && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>}
                       </p>
                       <p className="text-sm text-muted-foreground">{t('Pay via JazzCash mobile wallet')}</p>
                     </div>
@@ -1815,7 +1846,7 @@ export function Checkout() {
                     <div>
                       <p className="flex items-center gap-2">
                         {t('Credit / Debit Card')}
-                        <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>
+                        {isSandboxEnv && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">SANDBOX</span>}
                       </p>
                       <p className="text-sm text-muted-foreground">{t('Visa, Mastercard accepted')}</p>
                     </div>
@@ -1873,7 +1904,7 @@ export function Checkout() {
               
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-4 w-4 text-primary" />
                   <span>{t('Expected')}: <strong>{schedulePreview.estimated_completion_display}</strong></span>
                 </div>
                 {!schedulePreview.is_today && (
@@ -1883,6 +1914,10 @@ export function Checkout() {
                   </div>
                 )}
               </div>
+
+              <p className="mt-2 text-[11px] text-amber-900/90 bg-amber-100/60 px-2 py-1 rounded border border-amber-300/40 font-medium">
+                ℹ️ {t('Expected processing completion time only. Delivery time may vary.')}
+              </p>
 
               {!schedulePreview.is_today && schedulePreview.reason_code !== 'today' && (
                 <p className="mt-2 text-xs text-amber-700 bg-amber-100/50 p-2 rounded border border-amber-200/50 italic">
@@ -1990,7 +2025,7 @@ export function Checkout() {
               <div className="w-full bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Amount')}:</span>
-                  <span className="font-bold">Rs. {total}{hasPendingWeightItem && " + TBD"}</span>
+                  <span className="font-bold">Rs. {grandTotal}{hasPendingWeightItem && " + TBD"}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('Method')}:</span>
@@ -2044,7 +2079,7 @@ export function Checkout() {
           {paymentStep === 'input' && (
             <div className="space-y-3 sm:space-y-4">
               <div className="text-center py-2.5 sm:py-3 bg-secondary/30 rounded-lg">
-                <p className="text-2xl sm:text-3xl font-bold text-foreground">Rs. {total}{hasPendingWeightItem && " + TBD"}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-foreground">Rs. {grandTotal}{hasPendingWeightItem && " + TBD"}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">{t('Amount to pay')}</p>
                 {hasPendingWeightItem && (
                   <p className="text-xs text-primary mt-1 px-2">
@@ -2053,13 +2088,15 @@ export function Checkout() {
                 )}
               </div>
 
-              <button
-                onClick={() => setShowSandboxHelper(!showSandboxHelper)}
-                className="w-full flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg py-2 px-3 transition-colors"
-              >
-                <TestTube2 className="h-3.5 w-3.5" />
-                {showSandboxHelper ? t('Hide Sandbox Test Data') : t('Show Sandbox Test Data')}
-              </button>
+              {isSandboxEnv && (
+                <button
+                  onClick={() => setShowSandboxHelper(!showSandboxHelper)}
+                  className="w-full flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg py-2 px-3 transition-colors"
+                >
+                  <TestTube2 className="h-3.5 w-3.5" />
+                  {showSandboxHelper ? t('Hide Sandbox Test Data') : t('Show Sandbox Test Data')}
+                </button>
+              )}
 
               {paymentMethod === 'jazzcash' && (
                 <div className="space-y-3">
@@ -2203,7 +2240,7 @@ export function Checkout() {
 
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded-lg p-2.5">
                     <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span>{t('Your card information is encrypted and secure. Sandbox mode - no real charges.')}</span>
+                    <span>{isSandboxEnv ? t('Your card information is encrypted and secure. Sandbox mode - no real charges.') : t('Your card information is encrypted and processed securely.')}</span>
                   </div>
                 </div>
               )}
@@ -2216,7 +2253,7 @@ export function Checkout() {
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="bankAccountNumber"
-                        placeholder="PK00 XXXX 0000 0000 0000 0000"
+                        placeholder={bankDetails.iban || "PK00 XXXX 0000 0000 0000 0000"}
                         value={bankAccountNumber}
                         onChange={(e) => setBankAccountNumber(e.target.value)}
                         className="pl-10"
@@ -2227,14 +2264,17 @@ export function Checkout() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                     <p className="text-xs font-semibold text-blue-800">{t('Bank Transfer Instructions')}:</p>
                     <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                      <li>{t('Transfer Rs.')} {total}{hasPendingWeightItem && " + TBD"} {t('to the account below')}</li>
+                      <li>{t('Transfer Rs.')} {grandTotal}{hasPendingWeightItem && " + TBD"} {t('to the account below')}</li>
                       <li>{t('Your order will be confirmed after admin verification')}</li>
                       <li>{t('Please keep the transfer receipt for reference')}</li>
                     </ol>
                     <div className="bg-white rounded p-2 mt-2 space-y-1">
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Bank')}:</span> <strong>Meezan Bank</strong></p>
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Account')}:</span> <strong>0123-4567890</strong></p>
-                      <p className="text-xs"><span className="text-muted-foreground">{t('Title')}:</span> <strong>Suchi Chakki</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Bank')}:</span> <strong>{bankDetails.bank_name}</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Account')}:</span> <strong>{bankDetails.account_number}</strong></p>
+                      <p className="text-xs"><span className="text-muted-foreground">{t('Title')}:</span> <strong>{bankDetails.account_name}</strong></p>
+                      {bankDetails.iban && (
+                        <p className="text-xs"><span className="text-muted-foreground">{t('IBAN')}:</span> <strong className="break-all">{bankDetails.iban}</strong></p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2260,9 +2300,9 @@ export function Checkout() {
                   </>
                 ) : (
                   <>
-                    {paymentMethod === 'jazzcash' && `Pay Rs. ${total} via JazzCash`}
-                    {paymentMethod === 'card' && `${t('Pay')} Rs. ${total} ${t('via Card')}`}
-                    {paymentMethod === 'bank' && `${t('Confirm Transfer')} Rs. ${total}`}
+                    {paymentMethod === 'jazzcash' && `Pay Rs. ${grandTotal} via JazzCash`}
+                    {paymentMethod === 'card' && `${t('Pay')} Rs. ${grandTotal} ${t('via Card')}`}
+                    {paymentMethod === 'bank' && `${t('Confirm Transfer')} Rs. ${grandTotal}`}
                   </>
                 )}
               </Button>

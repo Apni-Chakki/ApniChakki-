@@ -1,6 +1,6 @@
-// live tracking k liye socket server hai ye
+// Real-Time Delivery Tracking and Notification Socket Server
 
-/* Express or Nodemailer imports */
+// Core Dependencies
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -17,9 +17,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const httpServer = createServer(app);
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📨 Nodemailer Setup
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Nodemailer Transporter Setup
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
@@ -45,11 +43,14 @@ transporter.verify((error, success) => {
 // 1. Order Confirmation Email
 app.post('/send-order-confirmation', async (req, res) => {
   try {
-    const { customerEmail, customerName, orderId, orderItems, totalPrice, deliveryAddress } = req.body;
+    const { customerEmail, customerName, orderId, orderItems, totalPrice, deliveryAddress, storePhone, storeName } = req.body;
 
     if (!customerEmail || !customerName || !orderId) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
+
+    const sName = storeName || 'Suchi Chakki';
+    const sPhone = storePhone || '+92 322 8483029';
 
     const itemsHTML = orderItems.map(item => `
       <tr>
@@ -78,7 +79,7 @@ app.post('/send-order-confirmation', async (req, res) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🌾 Atta Chakki</h1>
+            <h1>🌾 ${sName}</h1>
             <p>Order Confirmation</p>
           </div>
           
@@ -107,12 +108,12 @@ app.post('/send-order-confirmation', async (req, res) => {
             
             <p>Your order will be delivered soon. Track your order using the order ID above.</p>
             
-            <a href="http://localhost:5173/track-order/${orderId}" class="button">Track Your Order</a>
+            <a href="https://suchi-chakki.vercel.app/track-order" class="button">Track Your Order</a>
             
             <div class="footer">
-              <p>Thank you for choosing Atta Chakki!</p>
-              <p>📞 Contact: +92-XXX-XXXXXXX</p>
-              <p>&copy; 2024 Atta Chakki. All rights reserved.</p>
+              <p>Thank you for choosing ${sName}!</p>
+              <p>📞 Contact: ${sPhone}</p>
+              <p>&copy; ${new Date().getFullYear()} ${sName}. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -129,19 +130,19 @@ app.post('/send-order-confirmation', async (req, res) => {
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Order confirmation email sent:', info.response);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Order confirmation email sent successfully',
-      messageId: info.messageId 
+      messageId: info.messageId
     });
 
   } catch (error) {
     console.error('❌ Error sending order confirmation email:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to send email', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send email',
+      error: error.message
     });
   }
 });
@@ -376,11 +377,14 @@ app.post('/send-welcome-email', async (req, res) => {
 // 5. Contact Form Reply Email
 app.post('/send-contact-reply', async (req, res) => {
   try {
-    const { customerEmail, customerName, originalSubject, originalMessage, replyMessage } = req.body;
+    const { customerEmail, customerName, originalSubject, originalMessage, replyMessage, storePhone, storeName } = req.body;
 
     if (!customerEmail || !replyMessage) {
       return res.status(400).json({ success: false, message: 'Missing required fields (customerEmail, replyMessage)' });
     }
+
+    const sName = storeName || 'Suchi Chakki';
+    const sPhone = storePhone || '+92 3228483029';
 
     const htmlTemplate = `
       <!DOCTYPE html>
@@ -399,7 +403,7 @@ app.post('/send-contact-reply', async (req, res) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 24px;">🌾 Atta Chakki</h1>
+            <h1 style="margin: 0; font-size: 24px;">🌾 ${sName}</h1>
             <p style="margin: 5px 0 0 0; opacity: 0.9;">Response to Your Inquiry</p>
           </div>
           
@@ -420,12 +424,12 @@ app.post('/send-contact-reply', async (req, res) => {
             ` : ''}
             
             <p style="margin-top: 25px;">If you have any further questions or need additional assistance, feel free to reply directly to this email.</p>
-            <p style="margin-bottom: 0;">Best regards,<br><strong>Atta Chakki Team</strong></p>
+            <p style="margin-bottom: 0;">Best regards,<br><strong>${sName} Team</strong></p>
             
             <div class="footer">
-              <p style="margin: 5px 0;">Thank you for choosing Atta Chakki!</p>
-              <p style="margin: 5px 0;">📞 Contact: +92-XXX-XXXXXXX</p>
-              <p style="margin: 5px 0;">&copy; 2026 Atta Chakki. All rights reserved.</p>
+              <p style="margin: 5px 0;">Thank you for choosing ${sName}!</p>
+              <p style="margin: 5px 0;">📞 Contact: ${sPhone}</p>
+              <p style="margin: 5px 0;">&copy; ${new Date().getFullYear()} ${sName}. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -674,7 +678,7 @@ app.post('/send-vip-congratulations', async (req, res) => {
 
     const discountTextEN = vipDiscount ? 'Active (10% Discount on Every Order)' : 'Inactive';
     const shippingTextEN = vipFreeShipping ? 'Active (Free Delivery on Every Order)' : 'Inactive';
-    
+
     const discountTextUR = vipDiscount ? 'فعال (ہر آرڈر پر %10 رعایت)' : 'غیر فعال';
     const shippingTextUR = vipFreeShipping ? 'فعال (ہر آرڈر پر مفت ڈلیوری)' : 'غیر فعال';
 
@@ -775,9 +779,13 @@ app.use((err, req, res, next) => {
 
 
 
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',') 
+  : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -786,15 +794,15 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 });
 
-// driver aur watchers ka data yahan save hoga
+// Active driver states and order room tracking
 const activeDrivers = {};
 const orderRooms = {};
 
-// jab koi naya banda connect ho
+// Handle incoming Socket.io connections
 io.on('connection', (socket) => {
   console.log(`✅ Client connected: ${socket.id}`);
 
-  // driver apni location bhej raha hai
+  // Driver location broadcast event
   socket.on('driver:location_update', (data) => {
     const { order_id, latitude, longitude, heading, speed, driver_name, accuracy } = data;
 
@@ -803,7 +811,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // nai location save kar rahe han
+    // Cache driver coordinate update
     activeDrivers[order_id] = {
       order_id,
       latitude,
@@ -816,7 +824,7 @@ io.on('connection', (socket) => {
       socketId: socket.id
     };
 
-    // sab ko location bhej rahe han jo dekh rahe han
+    // Broadcast location to order subscribers
     const roomName = `order_${order_id}`;
     io.to(roomName).emit('tracking:location_update', {
       order_id,
@@ -829,7 +837,7 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     });
 
-    // admin ko bhi bata rahe han driver kahan hai
+    // Notify admin live dashboard
     io.to('admin_tracking').emit('tracking:driver_moved', {
       order_id,
       latitude,
@@ -845,7 +853,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // jab delivery ho jaye
+  // Handle order completion event
   socket.on('driver:delivery_completed', (data) => {
     const { order_id, driver_name } = data;
     const roomName = `order_${order_id}`;
@@ -866,7 +874,7 @@ io.on('connection', (socket) => {
     console.log(`✅ Delivery completed: Order #${order_id} by ${driver_name}`);
   });
 
-  // customer order track karna chahta hai
+  // Subscribe client to specific order room
   socket.on('tracking:subscribe', (data) => {
     const { order_id } = data;
     if (!order_id) return;
@@ -879,7 +887,7 @@ io.on('connection', (socket) => {
 
     console.log(`👀 Customer ${socket.id} watching Order #${order_id} (${orderRooms[order_id].size} watchers)`);
 
-    // agar driver online hai to location bhej do
+    // Emit initial location if driver is currently active
     if (activeDrivers[order_id]) {
       socket.emit('tracking:location_update', {
         ...activeDrivers[order_id],
@@ -888,7 +896,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // customer ne tracking band kar di
+  // Unsubscribe client from order room
   socket.on('tracking:unsubscribe', (data) => {
     const { order_id } = data;
     if (!order_id) return;
@@ -902,19 +910,19 @@ io.on('connection', (socket) => {
     }
   });
 
-  // admin tracking dekhne aaya hai
+  // Join admin monitoring channel
   socket.on('admin:subscribe', () => {
     socket.join('admin_tracking');
     console.log(`🔑 Admin ${socket.id} joined admin_tracking`);
 
-    // send all active drivers
+    // Send active drivers summary
     socket.emit('admin:active_drivers', {
       drivers: Object.values(activeDrivers),
       count: Object.keys(activeDrivers).length
     });
   });
 
-  // active drivers ki list nikal rahe han
+  // Fetch active drivers request
   socket.on('tracking:get_active_drivers', () => {
     socket.emit('admin:active_drivers', {
       drivers: Object.values(activeDrivers),
@@ -922,7 +930,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // jab koi chala jaye (disconnect)
+  // Handle client disconnection
   socket.on('disconnect', (reason) => {
     console.log(`❌ Client disconnected: ${socket.id} (${reason})`);
 
@@ -943,7 +951,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// har 30 second baad puray drivers ko saaf kar rahe han
+// Periodic cleanup for stale driver updates (runs every 30 seconds)
 setInterval(() => {
   const now = Date.now();
   const STALE_THRESHOLD = 2 * 60 * 1000;
@@ -951,18 +959,18 @@ setInterval(() => {
   for (const [orderId, driver] of Object.entries(activeDrivers)) {
     if (now - driver.lastUpdate > STALE_THRESHOLD) {
       console.log(`🗑️ Removing stale driver for Order #${orderId} (last update: ${Math.round((now - driver.lastUpdate) / 1000)}s ago)`);
-      
+
       io.to(`order_${orderId}`).emit('tracking:driver_offline', {
         order_id: orderId,
         timestamp: now
       });
-      
+
       delete activeDrivers[orderId];
     }
   }
 }, 30000);
 
-// server start kar rahe han
+// Start HTTP and WebSocket server
 httpServer.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════╗

@@ -26,6 +26,7 @@ export function Contact() {
     name: '',
     email: '',
     phone: '',
+    subject: 'General Inquiry',
     message: ''
   });
 
@@ -56,7 +57,7 @@ export function Contact() {
       const data = await response.json();
       if (data.success) {
         toast.success(data.message || 'Message sent! We will get back to you soon.');
-        setFormData({ name: '', email: '', phone: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', subject: 'General Inquiry', message: '' });
       } else {
         toast.error(data.message || 'Failed to send message');
       }
@@ -111,7 +112,14 @@ export function Contact() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">{t('Address')}</p>
-                    <p className="font-medium">{settings.address}</p>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium hover:underline hover:text-primary transition-colors block"
+                    >
+                      {settings.address}
+                    </a>
                   </div>
                 </div>
 

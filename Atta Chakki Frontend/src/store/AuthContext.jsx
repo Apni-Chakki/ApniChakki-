@@ -52,6 +52,8 @@ export function AuthProvider({ children }) {
         let finalUser = data.user;
         if (role === 'delivery') finalUser = { ...data.user, role: 'delivery' };
         
+        // Immediately write to localStorage so navigate() ke baad ka page null user na dekhe
+        localStorage.setItem('user', JSON.stringify(finalUser));
         setUser(finalUser); 
         return true;
       }
@@ -73,6 +75,8 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       if (data.success) {
         if (data.token) localStorage.setItem('token', data.token);
+        // Immediately write to localStorage so navigate() ke baad ka page null user na dekhe
+        localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
         return data.user;
       } else {

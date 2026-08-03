@@ -62,6 +62,9 @@ export function AdminLogin() {
 
         toast.success('Login Successful! Redirecting...');
         
+        if (data.token) localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
         // UPDATE REACT CONTEXT (AuthContext persists this automatically)
         setUser(data.user);
 

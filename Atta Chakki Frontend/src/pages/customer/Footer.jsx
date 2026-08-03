@@ -86,7 +86,14 @@ export function Footer() {
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 shrink-0 mt-1" />
-                  <span>{tDynamic(settings.address)}</span>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address || '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline cursor-pointer transition-colors"
+                  >
+                    {tDynamic(settings.address)}
+                  </a>
                 </div>
               </div>
             </div>

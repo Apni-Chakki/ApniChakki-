@@ -236,7 +236,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   // dual_unit products support both pickup (trip) and kg modes from one card
   const isDualUnit = service.dual_unit === 1 || service.dual_unit === true;
   const isPickupEligible = isDualUnit || isOnlyPickup;
-  // Trip waly products out of stock nahi hoty kabhi bhi
+  // Pickup/Trip products always remain available for booking
   const isOutOfStock = isPickupEligible ? false : stock <= 0;
 
   // Quick quantity options from admin (works for ALL units)
@@ -518,11 +518,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   };
 
   return (
-    <motion.div
-      variants={cardVariants} 
-      whileHover={{ y: -5 }} 
-      className="h-full"
-    >
+    <div className="h-full transition-transform duration-200 hover:-translate-y-1">
       <Card className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow h-full relative">
         <div className="relative w-full h-48 sm:h-52 md:h-56 overflow-hidden bg-muted">
           {service.image_url || service.imageUrl ? (
@@ -1021,6 +1017,6 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </div>
   );
 });

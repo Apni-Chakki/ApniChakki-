@@ -13,12 +13,14 @@
     <meta name="robots" content="index, follow">
     <meta name="language" content="English">
 
-    <!-- Preconnect to Backend API -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Preconnect & DNS-Prefetch to Asset Origins -->
+    <link rel="preconnect" href="https://images.unsplash.com">
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
     
     <!-- Preload first hero image for LCP -->
-    <link rel="preload" href="https://res.cloudinary.com/dy4k5rbuf/image/upload/v1779346834/apni-chakki/other/oa0f5tgym9p912fylepy.jpg" as="image" fetchpriority="high">
+    <link rel="preload" href="https://images.unsplash.com/photo-1731082300550-8093311708ef?w=600&auto=format&fit=crop&q=70&fm=webp" as="image" type="image/webp" fetchpriority="high">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -52,27 +54,34 @@
       }
     }
     </script>
-    <!-- Leaflet CSS for map in checkout - Deferred to avoid render blocking -->
-    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
     <!-- Dynamic Favicon is set via App.jsx -->
     <!-- Meta Pixel: add your real Pixel ID here when ready -->
     <!-- fbq('init', 'YOUR_REAL_PIXEL_ID'); -->
 
-    <!-- OneSignal Web SDK -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <!-- OneSignal Web SDK - Delayed execution for fast mobile load -->
     <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "6a090ab3-a214-481b-99b0-917fb4a5a902",
-          safari_web_id: "web.onesignal.auto.32358c52-eb5f-4c9c-a5b8-d10e6e7ce454",
-          notifyButton: {
-            enable: false,
-          },
-          allowLocalhostAsSecureOrigin: true
-        });
-        OneSignal.Slidedown.promptPush();
+      window.addEventListener('load', function() {
+        var loadOS = function() {
+          var s = document.createElement('script');
+          s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+          s.async = true;
+          document.head.appendChild(s);
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+              appId: "6a090ab3-a214-481b-99b0-917fb4a5a902",
+              safari_web_id: "web.onesignal.auto.32358c52-eb5f-4c9c-a5b8-d10e6e7ce454",
+              notifyButton: { enable: false },
+              allowLocalhostAsSecureOrigin: true
+            });
+            OneSignal.Slidedown.promptPush();
+          });
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { setTimeout(loadOS, 4000); });
+        } else {
+          setTimeout(loadOS, 5000);
+        }
       });
     </script>
     <!-- End OneSignal Web SDK -->
