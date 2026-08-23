@@ -3,12 +3,88 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Apni Chakki</title>
-    <!-- Leaflet CSS for map in checkout -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin="" />
+    <title>Suchi Chakki | Fresh Wheat Grinding & Premium Atta</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Suchi Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta name="description" content="Suchi Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <meta name="keywords" content="suchi chakki, chakki, wheat grinding, fresh atta, chakki fresh atta, pure wheat, custom flour mix, whole wheat flour, desi chakki, organic wheat, healthy atta, grain grinding, pure atta delivery, wheat flour online">
+    <meta name="author" content="Suchi Chakki">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+
+    <!-- Preconnect & DNS-Prefetch to Asset Origins -->
+    <link rel="preconnect" href="https://images.unsplash.com">
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
+    
+    <!-- Preload first hero image for LCP -->
+    <link rel="preload" href="https://images.unsplash.com/photo-1731082300550-8093311708ef?w=600&auto=format&fit=crop&q=70&fm=webp" as="image" type="image/webp" fetchpriority="high">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://apnichakki897.great-site.net/">
+    <meta property="og:title" content="Suchi Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta property="og:description" content="Suchi Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <!-- Replace with actual absolute image path -->
+    <meta property="og:image" content="https://apnichakki897.great-site.net/logo.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://apnichakki897.great-site.net/">
+    <meta name="twitter:title" content="Suchi Chakki | Fresh Wheat Grinding & Premium Atta">
+    <meta name="twitter:description" content="Suchi Chakki offers 100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes. Get the best quality healthy atta delivered to your doorstep.">
+    <!-- Replace with actual absolute image path -->
+    <meta name="twitter:image" content="https://apnichakki897.great-site.net/logo.png">
+
+    <!-- Structured Data (JSON-LD) for Local Business / Food Store -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FoodStore",
+      "name": "Suchi Chakki",
+      "image": "https://apnichakki897.great-site.net/logo.png",
+      "description": "100% pure, freshly ground wheat, chakki fresh atta, and custom grain mixes delivered to your doorstep.",
+      "url": "https://apnichakki897.great-site.net/",
+      "priceRange": "Rs.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "PK"
+      }
+    }
+    </script>
     <!-- Dynamic Favicon is set via App.jsx -->
+    <!-- Meta Pixel: add your real Pixel ID here when ready -->
+    <!-- fbq('init', 'YOUR_REAL_PIXEL_ID'); -->
+
+    <!-- OneSignal Web SDK - Delayed execution for fast mobile load -->
+    <script>
+      window.addEventListener('load', function() {
+        var loadOS = function() {
+          var s = document.createElement('script');
+          s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+          s.async = true;
+          document.head.appendChild(s);
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+              appId: "6a090ab3-a214-481b-99b0-917fb4a5a902",
+              safari_web_id: "web.onesignal.auto.32358c52-eb5f-4c9c-a5b8-d10e6e7ce454",
+              notifyButton: { enable: false },
+              allowLocalhostAsSecureOrigin: true
+            });
+            OneSignal.Slidedown.promptPush();
+          });
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { setTimeout(loadOS, 4000); });
+        } else {
+          setTimeout(loadOS, 5000);
+        }
+      });
+    </script>
+    <!-- End OneSignal Web SDK -->
     <style>
       /* Contain Leaflet map z-index so it doesn't overlay fixed banners/footer */
       .leaflet-container {
@@ -49,6 +125,11 @@
   </head>
 
   <body>
+    <!-- Meta Pixel Code (noscript) -->
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=<YOUR_PIXEL_ID_HERE>&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

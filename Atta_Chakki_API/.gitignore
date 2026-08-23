@@ -1,0 +1,5 @@
+.env
+error_log.txt
+cache/
+*.sql
+*.php.bak

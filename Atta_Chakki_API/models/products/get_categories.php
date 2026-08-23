@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Get all categories
  * API Endpoint: GET /get_categories.php
  */

@@ -2,6 +2,7 @@
 // delete product api
 require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/../../utils/cloudinary_helper.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
 
@@ -81,6 +82,7 @@ try {
         if ($stmt->affected_rows === 0) {
             echo json_encode(["success" => false, "message" => "Product not found"]);
         } else {
+            clear_api_cache();
             echo json_encode(["success" => true, "message" => "Product deleted successfully"]);
         }
     } else {

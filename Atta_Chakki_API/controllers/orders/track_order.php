@@ -3,6 +3,9 @@
 include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_auth();
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
@@ -49,7 +52,7 @@ try {
                 // getting items
                 $order_id_fetched = $row['id'];
                 $items = [];
-                $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase FROM order_items WHERE order_id = ?");
+                $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
                 $item_stmt->bind_param("i", $order_id_fetched);
                 $item_stmt->execute();
                 $item_res = $item_stmt->get_result();
@@ -106,7 +109,7 @@ try {
                         // getting items
                         $order_id_fetched = $row['id'];
                         $items = [];
-                        $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase FROM order_items WHERE order_id = ?");
+                        $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
                         $item_stmt->bind_param("i", $order_id_fetched);
                         $item_stmt->execute();
                         $item_res = $item_stmt->get_result();

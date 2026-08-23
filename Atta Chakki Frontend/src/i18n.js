@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { translations } from './lib/translations';
+import { translations } from './utils/translations';
 
 const savedLang = localStorage.getItem('apni_chakki_lang') || 'en';
 
@@ -27,3 +27,7 @@ i18n.on('languageChanged', (lng) => {
 });
 
 export default i18n;
+
+
+
+

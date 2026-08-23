@@ -7,32 +7,43 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 $action = isset($data['action']) ? $data['action'] : 'get_balance';
 
+// Public actions that do not require admin verification
+$public_actions = ['get_bank_details'];
+
 // checking if admin
 $user_id = isset($data['user_id']) ? intval($data['user_id']) : 0;
 
-if ($user_id > 0) {
-    $user_stmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
-    $user_stmt->bind_param("i", $user_id);
-    $user_stmt->execute();
-    $user_result = $user_stmt->get_result();
+if (!in_array($action, $public_actions)) {
+    if ($user_id > 0) {
+        $user_stmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+        $user_stmt->bind_param("i", $user_id);
+        $user_stmt->execute();
+        $user_result = $user_stmt->get_result();
 
-    if ($user_result->num_rows === 0) {
-        echo json_encode(["success" => false, "message" => "User not found"]);
+        if ($user_result->num_rows === 0) {
+            echo json_encode(["success" => false, "message" => "User not found"]);
+            $user_stmt->close();
+            exit;
+        }
+
+        $user = $user_result->fetch_assoc();
         $user_stmt->close();
-        exit;
-    }
 
-    $user = $user_result->fetch_assoc();
-    $user_stmt->close();
-
-    if (strtolower($user['role']) !== 'admin') {
-        echo json_encode(["success" => false, "message" => "Unauthorized access"]);
-        exit;
+        if (strtolower($user['role']) !== 'admin') {
+            echo json_encode(["success" => false, "message" => "Unauthorized access"]);
+            exit;
+        }
     }
 }
 
 // routing actions
 switch ($action) {
+    case 'get_bank_details':
+        getBankDetails();
+        break;
+    case 'update_bank_details':
+        updateBankDetails();
+        break;
     case 'get_balance':
         getBusinessBalance();
         break;
@@ -58,11 +69,89 @@ switch ($action) {
         echo json_encode(["success" => false, "message" => "Unknown action: $action"]);
 }
 
+// getting bank account details for checkout/admin
+function getBankDetails() {
+    global $conn;
+    
+    $stmt = $conn->prepare("SELECT id, account_name, bank_name, account_number, iban FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        echo json_encode([
+            "success" => true,
+            "bank_details" => [
+                "bank_name" => "Meezan Bank",
+                "account_name" => "Suchi Chakki",
+                "account_number" => "0123-4567890",
+                "iban" => "PK00 MEZN 0000 0000 0000 0000"
+            ]
+        ]);
+        $stmt->close();
+        return;
+    }
+    
+    $row = $result->fetch_assoc();
+    $stmt->close();
+    
+    echo json_encode([
+        "success" => true,
+        "bank_details" => [
+            "id" => intval($row['id']),
+            "bank_name" => !empty($row['bank_name']) ? $row['bank_name'] : "Meezan Bank",
+            "account_name" => !empty($row['account_name']) ? $row['account_name'] : "Suchi Chakki",
+            "account_number" => !empty($row['account_number']) ? $row['account_number'] : "0123-4567890",
+            "iban" => !empty($row['iban']) ? $row['iban'] : "PK00 MEZN 0000 0000 0000 0000"
+        ]
+    ]);
+}
+
+// updating bank account details (Admin only)
+function updateBankDetails() {
+    global $conn, $data;
+    
+    $bank_name = isset($data['bank_name']) ? trim($data['bank_name']) : '';
+    $account_name = isset($data['account_name']) ? trim($data['account_name']) : '';
+    $account_number = isset($data['account_number']) ? trim($data['account_number']) : '';
+    $iban = isset($data['iban']) ? trim($data['iban']) : '';
+    
+    if (empty($bank_name) || empty($account_name) || empty($account_number)) {
+        echo json_encode(["success" => false, "message" => "Bank Name, Account Title, and Account Number are required."]);
+        return;
+    }
+    
+    $check_stmt = $conn->prepare("SELECT id FROM business_accounts WHERE is_primary = 1 LIMIT 1");
+    $check_stmt->execute();
+    $res = $check_stmt->get_result();
+    
+    if ($res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        $account_id = $row['id'];
+        $check_stmt->close();
+        
+        $update_stmt = $conn->prepare("UPDATE business_accounts SET bank_name = ?, account_name = ?, account_number = ?, iban = ? WHERE id = ?");
+        $update_stmt->bind_param("ssssi", $bank_name, $account_name, $account_number, $iban, $account_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+    } else {
+        $check_stmt->close();
+        $insert_stmt = $conn->prepare("INSERT INTO business_accounts (bank_name, account_name, account_number, iban, balance, is_primary, is_active) VALUES (?, ?, ?, ?, 0.00, 1, 1)");
+        $insert_stmt->bind_param("ssss", $bank_name, $account_name, $account_number, $iban);
+        $insert_stmt->execute();
+        $insert_stmt->close();
+    }
+    
+    echo json_encode([
+        "success" => true,
+        "message" => "Bank account transfer details updated successfully!"
+    ]);
+}
+
 // getting business balance
 function getBusinessBalance() {
     global $conn;
     
-    $stmt = $conn->prepare("SELECT id, account_name, balance, account_number, bank_name FROM business_accounts WHERE is_primary = 1 AND is_active = 1");
+    $stmt = $conn->prepare("SELECT id, account_name, balance, account_number, bank_name, iban FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
     $stmt->execute();
     $result = $stmt->get_result();
     
@@ -103,6 +192,7 @@ function getBusinessBalance() {
         "balance" => floatval($account['balance']),
         "account_number" => $account['account_number'],
         "bank_name" => $account['bank_name'],
+        "iban" => $account['iban'] ?? '',
         "today_received" => floatval($today['today_received']),
         "total_online_received" => floatval($total_online_row['total_online']),
         "pending_verification_count" => intval($pending_row['pending_count'])
@@ -153,13 +243,31 @@ function getWalletTransactions() {
 // getting payment history
 function getPaymentHistory() {
     global $conn, $data;
-    
-    $limit = isset($data['limit']) ? intval($data['limit']) : 50;
-    $offset = isset($data['offset']) ? intval($data['offset']) : 0;
+
+    $page   = max(1, isset($data['page']) ? intval($data['page']) : 1);
+    $limit  = max(1, min(200, isset($data['limit']) ? intval($data['limit']) : 10));
+    $offset = isset($data['offset']) ? intval($data['offset']) : ($page - 1) * $limit;
     $status = isset($data['status']) ? $data['status'] : 'all';
     $method = isset($data['method']) ? $data['method'] : 'all';
-    
-    $query = "SELECT 
+    $search = isset($data['search']) ? trim($data['search']) : '';
+
+    $whereSql = "WHERE 1=1";
+    if ($status !== 'all') {
+        $whereSql .= " AND pt.payment_status = '" . $conn->real_escape_string($status) . "'";
+    }
+    if ($method !== 'all') {
+        $whereSql .= " AND pt.payment_method = '" . $conn->real_escape_string($method) . "'";
+    }
+    if ($search !== '') {
+        $esc = $conn->real_escape_string($search);
+        $whereSql .= " AND (u.full_name LIKE '%{$esc}%' OR u.phone LIKE '%{$esc}%' OR pt.transaction_id LIKE '%{$esc}%' OR CAST(pt.order_id AS CHAR) LIKE '%{$esc}%')";
+    }
+
+    // Count total filtered
+    $countRes = $conn->query("SELECT COUNT(*) AS c FROM payment_transactions pt JOIN users u ON pt.user_id = u.id JOIN orders o ON pt.order_id = o.id {$whereSql}");
+    $totalFiltered = $countRes ? (int)$countRes->fetch_assoc()['c'] : 0;
+
+    $query = "SELECT
         pt.id,
         pt.order_id,
         pt.user_id,
@@ -181,17 +289,10 @@ function getPaymentHistory() {
     FROM payment_transactions pt
     JOIN users u ON pt.user_id = u.id
     JOIN orders o ON pt.order_id = o.id
-    WHERE 1=1";
-    
-    if ($status !== 'all') {
-        $query .= " AND pt.payment_status = '" . $conn->real_escape_string($status) . "'";
-    }
-    if ($method !== 'all') {
-        $query .= " AND pt.payment_method = '" . $conn->real_escape_string($method) . "'";
-    }
-    
-    $query .= " ORDER BY pt.created_at DESC LIMIT ? OFFSET ?";
-    
+    {$whereSql}
+    ORDER BY pt.created_at DESC
+    LIMIT ? OFFSET ?";
+
     $stmt = $conn->prepare($query);
     $stmt->bind_param("ii", $limit, $offset);
     $stmt->execute();
@@ -230,9 +331,12 @@ function getPaymentHistory() {
     $stmt->close();
     
     echo json_encode([
-        "success" => true,
+        "success"  => true,
         "payments" => $payments,
-        "total" => count($payments)
+        "total"    => $totalFiltered,
+        "page"     => $page,
+        "limit"    => $limit,
+        "count"    => count($payments)
     ]);
 }
 
@@ -472,7 +576,12 @@ function rejectBankPayment() {
     $conn->begin_transaction();
     
     try {
-        $payment_stmt = $conn->prepare("SELECT order_id, amount FROM payment_transactions WHERE id = ? AND payment_status = 'pending'");
+        $payment_stmt = $conn->prepare("
+            SELECT pt.order_id, pt.amount, pt.transaction_id, u.phone as customer_phone, u.full_name as customer_name, u.email as customer_email 
+            FROM payment_transactions pt
+            JOIN users u ON pt.user_id = u.id
+            WHERE pt.id = ? AND pt.payment_status = 'pending'
+        ");
         $payment_stmt->bind_param("i", $payment_id);
         $payment_stmt->execute();
         $payment_result = $payment_stmt->get_result();
@@ -492,18 +601,46 @@ function rejectBankPayment() {
         $update_payment->execute();
         $update_payment->close();
         
-        // reverting order to cod
-        $update_order = $conn->prepare("UPDATE orders SET payment_status = 'pending', payment_method = 'cod' WHERE id = ?");
+        // setting order to unpaid and converting to Cash on Delivery (COD)
+        $update_order = $conn->prepare("UPDATE orders SET payment_status = 'unpaid', payment_method = 'cod' WHERE id = ?");
         $update_order->bind_param("i", $order_id);
         $update_order->execute();
         $update_order->close();
         
         $conn->commit();
+
+        // cURL to Node.js Email Server
+        if (!empty($payment['customer_email'])) {
+            $emailServerUrl = EMAIL_SERVER_URL . '/send-payment-rejection';
+            $dataToSend = [
+                'customerEmail' => $payment['customer_email'],
+                'customerName' => $payment['customer_name'],
+                'orderId' => $order_id,
+                'amount' => $amount,
+                'transactionId' => $payment['transaction_id'],
+                'reason' => $reason
+            ];
+            
+            $ch = curl_init($emailServerUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToSend));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_exec($ch);
+            curl_close($ch);
+        }
         
         echo json_encode([
             "success" => true,
-            "message" => "Payment rejected. Order #$order_id reverted to cash payment.",
-            "order_id" => $order_id
+            "message" => "Payment rejected. Order #$order_id marked as unpaid.",
+            "order_id" => $order_id,
+            "customer_phone" => $payment['customer_phone'],
+            "customer_name" => $payment['customer_name'],
+            "customer_email" => $payment['customer_email'],
+            "amount" => $amount,
+            "reason" => $reason,
+            "transaction_id" => $payment['transaction_id']
         ]);
         
     } catch (Exception $e) {

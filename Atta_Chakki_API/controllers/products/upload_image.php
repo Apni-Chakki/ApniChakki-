@@ -28,7 +28,7 @@ $result = uploadToCloudinary($_FILES['image'], $folder);
 if ($result['success']) {
     http_response_code(200);
 } else {
-    http_response_code(500);
+    http_response_code(400);
 }
 
 echo json_encode($result);

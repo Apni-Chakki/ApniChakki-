@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Process Online Payment Controller
  * Handles JazzCash (MWALLET), Credit Card, and Bank Transfer payments
  * Supports both Sandbox simulation and real API calls
@@ -281,23 +281,17 @@ try {
     ]);
 }
 
-// ==========================================
-// PAYMENT GATEWAY FUNCTIONS
-// ==========================================
+// Payment Gateway Helper Functions
 
-/**
+/* 
  * Process JazzCash MWALLET Payment
- * Uses Sandbox simulation or real API based on config
  */
 function processJazzCashPayment($phone, $amount, $transaction_id, $cnic_last6 = null) {
     // Clean phone number
     $phone = preg_replace('/[-\s]/', '', $phone);
     
     if (SIMULATE_SANDBOX_PAYMENTS) {
-        // ========================================
-        // SANDBOX SIMULATION MODE
-        // Simulates JazzCash API response locally
-        // ========================================
+        // Local Sandbox simulation response
         
         // Simulate processing delay
         usleep(SANDBOX_PROCESSING_DELAY_MS * 1000);
@@ -358,10 +352,7 @@ function processJazzCashPayment($phone, $amount, $transaction_id, $cnic_last6 = 
         }
     }
     
-    // ========================================
-    // REAL JAZZCASH API INTEGRATION
-    // Used when SIMULATE_SANDBOX_PAYMENTS = false
-    // ========================================
+    // Real JazzCash Production API Integration
     
     $datetime = date('YmdHis');
     $expiry = date('YmdHis', strtotime('+1 hour'));
@@ -448,7 +439,7 @@ function processJazzCashPayment($phone, $amount, $transaction_id, $cnic_last6 = 
     ];
 }
 
-/**
+/* 
  * Process Credit/Debit Card Payment
  * Uses Sandbox simulation for testing
  */
@@ -457,10 +448,7 @@ function processCreditCardPayment($card_number, $expiry, $cvv, $card_name, $amou
     $masked_card = str_repeat('*', strlen($card_number) - 4) . substr($card_number, -4);
     
     if (SIMULATE_SANDBOX_PAYMENTS) {
-        // ========================================
-        // SANDBOX SIMULATION MODE
-        // Tests different scenarios based on card number
-        // ========================================
+        // Sandbox Simulation Mode (Test Card Verification)
         
         usleep(SANDBOX_PROCESSING_DELAY_MS * 1000);
         
@@ -548,10 +536,7 @@ function processCreditCardPayment($card_number, $expiry, $cvv, $card_name, $amou
         }
     }
     
-    // ========================================
-    // REAL CARD PAYMENT API INTEGRATION
-    // Replace with actual payment gateway (Stripe, etc.)
-    // ========================================
+    // Production Card Payment Gateway Integration
     
     return [
         'success' => false,

@@ -1,8 +1,10 @@
 <?php
-// admin orders controller
+// admin orders controller - Server-Side Pagination + Status Filter + Batched Item Fetch
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -12,89 +14,99 @@ try {
     }
 
     $status_filter = isset($_GET['status']) ? strtolower(trim($_GET['status'])) : '';
+    $page          = max(1, isset($_GET['page']) ? (int)$_GET['page'] : 1);
+    $limit         = max(1, min(200, isset($_GET['limit']) ? (int)$_GET['limit'] : 20));
+    $offset        = ($page - 1) * $limit;
 
-    $sql = "SELECT * FROM orders";
-
-    // filtering by status
+    $whereSql = '';
     if ($status_filter === 'pending') {
-        $sql .= " WHERE TRIM(LOWER(status)) = 'pending'";
+        $whereSql = " WHERE TRIM(LOWER(status)) = 'pending' AND TRIM(LOWER(status)) != 'split_parent'";
     } elseif ($status_filter === 'ready') {
-        $sql .= " WHERE TRIM(LOWER(status)) = 'ready'";
+        $whereSql = " WHERE TRIM(LOWER(status)) = 'ready'";
     } elseif ($status_filter === 'active') {
-        $sql .= " WHERE TRIM(LOWER(status)) IN ('processing', 'ready', 'shipped')";
+        $whereSql = " WHERE TRIM(LOWER(status)) IN ('processing', 'ready', 'shipped')";
     } elseif ($status_filter === 'history') {
-        $sql .= " WHERE TRIM(LOWER(status)) IN ('completed', 'cancelled')";
+        $whereSql = " WHERE TRIM(LOWER(status)) IN ('completed', 'cancelled', 'split_parent')";
     }
 
-    $sql .= " ORDER BY created_at DESC";
+    // Total for pagination
+    $total = (int)$conn->query("SELECT COUNT(*) AS c FROM orders {$whereSql}")->fetch_assoc()['c'];
 
-    $result = $conn->query($sql);
-    
-    if (!$result) {
-        throw new Exception("Query failed: " . $conn->error);
+    // Paginated orders
+    $sql = "SELECT * FROM orders {$whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $limit, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $orders    = [];
+    $ordersMap = [];
+    $orderIds  = [];
+    $userIds   = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $id  = (int)$row['id'];
+        $uid = (int)$row['user_id'];
+        $row['items'] = [];
+        $orders[]        = &$ordersMap[$id];
+        $ordersMap[$id]  = $row;
+        $orderIds[]      = $id;
+        if ($uid > 0) { $userIds[$uid] = true; }
+        // rebind by reference
+        $orders[count($orders) - 1] = &$ordersMap[$id];
+    }
+    $stmt->close();
+
+    // Batch fetch users
+    $users = [];
+    if (!empty($userIds)) {
+        $idList = implode(',', array_map('intval', array_keys($userIds)));
+        $uRes   = $conn->query("SELECT id, full_name, phone FROM users WHERE id IN ({$idList})");
+        while ($u = $uRes->fetch_assoc()) {
+            $users[(int)$u['id']] = $u;
+        }
     }
 
-    $orders = [];
-
-    while($row = $result->fetch_assoc()) {
-        
-        // getting customer info
-        $user_id = (int)$row['user_id'];
-        if ($user_id > 0) {
-            $user_stmt = $conn->prepare("SELECT full_name, phone FROM users WHERE id = ?");
-            $user_stmt->bind_param("i", $user_id);
-            $user_stmt->execute();
-            $user_res = $user_stmt->get_result();
-            
-            if ($user_res && $user_row = $user_res->fetch_assoc()) {
-                $row['customer_name'] = $user_row['full_name'];
-                $row['customer_phone'] = $user_row['phone'];
-            } else {
-                $row['customer_name'] = "Walk-in Customer";
-                $row['customer_phone'] = "No Phone";
+    // Batch fetch items + product names
+    if (!empty($orderIds)) {
+        $idList = implode(',', array_map('intval', $orderIds));
+        $itemSql = "SELECT oi.order_id, oi.quantity, oi.product_id, p.name AS prod_name
+                    FROM order_items oi
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id IN ({$idList})";
+        $itemRes = $conn->query($itemSql);
+        while ($i = $itemRes->fetch_assoc()) {
+            $oid = (int)$i['order_id'];
+            $i['name'] = $i['prod_name'] ?? ("Item #" . (int)$i['product_id']);
+            if (isset($ordersMap[$oid])) {
+                $ordersMap[$oid]['items'][] = $i;
             }
-            $user_stmt->close();
+        }
+    }
+
+    // Attach user info
+    foreach ($ordersMap as $oid => &$row) {
+        $uid = (int)$row['user_id'];
+        if ($uid > 0 && isset($users[$uid])) {
+            $row['customer_name']  = $users[$uid]['full_name'];
+            $row['customer_phone'] = $users[$uid]['phone'];
         } else {
-            $row['customer_name'] = "Walk-in Customer";
-            $row['customer_phone'] = "No Phone";
+            $row['customer_name']  = 'Walk-in Customer';
+            $row['customer_phone'] = 'No Phone';
         }
-
-        // getting order items
-        $order_id = (int)$row['id'];
-        $items = [];
-        $item_stmt = $conn->prepare("SELECT quantity, product_id FROM order_items WHERE order_id = ?");
-        $item_stmt->bind_param("i", $order_id);
-        $item_stmt->execute();
-        $item_res = $item_stmt->get_result();
-        
-        if ($item_res) {
-            while($i = $item_res->fetch_assoc()) {
-                 $pid = (int)$i['product_id'];
-                 
-                 // getting product name
-                 $prod_stmt = $conn->prepare("SELECT name FROM products WHERE id = ?");
-                 $prod_stmt->bind_param("i", $pid);
-                 $prod_stmt->execute();
-                 $prod_res = $prod_stmt->get_result();
-                 
-                 if ($prod_res && $p = $prod_res->fetch_assoc()) {
-                     $i['name'] = $p['name'];
-                 } else {
-                     $i['name'] = "Item #$pid";
-                 }
-                 $prod_stmt->close();
-                 
-                 $items[] = $i;
-            }
-        }
-        $item_stmt->close();
-        $row['items'] = $items;
-        
-        $orders[] = $row;
     }
+    unset($row);
+
+    $ordersOut = array_values($ordersMap);
 
     http_response_code(200);
-    echo json_encode(["success" => true, "orders" => $orders]);
+    echo json_encode([
+        "success" => true,
+        "orders"  => $ordersOut,
+        "total"   => $total,
+        "page"    => $page,
+        "limit"   => $limit,
+    ]);
 
 } catch (Exception $e) {
     http_response_code(500);

@@ -3,6 +3,9 @@
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
     http_response_code(405);
@@ -25,7 +28,7 @@ try {
     $cancelled_by = isset($data['cancelled_by']) ? $conn->real_escape_string(trim($data['cancelled_by'])) : 'Admin';
     
     // checking valid status
-    $validStatuses = ['pending', 'processing', 'ready', 'out-for-delivery', 'completed', 'cancelled', 'scheduled-tomorrow', 'coming_for_pickup', 'arrived_at_shop'];
+    $validStatuses = ['pending', 'processing', 'ready', 'batch_ready', 'out-for-delivery', 'completed', 'cancelled', 'scheduled-tomorrow', 'coming_for_pickup', 'arrived_at_shop'];
     if (!in_array($status, $validStatuses)) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Invalid status value"]);
@@ -33,7 +36,7 @@ try {
     }
     
     // checking if order exists
-    $orderSql = "SELECT o.id, o.status, o.assigned_date, u.full_name as customer_name, u.phone as customer_phone 
+    $orderSql = "SELECT o.id, o.status, o.assigned_date, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email 
                  FROM orders o 
                  LEFT JOIN users u ON o.user_id = u.id 
                  WHERE o.id = ?";
@@ -80,8 +83,8 @@ try {
     }
     $stmt->close();
     
-    // recalculate schedule when order is removed from queue (ready, completed, cancelled)
-    if (in_array($status, ['ready', 'completed', 'cancelled']) && $old_date) {
+    // recalculate schedule when order is removed from queue (ready, batch_ready, completed, cancelled)
+    if (in_array($status, ['ready', 'batch_ready', 'completed', 'cancelled']) && $old_date) {
         require_once __DIR__ . '/order_scheduler.php';
         recalculateSchedule($conn, $old_date);
     }
@@ -96,6 +99,26 @@ try {
         }
     }
     
+    // Send status update email if customer has email
+    if ($order && !empty($order['customer_email'])) {
+        $emailData = [
+            'customerEmail' => $order['customer_email'],
+            'customerName' => $order['customer_name'] ?? 'Customer',
+            'orderId' => $order_id,
+            'newStatus' => $status,
+            'cancellationReason' => $reason
+        ];
+
+        $ch = curl_init(EMAIL_SERVER_URL . '/send-order-status-update');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "Order status updated to '$status'",
