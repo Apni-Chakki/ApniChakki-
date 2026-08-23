@@ -14,15 +14,26 @@ if (!isset($_GET['driver_phone'])) {
 }
 
 $driver_phone = $_GET['driver_phone'];
+$page   = max(1, isset($_GET['page']) ? (int)$_GET['page'] : 1);
+$limit  = max(1, min(200, isset($_GET['limit']) ? (int)$_GET['limit'] : 5));
+$offset = ($page - 1) * $limit;
+
+// Total count for pagination
+$countStmt = $conn->prepare("SELECT COUNT(*) AS c FROM orders o
+                             WHERE o.driver_phone = ?
+                             AND o.status IN ('out-for-delivery','pickup_assigned','coming_for_pickup','arrived_at_shop','ready')");
+$countStmt->bind_param("s", $driver_phone);
+$countStmt->execute();
+$total = (int)$countStmt->get_result()->fetch_assoc()['c'];
+$countStmt->close();
 
 // Only fetch orders explicitly assigned to this driver by their phone number.
-// No OR fallback — that was causing all unassigned 'ready' orders to leak to every driver.
 $sql = "SELECT o.*, o.order_type, u.full_name as customer_name, u.phone as customer_phone
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.id
         WHERE o.driver_phone = ?
         AND o.status IN ('out-for-delivery', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop', 'ready')
-        ORDER BY 
+        ORDER BY
             CASE o.status
                 WHEN 'out-for-delivery' THEN 1
                 WHEN 'coming_for_pickup' THEN 2
@@ -31,11 +42,11 @@ $sql = "SELECT o.*, o.order_type, u.full_name as customer_name, u.phone as custo
                 WHEN 'pickup_assigned' THEN 5
                 ELSE 6
             END ASC,
-            o.created_at ASC";
-
+            o.created_at ASC
+        LIMIT ? OFFSET ?";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $driver_phone);
+$stmt->bind_param("sii", $driver_phone, $limit, $offset);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -98,5 +109,8 @@ $stmt->close();
 
 echo json_encode([
     "success" => true,
-    "orders" => $orders
+    "orders"  => $orders,
+    "total"   => $total,
+    "page"    => $page,
+    "limit"   => $limit,
 ]);

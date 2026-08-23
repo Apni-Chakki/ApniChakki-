@@ -20,6 +20,7 @@ export default function CustomMixRequests() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Convert to order state variables
   const [convertingRequest, setConvertingRequest] = useState(null);
@@ -161,10 +162,12 @@ export default function CustomMixRequests() {
 
   const fetchRequests = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_custom_mix_requests.php`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_custom_mix_requests.php?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
         setRequests(data.data);
+        setTotalItems(data.total || 0);
       } else {
         toast.error('Failed to fetch requests');
       }
@@ -176,8 +179,13 @@ export default function CustomMixRequests() {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     fetchRequests();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
 
   const updateStatus = async (id, status) => {
     try {
@@ -189,7 +197,7 @@ export default function CustomMixRequests() {
       const data = await response.json();
       if (data.success) {
         toast.success(`Status updated to ${status}`);
-        setRequests(prev => prev.map(req => req.id === id ? { ...req, status } : req));
+        fetchRequests();
       } else {
         toast.error(data.message);
       }
@@ -222,14 +230,12 @@ export default function CustomMixRequests() {
       </div>
 
       <div className="grid gap-3 sm:gap-4">
-        {requests.length === 0 ? (
+        {totalItems === 0 ? (
           <div className="text-center p-6 sm:p-8 bg-muted/20 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground font-semibold">
             No custom mix requests found.
           </div>
         ) : (
-          requests
-            .slice((page - 1) * pageSize, page * pageSize)
-            .map(request => (
+          requests.map(request => (
             <motion.div
               key={request.id}
               initial={{ opacity: 0, y: 20 }}
@@ -348,10 +354,10 @@ export default function CustomMixRequests() {
         )}
       </div>
 
-      {requests.length > 0 && (
+      {totalItems > 0 && (
         <Pagination
           currentPage={page}
-          totalItems={requests.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}

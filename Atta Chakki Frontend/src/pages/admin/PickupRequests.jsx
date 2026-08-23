@@ -6,6 +6,7 @@ import { Badge } from '../../components/common/badge';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { Loader2, Truck, Trash2, Phone, MapPin, User, Package, AlertCircle } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,10 @@ export function PickupRequests() {
   const [weightInputs, setWeightInputs] = useState({});
   const [isSavingWeights, setIsSavingWeights] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
   const fetchPersonnel = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/manage_delivery.php`);
@@ -59,11 +64,13 @@ export function PickupRequests() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_pickup_requests.php`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_pickup_requests.php?${params.toString()}`);
       const data = await response.json();
-      
+
       if (data.success) {
         setOrders(data.orders || []);
+        setTotalItems(data.total || 0);
       } else {
         console.error("Failed to load pickup requests");
       }
@@ -75,11 +82,16 @@ export function PickupRequests() {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     fetchPersonnel();
     fetchOrders();
     const interval = setInterval(fetchOrders, 8000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
 
   const handleAssignPersonnel = async (orderId, personnelName, personnelPhone = null) => {
     setOrders(prevOrders => prevOrders.map(order => (
@@ -238,7 +250,7 @@ export function PickupRequests() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm" style={{ background: '#ffffff' }}>
+      <div className="rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm bg-white">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-amber-700 text-xs font-semibold uppercase tracking-wide mb-3">
@@ -250,13 +262,13 @@ export function PickupRequests() {
             </p>
           </div>
           <Badge variant="secondary" className="text-sm sm:text-base font-bold px-3 sm:px-4 py-1.5 sm:py-2 self-start sm:self-auto">
-            {orders.length} {t("Active Requests")}
+            {totalItems} {t("Active Requests")}
           </Badge>
         </div>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
+      {totalItems === 0 ? (
+        <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden bg-white">
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="rounded-full bg-gray-100 p-4 mb-4">
               <Truck className="h-8 w-8 text-gray-400" />
@@ -270,10 +282,13 @@ export function PickupRequests() {
         {/* Mobile card view (below md) */}
         <div className="md:hidden space-y-3">
           {orders.map((order) => {
-            const statusBg = (order.status === 'pending' || order.status === 'pickup_pending') ? '#FEF3C7' : order.status === 'arrived_at_shop' ? '#CCFBF1' : order.status === 'processing' ? '#DBEAFE' : '#DCFCE7';
-            const statusColor = (order.status === 'pending' || order.status === 'pickup_pending') ? '#92400E' : order.status === 'arrived_at_shop' ? '#0F766E' : order.status === 'processing' ? '#1E40AF' : '#166534';
+            const statusPillClasses =
+              (order.status === 'pending' || order.status === 'pickup_pending') ? 'bg-amber-100 text-amber-800'
+              : order.status === 'arrived_at_shop' ? 'bg-teal-100 text-teal-700'
+              : order.status === 'processing' ? 'bg-blue-100 text-blue-800'
+              : 'bg-green-100 text-green-800';
             return (
-              <div key={order.id} className="rounded-xl border border-gray-100 shadow-sm p-4 space-y-3" style={{ background: '#ffffff' }}>
+              <div key={order.id} className="rounded-xl border border-gray-100 shadow-sm p-4 space-y-3 bg-white">
                 {/* Top: Order ID + date + status */}
                 <div className="flex items-start justify-between gap-2 pb-2 border-b border-gray-100">
                   <div className="min-w-0">
@@ -282,7 +297,7 @@ export function PickupRequests() {
                       {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', month: 'short', day: 'numeric' })}
                     </div>
                   </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em', backgroundColor: statusBg, color: statusColor, whiteSpace: 'nowrap' }}>
+                  <span className={`inline-flex items-center px-2.5 py-[3px] rounded-full text-[10px] font-bold tracking-[0.02em] whitespace-nowrap ${statusPillClasses}`}>
                     {order.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </span>
                 </div>
@@ -325,8 +340,8 @@ export function PickupRequests() {
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, border: '1.5px solid #BFDBFE', backgroundColor: order.driver_name ? '#EFF6FF' : '#ffffff', color: '#1D4ED8', cursor: 'pointer', width: '100%' }}>
-                        <Truck style={{ width: 13, height: 13 }} />
+                      <button className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border-[1.5px] border-blue-200 text-blue-700 cursor-pointer ${order.driver_name ? 'bg-blue-50' : 'bg-white'}`}>
+                        <Truck className="w-[13px] h-[13px]" />
                         {order.driver_name ? order.driver_name : 'Assign Driver'}
                       </button>
                     </DropdownMenuTrigger>
@@ -353,16 +368,7 @@ export function PickupRequests() {
                     <button
                       onClick={() => handleArrivedAtShop(order)}
                       disabled={order.status !== 'arrived_at_shop'}
-                      style={{
-                        flex: 1,
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                        padding: '8px 11px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
-                        border: order.status === 'arrived_at_shop' ? '1.5px solid #99F6E4' : '1.5px solid #E5E7EB',
-                        backgroundColor: order.status === 'arrived_at_shop' ? '#F0FDFA' : '#F9FAFB',
-                        color: order.status === 'arrived_at_shop' ? '#0F766E' : '#9CA3AF',
-                        cursor: order.status === 'arrived_at_shop' ? 'pointer' : 'not-allowed',
-                        opacity: order.status === 'arrived_at_shop' ? 1 : 0.7
-                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-[11px] py-2 rounded-lg text-xs font-semibold border-[1.5px] cursor-pointer border-teal-200 bg-teal-50 text-teal-700 disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
                     </button>
@@ -383,7 +389,7 @@ export function PickupRequests() {
         </div>
 
         {/* Desktop table (md and up) */}
-        <div className="hidden md:block rounded-xl border border-gray-100 shadow-sm overflow-hidden" style={{ background: '#ffffff' }}>
+        <div className="hidden md:block rounded-xl border border-gray-100 shadow-sm overflow-hidden bg-white">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -442,18 +448,20 @@ export function PickupRequests() {
                       <div className="flex flex-col gap-3 min-w-[180px]">
 
                         {/* Status Badge */}
-                        <span style={{ display: 'inline-flex', width: 'fit-content', alignItems: 'center', padding: '3px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em',
-                          backgroundColor: (order.status === 'pending' || order.status === 'pickup_pending') ? '#FEF3C7' : order.status === 'arrived_at_shop' ? '#CCFBF1' : order.status === 'processing' ? '#DBEAFE' : '#DCFCE7',
-                          color: (order.status === 'pending' || order.status === 'pickup_pending') ? '#92400E' : order.status === 'arrived_at_shop' ? '#0F766E' : order.status === 'processing' ? '#1E40AF' : '#166534'
-                        }}>
+                        <span className={`inline-flex w-fit items-center px-2.5 py-[3px] rounded-full text-[11px] font-bold tracking-[0.02em] ${
+                          (order.status === 'pending' || order.status === 'pickup_pending') ? 'bg-amber-100 text-amber-800'
+                          : order.status === 'arrived_at_shop' ? 'bg-teal-100 text-teal-700'
+                          : order.status === 'processing' ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                        }`}>
                           {order.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                         </span>
 
                         {/* Assign Driver */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, border: '1.5px solid #BFDBFE', backgroundColor: order.driver_name ? '#EFF6FF' : '#ffffff', color: '#1D4ED8', cursor: 'pointer', transition: 'background 0.15s' }}>
-                              <Truck style={{ width: 13, height: 13 }} />
+                            <button className={`inline-flex items-center gap-1.5 px-3 py-[5px] rounded-lg text-xs font-semibold border-[1.5px] border-blue-200 text-blue-700 cursor-pointer transition-colors ${order.driver_name ? 'bg-blue-50' : 'bg-white'}`}>
+                              <Truck className="w-[13px] h-[13px]" />
                               {order.driver_name ? order.driver_name.slice(0, 12) : 'Assign Driver'}
                             </button>
                           </DropdownMenuTrigger>
@@ -481,15 +489,7 @@ export function PickupRequests() {
                           <button
                             onClick={() => handleArrivedAtShop(order)}
                             disabled={order.status !== 'arrived_at_shop'}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '5px',
-                              padding: '5px 11px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
-                              border: order.status === 'arrived_at_shop' ? '1.5px solid #99F6E4' : '1.5px solid #E5E7EB',
-                              backgroundColor: order.status === 'arrived_at_shop' ? '#F0FDFA' : '#F9FAFB',
-                              color: order.status === 'arrived_at_shop' ? '#0F766E' : '#9CA3AF',
-                              cursor: order.status === 'arrived_at_shop' ? 'pointer' : 'not-allowed',
-                              opacity: order.status === 'arrived_at_shop' ? 1 : 0.7
-                            }}
+                            className="inline-flex items-center gap-1.5 px-[11px] py-[5px] rounded-lg text-xs font-semibold border-[1.5px] cursor-pointer border-teal-200 bg-teal-50 text-teal-700 disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
                           >
                             {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
                           </button>
@@ -512,6 +512,16 @@ export function PickupRequests() {
             </Table>
           </div>
         </div>
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            className="mt-4"
+          />
+        )}
         </>
       )}
 

@@ -35,22 +35,82 @@ import * as XLSX from 'xlsx';
 import { API_BASE_URL } from '../../config'; // <-- NEW: Added API Config
 import { Pagination } from '../../components/common/Pagination';
 
+// Map raw API row → UI shape (shared by list + export/print fetches)
+const mapOrderRow = (order) => {
+  const totalAmount = parseFloat(order.total_amount) || 0;
+  const amountPaid = parseFloat(order.amount_paid) || 0;
+
+  let paymentStatus = order.payment_status || 'pending';
+  if (paymentStatus === 'paid' || amountPaid >= totalAmount) {
+    paymentStatus = 'paid';
+  } else if (amountPaid > 0) {
+    paymentStatus = 'partial';
+  }
+
+  return {
+    id: order.id.toString(),
+    customerName: order.customer_name || order.full_name || 'Unknown Customer',
+    phone: order.customer_phone || order.phone || 'No Phone',
+    total: totalAmount,
+    status: order.status,
+    cancelReason: order.cancellation_reason,
+    cancelledBy: order.cancelled_by,
+    createdAt: order.created_at,
+    paymentMethod: order.payment_method || 'cod',
+    paymentStatus,
+    advancePayment: amountPaid,
+    type: (order.order_type === 'pickup' || (order.shipping_address && (
+      order.shipping_address.toLowerCase().includes('pickup') ||
+      order.shipping_address.toLowerCase().includes('store') ||
+      order.shipping_address.toLowerCase().includes('collect') ||
+      order.shipping_address.toLowerCase().includes('self') ||
+      order.shipping_address.toLowerCase().includes('shop')
+    ))) ? 'pickup' : 'delivery',
+    deliveryAddress: order.shipping_address,
+    source: (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
+    deliveryPersonnel: order.driver_name || null,
+    couponCode: order.coupon_code || '',
+    couponDiscount: parseFloat(order.coupon_discount || 0),
+    items: order.items ? order.items.map(item => ({
+      quantity: item.quantity,
+      isWeightPending: item.is_weight_pending || false,
+      is_cleaning: item.is_cleaning == 1,
+      is_grinding: item.is_grinding == 1,
+      customizations: item.customizations || [],
+      price_at_purchase: item.price_at_purchase || 0,
+      name: item.name,
+      service: { name: item.name, price: item.price_at_purchase || 0, unit: item.unit || 'Kg' }
+    })) : []
+  };
+};
+
 export function OrdersRecord() {
   const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true); // <-- NEW: Added Loading State
-  
+  const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [dateRange, setDateRange] = useState(undefined);
-  
+
   const [printOrder, setPrintOrder] = useState(null);
   const [showPrintList, setShowPrintList] = useState(false);
+  const [printListOrders, setPrintListOrders] = useState([]);
+  const [isPreparingExport, setIsPreparingExport] = useState(false);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [filteredPaid, setFilteredPaid] = useState(0);
+
+  const [stats, setStats] = useState({
+    total: 0, pending: 0, processing: 0, ready: 0,
+    outForDelivery: 0, completed: 0, cancelled: 0,
+    totalRevenue: 0, paidOrders: 0, unpaidOrders: 0, partialOrders: 0,
+  });
 
   const [showAdvanceOnly, setShowAdvanceOnly] = useState(false);
   const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
@@ -59,136 +119,89 @@ export function OrdersRecord() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [isSavingPayment, setIsSavingPayment] = useState(false);
 
+  // Debounce free-text search so we don't hit the API on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Reset to page 1 whenever a filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, typeFilter, sourceFilter, dateRange, showAdvanceOnly, showUnpaidOnly, pageSize]);
+
+  // Build the query string used by both list fetch and export/print fetch
+  const buildQuery = (extra = {}) => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+    if (sourceFilter && sourceFilter !== 'all') params.set('source', sourceFilter);
+    if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
+    if (dateRange?.from) {
+      const iso = (d) => new Date(d).toISOString().slice(0, 10);
+      params.set('date_from', iso(dateRange.from));
+      params.set('date_to', iso(dateRange.to || dateRange.from));
+    }
+    if (showAdvanceOnly) params.set('advance_only', '1');
+    if (showUnpaidOnly) params.set('unpaid_only', '1');
+    Object.entries(extra).forEach(([k, v]) => params.set(k, v));
+    return params.toString();
+  };
+
   useEffect(() => {
     loadOrders();
-    // Reduced polling frequency slightly for a heavy "all orders" query
-    const interval = setInterval(loadOrders, 10000); 
+    const interval = setInterval(loadOrders, 15000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch, statusFilter, typeFilter, sourceFilter, dateRange, showAdvanceOnly, showUnpaidOnly]);
 
-  // NEW: FETCH FROM API
   const loadOrders = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_all_orders.php`);
+      const qs = buildQuery({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_all_orders.php?${qs}`);
       const data = await response.json();
 
       if (data.success) {
-        const mappedOrders = data.orders.map(order => {
-          const totalAmount = parseFloat(order.total_amount) || 0;
-          const amountPaid = parseFloat(order.amount_paid) || 0;
-          
-          // Determine payment status from DB, with fallback logic
-          let paymentStatus = order.payment_status || 'pending';
-          if (paymentStatus === 'paid' || amountPaid >= totalAmount) {
-            paymentStatus = 'paid';
-          } else if (amountPaid > 0) {
-            paymentStatus = 'partial';
-          }
-          
-          return {
-            id: order.id.toString(),
-            customerName: order.customer_name || order.full_name || 'Unknown Customer',
-            phone: order.customer_phone || order.phone || 'No Phone',
-            total: totalAmount,
-            status: order.status,
-            cancelReason: order.cancellation_reason,
-            cancelledBy: order.cancelled_by,
-            createdAt: order.created_at,
-            paymentMethod: order.payment_method || 'cod',
-            paymentStatus: paymentStatus,
-            advancePayment: amountPaid,
-            type: (order.order_type === 'pickup' || (order.shipping_address && (
-              order.shipping_address.toLowerCase().includes('pickup') || 
-              order.shipping_address.toLowerCase().includes('store') || 
-              order.shipping_address.toLowerCase().includes('collect') || 
-              order.shipping_address.toLowerCase().includes('self') || 
-              order.shipping_address.toLowerCase().includes('shop')
-            ))) ? 'pickup' : 'delivery',
-            deliveryAddress: order.shipping_address,
-            source: (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
-            deliveryPersonnel: order.driver_name || null,
-            couponCode: order.coupon_code || '',
-            couponDiscount: parseFloat(order.coupon_discount || 0),
-
-            items: order.items ? order.items.map(item => ({
-              quantity: item.quantity,
-              isWeightPending: item.is_weight_pending || false,
-              is_cleaning: item.is_cleaning == 1,
-              is_grinding: item.is_grinding == 1,
-              customizations: item.customizations || [],
-              price_at_purchase: item.price_at_purchase || 0,
-              name: item.name,
-              service: { name: item.name, price: item.price_at_purchase || 0, unit: item.unit || 'Kg' }
-            })) : []
-          };
-        });
-        
-        setOrders(mappedOrders);
+        setOrders(data.orders.map(mapOrderRow));
+        setTotalItems(data.total || 0);
+        setFilteredPaid(parseFloat(data.filtered_paid) || 0);
+        if (data.stats) {
+          setStats({
+            total: data.stats.total || 0,
+            pending: data.stats.pending || 0,
+            processing: data.stats.processing || 0,
+            ready: data.stats.ready || 0,
+            outForDelivery: data.stats.out_for_delivery || 0,
+            completed: data.stats.completed || 0,
+            cancelled: data.stats.cancelled || 0,
+            totalRevenue: parseFloat(data.stats.total_revenue) || 0,
+            paidOrders: data.stats.paid_orders || 0,
+            unpaidOrders: data.stats.unpaid_orders || 0,
+            partialOrders: data.stats.partial_orders || 0,
+          });
+        }
       } else {
         console.error("API Error:", data.message);
       }
     } catch (error) {
-      console.error("Network error fetching all orders:", error);
+      console.error("Network error fetching orders:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const matchesDate = (orderDateStr) => {
-    if (!dateRange || !dateRange.from) return true;
-    // Replace space with T to fix Safari/iOS Invalid Date bug with MySQL timestamps
-    const safeDateStr = typeof orderDateStr === 'string' ? orderDateStr.replace(' ', 'T') : orderDateStr;
-    const orderDate = new Date(safeDateStr);
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
-    if (orderDate < fromDate) return false;
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999); 
-    if (orderDate > toDate) return false;
-    return true;
+  // Fetch full filtered set for Export / Print
+  const fetchAllFiltered = async () => {
+    const qs = buildQuery({ all: '1' });
+    const response = await fetch(`${API_BASE_URL}/get_all_orders.php?${qs}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed to load orders');
+    return data.orders.map(mapOrderRow);
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.phone && order.phone.includes(searchTerm)) ||
-      (order.id && order.id.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesType = typeFilter === 'all' || order.type === typeFilter;
-    const matchesSource = sourceFilter === 'all' || order.source === sourceFilter;
-    const matchesDateFilter = matchesDate(order.createdAt);
-    const matchesAdvance = !showAdvanceOnly || (order.advancePayment !== undefined && order.advancePayment > 0);
-    
-    const matchesUnpaid = !showUnpaidOnly || 
-                          ((order.paymentStatus === 'pending' || order.paymentStatus === 'partial') && order.status !== 'cancelled');
-
-    return matchesSearch && matchesStatus && matchesType && matchesSource && matchesDateFilter && matchesAdvance && matchesUnpaid;
-  });
-
-  const totalPayment = filteredOrders.reduce((sum, order) => {
-    const paidAmount = order.paymentStatus === 'paid' ? order.total : (order.advancePayment || 0);
-    if (order.status !== 'cancelled' && paidAmount > 0) {
-      return sum + paidAmount;
-    }
-    return sum;
-  }, 0);
-
-  const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    processing: orders.filter(o => o.status === 'processing').length,
-    ready: orders.filter(o => o.status === 'ready').length,
-    outForDelivery: orders.filter(o => o.status === 'out-for-delivery').length,
-    completed: orders.filter(o => o.status === 'completed').length,
-    cancelled: orders.filter(o => o.status === 'cancelled').length,
-    totalRevenue: orders
-      .filter(o => o.status === 'completed')
-      .reduce((sum, o) => sum + o.total, 0),
-    paidOrders: orders.filter(o => o.paymentStatus === 'paid').length,
-    unpaidOrders: orders.filter(o => o.paymentStatus === 'pending').length,
-    partialOrders: orders.filter(o => o.paymentStatus === 'partial').length,
-  };
+  // Server already filters, sorts, and paginates — `orders` is the current page
+  const filteredOrders = orders;
+  const totalPayment = filteredPaid;
 
   const prettifyStatus = (status) =>
     String(status || '')
@@ -223,15 +236,31 @@ export function OrdersRecord() {
     }
   }
 
-  // Export to Real Excel (.xlsx)
-  const handleExportCSV = () => {
-    if (filteredOrders.length === 0) {
+  // Export to Real Excel (.xlsx) — always fetch the full filtered set, not just the current page
+  const handleExportCSV = async () => {
+    if (totalItems === 0) {
       toast.error('No orders to export');
       return;
     }
 
-    // Prepare data as array of objects for Excel
-    const excelData = filteredOrders.map(order => {
+    setIsPreparingExport(true);
+    let fullList = [];
+    try {
+      fullList = await fetchAllFiltered();
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to prepare export');
+      setIsPreparingExport(false);
+      return;
+    }
+    setIsPreparingExport(false);
+
+    if (fullList.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+
+    const excelData = fullList.map(order => {
       const remainingBalance = order.total - (order.advancePayment || 0);
       const itemsStr = order.items.map(i => `${i.service.name} x${i.quantity}`).join(' | ');
       
@@ -513,25 +542,37 @@ export function OrdersRecord() {
               <Label htmlFor="unpaid-filter" className="text-xs cursor-pointer text-red-700">Unpaid/Due</Label>
             </div>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               className="text-xs h-8 text-green-700 border-green-200 hover:bg-green-50 px-4"
-              disabled={filteredOrders.length === 0}
+              disabled={totalItems === 0 || isPreparingExport}
               onClick={handleExportCSV}
             >
-              <Download className="h-3 w-3 mr-1" />
+              {isPreparingExport ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />}
               Export
             </Button>
-            
-            <Button 
-              variant="default" 
+
+            <Button
+              variant="default"
               size="sm"
               className="text-xs h-8 px-4"
-              disabled={filteredOrders.length === 0}
-              onClick={() => setShowPrintList(true)}
+              disabled={totalItems === 0 || isPreparingExport}
+              onClick={async () => {
+                setIsPreparingExport(true);
+                try {
+                  const full = await fetchAllFiltered();
+                  setPrintListOrders(full);
+                  setShowPrintList(true);
+                } catch (e) {
+                  console.error(e);
+                  toast.error('Failed to prepare print list');
+                } finally {
+                  setIsPreparingExport(false);
+                }
+              }}
             >
-              <FileText className="h-3 w-3 mr-1" />
+              {isPreparingExport ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <FileText className="h-3 w-3 mr-1" />}
               Print
             </Button>
           </div>
@@ -544,12 +585,12 @@ export function OrdersRecord() {
             <h3 className="text-sm font-medium text-foreground">Filtered Summary</h3>
             <p className="text-lg font-bold mt-1">Rs. {totalPayment.toLocaleString('en-IN')}</p>
           </div>
-          <p className="text-xs text-muted-foreground text-right">{filteredOrders.length} orders</p>
+          <p className="text-xs text-muted-foreground text-right">{totalItems} orders</p>
         </div>
       </Card>
 
       {/* Orders Table / Cards */}
-      {filteredOrders.length === 0 ? (
+      {totalItems === 0 ? (
         <Card className="p-8 text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">No orders found matching your filters.</p>
@@ -559,7 +600,6 @@ export function OrdersRecord() {
         {/* Mobile card view (below md) */}
         <div className="md:hidden space-y-3">
           {filteredOrders
-            .slice((page - 1) * pageSize, page * pageSize)
             .map((order) => {
             const remainingBalance = order.total - (order.advancePayment || 0);
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -669,7 +709,6 @@ export function OrdersRecord() {
               </TableHeader>
               <TableBody>
                 {filteredOrders
-                  .slice((page - 1) * pageSize, page * pageSize)
                   .map((order) => {
                   const remainingBalance = order.total - (order.advancePayment || 0);
                   
@@ -758,28 +797,28 @@ export function OrdersRecord() {
         </>
       )}
 
-      {filteredOrders.length > 0 && (
+      {totalItems > 0 && (
         <Pagination
           currentPage={page}
-          totalItems={filteredOrders.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
           className="mt-4"
         />
       )}
-      
+
       <PrintOrderDetails
         order={printOrder}
         open={!!printOrder}
         onClose={() => setPrintOrder(null)}
       />
 
-      <PrintTaskList 
-        orders={filteredOrders}
+      <PrintTaskList
+        orders={printListOrders}
         title={`Orders List ${showUnpaidOnly ? '(Unpaid/Due Only)' : ''}`}
         open={showPrintList}
-        onClose={() => setShowPrintList(false)}
+        onClose={() => { setShowPrintList(false); setPrintListOrders([]); }}
       />
 
       <Dialog open={!!paymentOrder} onOpenChange={() => setPaymentOrder(null)}>

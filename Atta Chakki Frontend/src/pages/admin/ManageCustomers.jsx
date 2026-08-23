@@ -16,9 +16,12 @@ export function ManageCustomers() {
   const [privileges, setPrivileges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [stats, setStats] = useState({ total: 0, active: 0, vip: 0, total_spent: 0 });
   
   // VIP assign Modal states
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -43,10 +46,17 @@ export function ManageCustomers() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/get_customers.php`);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+      });
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const res = await fetch(`${API_BASE_URL}/get_customers.php?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
         setCustomers(data.customers);
+        setTotalItems(data.total || 0);
+        if (data.stats) setStats(data.stats);
       } else {
         toast.error(data.message || t('Failed to load customers'));
       }
@@ -70,9 +80,25 @@ export function ManageCustomers() {
   };
 
   useEffect(() => {
-    fetchCustomers();
     fetchPrivileges();
   }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset to page 1 whenever search or page size changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
+  // Re-fetch when page, size, or search changes
+  useEffect(() => {
+    fetchCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch]);
 
   const handleToggleStatus = async (customer) => {
     const nextActive = !customer.is_active;
@@ -251,21 +277,12 @@ export function ManageCustomers() {
     return `https://wa.me/${cleaned}`;
   };
 
-  // Filter customers by search term
-  const filteredCustomers = customers.filter(customer => {
-    const term = searchTerm.toLowerCase();
-    return (
-      (customer.full_name || '').toLowerCase().includes(term) ||
-      (customer.phone || '').toLowerCase().includes(term) ||
-      (customer.email || '').toLowerCase().includes(term)
-    );
-  });
-
-  // Aggregate Stats
-  const totalCustomersCount = customers.length;
-  const activeCustomersCount = customers.filter(c => c.is_active).length;
-  const vipCustomersCount = customers.filter(c => c.is_vip).length;
-  const totalSalesAmount = customers.reduce((sum, c) => sum + c.total_spent, 0);
+  // Server owns filtering + paging; `customers` is the current page
+  const filteredCustomers = customers;
+  const totalCustomersCount = stats.total;
+  const activeCustomersCount = stats.active;
+  const vipCustomersCount = stats.vip;
+  const totalSalesAmount = stats.total_spent;
 
   if (loading) {
     return (
@@ -349,7 +366,6 @@ export function ManageCustomers() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 transition-shadow focus:ring-2 focus:ring-purple-100"
-              style={{ paddingLeft: '2.5rem' }}
             />
           </div>
         </div>
@@ -362,9 +378,7 @@ export function ManageCustomers() {
           <>
           {/* Mobile: card list (below md) */}
           <div className="md:hidden space-y-3">
-            {filteredCustomers
-              .slice((page - 1) * pageSize, page * pageSize)
-              .map((customer) => (
+            {filteredCustomers.map((customer) => (
               <div key={customer.id} className="border rounded-lg p-3 bg-card space-y-2.5">
                 {/* Top row: name + status badge */}
                 <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
@@ -484,9 +498,7 @@ export function ManageCustomers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-              {filteredCustomers
-                .slice((page - 1) * pageSize, page * pageSize)
-                .map((customer) => (
+              {filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-4">
                       <div className="font-semibold text-gray-900">{customer.full_name}</div>
@@ -601,10 +613,10 @@ export function ManageCustomers() {
             </table>
           </div>
 
-          {filteredCustomers.length > 0 && (
+          {totalItems > 0 && (
             <Pagination
               currentPage={page}
-              totalItems={filteredCustomers.length}
+              totalItems={totalItems}
               pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}

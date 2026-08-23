@@ -12,21 +12,39 @@ export function CompletedOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Debounce
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Reset to page 1 on filter change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, sourceFilter, pageSize]);
 
   useEffect(() => {
     fetchCompletedOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch, sourceFilter]);
 
   const fetchCompletedOrders = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_completed_orders.php`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (sourceFilter && sourceFilter !== 'all') params.set('source', sourceFilter);
+      const response = await fetch(`${API_BASE_URL}/get_completed_orders.php?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
         setOrders(data.orders);
+        setTotalItems(data.total || 0);
       }
     } catch (error) {
       console.error("Error fetching history:", error);
@@ -35,17 +53,7 @@ export function CompletedOrders() {
     }
   };
 
-  // Filter logic for search bar
-  const filteredOrders = orders.filter(order => {
-    const source = (order.source && order.source === 'manual') ? 'manual' : (order.user_id === '1' || !order.user_id) ? 'manual' : 'online';
-    const matchesSearch = order.id.toString().includes(searchTerm) ||
-      (order.customer_name || order.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.customer_phone || order.phone || '').includes(searchTerm);
-    
-    const matchesSource = sourceFilter === 'all' || sourceFilter === source;
-
-    return matchesSearch && matchesSource;
-  });
+  const filteredOrders = orders;
 
   if (loading) return <div className="p-8 text-center">Loading History...</div>;
 
@@ -57,7 +65,7 @@ export function CompletedOrders() {
           <p className="text-muted-foreground">History of delivered and finished jobs</p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-3">
-          <select 
+          <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
             className="flex h-10 w-full md:w-[160px] items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -68,8 +76,8 @@ export function CompletedOrders() {
           </select>
           <div className="relative w-full md:w-64 lg:w-72 md:ml-auto group">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-green-600" />
-            <Input 
-              placeholder="Search ID, Name, Phone..." 
+            <Input
+              placeholder="Search ID, Name, Phone..."
               className="pl-11 text-sm h-10 rounded-full border-gray-200 bg-gray-50 hover:bg-white focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-green-500 shadow-sm transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -79,12 +87,10 @@ export function CompletedOrders() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredOrders.length === 0 ? (
+        {totalItems === 0 ? (
           <p className="col-span-full text-center text-muted-foreground py-10">No completed orders found.</p>
         ) : (
-          filteredOrders
-            .slice((page - 1) * pageSize, page * pageSize)
-            .map((order) => {
+          filteredOrders.map((order) => {
             const isManual = (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id);
             return (
             <Card key={order.id} className="border-t-4 border-t-green-500 hover:shadow-lg transition-shadow">
@@ -144,10 +150,10 @@ export function CompletedOrders() {
         )}
       </div>
 
-      {filteredOrders.length > 0 && (
+      {totalItems > 0 && (
         <Pagination
           currentPage={page}
-          totalItems={filteredOrders.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
@@ -160,8 +166,3 @@ export function CompletedOrders() {
 
 
 export default CompletedOrders;
-
-
-
-
-
