@@ -29,12 +29,17 @@ export function InventoryManagement() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [inventory, setInventory] = useState([]);
-  const [loading, setLoading] = useState(true); // <-- NEW: Loading State
-  const [isUpdating, setIsUpdating] = useState(false); // To disable buttons while saving
-  
+  const [printInventory, setPrintInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
+  const [totalItems, setTotalItems] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [stats, setStats] = useState({ total_products: 0, low_stock_count: 0, well_stocked_count: 0 });
+
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
@@ -47,19 +52,42 @@ export function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  // Debounce search
   useEffect(() => {
-    fetchInventory(); 
-  }, []);
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
-  // NEW: FETCH FROM API
+  // Reset to page 1 on filter change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, categoryFilter, pageSize]);
+
+  useEffect(() => {
+    fetchInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch, categoryFilter]);
+
+  const buildParams = (extra = {}) => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
+    Object.entries(extra).forEach(([k, v]) => params.set(k, v));
+    return params.toString();
+  };
+
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/get_inventory.php`);
+      const qs = buildParams({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_inventory.php?${qs}`);
       const data = await response.json();
 
       if (data.success) {
         setInventory(data.inventory);
+        setTotalItems(data.total || 0);
+        if (data.stats) setStats(data.stats);
+        if (Array.isArray(data.categories)) setCategories(data.categories);
       } else {
         toast.error(data.message || "Failed to load inventory");
       }
@@ -69,6 +97,14 @@ export function InventoryManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllInventory = async () => {
+    const qs = buildParams({ all: '1' });
+    const response = await fetch(`${API_BASE_URL}/get_inventory.php?${qs}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed');
+    return data.inventory;
   };
 
   // NEW: UPDATE VIA API
@@ -134,26 +170,22 @@ export function InventoryManagement() {
     }
   };
 
-  const handlePrintRestockList = () => {
-    setShowPrintDialog(true);
+  const handlePrintRestockList = async () => {
+    try {
+      const all = await fetchAllInventory();
+      setPrintInventory(all);
+      setShowPrintDialog(true);
+    } catch (e) {
+      toast.error('Failed to prepare restock list');
+    }
   };
 
-  // Extract unique categories dynamically from the database products
-  const dbCategories = Array.from(new Set(inventory.map(item => item.category).filter(Boolean))).sort();
+  // Server-provided categories (unique across whole DB)
+  const dbCategories = categories;
 
-  // Filter Logic (Now uses category directly from the DB)
-  const filteredInventory = inventory.filter(item => {
-    const safeName = (item.productName || item.name || '').toLowerCase();
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = safeName.includes(searchLower) || (item.category || '').toLowerCase().includes(searchLower);
-    
-    // Category dropdown filter
-    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-    
-    return matchesSearch && matchesCategory;
-  });
-
-  const lowStockCount = inventory.filter(item => item.currentStock <= item.minStockLevel).length;
+  // Server owns filtering + paging
+  const filteredInventory = inventory;
+  const lowStockCount = stats.low_stock_count;
 
   if (loading && inventory.length === 0) {
     return (
@@ -184,7 +216,7 @@ export function InventoryManagement() {
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">Total Products</p>
-              <p className="text-lg sm:text-2xl font-bold mt-1">{inventory.length}</p>
+              <p className="text-lg sm:text-2xl font-bold mt-1">{stats.total_products}</p>
             </div>
             <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <Package className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
@@ -209,7 +241,7 @@ export function InventoryManagement() {
             <div className="min-w-0">
               <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">Well Stocked</p>
               <p className="text-lg sm:text-2xl font-bold mt-1">
-                {inventory.filter(item => item.currentStock > item.minStockLevel).length}
+                {stats.well_stocked_count}
               </p>
             </div>
             <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
@@ -248,7 +280,7 @@ export function InventoryManagement() {
       </Card>
 
       {/* Inventory list */}
-      {filteredInventory.length === 0 ? (
+      {totalItems === 0 ? (
         <Card className="p-8 sm:p-12 text-center">
           <Package className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
           <p className="text-sm sm:text-base text-muted-foreground mb-2">No matching products found.</p>
@@ -257,9 +289,7 @@ export function InventoryManagement() {
         <>
           {/* Mobile: card list (below md) */}
           <div className="md:hidden space-y-3">
-            {filteredInventory
-              .slice((page - 1) * pageSize, page * pageSize)
-              .map((item) => {
+            {filteredInventory.map((item) => {
               const status = getStockStatus(item);
               return (
                 <Card key={item.id} className="p-3 space-y-3">
@@ -333,9 +363,7 @@ export function InventoryManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInventory
-                  .slice((page - 1) * pageSize, page * pageSize)
-                  .map((item) => {
+                {filteredInventory.map((item) => {
                   const status = getStockStatus(item);
                   return (
                     <TableRow key={item.id}>
@@ -397,10 +425,10 @@ export function InventoryManagement() {
             </Table>
           </Card>
 
-          {filteredInventory.length > 0 && (
+          {totalItems > 0 && (
             <Pagination
               currentPage={page}
-              totalItems={filteredInventory.length}
+              totalItems={totalItems}
               pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
@@ -498,10 +526,10 @@ export function InventoryManagement() {
         </DialogContent>
       </Dialog>
 
-      <PrintRestockList 
-        items={inventory}
+      <PrintRestockList
+        items={printInventory}
         open={showPrintDialog}
-        onClose={() => setShowPrintDialog(false)}
+        onClose={() => { setShowPrintDialog(false); setPrintInventory([]); }}
       />
     </div>
   );

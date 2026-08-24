@@ -41,8 +41,10 @@ export function ActiveRentals() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+  const [totalItems, setTotalItems] = useState(0);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [historyTotal, setHistoryTotal] = useState(0);
 
   const mapRentalToOrder = (rental) => {
     const isOverdue = rental.status === 'overdue';
@@ -99,11 +101,13 @@ export function ActiveRentals() {
 
   const loadRentals = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_active_rentals.php`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_active_rentals.php?${params.toString()}`);
       const data = await response.json();
       if (data.success && data.data) {
         setRentals(data.data.rentals || []);
         if (data.data.summary) setSummary(data.data.summary);
+        setTotalItems(data.data.total || 0);
       }
     } catch (error) {
       console.error('Error loading rentals:', error);
@@ -115,10 +119,12 @@ export function ActiveRentals() {
   const loadHistory = async () => {
     setLoadingHistory(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/get_rental_history.php`);
+      const params = new URLSearchParams({ page: String(historyPage), limit: String(historyPageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_rental_history.php?${params.toString()}`);
       const data = await response.json();
       if (data.success && data.data) {
         setHistory(data.data.rentals || []);
+        setHistoryTotal(data.data.total || 0);
       }
     } catch (error) {
       console.error('Error loading history:', error);
@@ -131,7 +137,13 @@ export function ActiveRentals() {
     loadRentals();
     const interval = setInterval(loadRentals, 15000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    if (viewHistory) loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyPage, historyPageSize, viewHistory]);
 
   const handleReturn = async () => {
     if (!returnModal) return;
@@ -250,7 +262,7 @@ Suchi Chakki - Fresh Flour Daily`.trim();
             <RotateCcw className="h-7 w-7 text-teal-500" />
             Active Rentals
           </h1>
-          <p className="text-muted-foreground">{rentals.length} {t("rental(s) currently active")}</p>
+          <p className="text-muted-foreground">{totalItems} {t("rental(s) currently active")}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -290,7 +302,7 @@ Suchi Chakki - Fresh Flour Daily`.trim();
       </div>
 
       {/* Active Rentals List */}
-      {rentals.length === 0 ? (
+      {totalItems === 0 ? (
         <Card className="bg-muted/50 border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="rounded-full bg-background p-4 mb-4">
@@ -303,9 +315,7 @@ Suchi Chakki - Fresh Flour Daily`.trim();
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {rentals
-              .slice((page - 1) * pageSize, page * pageSize)
-              .map((rental) => {
+            {rentals.map((rental) => {
               const isOverdue = rental.status === 'overdue';
             const overdueDays = getOverdueDays(rental);
             const daysRemaining = getDaysRemaining(rental);
@@ -455,10 +465,10 @@ Suchi Chakki - Fresh Flour Daily`.trim();
             );
           })}
           </div>
-          {rentals.length > 0 && (
+          {totalItems > 0 && (
             <Pagination
               currentPage={page}
-              totalItems={rentals.length}
+              totalItems={totalItems}
               pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
@@ -477,12 +487,12 @@ Suchi Chakki - Fresh Flour Daily`.trim();
               Rental History
             </div>
             <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-500 font-semibold">{history.length} record(s)</span>
+            <span className="text-xs text-slate-500 font-semibold">{historyTotal} record(s)</span>
           </div>
 
           {loadingHistory ? (
             <div className="text-center py-8"><Loader2 className="animate-spin h-6 w-6 mx-auto text-slate-400" /></div>
-          ) : history.length === 0 ? (
+          ) : historyTotal === 0 ? (
             <Card className="bg-slate-50/50 border-dashed">
               <CardContent className="py-8 text-center">
                 <p className="text-slate-500 text-sm font-semibold">No rental history found.</p>
@@ -490,9 +500,7 @@ Suchi Chakki - Fresh Flour Daily`.trim();
             </Card>
           ) : (
             <div className="space-y-3">
-              {history
-                .slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize)
-                .map((h) => (
+              {history.map((h) => (
                 <Card key={h.id} className={`border-l-4 ${
                   h.status === 'returned' ? 'border-l-green-400' :
                   h.status === 'active' ? 'border-l-teal-400' :
@@ -536,10 +544,10 @@ Suchi Chakki - Fresh Flour Daily`.trim();
             </div>
           )}
 
-          {history.length > 0 && (
+          {historyTotal > 0 && (
             <Pagination
               currentPage={historyPage}
-              totalItems={history.length}
+              totalItems={historyTotal}
               pageSize={historyPageSize}
               onPageChange={setHistoryPage}
               onPageSizeChange={(s) => { setHistoryPageSize(s); setHistoryPage(1); }}

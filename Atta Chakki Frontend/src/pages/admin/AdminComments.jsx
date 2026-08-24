@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../config';
 import { Loader2, Trash2, Search, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../store/AuthContext';
+import { Pagination } from '../../components/common/Pagination';
 
 export function AdminComments() {
   const { t } = useTranslation();
@@ -14,19 +15,31 @@ export function AdminComments() {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  useEffect(() => {
+    setPage(1);
+  }, [appliedSearch, pageSize]);
 
   useEffect(() => {
     fetchComments();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, appliedSearch]);
 
-  const fetchComments = async (searchTerm = '') => {
+  const fetchComments = async () => {
     setLoading(true);
     try {
-      const url = `${API_BASE_URL}/admin_get_comments.php${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`;
-      const response = await fetch(url);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      if (appliedSearch) params.set('search', appliedSearch);
+      const response = await fetch(`${API_BASE_URL}/admin_get_comments.php?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
         setComments(data.data);
+        setTotalItems(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -38,7 +51,7 @@ export function AdminComments() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchComments(search);
+    setAppliedSearch(search);
   };
 
   const handleDelete = async (id) => {
@@ -50,10 +63,10 @@ export function AdminComments() {
           body: JSON.stringify({ id, user_id: user.id, role: user.role })
         });
         const data = await response.json();
-        
+
         if (data.success) {
           toast.success('Comment deleted successfully');
-          fetchComments(search);
+          fetchComments();
         } else {
           toast.error(data.message || 'Error deleting comment');
         }
@@ -66,19 +79,19 @@ export function AdminComments() {
       <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
         <p className="text-primary-foreground font-medium">Are you sure you want to delete this comment?</p>
         <div className="flex gap-2 justify-end">
-          <Button 
-            onClick={() => toast.dismiss(t)} 
-            variant="outline" 
+          <Button
+            onClick={() => toast.dismiss(t)}
+            variant="outline"
             size="sm"
             className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               toast.dismiss(t);
               deleteComment();
-            }} 
+            }}
             size="sm"
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
           >
@@ -117,7 +130,7 @@ export function AdminComments() {
 
       {/* Mobile: card list (below md) */}
       <div className="md:hidden space-y-3">
-        {comments.length === 0 ? (
+        {totalItems === 0 ? (
           <Card className="p-6 sm:p-8 text-center text-sm text-muted-foreground">
             <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
             No comments found
@@ -195,7 +208,7 @@ export function AdminComments() {
                 </tr>
               ))}
 
-              {comments.length === 0 && (
+              {totalItems === 0 && (
                 <tr>
                   <td colSpan="5" className="px-6 py-8 text-center text-muted-foreground">
                     <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
@@ -207,10 +220,17 @@ export function AdminComments() {
           </table>
         </div>
       </div>
+
+      {totalItems > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          className="mt-4"
+        />
+      )}
     </div>
   );
 }
-
-
-
-

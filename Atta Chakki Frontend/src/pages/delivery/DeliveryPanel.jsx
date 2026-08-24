@@ -26,6 +26,7 @@ export function DeliveryPanel() {
   
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [totalItems, setTotalItems] = useState(0);
   
   // Confirmation Dialog States
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -86,12 +87,17 @@ export function DeliveryPanel() {
   }, [socketEnabled]);
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     if (user) {
       loadOrders();
       const interval = setInterval(loadOrders, 5000); // Check every 5s
       return () => clearInterval(interval);
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, page, pageSize]);
 
   // Cleanup all tracking on unmount
   useEffect(() => {
@@ -112,10 +118,16 @@ export function DeliveryPanel() {
       if (!driverPhone) return;
 
       // Fetch delivery orders specifically for this driver from DB
-      const response = await fetch(`${API_BASE_URL}/get_delivery_orders.php?driver_phone=${encodeURIComponent(driverPhone)}`);
+      const params = new URLSearchParams({
+        driver_phone: driverPhone,
+        page: String(page),
+        limit: String(pageSize),
+      });
+      const response = await fetch(`${API_BASE_URL}/get_delivery_orders.php?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
+        setTotalItems(data.total || 0);
         // Map them to match the UI props
         const mappedOrders = data.orders.map(order => ({
           ...order,
@@ -916,7 +928,7 @@ export function DeliveryPanel() {
       </div>
 
       <div className="container mx-auto px-4 py-6 max-w-2xl">
-        {orders.length === 0 ? (
+        {totalItems === 0 ? (
           <Card className="p-12 text-center">
             <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">{t('No Deliveries Available')}</h2>
@@ -926,9 +938,7 @@ export function DeliveryPanel() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {orders
-              .slice((page - 1) * pageSize, page * pageSize)
-              .map((order) => {
+            {orders.map((order) => {
               // isStorePickup = customer comes to shop themselves (no driver needed)
               const isStorePickup = order.orderType === 'pickup';
               const isPickupRequest = ['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0;
@@ -1318,10 +1328,10 @@ export function DeliveryPanel() {
               );
             })}
 
-            {orders.length > 0 && (
+            {totalItems > 0 && (
               <Pagination
                 currentPage={page}
-                totalItems={orders.length}
+                totalItems={totalItems}
                 pageSize={pageSize}
                 onPageChange={setPage}
                 onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}

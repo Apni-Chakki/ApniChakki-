@@ -42,6 +42,7 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "../../components/common/tooltip";
+import { Pagination } from '../../components/common/Pagination';
 
 export function NewOrders() {
   const { t } = useTranslation();
@@ -51,6 +52,10 @@ export function NewOrders() {
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Heavy Order Split
   const [splitOrder, setSplitOrder] = useState(null);      // order being split
@@ -90,10 +95,12 @@ export function NewOrders() {
   // Load pending orders
   const loadOrders = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin_orders.php?status=pending`);
+      const params = new URLSearchParams({ status: 'pending', page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/admin_orders.php?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
+        setTotalItems(data.total || 0);
         const mappedOrders = data.orders.map(order => ({
           ...order,
           id: order.id,
@@ -120,7 +127,11 @@ export function NewOrders() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   useEffect(() => {
     fetchSettings();
@@ -328,7 +339,7 @@ export function NewOrders() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{t("New Orders")}</h1>
-            <p className="text-sm text-muted-foreground">{orders.length} pending</p>
+            <p className="text-sm text-muted-foreground">{totalItems} pending</p>
           </div>
           {heavyThreshold && (
             <Badge variant="outline" className="text-xs text-purple-700 border-purple-300 bg-purple-50">
@@ -452,6 +463,17 @@ export function NewOrders() {
             </div>
           )}
         />
+
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            className="mt-4"
+          />
+        )}
 
         {/* Cancel Order Dialog */}
         <AlertDialog open={!!cancelOrder} onOpenChange={() => { setCancelOrder(null); setCancelReason(''); }}>
