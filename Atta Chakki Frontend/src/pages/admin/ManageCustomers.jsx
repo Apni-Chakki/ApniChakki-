@@ -366,7 +366,6 @@ export function ManageCustomers() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 transition-shadow focus:ring-2 focus:ring-purple-100"
-              style={{ paddingLeft: '2.5rem' }}
             />
           </div>
         </div>

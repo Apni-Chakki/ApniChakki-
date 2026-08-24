@@ -675,69 +675,61 @@ export function DeliveryPanel() {
   };
 
   const getStatusBadge = (status) => {
-    const badgeStyle = (bg, border, text) => ({
-      backgroundColor: bg,
-      borderColor: border,
-      color: text,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px'
-    });
-
+    const base = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border";
     switch (status) {
       case 'pending':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={badgeStyle('#fffbeb', '#fde68a', '#b45309')}>
-            <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: '#b45309' }} />
+          <Badge variant="outline" className={`${base} font-semibold bg-amber-50 border-amber-200 text-amber-700`}>
+            <Clock className="h-3.5 w-3.5 shrink-0 text-amber-700" />
             {t('Pending')}
           </Badge>
         );
       case 'processing':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={badgeStyle('#eff6ff', '#bfdbfe', '#1d4ed8')}>
-            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: '#1d4ed8' }} />
+          <Badge variant="outline" className={`${base} font-semibold bg-blue-50 border-blue-200 text-blue-700`}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-blue-700" />
             {t('Processing')}
           </Badge>
         );
       case 'ready':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={badgeStyle('#ecfdf5', '#a7f3d0', '#047857')}>
-            <Package className="h-3.5 w-3.5 shrink-0" style={{ color: '#047857' }} />
+          <Badge variant="outline" className={`${base} font-bold bg-emerald-50 border-emerald-200 text-emerald-700`}>
+            <Package className="h-3.5 w-3.5 shrink-0 text-emerald-700" />
             {t('Ready for Pickup')}
           </Badge>
         );
       case 'out-for-delivery':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold animate-pulse" style={badgeStyle('#e0e7ff', '#c7d2fe', '#4338ca')}>
-            <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: '#4338ca' }} />
+          <Badge variant="outline" className={`${base} font-bold animate-pulse bg-indigo-100 border-indigo-200 text-indigo-700`}>
+            <Truck className="h-3.5 w-3.5 shrink-0 text-indigo-700" />
             {t('Out for Delivery')}
           </Badge>
         );
       case 'completed':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={badgeStyle('#f0fdfa', '#99f6e4', '#0f766e')}>
-            <CheckCircle className="h-3.5 w-3.5 shrink-0" style={{ color: '#0f766e' }} />
+          <Badge variant="outline" className={`${base} font-semibold bg-teal-50 border-teal-200 text-teal-700`}>
+            <CheckCircle className="h-3.5 w-3.5 shrink-0 text-teal-700" />
             {t('Completed')}
           </Badge>
         );
       case 'pickup_assigned':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={badgeStyle('#fff7ed', '#ffedd5', '#ea580c')}>
-            <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: '#ea580c' }} />
+          <Badge variant="outline" className={`${base} font-bold bg-orange-50 border-orange-100 text-orange-600`}>
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-orange-600" />
             {t('Pickup Assigned')}
           </Badge>
         );
       case 'coming_for_pickup':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold animate-pulse" style={badgeStyle('#ecfeff', '#cffafe', '#0891b2')}>
-            <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: '#0891b2' }} />
+          <Badge variant="outline" className={`${base} font-bold animate-pulse bg-cyan-50 border-cyan-100 text-cyan-600`}>
+            <Truck className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
             {t('Coming for Pickup')}
           </Badge>
         );
       case 'arrived_at_shop':
         return (
-          <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={badgeStyle('#f5f3ff', '#ddd6fe', '#6d28d9')}>
-            <Wheat className="h-3.5 w-3.5 shrink-0" style={{ color: '#6d28d9' }} />
+          <Badge variant="outline" className={`${base} font-bold bg-violet-50 border-violet-200 text-violet-700`}>
+            <Wheat className="h-3.5 w-3.5 shrink-0 text-violet-700" />
             {t('Arrived at Shop')}
           </Badge>
         );
@@ -948,110 +940,74 @@ export function DeliveryPanel() {
               return (
                 <Card 
                   key={order.id} 
-                  className={`p-6 relative overflow-hidden transition-all duration-300 border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
-                    !isActionable 
-                      ? 'opacity-70 bg-gray-50' 
+                  className={`p-6 relative overflow-hidden transition-all duration-300 border border-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-md hover:-translate-y-0.5 flex flex-col gap-4 ${
+                    !isActionable
+                      ? 'opacity-70 bg-gray-50'
                       : 'bg-white'
                   }`}
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '16px',
-                    borderColor: '#f1f5f9',
-                    backgroundColor: !isActionable ? '#f9fafb' : '#ffffff',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
-                  }}
                 >
                   {/* Left accent color strip */}
                   {isActionable && (
-                    <div 
-                      className="absolute left-0 top-0 bottom-0"
-                      style={{ 
-                        width: '6px', 
-                        background: isStorePickup
-                          ? 'linear-gradient(to bottom, #22c55e, #16a34a)'   // green = store pickup
-                          : isPickupRequest 
-                            ? 'linear-gradient(to bottom, #fbbf24, #f97316)' // orange = driver pickup
-                            : 'linear-gradient(to bottom, #3b82f6, #4f46e5)' // blue = delivery
-                      }} 
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${
+                        isStorePickup
+                          ? 'from-green-500 to-green-600'   // green = store pickup
+                          : isPickupRequest
+                            ? 'from-amber-400 to-orange-500' // orange = driver pickup
+                            : 'from-blue-500 to-indigo-600'  // blue = delivery
+                      }`}
                     />
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="flex flex-col gap-4">
                     {/* Order Header */}
                     <div className="flex items-start justify-between">
-                      <div className="flex flex-col" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div className="flex items-center flex-wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                          <span 
-                            className="font-mono text-sm font-bold px-2.5 py-0.5 rounded-md border"
-                            style={{ backgroundColor: '#f1f5f9', color: '#475569', borderColor: '#e2e8f0' }}
-                          >
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-sm font-bold px-2.5 py-0.5 rounded-md border bg-slate-100 text-slate-600 border-slate-200">
                             #{order.id}
                           </span>
                           {getStatusBadge(order.status)}
                           {isTracking && (
-                            <Badge 
-                              className="text-white text-[10px] font-bold tracking-wider animate-pulse border-none"
-                              style={{ 
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '2px 8px',
-                                borderRadius: '9999px',
-                                backgroundColor: '#ef4444', 
-                                boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
-                              }}
-                            >
-                              <Radio className="h-3 w-3" style={{ color: '#ffffff' }} />
+                            <Badge className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[10px] font-bold tracking-wider animate-pulse border-none bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                              <Radio className="h-3 w-3 text-white" />
                               LIVE
                             </Badge>
                           )}
                         </div>
-                        
+
                         {/* Customer Avatar & Name */}
-                        <div className="flex items-center" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
-                          <div 
-                            className="rounded-full flex items-center justify-center font-bold text-sm shrink-0 border"
-                            style={{ 
-                              width: '40px', 
-                              height: '40px', 
-                              minWidth: '40px', 
-                              minHeight: '40px', 
-                              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
-                              borderColor: '#cbd5e1', 
-                              color: '#475569' 
-                            }}
-                          >
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <div className="rounded-full flex items-center justify-center font-bold text-sm shrink-0 border w-10 h-10 min-w-10 min-h-10 bg-gradient-to-br from-slate-50 to-slate-200 border-slate-300 text-slate-600">
                             {order.customerName ? order.customerName.charAt(0).toUpperCase() : 'C'}
                           </div>
                           <div>
-                            <h3 className="font-bold text-base leading-tight" style={{ color: '#1e293b', margin: 0 }}>
+                            <h3 className="font-bold text-base leading-tight m-0 text-slate-800">
                               {order.customerName}
                             </h3>
-                            <p className="text-[11px] font-bold leading-none mt-1 uppercase tracking-wider" style={{ color: '#94a3b8', margin: '4px 0 0 0' }}>
+                            <p className="text-[11px] font-bold leading-none mt-1 uppercase tracking-wider text-slate-400">
                               {t('Customer')}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="text-right flex flex-col items-end" style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: '6px' }}>
+                      <div className="text-right flex flex-col items-end gap-1.5">
                         <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-bold tracking-wider leading-none mb-1" style={{ color: '#94a3b8', margin: '0 0 4px 0' }}>
+                          <span className="text-[10px] uppercase font-bold tracking-wider leading-none mb-1 text-slate-400">
                             {isPickupRequest ? t('Pickup Request') : t('Total Amount')}
                           </span>
-                          <p className="text-xl font-extrabold leading-none" style={{ color: '#0f172a', margin: 0 }}>
+                          <p className="text-xl font-extrabold leading-none m-0 text-slate-900">
                             {isPickupRequest ? 'TBD' : `Rs. ${order.total.toLocaleString()}`}
                           </p>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
-                          style={{
-                            backgroundColor: order.payment_method === 'cash' ? '#fffbeb' : '#ecfdf5',
-                            borderColor: order.payment_method === 'cash' ? '#fde68a' : '#a7f3d0',
-                            color: order.payment_method === 'cash' ? '#b45309' : '#047857'
-                          }}
+                        <Badge
+                          variant="outline"
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                            order.payment_method === 'cash'
+                              ? 'bg-amber-50 border-amber-200 text-amber-700'
+                              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          }`}
                         >
                           {order.payment_method === 'cash' ? t('Collect Cash') : t('Paid Online')}
                         </Badge>
@@ -1059,68 +1015,37 @@ export function DeliveryPanel() {
                     </div>
 
                     {/* Address Block */}
-                    <div 
-                      className="flex p-4 rounded-xl border items-center justify-between"
-                      style={{ backgroundColor: '#fafaf9', borderColor: '#e7e5e4', gap: '12px', display: 'flex' }}
-                    >
-                      <div className="flex items-center min-w-0 flex-1" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div 
-                          className="rounded-full border flex items-center justify-center shrink-0"
-                          style={{ 
-                            width: '40px', 
-                            height: '40px', 
-                            minWidth: '40px', 
-                            minHeight: '40px', 
-                            backgroundColor: '#fee2e2', 
-                            borderColor: '#fca5a5' 
-                          }}
-                        >
+                    <div className="flex p-4 rounded-xl border items-center justify-between gap-3 bg-stone-50 border-stone-200">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="rounded-full border flex items-center justify-center shrink-0 w-10 h-10 min-w-10 min-h-10 bg-red-100 border-red-300">
                           <MapPin className="h-5 w-5 text-red-500" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: '#94a3b8', margin: '0 0 4px 0' }}>
+                          <span className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-slate-400">
                             {t('Delivery Address')}
                           </span>
-                          <p className="text-sm font-semibold leading-snug break-words" style={{ color: '#334155', margin: 0 }}>
+                          <p className="text-sm font-semibold leading-snug break-words m-0 text-slate-700">
                             {order.deliveryAddress || t('No address provided')}
                           </p>
                         </div>
                       </div>
-                      
+
                       {isActionable && (
-                        <div className="flex items-center shrink-0 ml-1" style={{ display: 'flex', gap: '8px' }}>
+                        <div className="flex items-center gap-2 shrink-0 ml-1">
                           <button
-                            className="rounded-full bg-white border flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
-                            style={{ 
-                              width: '36px', 
-                              height: '36px', 
-                              minWidth: '36px', 
-                              minHeight: '36px', 
-                              borderColor: '#e2e8f0', 
-                              color: '#2563eb',
-                              padding: '0'
-                            }}
+                            className="rounded-full bg-white border flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer w-9 h-9 min-w-9 min-h-9 border-slate-200 text-blue-600 p-0"
                             onClick={() => openMaps(order.deliveryAddress || '')}
                             title={t('Navigate')}
                           >
-                            <Navigation className="h-4.5 w-4.5" style={{ color: '#2563eb' }} />
+                            <Navigation className="h-4.5 w-4.5 text-blue-600" />
                           </button>
                           {order.phone && (
                             <button
-                              className="rounded-full bg-white border flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
-                              style={{ 
-                                width: '36px', 
-                                height: '36px', 
-                                minWidth: '36px', 
-                                minHeight: '36px', 
-                                borderColor: '#e2e8f0', 
-                                color: '#475569',
-                                padding: '0'
-                              }}
+                              className="rounded-full bg-white border flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer w-9 h-9 min-w-9 min-h-9 border-slate-200 text-slate-600 p-0"
                               onClick={() => window.open(`tel:${order.phone}`, '_self')}
                               title={t('Call Customer')}
                             >
-                              <Phone className="h-4.5 w-4.5" style={{ color: '#475569' }} />
+                              <Phone className="h-4.5 w-4.5 text-slate-600" />
                             </button>
                           )}
                         </div>
@@ -1129,29 +1054,21 @@ export function DeliveryPanel() {
 
                     {/* Action Buttons */}
                     {isActionable && (
-                      <div className="flex flex-col pt-3" style={{ borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
 
                         {/* STORE PICKUP: Customer comes to shop — only Complete button */}
                         {isStorePickup ? (
                           <>
-                            <div
-                              className="w-full text-center text-xs font-semibold rounded-xl py-2 border flex items-center justify-center gap-2"
-                              style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#15803d' }}
-                            >
-                              <Package className="h-4 w-4" style={{ color: '#15803d' }} />
+                            <div className="w-full text-center text-xs font-semibold rounded-xl py-2 border flex items-center justify-center gap-2 bg-green-50 border-green-200 text-green-700">
+                              <Package className="h-4 w-4 text-green-700" />
                               {t('Customer will collect from store')}
                             </div>
                             {order.status === 'ready' && (
                               <button
-                                className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md"
-                                style={{
-                                  background: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
-                                  border: 'none',
-                                  padding: '0 1.5rem'
-                                }}
+                                className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-green-500 to-green-700 border-none px-6"
                                 onClick={() => handleCompleteDelivery(order)}
                               >
-                                <CheckCircle className="h-5 w-5 animate-pulse" style={{ color: '#ffffff' }} />
+                                <CheckCircle className="h-5 w-5 animate-pulse text-white" />
                                 {t('Mark as Collected')}
                               </button>
                             )}
@@ -1162,33 +1079,21 @@ export function DeliveryPanel() {
                             {/* Status: pickup_assigned — I'm Coming button */}
                             {order.status === 'pickup_assigned' && (
                               <button
-                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md"
-                                style={{ 
-                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  padding: '0 1.5rem'
-                                }}
+                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-blue-500 to-blue-700 border-none px-6"
                                 onClick={() => handleComingForPickup(order)}
                               >
-                                <Navigation className="h-4 w-4" style={{ color: '#ffffff' }} />
+                                <Navigation className="h-4 w-4 text-white" />
                                 {t("I'm coming")}
                               </button>
                             )}
 
                             {/* Status: coming_for_pickup — WhatsApp Share + Mark as Arrived */}
                             {order.status === 'coming_for_pickup' && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" style={{ display: 'grid', gap: '8px' }}>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {/* WhatsApp Share button */}
                                 {order.phone && (
                                   <button
-                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98]"
-                                    style={{ 
-                                      borderColor: '#10b981', 
-                                      color: '#047857', 
-                                      backgroundColor: '#ecfdf5',
-                                      padding: '0 1rem'
-                                    }}
+                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98] border-emerald-500 text-emerald-700 bg-emerald-50 px-4"
                                     onClick={() => {
                                       const trackingData = trackingLinks[order.id];
                                       if (trackingData?.whatsapp_url) {
@@ -1207,23 +1112,17 @@ export function DeliveryPanel() {
                                       }
                                     }}
                                   >
-                                    <MessageCircle className="h-4 w-4" style={{ color: '#047857' }} />
+                                    <MessageCircle className="h-4 w-4 text-emerald-700" />
                                     {t('Share Live Location')}
                                   </button>
                                 )}
 
                                 {/* Mark as Arrived at Shop */}
                                 <button
-                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md col-span-1 sm:col-span-1"
-                                  style={{ 
-                                    background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)', 
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    padding: '0 1rem'
-                                  }}
+                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md col-span-1 sm:col-span-1 bg-gradient-to-br from-teal-600 to-teal-700 border-none px-4"
                                   onClick={() => handleArrivedAtShopForPickup(order)}
                                 >
-                                  <CheckCircle className="h-4.5 w-4.5" style={{ color: '#ffffff' }} />
+                                  <CheckCircle className="h-4.5 w-4.5 text-white" />
                                   {t('Mark as Arrived')}
                                 </button>
                               </div>
@@ -1231,16 +1130,8 @@ export function DeliveryPanel() {
 
                             {/* Status: arrived_at_shop — info block */}
                             {order.status === 'arrived_at_shop' && (
-                              <div 
-                                className="w-full text-center text-sm font-semibold rounded-xl py-3 border shadow-2xs flex items-center justify-center gap-2"
-                                style={{ 
-                                  backgroundColor: '#f0fdfa', 
-                                  borderColor: '#ccfbf1', 
-                                  color: '#0f766e',
-                                  gap: '8px'
-                                }}
-                              >
-                                <CheckCircle className="h-4.5 w-4.5 animate-bounce" style={{ color: '#0f766e' }} />
+                              <div className="w-full text-center text-sm font-semibold rounded-xl py-3 border shadow-2xs flex items-center justify-center gap-2 bg-teal-50 border-teal-100 text-teal-700">
+                                <CheckCircle className="h-4.5 w-4.5 animate-bounce text-teal-700" />
                                 {t('Arrived at Shop — Admin processing')}
                               </div>
                             )}
@@ -1249,30 +1140,18 @@ export function DeliveryPanel() {
                           <>
                             {order.status !== 'out-for-delivery' ? (
                               <button
-                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md"
-                                style={{ 
-                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  padding: '0 1.5rem'
-                                }}
+                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-blue-500 to-blue-700 border-none px-6"
                                 onClick={() => handleStartDelivery(order)}
                               >
-                                <Truck className="h-5 w-5" style={{ color: '#ffffff' }} />
+                                <Truck className="h-5 w-5 text-white" />
                                 {t('Start Delivery')}
                               </button>
                             ) : (
-                              <div className="flex flex-col" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div className="grid grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                              <div className="flex flex-col gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                   {order.phone && (
                                     <button
-                                      className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98]"
-                                      style={{ 
-                                        borderColor: '#10b981', 
-                                        color: '#047857', 
-                                        backgroundColor: '#ecfdf5',
-                                        padding: '0 0.5rem'
-                                      }}
+                                      className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98] border-emerald-500 text-emerald-700 bg-emerald-50 px-2"
                                       onClick={() => {
                                         getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 })
                                           .then((pos) => {
@@ -1286,35 +1165,23 @@ export function DeliveryPanel() {
                                           });
                                       }}
                                     >
-                                      <MessageCircle className="h-4 w-4" style={{ color: '#047857' }} />
+                                      <MessageCircle className="h-4 w-4 text-emerald-700" />
                                       {t('WhatsApp Update')}
                                     </button>
                                   )}
                                   <button
-                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98]"
-                                    style={{ 
-                                      backgroundColor: '#f1f5f9', 
-                                      color: '#334155',
-                                      border: 'none',
-                                      padding: '0 0.5rem'
-                                    }}
+                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98] bg-slate-100 text-slate-700 border-none px-2"
                                     onClick={() => handleImComing(order)}
                                   >
-                                    <Navigation className="h-4 w-4" style={{ color: '#475569' }} />
+                                    <Navigation className="h-4 w-4 text-slate-600" />
                                     {t("I'm coming")}
                                   </button>
                                 </div>
                                 <button
-                                  className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1"
-                                  style={{ 
-                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    padding: '0 1.5rem'
-                                  }}
+                                  className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1 bg-gradient-to-br from-emerald-500 to-emerald-600 border-none px-6"
                                   onClick={() => handleCompleteDelivery(order)}
                                 >
-                                  <CheckCircle className="h-5 w-5 animate-pulse" style={{ color: '#ffffff' }} />
+                                  <CheckCircle className="h-5 w-5 animate-pulse text-white" />
                                   {t('Mark as Delivered')}
                                 </button>
                               </div>

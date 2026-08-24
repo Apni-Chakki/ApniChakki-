@@ -527,7 +527,7 @@ export function NewOrders() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar" style={{ maxHeight: '400px' }}>
+          <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar max-h-[400px]">
             <div className="space-y-3">
               {splitBatches.map((batch, idx) => (
                 <div key={batch.id} className="relative bg-slate-50 p-4 rounded-xl border border-slate-200 transition-all hover:border-blue-300">
