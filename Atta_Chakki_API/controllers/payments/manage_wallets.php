@@ -243,13 +243,31 @@ function getWalletTransactions() {
 // getting payment history
 function getPaymentHistory() {
     global $conn, $data;
-    
-    $limit = isset($data['limit']) ? intval($data['limit']) : 50;
-    $offset = isset($data['offset']) ? intval($data['offset']) : 0;
+
+    $page   = max(1, isset($data['page']) ? intval($data['page']) : 1);
+    $limit  = max(1, min(200, isset($data['limit']) ? intval($data['limit']) : 10));
+    $offset = isset($data['offset']) ? intval($data['offset']) : ($page - 1) * $limit;
     $status = isset($data['status']) ? $data['status'] : 'all';
     $method = isset($data['method']) ? $data['method'] : 'all';
-    
-    $query = "SELECT 
+    $search = isset($data['search']) ? trim($data['search']) : '';
+
+    $whereSql = "WHERE 1=1";
+    if ($status !== 'all') {
+        $whereSql .= " AND pt.payment_status = '" . $conn->real_escape_string($status) . "'";
+    }
+    if ($method !== 'all') {
+        $whereSql .= " AND pt.payment_method = '" . $conn->real_escape_string($method) . "'";
+    }
+    if ($search !== '') {
+        $esc = $conn->real_escape_string($search);
+        $whereSql .= " AND (u.full_name LIKE '%{$esc}%' OR u.phone LIKE '%{$esc}%' OR pt.transaction_id LIKE '%{$esc}%' OR CAST(pt.order_id AS CHAR) LIKE '%{$esc}%')";
+    }
+
+    // Count total filtered
+    $countRes = $conn->query("SELECT COUNT(*) AS c FROM payment_transactions pt JOIN users u ON pt.user_id = u.id JOIN orders o ON pt.order_id = o.id {$whereSql}");
+    $totalFiltered = $countRes ? (int)$countRes->fetch_assoc()['c'] : 0;
+
+    $query = "SELECT
         pt.id,
         pt.order_id,
         pt.user_id,
@@ -271,17 +289,10 @@ function getPaymentHistory() {
     FROM payment_transactions pt
     JOIN users u ON pt.user_id = u.id
     JOIN orders o ON pt.order_id = o.id
-    WHERE 1=1";
-    
-    if ($status !== 'all') {
-        $query .= " AND pt.payment_status = '" . $conn->real_escape_string($status) . "'";
-    }
-    if ($method !== 'all') {
-        $query .= " AND pt.payment_method = '" . $conn->real_escape_string($method) . "'";
-    }
-    
-    $query .= " ORDER BY pt.created_at DESC LIMIT ? OFFSET ?";
-    
+    {$whereSql}
+    ORDER BY pt.created_at DESC
+    LIMIT ? OFFSET ?";
+
     $stmt = $conn->prepare($query);
     $stmt->bind_param("ii", $limit, $offset);
     $stmt->execute();
@@ -320,9 +331,12 @@ function getPaymentHistory() {
     $stmt->close();
     
     echo json_encode([
-        "success" => true,
+        "success"  => true,
         "payments" => $payments,
-        "total" => count($payments)
+        "total"    => $totalFiltered,
+        "page"     => $page,
+        "limit"    => $limit,
+        "count"    => count($payments)
     ]);
 }
 

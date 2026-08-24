@@ -29,25 +29,57 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
-    $result = $conn->query("SELECT * FROM custom_mix_requests ORDER BY created_at DESC");
+    $page   = max(1, isset($_GET['page']) ? (int)$_GET['page'] : 1);
+    $limit  = max(1, min(200, isset($_GET['limit']) ? (int)$_GET['limit'] : 6));
+    $offset = ($page - 1) * $limit;
+    $status = isset($_GET['status']) ? trim($_GET['status']) : 'all';
+
+    $where  = [];
+    $params = [];
+    $types  = '';
+    if ($status !== 'all' && $status !== '') {
+        $where[]  = "status = ?";
+        $params[] = $status;
+        $types   .= 's';
+    }
+    $whereSql = count($where) > 0 ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+    $countSql = "SELECT COUNT(*) AS c FROM custom_mix_requests {$whereSql}";
+    $stmt = $conn->prepare($countSql);
+    if ($types !== '') { $stmt->bind_param($types, ...$params); }
+    $stmt->execute();
+    $total = (int)$stmt->get_result()->fetch_assoc()['c'];
+    $stmt->close();
+
+    $sql = "SELECT * FROM custom_mix_requests {$whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    $pageParams = $params;
+    $pageTypes  = $types . 'ii';
+    $pageParams[] = $limit;
+    $pageParams[] = $offset;
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($pageTypes, ...$pageParams);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     $requests = [];
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            // Parse selected_items JSON
-            if (!empty($row['selected_items'])) {
-                $row['selected_items'] = json_decode($row['selected_items'], true);
-            } else {
-                $row['selected_items'] = [];
-            }
-            $requests[] = $row;
+    while ($row = $result->fetch_assoc()) {
+        if (!empty($row['selected_items'])) {
+            $row['selected_items'] = json_decode($row['selected_items'], true);
+        } else {
+            $row['selected_items'] = [];
         }
+        $requests[] = $row;
     }
+    $stmt->close();
 
     echo json_encode([
         "success" => true,
-        "data" => $requests,
-        "count" => count($requests)
+        "data"    => $requests,
+        "total"   => $total,
+        "page"    => $page,
+        "limit"   => $limit,
+        "count"   => count($requests),
     ]);
 
 } catch (Exception $e) {
