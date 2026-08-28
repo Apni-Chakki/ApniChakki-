@@ -75,8 +75,8 @@ export function CustomerSignUp() {
       return false;
     }
     const cleanPhone = phone.replace(/\s/g, '');
-    if (!/^\d{11}$/.test(cleanPhone)) {
-      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
+    if (!/^0\d{10}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must start with 0 and be exactly 11 digits.'));
       return false;
     }
     if (address && address.trim().length > 150) {

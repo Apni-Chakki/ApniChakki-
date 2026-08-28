@@ -7,7 +7,8 @@ import { CheckCircle, Clock, MapPin, Phone, User, Package, Printer, FileDown, Lo
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { downloadBillPDF } from '../../utils/billPdfUtils';
-import { PrintOrderDetails } from './PrintOrderDetails';
+import { deductFromInventory } from '../../utils/inventoryUtils';
+import { PrintSlip } from './PrintSlip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -542,7 +543,7 @@ Suchi Chakki — Pure & Fresh Processing
       }
     } catch (error) {
       console.error(error);
-      toast.error('Network Error');
+      toast.error('Error: ' + error.message);
     } finally {
       setSendingBill(null);
     }
@@ -1475,7 +1476,7 @@ Suchi Chakki — Pure & Fresh Processing
       )}
 
       {/* print overlay dialog */}
-      <PrintOrderDetails
+      <PrintSlip
         order={printOrder}
         open={!!printOrder}
         onClose={() => setPrintOrder(null)}

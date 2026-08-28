@@ -28,6 +28,9 @@ export function DigitalKhata() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [filteredTotalAmount, setFilteredTotalAmount] = useState(0);
+  const [printExpenses, setPrintExpenses] = useState([]);
 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -43,27 +46,38 @@ export function DigitalKhata() {
   });
   const [showPrintReport, setShowPrintReport] = useState(false);
 
-  // NEW: FETCH FROM API
+  const mapRecord = (record) => ({
+    id: record.id,
+    date: record.expense_time,
+    category: record.category || "Uncategorized",
+    amount: parseFloat(record.amount),
+    description: record.description,
+    recordedBy: record.recorded_by || 'Admin',
+  });
+
+  const buildExpenseParams = (extra = {}) => {
+    const params = new URLSearchParams();
+    if (dateRange?.from) {
+      const iso = (d) => new Date(d).toISOString().slice(0, 10);
+      params.set('date_from', iso(dateRange.from));
+      params.set('date_to', iso(dateRange.to || dateRange.from));
+    }
+    Object.entries(extra).forEach(([k, v]) => params.set(k, v));
+    return params.toString();
+  };
+
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/get_expenses.php`);
+      const qs = buildExpenseParams({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_expenses.php?${qs}`);
       const data = await response.json();
 
       if (data.success) {
         setBackendTotals(data.totals);
-        
-        // Map Database format to React format
-        const mappedExpenses = data.records.map(record => ({
-          id: record.id,
-          date: record.expense_time, 
-          category: record.category || "Uncategorized",
-          amount: parseFloat(record.amount),
-          description: record.description,
-          recordedBy: record.recorded_by || 'Admin'
-        }));
-        
-        setExpenses(mappedExpenses);
+        setExpenses(data.records.map(mapRecord));
+        setTotalItems(data.total || 0);
+        setFilteredTotalAmount(parseFloat(data.filtered_amount) || 0);
       } else {
         toast.error("Failed to load expenses");
       }
@@ -73,6 +87,14 @@ export function DigitalKhata() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllExpenses = async () => {
+    const qs = buildExpenseParams({ all: '1' });
+    const response = await fetch(`${API_BASE_URL}/get_expenses.php?${qs}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed');
+    return data.records.map(mapRecord);
   };
 
   const fetchProducts = async () => {
@@ -89,9 +111,17 @@ export function DigitalKhata() {
   };
 
   useEffect(() => {
-    fetchExpenses();
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateRange, pageSize]);
+
+  useEffect(() => {
+    fetchExpenses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, dateRange]);
 
   // NEW: SAVE TO API
   const handleAddExpense = async () => {
@@ -208,24 +238,8 @@ export function DigitalKhata() {
     ));
   };
 
-  const filteredExpenses = expenses.filter(e => {
-    if (!dateRange || !dateRange.from) return true;
-    
-    // Replace space with T to fix Safari/iOS Invalid Date bug with MySQL timestamps
-    const safeDateStr = typeof e.date === 'string' ? e.date.replace(' ', 'T') : e.date;
-    const expenseDate = new Date(safeDateStr);
-    
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
-    
-    if (expenseDate < fromDate) return false;
-    
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999);
-    if (expenseDate > toDate) return false;
-    
-    return true;
-  });
+  // Server owns filtering + paging
+  const filteredExpenses = expenses;
 
   const getPeriodLabel = () => {
     if (dateRange?.from) {
@@ -256,7 +270,15 @@ export function DigitalKhata() {
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           <Button
             variant="outline"
-            onClick={() => setShowPrintReport(true)}
+            onClick={async () => {
+              try {
+                const all = await fetchAllExpenses();
+                setPrintExpenses(all);
+                setShowPrintReport(true);
+              } catch (e) {
+                toast.error('Failed to prepare print report');
+              }
+            }}
             className="w-full md:w-[180px]"
           >
             <Printer className="h-4 w-4 mr-2 shrink-0" />
@@ -504,7 +526,7 @@ export function DigitalKhata() {
 
         {/* Mobile: card list (below md) */}
         <div className="md:hidden p-3 space-y-2">
-          {filteredExpenses.length === 0 ? (
+          {totalItems === 0 ? (
             <p className="text-center py-8 text-sm text-muted-foreground">No expenses found for the selected period.</p>
           ) : (
             filteredExpenses.map((expense) => (
@@ -555,16 +577,14 @@ export function DigitalKhata() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredExpenses.length === 0 ? (
+              {totalItems === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No expenses found for the selected period.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredExpenses
-                .slice((page - 1) * pageSize, page * pageSize)
-                .map((expense) => (
+                filteredExpenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell className="font-medium">
                       {new Date(expense.date).toLocaleDateString()} <br/>
@@ -599,10 +619,10 @@ export function DigitalKhata() {
           </Table>
         </div>
 
-        {filteredExpenses.length > 0 && (
+        {totalItems > 0 && (
           <Pagination
             currentPage={page}
-            totalItems={filteredExpenses.length}
+            totalItems={totalItems}
             pageSize={pageSize}
             onPageChange={setPage}
             onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
@@ -611,21 +631,21 @@ export function DigitalKhata() {
         )}
 
         {/* Footer Total for Filtered View */}
-        {filteredExpenses.length > 0 && (
+        {totalItems > 0 && (
           <div className="p-3 sm:p-4 border-t bg-muted/10 flex flex-col sm:flex-row sm:justify-end sm:items-center gap-1 sm:gap-4">
             <span className="text-muted-foreground font-medium text-sm">Total for period:</span>
             <span className="text-lg sm:text-xl font-bold text-foreground break-all">
-              Rs. {filteredExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
+              Rs. {filteredTotalAmount.toLocaleString()}
             </span>
           </div>
         )}
       </Card>
 
-      <PrintExpenseReport 
-        expenses={filteredExpenses}
+      <PrintExpenseReport
+        expenses={printExpenses}
         dateRangeLabel={getPeriodLabel()}
         open={showPrintReport}
-        onClose={() => setShowPrintReport(false)}
+        onClose={() => { setShowPrintReport(false); setPrintExpenses([]); }}
       />
     </div>
   );

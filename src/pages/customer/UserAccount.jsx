@@ -211,6 +211,7 @@ export function UserAccount() {
           user_id: user.id,
           name: tempProfile.name,
           phone: cleanPhone,
+          email: tempProfile.email,
           address: tempProfile.address
         })
       });
@@ -224,6 +225,7 @@ export function UserAccount() {
           full_name: tempProfile.name,
           name: tempProfile.name,
           phone: cleanPhone,
+          email: tempProfile.email,
           address: tempProfile.address
         };
 
@@ -526,6 +528,24 @@ export function UserAccount() {
                       />
                     ) : (
                       <p className="mt-1 text-foreground">{profile.phone || t('Not provided')}</p>
+                    )}
+                  </div>
+
+                  {/* EMAIL ADDRESS */}
+                  <div>
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> {t('Email Address')}
+                    </Label>
+                    {editMode ? (
+                      <Input
+                        id="email"
+                        type="email"
+                        value={tempProfile.email}
+                        onChange={(e) => setTempProfile({ ...tempProfile, email: e.target.value })}
+                        placeholder="example@gmail.com"
+                      />
+                    ) : (
+                      <p className="mt-1 text-foreground">{profile.email || t('Not provided')}</p>
                     )}
                   </div>
 

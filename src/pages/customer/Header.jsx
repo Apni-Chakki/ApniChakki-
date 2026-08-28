@@ -25,6 +25,37 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      const phoneVal = user.phone || '';
+      const isPlaceholderPhone = phoneVal.startsWith('G-') || phoneVal.startsWith('G') || !/^\d{11}$/.test(phoneVal.replace(/\s/g, ''));
+      const isEmailMissing = !user.email || user.email.trim() === '';
+
+      const lastPhoneWarn = sessionStorage.getItem('warned_phone');
+      const lastEmailWarn = sessionStorage.getItem('warned_email');
+
+      if (isPlaceholderPhone && !lastPhoneWarn) {
+        toast.warning(t('Please update your phone number in account settings to proceed with orders!'), {
+          duration: 10000,
+          action: {
+            label: t('Update Now'),
+            onClick: () => navigate('/account')
+          }
+        });
+        sessionStorage.setItem('warned_phone', 'true');
+      } else if (isEmailMissing && !lastEmailWarn) {
+        toast.warning(t('Please add your Gmail address in account settings to link your Google Account!'), {
+          duration: 10000,
+          action: {
+            label: t('Add Gmail'),
+            onClick: () => navigate('/account')
+          }
+        });
+        sessionStorage.setItem('warned_email', 'true');
+      }
+    }
+  }, [user, navigate, t]);
+
   const fetchNotifications = async () => {
     if (!user) return;
     try {

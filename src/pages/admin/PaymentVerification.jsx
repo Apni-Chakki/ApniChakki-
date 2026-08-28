@@ -37,6 +37,19 @@ export function PaymentVerification() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, methodFilter, pageSize, activeTab]);
 
   // Dialog states
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
@@ -81,14 +94,23 @@ export function PaymentVerification() {
     try {
       const [balanceRes, historyRes, pendingRes, statsRes, settingsRes] = await Promise.all([
         apiCall('get_balance'),
-        apiCall('get_payment_history', { status: statusFilter, method: methodFilter, limit: 100 }),
+        apiCall('get_payment_history', {
+          status: statusFilter,
+          method: methodFilter,
+          search: debouncedSearch,
+          page,
+          limit: pageSize,
+        }),
         apiCall('get_pending_verification'),
         apiCall('get_payment_stats'),
         fetch(`${API_BASE_URL}/get_store_settings.php`).then(r => r.json())
       ]);
 
       if (balanceRes.success) setWalletBalance(balanceRes);
-      if (historyRes.success) setPaymentHistory(historyRes.payments || []);
+      if (historyRes.success) {
+        setPaymentHistory(historyRes.payments || []);
+        setTotalItems(historyRes.total || 0);
+      }
       if (pendingRes.success) setPendingTransfers(pendingRes.pending_transfers || []);
       if (statsRes.success) setPaymentStats(statsRes);
       
@@ -109,7 +131,7 @@ export function PaymentVerification() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [apiCall, statusFilter, methodFilter, t]);
+  }, [apiCall, statusFilter, methodFilter, debouncedSearch, page, pageSize, t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -298,19 +320,8 @@ export function PaymentVerification() {
     return `${days}d ago`;
   };
 
-  // Filter history
-  const filteredHistory = paymentHistory.filter(p => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        p.user_name?.toLowerCase().includes(q) ||
-        p.transaction_id?.toLowerCase().includes(q) ||
-        String(p.order_id).includes(q) ||
-        p.user_phone?.includes(q)
-      );
-    }
-    return true;
-  });
+  // Server owns filtering + paging
+  const filteredHistory = paymentHistory;
 
   if (loading) {
     return (
@@ -569,7 +580,7 @@ export function PaymentVerification() {
           </div>
 
           {/* Payment list */}
-          {filteredHistory.length === 0 ? (
+          {totalItems === 0 ? (
             <Card className="p-8 sm:p-12 text-center">
               <CreditCard className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm sm:text-base text-muted-foreground">{t('No payment transactions found')}</p>
@@ -577,9 +588,7 @@ export function PaymentVerification() {
           ) : (
             <>
               <div className="space-y-2">
-                {filteredHistory
-                  .slice((page - 1) * pageSize, page * pageSize)
-                  .map(payment => (
+                {filteredHistory.map(payment => (
                 <Card key={payment.id} className="p-3 sm:p-4 hover:bg-secondary/30 transition-colors cursor-pointer"
                   onClick={() => { setSelectedPayment(payment); setShowDetailsDialog(true); }}
                 >
@@ -608,10 +617,10 @@ export function PaymentVerification() {
               ))}
             </div>
 
-            {filteredHistory.length > 0 && (
+            {totalItems > 0 && (
               <Pagination
                 currentPage={page}
-                totalItems={filteredHistory.length}
+                totalItems={totalItems}
                 pageSize={pageSize}
                 onPageChange={setPage}
                 onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}

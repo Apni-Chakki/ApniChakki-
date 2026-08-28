@@ -17,6 +17,7 @@ export function ContactMessages() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+  const [totalItems, setTotalItems] = useState(0);
   
   // Modal State
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -25,16 +26,23 @@ export function ContactMessages() {
   const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     fetchMessages();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
 
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/get_contact_messages.php`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/get_contact_messages.php?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
         setMessages(data.data);
+        setTotalItems(data.total || 0);
       } else {
         toast.error(data.message || 'Failed to load messages');
       }
@@ -58,7 +66,7 @@ export function ContactMessages() {
         
         if (data.success) {
           toast.success('Message deleted successfully');
-          setMessages(messages.filter(msg => msg.id !== id));
+          fetchMessages();
         } else {
           toast.error(data.message || 'Error deleting message');
         }
@@ -155,7 +163,7 @@ export function ContactMessages() {
         </Button>
       </div>
 
-      {messages.length === 0 ? (
+      {totalItems === 0 ? (
         <Card className="flex flex-col items-center justify-center p-8 sm:p-12 text-center border-dashed">
           <div className="bg-muted p-3 sm:p-4 rounded-full mb-4">
             <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground" />
@@ -167,9 +175,7 @@ export function ContactMessages() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {messages
-            .slice((page - 1) * pageSize, page * pageSize)
-            .map((msg) => (
+          {messages.map((msg) => (
             <Card key={msg.id} className={`overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow ${msg.status === 'replied' ? 'opacity-90' : ''}`}>
               <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
@@ -268,10 +274,10 @@ export function ContactMessages() {
         </div>
       )}
 
-      {messages.length > 0 && (
+      {totalItems > 0 && (
         <Pagination
           currentPage={page}
-          totalItems={messages.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
