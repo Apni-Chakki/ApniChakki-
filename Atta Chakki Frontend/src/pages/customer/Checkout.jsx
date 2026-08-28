@@ -406,7 +406,7 @@ export function Checkout() {
   }, [hasTripItem, cart]);
 
   useEffect(() => {
-    if (cart.length === 0) {
+    if (cart.length === 0 || hasTripItem) {
       setSchedulePreview(null);
       return;
     }
@@ -1320,7 +1320,7 @@ export function Checkout() {
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
-        <h1 className="mb-4 text-foreground">{t('Your Cart is Empty')}</h1>
+        <h1 className="mb-4 text-foreground text-2xl sm:text-3xl font-bold">{t('Your Cart is Empty')}</h1>
         <p className="text-muted-foreground mb-6">{t('Add some items from our services to get started')}</p>
         <Button onClick={() => navigate('/')}>{t('Browse Services')}</Button>
       </div>
@@ -1333,8 +1333,8 @@ export function Checkout() {
   const isDeliveryInvalid = orderType === 'delivery' && (isOutOfLahore || !gpsCoords || !deliveryArea);
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <SEO 
+    <div className="relative min-h-screen">
+      <SEO
         title="Checkout"
         description="Complete your order at Suchi Chakki. Secure checkout for fresh flour and premium services."
       />
@@ -1342,33 +1342,17 @@ export function Checkout() {
       {CAROUSEL_SLIDES.map((slide, i) => (
         <div
           key={i}
+          className="fixed inset-0 w-full h-full bg-cover bg-center transition-opacity duration-[1500ms] ease-in-out -z-20"
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
             backgroundImage: `url(${slide})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
             opacity: i === currentSlide ? 1 : 0,
-            transition: 'opacity 1.5s ease-in-out',
-            zIndex: -2,
           }}
         />
       ))}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.5) 100%)',
-        zIndex: -1,
-      }} />
-      
-      <div className="container mx-auto px-4 py-8 max-w-3xl" style={{ position: 'relative', zIndex: 1 }}>
-      <h1 className="mb-6 text-white">{t('Checkout')}</h1>
+      <div className="fixed inset-0 w-full h-full bg-[linear-gradient(to_bottom,rgba(0,0,0,0.5)_0%,rgba(0,0,0,0.3)_50%,rgba(0,0,0,0.5)_100%)] -z-10" />
+
+      <div className="container mx-auto px-4 py-8 max-w-3xl relative z-10">
+      <h1 className="mb-6 text-white text-2xl sm:text-3xl font-bold drop-shadow-md">{t('Checkout')}</h1>
 
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Order Summary')}</h3>
@@ -1824,7 +1808,7 @@ export function Checkout() {
                 <RadioGroupItem value="jazzcash" id="jazzcash" />
                 <Label htmlFor="jazzcash" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <Smartphone className="h-5 w-5" style={{ color: '#e1272c' }} />
+                    <Smartphone className="h-5 w-5 text-[#e1272c]" />
                     <div>
                       <p className="flex items-center gap-2">
                         JazzCash
@@ -1842,7 +1826,7 @@ export function Checkout() {
                 <RadioGroupItem value="card" id="card" />
                 <Label htmlFor="card" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5" style={{ color: '#1a1f71' }} />
+                    <CreditCard className="h-5 w-5 text-[#1a1f71]" />
                     <div>
                       <p className="flex items-center gap-2">
                         {t('Credit / Debit Card')}
@@ -1880,13 +1864,13 @@ export function Checkout() {
       </Card>
 
       {/* order kab mile ga uska preview yahan dikha rahe han */}
-      {schedulePreview && (
-        <Card 
-          className="p-4 mb-6"
-          style={{
-            borderLeft: `4px solid ${schedulePreview.is_today ? '#22c55e' : '#f97316'}`,
-            backgroundColor: schedulePreview.is_today ? '#f0fdf4' : '#fff7ed'
-          }}
+      {schedulePreview && !hasTripItem && (
+        <Card
+          className={`p-4 mb-6 border-l-4 ${
+            schedulePreview.is_today
+              ? 'border-l-green-500 bg-green-50'
+              : 'border-l-orange-500 bg-orange-50'
+          }`}
         >
           <div className="flex items-start gap-3">
             <div className={`p-2 rounded-full ${schedulePreview.is_today ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
@@ -1931,7 +1915,7 @@ export function Checkout() {
         </Card>
       )}
 
-      {scheduleLoading && (
+      {scheduleLoading && !hasTripItem && (
         <div className="flex items-center justify-center p-4 mb-6 bg-secondary/20 rounded-lg animate-pulse">
           <Loader2 className="h-4 w-4 mr-2 animate-spin text-primary" />
           <span className="text-xs text-muted-foreground">{t('Checking schedule...')}</span>
@@ -1966,13 +1950,13 @@ export function Checkout() {
               <DialogTitle className="flex items-center gap-2 text-base sm:text-lg min-w-0">
                 {paymentMethod === 'jazzcash' && (
                   <>
-                    <Smartphone className="h-5 w-5 shrink-0" style={{ color: '#e1272c' }} />
+                    <Smartphone className="h-5 w-5 shrink-0 text-[#e1272c]" />
                     <span className="truncate">JazzCash Payment</span>
                   </>
                 )}
                 {paymentMethod === 'card' && (
                   <>
-                    <CreditCard className="h-5 w-5 shrink-0" style={{ color: '#1a1f71' }} />
+                    <CreditCard className="h-5 w-5 shrink-0 text-[#1a1f71]" />
                     <span className="truncate">{t('Card Payment')}</span>
                   </>
                 )}
@@ -2001,9 +1985,9 @@ export function Checkout() {
           {paymentStep === 'processing' && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <div className="relative">
-                <div className="w-20 h-20 rounded-full border-4 border-primary/20 animate-spin" style={{ borderTopColor: paymentMethod === 'jazzcash' ? '#e1272c' : '#1a1f71' }}></div>
-                {paymentMethod === 'jazzcash' && <Smartphone className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8" style={{ color: '#e1272c' }} />}
-                {paymentMethod === 'card' && <CreditCard className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8" style={{ color: '#1a1f71' }} />}
+                <div className={`w-20 h-20 rounded-full border-4 border-primary/20 animate-spin ${paymentMethod === 'jazzcash' ? 'border-t-[#e1272c]' : 'border-t-[#1a1f71]'}`}></div>
+                {paymentMethod === 'jazzcash' && <Smartphone className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-[#e1272c]" />}
+                {paymentMethod === 'card' && <CreditCard className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-[#1a1f71]" />}
                 {paymentMethod === 'bank' && <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary" />}
               </div>
               <p className="text-lg font-semibold text-foreground">{t('Processing Payment...')}</p>

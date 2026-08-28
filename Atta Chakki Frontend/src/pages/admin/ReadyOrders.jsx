@@ -5,19 +5,25 @@ import { Button } from '../../components/common/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { CheckCircle2, Loader2, PackageCheck } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
 
 export function ReadyOrders() {
   const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Fetch orders and strictly filter for 'ready' status
   const loadOrders = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin_orders.php?status=ready`);
+      const params = new URLSearchParams({ status: 'ready', page: String(page), limit: String(pageSize) });
+      const response = await fetch(`${API_BASE_URL}/admin_orders.php?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
+        setTotalItems(data.total || 0);
         // ALLOW transit orders (out-for-delivery, etc.) to show up in Admin Panel too
         const activeOrders = data.orders;
 
@@ -50,10 +56,15 @@ export function ReadyOrders() {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     loadOrders();
     const interval = setInterval(loadOrders, 5000); // Auto-refresh every 5 seconds
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
 
   // Update Status to Completed
   const updateToCompleted = async (orderId) => {
@@ -95,17 +106,18 @@ export function ReadyOrders() {
             <PackageCheck className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 shrink-0" />
             <span className="truncate">{t("Ready Orders")}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{orders.length} {t("orders waiting for pickup or delivery")}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{totalItems} {t("orders waiting for pickup or delivery")}</p>
         </div>
       </div>
 
-      {orders.length === 0 && !loading ? (
-        <div className="p-8 sm:p-12 text-center border-2 border-dashed rounded-xl" style={{ background: '#ffffff' }}>
+      {totalItems === 0 && !loading ? (
+        <div className="p-8 sm:p-12 text-center border-2 border-dashed rounded-xl bg-white">
             <PackageCheck className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-base sm:text-lg font-medium text-foreground">No ready orders right now.</p>
             <p className="text-sm text-muted-foreground">When you mark an order as 'Ready' in Today's Work, it will appear here.</p>
         </div>
       ) : (
+        <>
         <OrdersTable
           orders={orders}
           actions={(order) => (
@@ -131,6 +143,17 @@ export function ReadyOrders() {
             </Button>
           )}
         />
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            className="mt-4"
+          />
+        )}
+        </>
       )}
     </div>
   );

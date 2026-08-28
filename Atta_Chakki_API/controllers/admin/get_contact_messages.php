@@ -27,19 +27,30 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
-    $result = $conn->query("SELECT * FROM contact_messages ORDER BY created_at DESC");
+    $page   = max(1, isset($_GET['page']) ? (int)$_GET['page'] : 1);
+    $limit  = max(1, min(200, isset($_GET['limit']) ? (int)$_GET['limit'] : 6));
+    $offset = ($page - 1) * $limit;
+
+    $total = (int)$conn->query("SELECT COUNT(*) AS c FROM contact_messages")->fetch_assoc()['c'];
+
+    $stmt = $conn->prepare("SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT ? OFFSET ?");
+    $stmt->bind_param("ii", $limit, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     $messages = [];
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            $messages[] = $row;
-        }
+    while ($row = $result->fetch_assoc()) {
+        $messages[] = $row;
     }
+    $stmt->close();
 
     echo json_encode([
         "success" => true,
-        "data" => $messages,
-        "count" => count($messages)
+        "data"    => $messages,
+        "total"   => $total,
+        "page"    => $page,
+        "limit"   => $limit,
+        "count"   => count($messages),
     ]);
 
 } catch (Exception $e) {

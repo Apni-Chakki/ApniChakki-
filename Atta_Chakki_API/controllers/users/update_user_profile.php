@@ -26,6 +26,7 @@ try {
     $user_id = intval($data['user_id']);
     $name = isset($data['name']) ? $conn->real_escape_string(trim($data['name'])) : null;
     $phone = isset($data['phone']) ? $conn->real_escape_string(trim($data['phone'])) : null;
+    $email = isset($data['email']) ? $conn->real_escape_string(trim($data['email'])) : null;
     $address = isset($data['address']) ? $conn->real_escape_string(trim($data['address'])) : null;
     
     // checking if user exists
@@ -57,6 +58,12 @@ try {
         $updates[] = "phone = ?";
         $types .= 's';
         $values[] = $phone;
+    }
+    
+    if ($email !== null) {
+        $updates[] = "email = ?";
+        $types .= 's';
+        $values[] = $email;
     }
     
     if ($address !== null) {

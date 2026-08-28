@@ -21,27 +21,42 @@ export function UdhaarKhata() {
   
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
+  const [totalItems, setTotalItems] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
   useEffect(() => {
     loadLedgers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch]);
 
-  // FETCH FROM API
   const loadLedgers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/get_udhaar_ledger.php`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const response = await fetch(`${API_BASE_URL}/get_udhaar_ledger.php?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
         setLedgers(data.ledgers || []);
         setTotalOutstanding(data.totalOutstanding || 0);
+        setTotalItems(data.total || 0);
       } else {
         toast.error(data.message || 'Failed to load ledger');
       }
@@ -99,10 +114,8 @@ export function UdhaarKhata() {
     }
   };
 
-  const filteredLedgers = ledgers.filter(l => 
-    l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    l.phone.includes(searchTerm)
-  );
+  // Server owns filtering + paging
+  const filteredLedgers = ledgers;
 
   if (loading && ledgers.length === 0) {
     return (
@@ -212,9 +225,7 @@ export function UdhaarKhata() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLedgers
-                .slice((page - 1) * pageSize, page * pageSize)
-                .map((customer) => (
+              filteredLedgers.map((customer) => (
                 <TableRow key={customer.phone}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -254,10 +265,10 @@ export function UdhaarKhata() {
           </TableBody>
         </Table>
 
-        {filteredLedgers.length > 0 && (
+        {totalItems > 0 && (
           <Pagination
             currentPage={page}
-            totalItems={filteredLedgers.length}
+            totalItems={totalItems}
             pageSize={pageSize}
             onPageChange={setPage}
             onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}

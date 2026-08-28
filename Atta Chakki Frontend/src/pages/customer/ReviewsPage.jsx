@@ -8,6 +8,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { Pagination } from '../../components/common/Pagination';
 
 export function ReviewsPage() {
   const { t } = useTranslation();
@@ -17,6 +18,10 @@ export function ReviewsPage() {
   const [stats, setStats] = useState({ average: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [filterRating, setFilterRating] = useState('all');
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -42,24 +47,25 @@ export function ReviewsPage() {
   }, [location.state, user]);
 
   useEffect(() => {
+    setPage(1);
+  }, [filterRating, pageSize]);
+
+  useEffect(() => {
     fetchReviews(filterRating);
-  }, [filterRating]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterRating, page, pageSize]);
 
   const fetchReviews = async (rating) => {
     setLoading(true);
     try {
-      let url = `${API_BASE_URL}/get_comments.php`;
-      if (rating !== 'all') {
-        url += `?rating=${rating}`;
-      }
-      
-      const response = await fetch(url);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      if (rating !== 'all') params.set('rating', String(rating));
+      const response = await fetch(`${API_BASE_URL}/get_comments.php?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
         setReviews(data.data);
-        if (data.stats && rating === 'all') {
-            setStats(data.stats);
-        }
+        setTotalItems(data.total || 0);
+        if (data.stats) setStats(data.stats);
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -258,11 +264,12 @@ export function ReviewsPage() {
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">{t('Loading comments...')}</p>
         </div>
-      ) : reviews.length === 0 ? (
+      ) : totalItems === 0 ? (
         <div className="text-center py-20 bg-secondary rounded-xl">
           <p className="text-xl text-muted-foreground">{t('No reviews found for this filter.')}</p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {reviews.map((review) => (
              <Card key={review.id} className="p-6 flex flex-col gap-4 bg-card h-full justify-between shadow-sm hover:shadow-md transition-all duration-300">
@@ -295,6 +302,17 @@ export function ReviewsPage() {
            </Card>
           ))}
         </div>
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            className="mt-6"
+          />
+        )}
+        </>
       )}
     </div>
   );

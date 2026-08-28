@@ -30,13 +30,30 @@ try {
             $qty = isset($item['quantity']) ? floatval($item['quantity']) : 0;
             
             if ($product_id > 0 && $qty > 0) {
-                // Ignore service/trip items (if unit is trip, stock doesn't matter, but here we just update if it exists)
+                // Fetch product's rental status
+                $prod_chk = $conn->prepare("SELECT is_rental FROM products WHERE id = ?");
+                $prod_chk->bind_param("i", $product_id);
+                $prod_chk->execute();
+                $prod_chk_res = $prod_chk->get_result();
+                $is_rental = 0;
+                if ($prod_chk_res->num_rows > 0) {
+                    $is_rental = intval($prod_chk_res->fetch_assoc()['is_rental'] ?? 0);
+                }
+                $prod_chk->close();
+
                 // 'deduct' means stock decreases, 'restore' means stock increases
                 $quantity_change = ($action === 'deduct') ? -$qty : $qty;
                 $reason = 'order_' . $action;
                 
-                $update->bind_param("di", $quantity_change, $product_id);
-                $update->execute();
+                if ($is_rental === 1) {
+                    $update_rental = $conn->prepare("UPDATE products SET rental_available_qty = GREATEST(0, rental_available_qty + ?) WHERE id = ?");
+                    $update_rental->bind_param("di", $quantity_change, $product_id);
+                    $update_rental->execute();
+                    $update_rental->close();
+                } else {
+                    $update->bind_param("di", $quantity_change, $product_id);
+                    $update->execute();
+                }
                 
                 if ($log) {
                     $log->bind_param("ids", $product_id, $quantity_change, $reason);
@@ -70,7 +87,7 @@ try {
     $reason = isset($data['reason']) ? $data['reason'] : 'manual_update';
     
     // getting current stock
-    $product = $conn->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+    $product = $conn->prepare("SELECT stock_quantity, is_rental, rental_available_qty FROM products WHERE id = ?");
     $product->bind_param("i", $product_id);
     $product->execute();
     $result = $product->get_result();
@@ -82,17 +99,26 @@ try {
     }
     
     $prod = $result->fetch_assoc();
-    $new_stock = floatval($prod['stock_quantity']) + $quantity_change;
+    $is_rental = intval($prod['is_rental'] ?? 0);
     
-    // cant go negative
-    if ($new_stock < 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Insufficient stock for this operation']);
-        exit;
+    if ($is_rental === 1) {
+        $new_stock = floatval($prod['rental_available_qty']) + $quantity_change;
+        if ($new_stock < 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Insufficient rental stock for this operation']);
+            exit;
+        }
+        $update = $conn->prepare("UPDATE products SET rental_available_qty = ?, updated_at = NOW() WHERE id = ?");
+    } else {
+        $new_stock = floatval($prod['stock_quantity']) + $quantity_change;
+        if ($new_stock < 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Insufficient stock for this operation']);
+            exit;
+        }
+        $update = $conn->prepare("UPDATE products SET stock_quantity = ?, updated_at = NOW() WHERE id = ?");
     }
     
-    // updating stock
-    $update = $conn->prepare("UPDATE products SET stock_quantity = ?, updated_at = NOW() WHERE id = ?");
     $update->bind_param("di", $new_stock, $product_id);
     
     if (!$update->execute()) {

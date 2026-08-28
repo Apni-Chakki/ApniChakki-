@@ -10,6 +10,15 @@ $data = json_decode(file_get_contents("php://input"));
 $user_id = $payload['id']; // IDOR fixed
 
 if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
+    $user_query = $conn->prepare("SELECT email, full_name, phone FROM users WHERE id = ?");
+    $user_query->bind_param("i", $user_id);
+    $user_query->execute();
+    $user_row = $user_query->get_result()->fetch_assoc();
+    $user_query->close();
+    
+    $customer_name = $user_row['full_name'] ?? 'Customer';
+    $customer_phone = $user_row['phone'] ?? '';
+
     $address = isset($data->address) ? $data->address : "No address provided";
     $latitude = isset($data->latitude) && is_numeric($data->latitude) ? floatval($data->latitude) : null;
     $longitude = isset($data->longitude) && is_numeric($data->longitude) ? floatval($data->longitude) : null;
@@ -48,7 +57,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
     // total calculate ho raha hai products ka
     foreach($cart_items as $item) {
         $pid = $item->id;
-        $query = $conn->prepare("SELECT price, discount_type, discount_value, unit, is_grinding_service, cleaning_price, grinding_price FROM products WHERE id = ?");
+        $query = $conn->prepare("SELECT price, discount_type, discount_value, unit, is_grinding_service, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day FROM products WHERE id = ?");
         $query->bind_param("i", $pid);
         $query->execute();
         $res = $query->get_result();
@@ -94,6 +103,13 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
                 $price = max(0, $base_price - $discount_value);
             }
 
+            $is_rental_val = isset($row['is_rental']) ? (int)$row['is_rental'] : 0;
+            $rental_days_val = $is_rental_val ? (isset($item->rental_days) ? (int)$item->rental_days : 0) : null;
+            $rental_start_date_val = $is_rental_val ? (isset($item->rental_start_date) ? $item->rental_start_date : null) : null;
+            $rental_price_per_day_val = $is_rental_val ? (isset($row['rental_price_per_day']) ? floatval($row['rental_price_per_day']) : 0.0) : null;
+            $security_deposit_val = $is_rental_val ? (isset($row['security_deposit']) ? floatval($row['security_deposit']) : 0.0) : null;
+            $late_penalty_per_day_val = $is_rental_val ? (isset($row['late_penalty_per_day']) ? floatval($row['late_penalty_per_day']) : 0.0) : null;
+
             if ($unit === 'trip') {
                 $has_trip_item = true;
                 $has_pending_weight_item = true;
@@ -106,7 +122,13 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
                     "is_cleaning" => $is_cleaning,
                     "is_grinding" => $is_grinding,
                     "is_weight_pending" => 1,
-                    "selected_customizations" => $selected_customizations
+                    "selected_customizations" => $selected_customizations,
+                    "is_rental" => $is_rental_val,
+                    "rental_days" => $rental_days_val,
+                    "rental_start_date" => $rental_start_date_val,
+                    "rental_price_per_day" => $rental_price_per_day_val,
+                    "security_deposit" => $security_deposit_val,
+                    "late_penalty_per_day" => $late_penalty_per_day_val
                 ];
             } else {
                 if (!$item_is_pending) {
@@ -121,7 +143,13 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
                     "is_cleaning" => $is_cleaning,
                     "is_grinding" => $is_grinding,
                     "is_weight_pending" => $item_is_pending,
-                    "selected_customizations" => $selected_customizations
+                    "selected_customizations" => $selected_customizations,
+                    "is_rental" => $is_rental_val,
+                    "rental_days" => $rental_days_val,
+                    "rental_start_date" => $rental_start_date_val,
+                    "rental_price_per_day" => $rental_price_per_day_val,
+                    "security_deposit" => $security_deposit_val,
+                    "late_penalty_per_day" => $late_penalty_per_day_val
                 ];
             }
         }
@@ -265,12 +293,27 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
 
         // items add aur stock update kar rahe han yahan par
         // stock can never be negative logic: using GREATEST(0, stock - qty)
-        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending, is_rental, rental_days, rental_start_date, rental_price_per_day, security_deposit, late_penalty_per_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ?");
         $cust_stmt = $conn->prepare("INSERT INTO order_item_customizations (order_item_id, option_name, option_price) VALUES (?, ?, ?)");
         
         foreach($valid_items as $v_item) {
-            $item_stmt->bind_param("iiddiiii", $order_id, $v_item['product_id'], $v_item['quantity'], $v_item['price'], $v_item['original_price'], $v_item['is_cleaning'], $v_item['is_grinding'], $v_item['is_weight_pending']);
+            $item_stmt->bind_param("iiddiiiiiisddd", 
+                $order_id, 
+                $v_item['product_id'], 
+                $v_item['quantity'], 
+                $v_item['price'], 
+                $v_item['original_price'], 
+                $v_item['is_cleaning'], 
+                $v_item['is_grinding'], 
+                $v_item['is_weight_pending'],
+                $v_item['is_rental'],
+                $v_item['rental_days'],
+                $v_item['rental_start_date'],
+                $v_item['rental_price_per_day'],
+                $v_item['security_deposit'],
+                $v_item['late_penalty_per_day']
+            );
             if (!$item_stmt->execute()) {
                 throw new Exception("Failed to add item to order: " . $item_stmt->error);
             }
@@ -288,10 +331,63 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             
             // stock kam kar rahe han (sirf physical items ka)
             if (strtolower(trim($v_item['unit'])) !== 'trip') {
-                $inv_stmt->bind_param("di", $v_item['quantity'], $v_item['product_id']);
-                if (!$inv_stmt->execute()) {
-                    throw new Exception("Failed to update product stock: " . $inv_stmt->error);
+                if ($v_item['is_rental'] === 1) {
+                    $rent_inv_stmt = $conn->prepare("UPDATE products SET rental_available_qty = GREATEST(0, rental_available_qty - ?) WHERE id = ?");
+                    $rent_inv_stmt->bind_param("di", $v_item['quantity'], $v_item['product_id']);
+                    if (!$rent_inv_stmt->execute()) {
+                        throw new Exception("Failed to update product rental stock: " . $rent_inv_stmt->error);
+                    }
+                    $rent_inv_stmt->close();
+                } else {
+                    $inv_stmt->bind_param("di", $v_item['quantity'], $v_item['product_id']);
+                    if (!$inv_stmt->execute()) {
+                        throw new Exception("Failed to update product stock: " . $inv_stmt->error);
+                    }
                 }
+            }
+
+            if ($v_item['is_rental'] === 1) {
+                $rental_days = intval($v_item['rental_days']);
+                if ($rental_days <= 0) $rental_days = 1;
+                $rental_start_date = !empty($v_item['rental_start_date']) ? $v_item['rental_start_date'] : date('Y-m-d');
+                $rental_end_date = date('Y-m-d', strtotime($rental_start_date . " + $rental_days days"));
+                
+                $total_rental_amount = $rental_days * floatval($v_item['rental_price_per_day']) * intval($v_item['quantity']);
+                
+                $total_cost = $total_rental_amount + (floatval($v_item['security_deposit']) * intval($v_item['quantity']));
+                $rental_amount_paid = ($final_payment_status === 'paid') ? $total_cost : 0.0;
+                
+                $insert_rent_stmt = $conn->prepare("INSERT INTO rentals (
+                    order_id, product_id, user_id, customer_name, customer_phone, customer_address, 
+                    quantity, rental_start_date, rental_end_date, rental_days, rental_price_per_day, 
+                    total_rental_amount, security_deposit, deposit_status, late_penalty_per_day, 
+                    payment_method, amount_paid, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'held', ?, ?, ?, 'active', NOW(), NOW())");
+                
+                $insert_rent_stmt->bind_param(
+                    "iiisssissidddssd",
+                    $order_id,
+                    $v_item['product_id'],
+                    $user_id,
+                    $customer_name,
+                    $customer_phone,
+                    $address,
+                    $v_item['quantity'],
+                    $rental_start_date,
+                    $rental_end_date,
+                    $rental_days,
+                    $v_item['rental_price_per_day'],
+                    $total_rental_amount,
+                    $v_item['security_deposit'],
+                    $v_item['late_penalty_per_day'],
+                    $db_payment_method,
+                    $rental_amount_paid
+                );
+                
+                if (!$insert_rent_stmt->execute()) {
+                    throw new Exception("Failed to create active rental: " . $insert_rent_stmt->error);
+                }
+                $insert_rent_stmt->close();
             }
         }
         $item_stmt->close();
@@ -375,14 +471,8 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
                 'storeName' => $store_name
             ];
 
-            $ch = curl_init(EMAIL_SERVER_URL . '/send-order-confirmation');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-            curl_exec($ch);
-            curl_close($ch);
+            require_once __DIR__ . '/../../utils/email_helper.php';
+            send_email_async('/send-order-confirmation', $emailData);
         }
         
         // auto scheduling wala kaam kar rahe han

@@ -16,8 +16,16 @@ try {
     $revenue_result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE LOWER(TRIM(status)) = 'completed'");
     $revenueTotal = $revenue_result->fetch_assoc()['total'];
 
+    $refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as total_refunded FROM rentals WHERE status = 'returned'");
+    $totalRefunded = $refund_res->fetch_assoc()['total_refunded'];
+    $revenueTotal = max(0, floatval($revenueTotal) - floatval($totalRefunded));
+
     $today_revenue_result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE LOWER(TRIM(status)) = 'completed' AND DATE(updated_at) = CURDATE()");
     $todayRevenue = $today_revenue_result->fetch_assoc()['total'];
+    
+    $today_refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as today_refunded FROM rentals WHERE status = 'returned' AND DATE(actual_return_date) = CURDATE()");
+    $todayRefunded = $today_refund_res->fetch_assoc()['today_refunded'];
+    $todayRevenue = max(0, floatval($todayRevenue) - floatval($todayRefunded));
     
     $customers = $conn->query("SELECT COUNT(*) as count FROM users WHERE role = 'customer'")->fetch_assoc()['count'];
     $todayOrders = $conn->query("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = CURDATE()")->fetch_assoc()['count'];

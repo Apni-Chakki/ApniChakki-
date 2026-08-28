@@ -43,6 +43,20 @@ if ($rev_res) {
     }
 }
 
+$refunds_sql = "SELECT DATE(actual_return_date) as refund_date, SUM(deposit_refund_amount) as daily_refunds
+                FROM rentals
+                WHERE status = 'returned' AND actual_return_date >= DATE(NOW()) - INTERVAL 6 DAY
+                GROUP BY DATE(actual_return_date)";
+$ref_res = $conn->query($refunds_sql);
+if ($ref_res) {
+    while ($row = $ref_res->fetch_assoc()) {
+        $date = $row['refund_date'];
+        if (isset($chartData[$date])) {
+            $chartData[$date]['revenue'] = max(0, $chartData[$date]['revenue'] - floatval($row['daily_refunds']));
+        }
+    }
+}
+
 // 3. Fetch Expenses from Digital Khata
 $expense_sql = "SELECT DATE(expense_time) as exp_date, SUM(amount) as daily_expense
                 FROM expenses

@@ -167,13 +167,25 @@ export function TrackOrder() {
 
   const getStatusInfo = (status) => {
     switch (status) {
-      case 'pending': return { color: 'text-orange-600', bg: 'bg-orange-100', dot: 'bg-orange-500' };
-      case 'processing': return { color: 'text-blue-600', bg: 'bg-blue-100', dot: 'bg-blue-500' };
-      case 'ready': return { color: 'text-indigo-600', bg: 'bg-indigo-100', dot: 'bg-indigo-500' };
-      case 'out-for-delivery': return { color: 'text-purple-600', bg: 'bg-purple-100', dot: 'bg-purple-500' };
-      case 'completed': return { color: 'text-primary', bg: 'bg-primary/10', dot: 'bg-primary' };
-      case 'cancelled': return { color: 'text-red-600', bg: 'bg-red-100', dot: 'bg-red-500' };
-      default: return { color: 'text-gray-600', bg: 'bg-gray-100', dot: 'bg-gray-500' };
+      case 'pending':
+      case 'pickup_pending':
+        return { color: 'text-orange-600', bg: 'bg-orange-100', dot: 'bg-orange-500' };
+      case 'pickup_assigned':
+      case 'coming_for_pickup':
+        return { color: 'text-amber-600', bg: 'bg-amber-100', dot: 'bg-amber-500' };
+      case 'arrived_at_shop':
+      case 'processing':
+        return { color: 'text-blue-600', bg: 'bg-blue-100', dot: 'bg-blue-500' };
+      case 'ready':
+        return { color: 'text-indigo-600', bg: 'bg-indigo-100', dot: 'bg-indigo-500' };
+      case 'out-for-delivery':
+        return { color: 'text-purple-600', bg: 'bg-purple-100', dot: 'bg-purple-500' };
+      case 'completed':
+        return { color: 'text-primary', bg: 'bg-primary/10', dot: 'bg-primary' };
+      case 'cancelled':
+        return { color: 'text-red-600', bg: 'bg-red-100', dot: 'bg-red-500' };
+      default:
+        return { color: 'text-gray-600', bg: 'bg-gray-100', dot: 'bg-gray-500' };
     }
   };
 
@@ -189,8 +201,21 @@ export function TrackOrder() {
         </div>
       );
     }
+    let activeIndex = 0;
     const currentStepIndex = STATUS_STEPS.findIndex(s => s.id === currentStatus);
-    const activeIndex = currentStepIndex === -1 && currentStatus !== 'pending' ? STATUS_STEPS.length : currentStepIndex;
+    if (currentStepIndex !== -1) {
+      activeIndex = currentStepIndex;
+    } else {
+      if (['pickup_pending', 'pickup_assigned', 'coming_for_pickup'].includes(currentStatus)) {
+        activeIndex = 0;
+      } else if (currentStatus === 'arrived_at_shop') {
+        activeIndex = 1;
+      } else if (currentStatus === 'pending') {
+        activeIndex = 0;
+      } else {
+        activeIndex = STATUS_STEPS.length;
+      }
+    }
     return (
       <div className="relative pt-8 pb-4">
         <div className="absolute top-12 left-0 w-full h-1 bg-gray-200 rounded-full" style={{ zIndex: 0 }}></div>
@@ -435,7 +460,7 @@ export function TrackOrder() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
                         <div className={`px-3 py-1 rounded-full text-xs font-bold capitalize flex items-center gap-1.5 ${statusColors.bg} ${statusColors.color}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
-                          {t(order.status.replace('-', ' '))}
+                          {t(order.status.replace(/[-_]/g, ' '))}
                         </div>
                         <div style={{ padding: '0.375rem', border: '1px solid #e2e8f0', borderRadius: '50%', color: '#94a3b8', display: 'flex' }}>
                           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

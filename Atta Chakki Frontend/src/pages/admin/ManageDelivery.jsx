@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit2, Trash2, UserCheck, UserX, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, UserCheck, UserX, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/common/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/common/dialog';
@@ -26,7 +26,12 @@ export function ManageDelivery() {
     email: '',
     phone: '',
     password: '',
+    cnic: '',
+    address: '',
   });
+
+  const [showAddPassword, setShowAddPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   const fetchPersonnel = async () => {
     try {
@@ -47,12 +52,56 @@ export function ManageDelivery() {
   }, []);
 
   const resetForm = () => {
-    setFormData({ name: '', email: '', phone: '', password: '' });
+    setFormData({ name: '', email: '', phone: '', password: '', cnic: '', address: '' });
+    setShowAddPassword(false);
+    setShowEditPassword(false);
+  };
+
+  const validatePassword = (password, isOptional = false) => {
+    if (isOptional && !password) return true;
+    if (/\s/.test(password)) {
+      toast.error(t('Password must not contain spaces.'));
+      return false;
+    }
+    if (password.length < 8) {
+      toast.error(t('Password must be at least 8 characters.'));
+      return false;
+    }
+    if (password.length > 50) {
+      toast.error(t('Password must not exceed 50 characters.'));
+      return false;
+    }
+    if (!/^[A-Z]/.test(password)) {
+      toast.error(t('Password must start with a capital letter.'));
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      toast.error(t('Password must contain at least one number.'));
+      return false;
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      toast.error(t('Password must contain at least one special character.'));
+      return false;
+    }
+    return true;
   };
 
   // SPY CODE INJECTED HERE
   const handleAddPersonnel = async (e) => {
     e.preventDefault();
+    if (!validatePassword(formData.password)) {
+      return;
+    }
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (!/^0\d{10}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must start with 0 and be exactly 11 digits.'));
+      return;
+    }
+    const cleanCnic = formData.cnic.replace(/\D/g, '');
+    if (!/^\d{13}$/.test(cleanCnic)) {
+      toast.error(t('CNIC must be exactly 13 digits.'));
+      return;
+    }
     setIsProcessing(true);
 
     try {
@@ -98,6 +147,8 @@ export function ManageDelivery() {
       email: personnel.email || '',
       phone: personnel.phone,
       password: '', 
+      cnic: personnel.cnic || '',
+      address: personnel.address || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -105,6 +156,19 @@ export function ManageDelivery() {
   const handleUpdatePersonnel = async (e) => {
     e.preventDefault();
     if (!editingPersonnel) return;
+    if (formData.password && !validatePassword(formData.password, true)) {
+      return;
+    }
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (!/^0\d{10}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must start with 0 and be exactly 11 digits.'));
+      return;
+    }
+    const cleanCnic = formData.cnic.replace(/\D/g, '');
+    if (!/^\d{13}$/.test(cleanCnic)) {
+      toast.error(t('CNIC must be exactly 13 digits.'));
+      return;
+    }
     setIsProcessing(true);
 
     try {
@@ -254,6 +318,8 @@ export function ManageDelivery() {
                     <div className="text-xs space-y-1">
                       <p className="text-muted-foreground break-all">{personnel.email}</p>
                       <p className="text-muted-foreground break-all">{personnel.phone}</p>
+                      <p className="text-muted-foreground break-all">{t('CNIC Number')}: {personnel.cnic}</p>
+                      {personnel.address && <p className="text-muted-foreground break-all">{t('Delivery Address')}: {personnel.address}</p>}
                     </div>
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
                       <Button
@@ -297,6 +363,7 @@ export function ManageDelivery() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>{t('CNIC Number')}</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -307,6 +374,7 @@ export function ManageDelivery() {
                         <TableCell className="font-medium">{personnel.name}</TableCell>
                         <TableCell>{personnel.email}</TableCell>
                         <TableCell>{personnel.phone}</TableCell>
+                        <TableCell>{personnel.cnic}</TableCell>
                         <TableCell>
                           {personnel.isActive ? (
                             <Badge className="bg-success text-success-foreground">Active</Badge>
@@ -395,22 +463,57 @@ export function ManageDelivery() {
                   id="add-phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+91 98765 43210"
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                  placeholder="03001234567"
                   required
+                  maxLength={11}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-cnic" className="text-sm">{t('CNIC Number')}</Label>
+                <Input
+                  id="add-cnic"
+                  value={formData.cnic}
+                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value.replace(/\D/g, '') })}
+                  placeholder="3520112345671"
+                  required
+                  maxLength={13}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-address" className="text-sm">{t('Delivery Address')} <span className="text-muted-foreground font-normal">{t('(Optional)')}</span></Label>
+                <Input
+                  id="add-address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value.replace(/^ /, '').replace(/  +/g, ' ') })}
+                  placeholder={t('Enter street address')}
+                  maxLength={150}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="add-password" className="text-sm">Password</Label>
-                <Input
-                  id="add-password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Create a password"
-                  required
-                  minLength={6}
-                />
+                <div className="relative">
+                  <Input
+                    id="add-password"
+                    type={showAddPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value.replace(/\s/g, '') })}
+                    placeholder="Create a password"
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPassword(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showAddPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {t('8–50 chars · starts with capital · must include a number & special character')}
+                </p>
               </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
@@ -471,20 +574,56 @@ export function ManageDelivery() {
                   id="edit-phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                  placeholder="03001234567"
                   required
+                  maxLength={11}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-cnic" className="text-sm">{t('CNIC Number')}</Label>
+                <Input
+                  id="edit-cnic"
+                  value={formData.cnic}
+                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value.replace(/\D/g, '') })}
+                  placeholder="3520112345671"
+                  required
+                  maxLength={13}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-address" className="text-sm">{t('Delivery Address')} <span className="text-muted-foreground font-normal">{t('(Optional)')}</span></Label>
+                <Input
+                  id="edit-address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value.replace(/^ /, '').replace(/  +/g, ' ') })}
+                  placeholder={t('Enter street address')}
+                  maxLength={150}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="edit-password" className="text-sm">New Password (Optional)</Label>
-                <Input
-                  id="edit-password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Type to change password"
-                  minLength={6}
-                />
+                <div className="relative">
+                  <Input
+                    id="edit-password"
+                    type={showEditPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value.replace(/\s/g, '') })}
+                    placeholder="Type to change password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showEditPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {t('8–50 chars · starts with capital · must include a number & special character')}
+                </p>
               </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2">

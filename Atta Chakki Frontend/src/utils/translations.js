@@ -364,6 +364,8 @@ export const translations = {
     "Invalid credentials. Please try again.": "Invalid credentials. Please try again.",
     "Phone number must be exactly 11 digits with no spaces.":
       "Phone number must be exactly 11 digits with no spaces.",
+    "Phone number must start with 0 and be exactly 11 digits.":
+      "Phone number must start with 0 and be exactly 11 digits.",
     "Password must not contain spaces.": "Password must not contain spaces.",
     "Password must be at least 8 characters.": "Password must be at least 8 characters.",
     "Password must not exceed 50 characters.": "Password must not exceed 50 characters.",
@@ -371,6 +373,8 @@ export const translations = {
     "Password must contain at least one number.": "Password must contain at least one number.",
     "Password must contain at least one special character.":
       "Password must contain at least one special character.",
+    "CNIC Number": "CNIC Number",
+    "CNIC must be exactly 13 digits.": "CNIC must be exactly 13 digits.",
 
     // Customer Sign Up
     "Create Customer Account": "Create Customer Account",
@@ -554,6 +558,10 @@ export const translations = {
     "Password updated successfully!": "Password updated successfully!",
     "Incorrect current password.": "Incorrect current password.",
     "Please enter your current password.": "Please enter your current password.",
+    "Please update your phone number in account settings to proceed with orders!": "Please update your phone number in account settings to proceed with orders!",
+    "Please add your Gmail address in account settings to link your Google Account!": "Please add your Gmail address in account settings to link your Google Account!",
+    "Update Now": "Update Now",
+    "Add Gmail": "Add Gmail",
   },
   ur: {
     "Apni Chakki": "سچی چکی",
@@ -920,6 +928,8 @@ export const translations = {
     "Invalid credentials. Please try again.": "غلط معلومات۔ دوبارہ کوشش کریں۔",
     "Phone number must be exactly 11 digits with no spaces.":
       "فون نمبر بالکل 11 ہندسوں کا ہونا چاہیے",
+    "Phone number must start with 0 and be exactly 11 digits.":
+      "فون نمبر 0 سے شروع ہونا چاہیے اور بالکل 11 ہندسوں کا ہونا چاہیے",
     "Password must not contain spaces.": "پاس ورڈ میں خالی جگہ نہیں ہونی چاہیے",
     "Password must be at least 8 characters.": "پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے",
     "Password must not exceed 50 characters.": "پاس ورڈ 50 حروف سے زیادہ نہیں ہونا چاہیے",
@@ -927,6 +937,8 @@ export const translations = {
     "Password must contain at least one number.": "پاس ورڈ میں کم از کم ایک نمبر ہونا چاہیے",
     "Password must contain at least one special character.":
       "پاس ورڈ میں کم از کم ایک خاص علامت ہونی چاہیے",
+    "CNIC Number": "شناختی کارڈ نمبر (CNIC)",
+    "CNIC must be exactly 13 digits.": "شناختی کارڈ نمبر بالکل 13 ہندسوں کا ہونا چاہیے",
 
     // Customer Sign Up
     "Create Customer Account": "صارف اکاؤنٹ بنائیں",
@@ -1152,6 +1164,10 @@ export const translations = {
     "Password updated successfully!": "پاس ورڈ کامیابی سے تبدیل ہو گیا ہے!",
     "Incorrect current password.": "موجودہ پاس ورڈ غلط ہے۔",
     "Please enter your current password.": "براہ کرم اپنا موجودہ پاس ورڈ درج کریں۔",
+    "Please update your phone number in account settings to proceed with orders!": "آرڈرز جاری رکھنے کے لیے، برائے مہربانی اکاؤنٹ سیٹنگز میں اپنا فون نمبر درج کریں!",
+    "Please add your Gmail address in account settings to link your Google Account!": "اپنا گوگل اکاؤنٹ لنک کرنے کے لیے، برائے مہربانی اکاؤنٹ سیٹنگز میں اپنا جی میل ایڈریس شامل کریں!",
+    "Update Now": "ابھی اپڈیٹ کریں",
+    "Add Gmail": "جی میل شامل کریں",
   },
 };
 
