@@ -54,14 +54,8 @@ try {
         'name' => $customer_name,
         'otp' => $otp
     ];
-    $ch = curl_init(EMAIL_SERVER_URL . '/send-password-reset');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-    curl_exec($ch);
-    curl_close($ch);
+    require_once __DIR__ . '/../../utils/email_helper.php';
+    send_email_async('/send-password-reset', $emailData);
 
     echo json_encode([
         'success' => true,

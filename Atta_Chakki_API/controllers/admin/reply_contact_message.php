@@ -58,14 +58,8 @@ try {
                 'storeName' => $storeName
             ];
 
-            $ch = curl_init(EMAIL_SERVER_URL . '/send-contact-reply');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-            curl_exec($ch);
-            curl_close($ch);
+            require_once __DIR__ . '/../../utils/email_helper.php';
+            send_email_async('/send-contact-reply', $emailData);
         }
 
         echo json_encode(["success" => true, "message" => "Reply saved and emailed successfully"]);

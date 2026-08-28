@@ -26,18 +26,48 @@ try {
     }
 
     // checking duplicate phone
-    $check = $conn->prepare("SELECT id FROM users WHERE phone = ?");
+    $check = $conn->prepare("SELECT id, role FROM users WHERE phone = ?");
     $check->bind_param("s", $phone);
     $check->execute();
     $check->store_result();
 
     if ($check->num_rows > 0) {
-        http_response_code(409);
-        echo json_encode(['success' => false, 'message' => 'Phone number already registered']);
+        $existing_id = null;
+        $existing_role = null;
+        $check->bind_result($existing_id, $existing_role);
+        $check->fetch();
         $check->close();
-        exit;
+        
+        // If it is a delivery boy/delivery role, check if they are still in delivery_personnel
+        if (in_array($existing_role, ['delivery_boy', 'delivery'])) {
+            $dp_check = $conn->prepare("SELECT id FROM delivery_personnel WHERE phone = ?");
+            $dp_check->bind_param("s", $phone);
+            $dp_check->execute();
+            $dp_check->store_result();
+            $in_dp = $dp_check->num_rows > 0;
+            $dp_check->close();
+            
+            if (!$in_dp) {
+                // It is a leftover orphan! Delete it.
+                $del_orphan = $conn->prepare("DELETE FROM users WHERE id = ?");
+                $del_orphan->bind_param("i", $existing_id);
+                $del_orphan->execute();
+                $del_orphan->close();
+                
+                // Allow registration to proceed since orphan is deleted!
+            } else {
+                http_response_code(409);
+                echo json_encode(['success' => false, 'message' => 'Phone number already registered']);
+                exit;
+            }
+        } else {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'message' => 'Phone number already registered']);
+            exit;
+        }
+    } else {
+        $check->close();
     }
-    $check->close();
 
     // hashing password
     $password_hash = password_hash($password, PASSWORD_DEFAULT);

@@ -26,7 +26,7 @@ try {
     if ($login_type === 'delivery') {
         // delivery boy login
         $stmt = $conn->prepare("
-            SELECT u.id, u.full_name as name, u.phone, u.password_hash, u.is_active, d.vehicle_number 
+            SELECT u.id, u.full_name as name, u.phone, u.password_hash, u.is_active, d.cnic 
             FROM users u 
             LEFT JOIN delivery_personnel d ON u.phone = d.phone 
             WHERE u.phone = ? AND u.role IN ('delivery_boy', 'delivery', 'admin')
@@ -70,7 +70,7 @@ try {
                 'id' => $user['id'],
                 'name' => $user['name'],
                 'phone' => $user['phone'],
-                'vehicle_number' => $user['vehicle_number'],
+                'cnic' => $user['cnic'],
                 'role' => 'delivery_boy'
             ]
         ]);

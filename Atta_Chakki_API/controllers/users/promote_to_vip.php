@@ -117,20 +117,8 @@ try {
                     'vipFreeShipping' => intval($vip_free_shipping)
                 ];
                 
-                $ch = curl_init(EMAIL_SERVER_URL . '/send-vip-congratulations');
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
-                curl_setopt($ch, CURLOPT_TIMEOUT_MS, 3000); // 3 seconds timeout
-                
-                $response = curl_exec($ch);
-                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                curl_close($ch);
-                
-                if ($http_code === 200) {
-                    $email_sent = true;
-                }
+                require_once __DIR__ . '/../../utils/email_helper.php';
+                $email_sent = send_email_async('/send-vip-congratulations', $emailData);
             } catch (Exception $e) {
                 // ignore mail errors
             }
