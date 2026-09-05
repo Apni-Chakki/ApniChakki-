@@ -392,14 +392,16 @@ export function TodaysWork() {
 
   // whatsapp message generator
   const generateWhatsAppMessage = (order) => {
+    if (!order) return '';
     const isDelivery = order.type !== 'pickup';
     const orderType = isDelivery ? "DELIVERY" : "PICKUP";
     
     let itemsText = "";
-    order.items.forEach(item => {
-        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+    const items = order.items || [];
+    items.forEach(item => {
+        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || parseFloat(item.price) || 0;
         const unit = item.unit || item.service?.unit || 'unit';
-        const name = item.name || item.service?.name || '';
+        const name = item.name || item.service?.name || 'Product';
         
         let customText = "";
         if (item.customizations?.length > 0) {
@@ -411,12 +413,12 @@ export function TodaysWork() {
             customText = services.join(' + ');
         }
         
-        itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+        itemsText += `🔸 *${name}* × ${item.quantity || 1} ${unit}`;
         if (customText) {
             itemsText += ` (${customText})`;
         }
         if (itemPrice > 0) {
-            itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+            itemsText += ` = Rs. ${((item.quantity || 1) * itemPrice).toLocaleString()}`;
         }
         itemsText += `\n`;
         
@@ -427,17 +429,18 @@ export function TodaysWork() {
         }
     });
 
-    let phone = (order.customer_phone || '').replace(/\D/g,'');
+    const customerName = order.customer_name || order.customerName || order.full_name || 'Valued Customer';
+    let phone = (order.customer_phone || order.phone || '').replace(/\D/g,'');
     if (phone.startsWith('0')) {
         phone = '92' + phone.substring(1);
-    } else if (!phone.startsWith('92')) {
+    } else if (phone && !phone.startsWith('92')) {
         phone = '92' + phone; 
     }
 
-    const subtotal = parseFloat(order.total_amount) || 0;
-    const discount = parseFloat(order.coupon_discount) || 0;
+    const subtotal = parseFloat(order.total_amount || order.total) || 0;
+    const discount = parseFloat(order.coupon_discount || order.couponDiscount) || 0;
     const grandTotal = subtotal - discount;
-    const advancePaid = parseFloat(order.amount_paid) || 0;
+    const advancePaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
     const remainingDue = grandTotal - advancePaid;
 
     let priceBreakdown = `*SUBTOTAL:* Rs. ${subtotal.toLocaleString()}\n`;
@@ -451,14 +454,14 @@ export function TodaysWork() {
     priceBreakdown += `*REMAINING DUE:* Rs. ${remainingDue.toLocaleString()}`;
 
     let addressSection = "";
-    if (isDelivery && order.shipping_address) {
-        addressSection = `*DELIVERY ADDRESS:* ${order.shipping_address}\n`;
+    if (isDelivery && (order.shipping_address || order.deliveryAddress)) {
+        addressSection = `*DELIVERY ADDRESS:* ${order.shipping_address || order.deliveryAddress}\n`;
     }
 
     const message = `
 *SUCHI CHAKKI* - Fresh Flour Daily 🌾
 -----------------------------------
-Assalam-o-Alaikum / Hello *${order.customer_name}*! 👋
+Assalam-o-Alaikum / Hello *${customerName}*! 👋
 Your order is now *READY* for ${orderType}.
 
 *ORDER DETAILS*
@@ -474,35 +477,43 @@ Suchi Chakki — Pure & Fresh Processing
 `.trim();
     
     const encodedMessage = encodeURIComponent(message);
-    return `https://wa.me/${phone}?text=${encodedMessage}`;
+    return phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
   };
 
   // mark as ready + download PDF bill + send whatsapp
   const markAsReady = async (order) => {
     setSendingBill(order.id);
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
       const response = await fetch(`${API_BASE_URL}/update_order_status.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ order_id: order.id, status: 'ready' })
       });
       const data = await response.json();
 
       if (data.success) {
-        const invResult = await deductFromInventory(order);
-        if (invResult.success) {
-          toast.success(`Order #${order.id} is Ready! Inventory updated.`);
-        } else {
-          toast.warning(`Order is Ready, but inventory issue: ${invResult.message}`);
+        // 1. Inventory deduction (non-blocking)
+        try {
+          await deductFromInventory(order);
+        } catch (invErr) {
+          console.warn("Inventory update note:", invErr);
         }
 
+        // 2. Sync split batch siblings
         if (order.is_split_batch && order.siblings) {
           for (const sib of order.siblings) {
             if (sib.status === 'batch_ready') {
               try {
                 await fetch(`${API_BASE_URL}/update_order_status.php`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
                   body: JSON.stringify({ order_id: sib.id, status: 'ready' })
                 });
               } catch(e) {
@@ -512,41 +523,67 @@ Suchi Chakki — Pure & Fresh Processing
           }
         }
 
-        const totalAmount = parseFloat(order.total_amount) || 0;
-        const amountPaid = parseFloat(order.amount_paid) || 0;
+        // 3. Prepare PDF Object
+        const totalAmount = parseFloat(order.total_amount || order.total) || 0;
+        const amountPaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
         const pdfOrder = {
           id: String(order.id),
-          customerName: order.customer_name || 'Walk-in Customer',
-          phone: order.customer_phone || '',
+          customerName: order.customer_name || order.customerName || order.full_name || 'Walk-in Customer',
+          phone: order.customer_phone || order.phone || '',
           total: totalAmount,
           advancePayment: amountPaid,
           type: order.type === 'pickup' ? 'pickup' : 'delivery',
-          deliveryAddress: order.shipping_address || '',
-          paymentMethod: order.payment_method || 'cash',
-          paymentStatus: amountPaid >= totalAmount && totalAmount > 0 ? 'paid' : amountPaid > 0 ? 'partial' : 'pending',
+          deliveryAddress: order.shipping_address || order.deliveryAddress || '',
+          paymentMethod: order.payment_method || order.paymentMethod || 'cash',
+          paymentStatus: (amountPaid >= totalAmount && totalAmount > 0) ? 'paid' : (amountPaid > 0 ? 'partial' : 'pending'),
           couponCode: order.coupon_code || '',
           couponDiscount: parseFloat(order.coupon_discount || 0),
+          createdAt: order.created_at || order.createdAt || new Date().toISOString(),
           items: (order.items || []).map(item => ({
-            quantity: item.quantity,
+            quantity: item.quantity || 1,
             isWeightPending: false,
             service: {
-              name: item.name,
-              price: item.price_at_purchase || 0,
-              unit: item.unit || 'kg'
+              name: item.name || item.service?.name || 'Product',
+              price: parseFloat(item.price_at_purchase || item.price || item.service?.price) || 0,
+              unit: item.unit || item.service?.unit || 'kg'
             }
           }))
         };
 
-        const filename = await downloadBillPDF(pdfOrder);
-        toast.success(`📄 Bill PDF downloaded: ${filename}`);
+        // 4. Generate & Download PDF Bill
+        try {
+          const filename = await downloadBillPDF(pdfOrder);
+          toast.success(`📄 Bill PDF downloaded: ${filename}`);
+        } catch (pdfErr) {
+          console.warn("PDF generation warning:", pdfErr);
+        }
+
+        // 5. Update local list state
         setOrders(prev => prev.filter(o => o.id !== order.id));
-        const whatsappLink = generateWhatsAppMessage(order);
-        window.open(whatsappLink, '_blank', 'noopener,noreferrer');
+        toast.success(`Order #${order.id} is marked as Ready!`);
+
+        // 6. Generate WhatsApp message & open
+        try {
+          const whatsappLink = generateWhatsAppMessage(order);
+          if (whatsappLink) {
+            const waWin = window.open(whatsappLink, '_blank');
+            if (!waWin || waWin.closed || typeof waWin.closed === 'undefined') {
+              toast.info('📱 WhatsApp ready', {
+                action: {
+                  label: 'Open WhatsApp',
+                  onClick: () => window.open(whatsappLink, '_blank')
+                }
+              });
+            }
+          }
+        } catch (waErr) {
+          console.warn("WhatsApp link warning:", waErr);
+        }
       } else {
-        toast.error('Failed to update status.');
+        toast.error(data.message || 'Failed to update status.');
       }
     } catch (error) {
-      console.error(error);
+      console.error("markAsReady error:", error);
       toast.error('Error: ' + error.message);
     } finally {
       setSendingBill(null);
