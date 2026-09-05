@@ -136,7 +136,11 @@ export function TodaysWork() {
     fetchSettings();
     fetchPersonnel();
     fetchOrders();
-    const interval = setInterval(fetchOrders, 8000);
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchOrders();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 

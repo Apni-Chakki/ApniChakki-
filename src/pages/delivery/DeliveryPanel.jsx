@@ -93,7 +93,11 @@ export function DeliveryPanel() {
   useEffect(() => {
     if (user) {
       loadOrders();
-      const interval = setInterval(loadOrders, 5000); // Check every 5s
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          loadOrders();
+        }
+      }, 20000); // Check every 20s when tab is active
       return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

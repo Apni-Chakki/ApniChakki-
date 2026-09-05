@@ -686,8 +686,8 @@ export function LiveTrackingMap() {
     try { const res = await fetch(`${API_BASE_URL}/get_driver_location.php?order_id=${orderId}`); const data = await res.json(); if (data.success) setOrderDetail(data); } catch {}
   }, []);
 
-  useEffect(() => { fetchDriverLocations(); const i = setInterval(fetchDriverLocations, 8000); return () => clearInterval(i); }, [fetchDriverLocations]);
-  useEffect(() => { if (!selectedOrder) return; fetchOrderTrail(selectedOrder); const i = setInterval(() => fetchOrderTrail(selectedOrder), 6000); return () => clearInterval(i); }, [selectedOrder, fetchOrderTrail]);
+  useEffect(() => { fetchDriverLocations(); const i = setInterval(() => { if (!document.hidden) fetchDriverLocations(); }, 20000); return () => clearInterval(i); }, [fetchDriverLocations]);
+  useEffect(() => { if (!selectedOrder) return; fetchOrderTrail(selectedOrder); const i = setInterval(() => { if (!document.hidden) fetchOrderTrail(selectedOrder); }, 15000); return () => clearInterval(i); }, [selectedOrder, fetchOrderTrail]);
 
   useEffect(() => {
     if (!mapRef.current || !window.google) return;
