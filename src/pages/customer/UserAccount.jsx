@@ -190,14 +190,13 @@ export function UserAccount() {
       toast.error(t('Name is required'));
       return;
     }
-    if (!tempProfile.phone.trim()) {
+    const cleanPhone = (tempProfile.phone || '').replace(/\D/g, '');
+    if (!cleanPhone) {
       toast.error(t('Phone number is required'));
       return;
     }
-
-    const cleanPhone = tempProfile.phone.replace(/\s/g, '');
-    if (!/^\d{11}$/.test(cleanPhone)) {
-      toast.error(t('Phone number must be exactly 11 digits with no spaces.'));
+    if (!/^0\d{10}$/.test(cleanPhone)) {
+      toast.error(t('Phone number must start with 0 and be exactly 11 digits.'));
       return;
     }
 
@@ -522,9 +521,12 @@ export function UserAccount() {
                     {editMode ? (
                       <Input
                         id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={11}
                         value={tempProfile.phone}
-                        onChange={(e) => setTempProfile({ ...tempProfile, phone: e.target.value })}
-                        placeholder="0300 1234567"
+                        onChange={(e) => setTempProfile({ ...tempProfile, phone: e.target.value.replace(/\D/g, '') })}
+                        placeholder="03001234567"
                       />
                     ) : (
                       <p className="mt-1 text-foreground">{profile.phone || t('Not provided')}</p>

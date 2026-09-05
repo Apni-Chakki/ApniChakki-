@@ -22,7 +22,7 @@ function loadGoogleMapsScript() {
     const cb = '__gmapsAdmin_' + Date.now();
     window[cb] = () => { delete window[cb]; resolve(); };
     const s = document.createElement('script');
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,geometry&loading=async&callback=${cb}`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,geometry,marker&loading=async&callback=${cb}`;
     s.async = true; s.defer = true;
     s.onerror = () => { delete window[cb]; reject(new Error('Maps load failed')); };
     document.head.appendChild(s);
@@ -85,16 +85,17 @@ function createDestIcon(color = '#ef4444', label = '') {
 
 // Helpers
 function animateMarker(marker, pos, dur = 800) {
-  const s = marker.position || marker.getPosition();
-  const sLat = typeof s.lat === 'function' ? s.lat() : s.lat;
-  const sLng = typeof s.lng === 'function' ? s.lng() : s.lng;
+  if (!marker || !pos) return;
+  const s = marker.position || (typeof marker.getPosition === 'function' ? marker.getPosition() : pos);
+  const sLat = typeof s?.lat === 'function' ? s.lat() : (s?.lat ?? pos.lat);
+  const sLng = typeof s?.lng === 'function' ? s.lng() : (s?.lng ?? pos.lng);
   const t0 = Date.now();
   const step = () => {
     const t = Math.min((Date.now() - t0) / dur, 1);
     const e = 1 - Math.pow(1 - t, 3);
     const nextLat = sLat + (pos.lat - sLat) * e;
     const nextLng = sLng + (pos.lng - sLng) * e;
-    if (marker.setPosition) {
+    if (typeof marker.setPosition === 'function') {
       marker.setPosition({ lat: nextLat, lng: nextLng });
     } else {
       marker.position = { lat: nextLat, lng: nextLng };
@@ -414,11 +415,24 @@ export function LiveTrackingMap() {
       routeDrawnRef.current.add(orderId);
     };
 
+    const fallbackStraightLine = () => {
+      const oLat = typeof origin.lat === 'function' ? origin.lat() : origin.lat;
+      const oLng = typeof origin.lng === 'function' ? origin.lng() : origin.lng;
+      const dLat = typeof destination.lat === 'function' ? destination.lat() : destination.lat;
+      const dLng = typeof destination.lng === 'function' ? destination.lng() : destination.lng;
+      applyPolylines([{ lat: oLat, lng: oLng }, { lat: dLat, lng: dLng }]);
+    };
+
     // Try to get route path from server API
     try {
+      const oLat = typeof origin.lat === 'function' ? origin.lat() : origin.lat;
+      const oLng = typeof origin.lng === 'function' ? origin.lng() : origin.lng;
+      const dLat = typeof destination.lat === 'function' ? destination.lat() : destination.lat;
+      const dLng = typeof destination.lng === 'function' ? destination.lng() : destination.lng;
+
       const body = JSON.stringify({
-        origin:      { location: { latLng: { latitude: origin.lat  ?? origin.lat(),  longitude: origin.lng  ?? origin.lng()  } } },
-        destination: { location: { latLng: { latitude: destination.lat ?? destination.lat(), longitude: destination.lng ?? destination.lng() } } },
+        origin:      { location: { latLng: { latitude: oLat, longitude: oLng } } },
+        destination: { location: { latLng: { latitude: dLat, longitude: dLng } } },
         travelMode:  'DRIVE',
         routingPreference: 'TRAFFIC_AWARE',
         computeAlternativeRoutes: false,
@@ -455,15 +469,22 @@ export function LiveTrackingMap() {
     }
 
     // Use fallback if server API fails
-    new window.google.maps.DirectionsService().route(
-      { origin, destination, travelMode: window.google.maps.TravelMode.DRIVING, provideRouteAlternatives: false },
-      (result, status) => {
-        if (status !== 'OK') return;
-        const fullPath = [];
-        result.routes[0].legs.forEach(leg => leg.steps.forEach(step => step.path.forEach(pt => fullPath.push(pt))));
-        applyPolylines(fullPath);
-      }
-    );
+    try {
+      new window.google.maps.DirectionsService().route(
+        { origin, destination, travelMode: window.google.maps.TravelMode.DRIVING, provideRouteAlternatives: false },
+        (result, status) => {
+          if (status === 'OK' && result?.routes?.[0]?.legs) {
+            const fullPath = [];
+            result.routes[0].legs.forEach(leg => leg.steps.forEach(step => step.path.forEach(pt => fullPath.push(pt))));
+            applyPolylines(fullPath);
+          } else {
+            fallbackStraightLine();
+          }
+        }
+      );
+    } catch (err) {
+      fallbackStraightLine();
+    }
   }, []);
 
   // 
@@ -499,14 +520,35 @@ export function LiveTrackingMap() {
       destCoordsRef.current[orderId] = dest;
       if (!destMarkersRef.current[orderId] && mapRef.current) {
         const color = getDriverColor(orderId).main;
-        const element = document.createElement('div');
-        element.innerHTML = `<img src="${createDestIcon(color)}" style="width: 40px; height: 52px; pointer-events: none;" />`;
-        destMarkersRef.current[orderId] = new window.google.maps.marker.AdvancedMarkerElement({
-          position: dest,
-          map: mapRef.current,
-          content: element,
-          zIndex: 30,
-        });
+        const destIconUrl = createDestIcon(color);
+        let destMarker = null;
+        if (window.google?.maps?.marker?.AdvancedMarkerElement) {
+          try {
+            const element = document.createElement('div');
+            element.innerHTML = `<img src="${destIconUrl}" style="width: 40px; height: 52px; pointer-events: none;" />`;
+            destMarker = new window.google.maps.marker.AdvancedMarkerElement({
+              position: dest,
+              map: mapRef.current,
+              content: element,
+              zIndex: 30,
+            });
+          } catch (e) {}
+        }
+        if (!destMarker && window.google?.maps?.Marker) {
+          destMarker = new window.google.maps.Marker({
+            position: dest,
+            map: mapRef.current,
+            icon: {
+              url: destIconUrl,
+              scaledSize: new window.google.maps.Size(40, 52),
+              anchor: new window.google.maps.Point(20, 52)
+            },
+            zIndex: 30,
+          });
+        }
+        if (destMarker) {
+          destMarkersRef.current[orderId] = destMarker;
+        }
       }
       // Routes API RouteMatrix (replaces deprecated DistanceMatrixService)
       fetch(
@@ -582,29 +624,54 @@ export function LiveTrackingMap() {
       if (markersRef.current[orderId]) {
         animateMarker(markersRef.current[orderId], pos);
         if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
-          const img = markersRef.current[orderId].content.querySelector('img');
+          const img = markersRef.current[orderId].content?.querySelector ? markersRef.current[orderId].content.querySelector('img') : null;
           if (img) img.src = createCarIcon(h, spd, color);
           previousHeadingsRef.current[orderId] = h;
         }
       } else {
-        const element = document.createElement('div');
-        element.innerHTML = `<img src="${createCarIcon(h, spd, color)}" style="width: 56px; height: 56px; pointer-events: none;" />`;
-        const marker = new window.google.maps.marker.AdvancedMarkerElement({
-          position: pos,
-          map: mapRef.current,
-          title: `${driver.driver_name} — #${driver.order_id}`,
-          content: element,
-          zIndex: 100,
-        });
-        marker.addListener('click', () => {
-          setSelectedOrder(driver.order_id);
-          autoFollowRef.current = true;
-          const ei = driverETAs[orderId];
-          infoWindowRef.current?.setContent(`<div style="padding:12px;min-width:220px;font-family:Inter,sans-serif"><p style="margin:0 0 6px;font-weight:800;color:${color}">🚚 ${driver.driver_name}</p><p style="font-size:12px;margin:3px 0">Order #${driver.order_id}</p>${ei ? `<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px"><p style="margin:0;font-weight:700;color:#1e40af">📍 ${ei.distance} — ${ei.eta}</p>${ei.arrivalTime ? `<p style="margin:4px 0 0;font-size:11px;color:#3b82f6">Arrives ${ei.arrivalTime}</p>` : ''}</div>` : ''}</div>`);
-          infoWindowRef.current?.open({ anchor: marker, map: mapRef.current });
-        });
-        markersRef.current[orderId] = marker;
-        previousHeadingsRef.current[orderId] = h;
+        const carIconUrl = createCarIcon(h, spd, color);
+        let marker = null;
+        if (window.google?.maps?.marker?.AdvancedMarkerElement) {
+          try {
+            const element = document.createElement('div');
+            element.innerHTML = `<img src="${carIconUrl}" style="width: 56px; height: 56px; pointer-events: none;" />`;
+            marker = new window.google.maps.marker.AdvancedMarkerElement({
+              position: pos,
+              map: mapRef.current,
+              title: `${driver.driver_name} — #${driver.order_id}`,
+              content: element,
+              zIndex: 100,
+            });
+          } catch (e) {
+            console.warn('AdvancedMarkerElement error, fallback to Marker:', e);
+          }
+        }
+        if (!marker && window.google?.maps?.Marker) {
+          marker = new window.google.maps.Marker({
+            position: pos,
+            map: mapRef.current,
+            title: `${driver.driver_name} — #${driver.order_id}`,
+            icon: {
+              url: carIconUrl,
+              scaledSize: new window.google.maps.Size(56, 56),
+              anchor: new window.google.maps.Point(28, 28)
+            },
+            zIndex: 100,
+          });
+        }
+        if (marker) {
+          const clickHandler = () => {
+            setSelectedOrder(driver.order_id);
+            autoFollowRef.current = true;
+            const ei = driverETAs[orderId];
+            infoWindowRef.current?.setContent(`<div style="padding:12px;min-width:220px;font-family:Inter,sans-serif"><p style="margin:0 0 6px;font-weight:800;color:${color}">🚚 ${driver.driver_name}</p><p style="font-size:12px;margin:3px 0">Order #${driver.order_id}</p>${ei ? `<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px"><p style="margin:0;font-weight:700;color:#1e40af">📍 ${ei.distance} — ${ei.eta}</p>${ei.arrivalTime ? `<p style="margin:4px 0 0;font-size:11px;color:#3b82f6">Arrives ${ei.arrivalTime}</p>` : ''}</div>` : ''}</div>`);
+            infoWindowRef.current?.open({ anchor: marker, map: mapRef.current });
+          };
+          marker.addListener('click', clickHandler);
+          if (marker.addListener) marker.addListener('gmp-click', clickHandler);
+          markersRef.current[orderId] = marker;
+          previousHeadingsRef.current[orderId] = h;
+        }
       }
     });
     if (!selectedOrder && driverList.length > 0) {
@@ -891,14 +958,48 @@ export function LiveTrackingMap() {
   //  HELPERS
   // 
   const copyTrackingLink = async (orderId) => {
-    try { const res = await fetch(`${API_BASE_URL}/generate_tracking_link.php?order_id=${orderId}`); const data = await res.json(); if (data.success && data.token) { await navigator.clipboard.writeText(`${window.location.origin}/track/${data.token}`); toast.success('Link copied!'); } else toast.error('No link available'); } catch { toast.error('Failed'); }
+    try {
+      const res = await fetch(`${API_BASE_URL}/generate_tracking_link.php?order_id=${orderId}`);
+      const data = await res.json();
+      if (data.success && data.token) {
+        const link = `${window.location.origin}/track/${data.token}`;
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(link);
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = link;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+        toast.success(`Tracking link copied: /track/${data.token}`);
+      } else {
+        toast.error(data.message || 'No link available');
+      }
+    } catch (e) {
+      toast.error('Failed to copy tracking link');
+    }
   };
 
   const focusDriver = (driver) => {
-    setSelectedOrder(driver.order_id); autoFollowRef.current = true;
-    mapRef.current?.setCenter({ lat: parseFloat(driver.latitude), lng: parseFloat(driver.longitude) });
-    mapRef.current?.setZoom(16);
-    if (driver.shipping_address) fetchDriverETA(driver);
+    setSelectedOrder(driver.order_id);
+    autoFollowRef.current = true;
+    const pos = { lat: parseFloat(driver.latitude), lng: parseFloat(driver.longitude) };
+    if (mapRef.current) {
+      mapRef.current.panTo(pos);
+      mapRef.current.setZoom(15);
+    }
+    if (driver.shipping_address) {
+      fetchDriverETA(driver);
+    }
+    const dest = destCoordsRef.current[String(driver.order_id)];
+    if (dest && mapRef.current && window.google) {
+      const bounds = new window.google.maps.LatLngBounds();
+      bounds.extend(pos);
+      bounds.extend(dest);
+      mapRef.current.fitBounds(bounds, { padding: 80 });
+    }
   };
 
   const clearSelection = () => {

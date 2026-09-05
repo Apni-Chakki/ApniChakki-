@@ -284,8 +284,8 @@ export function DeliveryPanel() {
     return null;
   }, [user]);
 
-  // Fallback WhatsApp link (Google Maps static location)
-  const generateWhatsAppLink = useCallback((order, lat, lng) => {
+  // Helper to generate clean WhatsApp message link (without tracking link)
+  const generateWhatsAppLink = useCallback((order) => {
     const customerPhone = order.phone || order.customer_phone || '';
     let formattedPhone = customerPhone.replace(/\D/g, '');
     if (formattedPhone.startsWith('0')) {
@@ -294,15 +294,6 @@ export function DeliveryPanel() {
       formattedPhone = '92' + formattedPhone;
     }
 
-    // Use tracking link if available, otherwise Google Maps link
-    const trackingData = trackingLinks[order.id];
-    if (trackingData?.whatsapp_url) {
-      return trackingData.whatsapp_url;
-    }
-
-    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
-    const mapsLink = hasCoords ? `https://www.google.com/maps?q=${lat},${lng}` : null;
-    
     let itemsText = "";
     if (order.items && order.items.length > 0) {
       order.items.forEach(item => {
@@ -364,16 +355,15 @@ export function DeliveryPanel() {
       `${isPickupReq ? `❗ *Amount:* TBD (Pickup Request)\n` : `${priceBreakdown}\n`}` +
       `🚚 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
       `🧑‍💼 *Rider:* ${user?.name || 'Suchi Chakki Driver'}\n\n` +
-      `${mapsLink ? `📍 *Driver's Static Location:*\n${mapsLink}\n\n` : ''}` +
       `Please keep your phone nearby so our rider can reach you easily.\n\n` +
       `Thank you for choosing Suchi Chakki! JazakAllah! 🙏🌾`
     );
 
     return `https://wa.me/${formattedPhone}?text=${message}`;
-  }, [trackingLinks, user]);
+  }, [user]);
 
-  // Central helper: GPS → Google Maps Link → WhatsApp Customer
-  const shareLocationViaWhatsApp = useCallback(async (order, lat, lng) => {
+  // Central helper: Send clean WhatsApp Customer update
+  const shareLocationViaWhatsApp = useCallback(async (order) => {
     const customerPhone = order.phone || order.customer_phone;
     if (!customerPhone) {
       toast.warning('⚠️ Customer ka phone number available nahi. WhatsApp message nahi bheja ja sakta.');
@@ -388,12 +378,6 @@ export function DeliveryPanel() {
     } else if (!rawPhone.startsWith('92')) {
       formattedPhone = '92' + rawPhone;
     }
-
-    // Build Google Maps link with current GPS coordinates
-    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
-    const mapsLink = hasCoords
-      ? `https://www.google.com/maps?q=${lat},${lng}`
-      : null;
 
     // Build order items summary
     let itemsText = '';
@@ -426,9 +410,6 @@ export function DeliveryPanel() {
           `❗ *Remaining Due:* Rs. ${remaining.toLocaleString()}\n`) +
       `\n📍 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
       `🧑‍💼 *Rider:* ${user?.name || 'Suchi Chakki Driver'}\n\n` +
-      (mapsLink
-        ? `🗺️ *Rider ki Live Location (Google Maps):*\n${mapsLink}\n\n`
-        : '') +
       `Apna phone paas rakhein taake rider aap tak asaani se pahunch sake.\n\n` +
       `Shukriya! JazakAllah! 🙏🌾`
     );
@@ -437,11 +418,7 @@ export function DeliveryPanel() {
 
     toast.dismiss();
     setTimeout(() => window.open(whatsappUrl, '_blank'), 300);
-    toast.success(
-      mapsLink
-        ? '✅ WhatsApp khul gaya! Customer ko Google Maps location bhi mil jaegi.'
-        : '✅ WhatsApp khul gaya! (GPS location nahi mili, baaki details bhej di gayi hain.)'
-    );
+    toast.success('✅ WhatsApp khul gaya! Customer ko details bhej di gayi hain.');
   }, [user]);
 
   // Update Status to Out-For-Delivery + Start Tracking
@@ -493,8 +470,8 @@ export function DeliveryPanel() {
         startGpsTracking(order.id);
         toast.success('🚚 Delivery started! GPS tracking active.');
 
-        // 5. Send live location to customer via WhatsApp
-        await shareLocationViaWhatsApp(order, initialLat, initialLng);
+        // 5. Send order update to customer via WhatsApp
+        await shareLocationViaWhatsApp(order);
 
         loadOrders();
       } else {
@@ -753,9 +730,6 @@ export function DeliveryPanel() {
         // Start GPS tracking for live driver location
         startGpsTracking(order.id);
 
-        // Generate customer live tracking link
-        const trackingData = await generateTrackingLink(order);
-
         const cPhone = result.customer_phone || order.phone;
         const cName = result.customer_name || order.customerName;
         
@@ -765,47 +739,41 @@ export function DeliveryPanel() {
             ? '92' + customerPhone.substring(1) 
             : customerPhone.startsWith('92') ? customerPhone : '92' + customerPhone;
 
-          // Construct WhatsApp notification message with live tracking link fallback
-          let whatsappUrl;
-          if (trackingData?.whatsapp_url) {
-            whatsappUrl = trackingData.whatsapp_url;
-          } else {
-            let itemsText = "";
-            if (order.items && order.items.length > 0) {
-              order.items.forEach(item => {
-                const unit = item.unit || item.service?.unit || 'unit';
-                const name = item.name || item.service?.name || '';
-                
-                let customText = "";
-                if (item.customizations?.length > 0) {
-                    customText = item.customizations.map(c => c.option_name).join(' + ');
-                } else {
-                    const services = [];
-                    if (item.is_cleaning == 1) services.push('Cleaning');
-                    if (item.is_grinding == 1) services.push('Grinding');
-                    customText = services.join(' + ');
-                }
-                
-                itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
-                if (customText) {
-                    itemsText += ` (${customText})`;
-                }
-                itemsText += `\n`;
-              });
-            }
-
-            const msg = encodeURIComponent(
-              `🚚 *Suchi Chakki — Pickup Update* 🚚\n\n` +
-              `Assalam-o-Alaikum ${cName || 'Customer'}!\n\n` +
-              `Our rider *${user?.name || 'Suchi Chakki Rider'}* is currently on the way to your location to pick up your items. 🛵💨\n\n` +
-              `📦 *ITEMS TO BE PICKED UP:*\n` +
-              `${itemsText}\n` +
-              `📍 *Pickup Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +
-              `Please keep your items ready. If you have any specific instructions, feel free to let us know.\n\n` +
-              `JazakAllah! 🙏🌾`
-            );
-            whatsappUrl = `https://wa.me/${formattedPhone}?text=${msg}`;
+          let itemsText = "";
+          if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+              const unit = item.unit || item.service?.unit || 'unit';
+              const name = item.name || item.service?.name || '';
+              
+              let customText = "";
+              if (item.customizations?.length > 0) {
+                  customText = item.customizations.map(c => c.option_name).join(' + ');
+              } else {
+                  const services = [];
+                  if (item.is_cleaning == 1) services.push('Cleaning');
+                  if (item.is_grinding == 1) services.push('Grinding');
+                  customText = services.join(' + ');
+              }
+              
+              itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
+              if (customText) {
+                  itemsText += ` (${customText})`;
+              }
+              itemsText += `\n`;
+            });
           }
+
+          const msg = encodeURIComponent(
+            `🚚 *Suchi Chakki — Pickup Update* 🚚\n\n` +
+            `Assalam-o-Alaikum ${cName || 'Customer'}!\n\n` +
+            `Our rider *${user?.name || 'Suchi Chakki Rider'}* is currently on the way to your location to pick up your items. 🛵💨\n\n` +
+            `📦 *ITEMS TO BE PICKED UP:*\n` +
+            `${itemsText}\n` +
+            `📍 *Pickup Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +
+            `Please keep your items ready. If you have any specific instructions, feel free to let us know.\n\n` +
+            `JazakAllah! 🙏🌾`
+          );
+          const whatsappUrl = `https://wa.me/${formattedPhone}?text=${msg}`;
           
           setTimeout(() => window.open(whatsappUrl, '_blank'), 800);
         }
@@ -883,8 +851,8 @@ export function DeliveryPanel() {
         startGpsTracking(order.id);
       }
 
-      // 3. Share Live Location via WhatsApp (automatically opens customer's chat)
-      await shareLocationViaWhatsApp(order, initialLat, initialLng);
+      // 3. Send WhatsApp update (without tracking link)
+      await shareLocationViaWhatsApp(order);
     } catch (e) {
       console.error('Im coming error', e);
       toast.error('Network error');
@@ -1001,16 +969,44 @@ export function DeliveryPanel() {
                             {isPickupRequest ? 'TBD' : `Rs. ${order.total.toLocaleString()}`}
                           </p>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                            order.payment_method === 'cash'
-                              ? 'bg-amber-50 border-amber-200 text-amber-700'
-                              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          }`}
-                        >
-                          {order.payment_method === 'cash' ? t('Collect Cash') : t('Paid Online')}
-                        </Badge>
+                        {(() => {
+                          if (isPickupRequest) return null;
+                          const totalAmt = parseFloat(order.total || order.total_amount || 0);
+                          const advPaid = parseFloat(order.advancePayment || order.amount_paid || 0);
+                          const remDue = Math.max(0, totalAmt - advPaid);
+                          const isPaid = (order.paymentStatus === 'paid' || order.payment_status === 'paid' || (totalAmt > 0 && advPaid >= totalAmt));
+
+                          if (isPaid) {
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-emerald-50 border-emerald-200 text-emerald-700"
+                              >
+                                {t('Paid Online')}
+                              </Badge>
+                            );
+                          }
+
+                          if (advPaid > 0 && remDue > 0) {
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700"
+                              >
+                                {t('Collect')}: Rs. {remDue.toLocaleString()} ({t('Adv')}: Rs. {advPaid.toLocaleString()})
+                              </Badge>
+                            );
+                          }
+
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700"
+                            >
+                              {t('Collect Cash')}: Rs. {remDue > 0 ? remDue.toLocaleString() : totalAmt.toLocaleString()}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -1095,25 +1091,12 @@ export function DeliveryPanel() {
                                   <button
                                     className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98] border-emerald-500 text-emerald-700 bg-emerald-50 px-4"
                                     onClick={() => {
-                                      const trackingData = trackingLinks[order.id];
-                                      if (trackingData?.whatsapp_url) {
-                                        window.open(trackingData.whatsapp_url, '_blank');
-                                      } else {
-                                        generateTrackingLink(order).then(data => {
-                                          if (data?.whatsapp_url) {
-                                            window.open(data.whatsapp_url, '_blank');
-                                          } else {
-                                            getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 }).then(pos => {
-                                              const url = generateWhatsAppLink(order, pos?.coords?.latitude, pos?.coords?.longitude);
-                                              window.open(url, '_blank');
-                                            });
-                                          }
-                                        });
-                                      }
+                                      const url = generateWhatsAppLink(order);
+                                      window.open(url, '_blank');
                                     }}
                                   >
                                     <MessageCircle className="h-4 w-4 text-emerald-700" />
-                                    {t('Share Live Location')}
+                                    {t('WhatsApp Update')}
                                   </button>
                                 )}
 
@@ -1153,16 +1136,8 @@ export function DeliveryPanel() {
                                     <button
                                       className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98] border-emerald-500 text-emerald-700 bg-emerald-50 px-2"
                                       onClick={() => {
-                                        getCurrentPositionSafe({ timeout: 5000, maximumAge: 3000 })
-                                          .then((pos) => {
-                                            if (pos) {
-                                              const url = generateWhatsAppLink(order, pos.coords.latitude, pos.coords.longitude);
-                                              window.open(url, '_blank');
-                                              return;
-                                            }
-                                            toast.info(t('Could not get current location. Sending the update without live coordinates.'));
-                                            window.open(generateWhatsAppLink(order, null, null), '_blank');
-                                          });
+                                        const url = generateWhatsAppLink(order);
+                                        window.open(url, '_blank');
                                       }}
                                     >
                                       <MessageCircle className="h-4 w-4 text-emerald-700" />
