@@ -59,18 +59,19 @@ try {
 
     } else {
         // getting all active drivers
-        $sql = "SELECT dt1.*, o.shipping_address, o.status as order_status,
+        $sql = "SELECT dt1.*, 
+                       COALESCE(NULLIF(dt1.driver_name, ''), o.driver_name, 'Driver') as driver_name,
+                       o.shipping_address, o.status as order_status,
                        o.total_amount, u.full_name as customer_name, u.phone as customer_phone
                 FROM delivery_tracking dt1
                 INNER JOIN (
-                    SELECT order_id, MAX(created_at) as max_time
+                    SELECT MAX(id) as max_id
                     FROM delivery_tracking
-                    WHERE status IN ('started', 'in_transit')
                     GROUP BY order_id
-                ) dt2 ON dt1.order_id = dt2.order_id AND dt1.created_at = dt2.max_time
+                ) dt2 ON dt1.id = dt2.max_id
                 JOIN orders o ON o.id = dt1.order_id
                 JOIN users u ON u.id = o.user_id
-                WHERE o.status = 'out-for-delivery'
+                WHERE o.status NOT IN ('completed', 'cancelled')
                 ORDER BY dt1.created_at DESC";
 
         $result = $conn->query($sql);

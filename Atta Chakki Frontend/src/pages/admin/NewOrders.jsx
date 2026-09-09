@@ -137,7 +137,11 @@ export function NewOrders() {
     fetchSettings();
     fetchPersonnel();
     loadOrders();
-    const interval = setInterval(loadOrders, 5000);
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadOrders();
+      }
+    }, 25000);
     return () => clearInterval(interval);
   }, [fetchSettings, fetchPersonnel, loadOrders]);
 

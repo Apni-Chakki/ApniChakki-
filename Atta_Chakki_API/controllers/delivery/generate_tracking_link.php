@@ -131,9 +131,7 @@ try {
             . "💵 *Remaining Due:* Rs. " . number_format($remaining_due) . "\n"
             . "📍 *Delivery Address:* " . ($order['shipping_address'] ?: 'Provided Address') . "\n"
             . "🧑‍💼 *Rider:* " . ($driver_name ?: 'Suchi Chakki Driver') . "\n\n"
-            . "🗺️ *LIVE TRACK YOUR RIDER:*\n"
-            . $tracking_url . "\n\n"
-            . "Click the link above to view your rider's live location on the map. Please keep the remaining amount ready if applicable. 💵\n\n"
+            . "Please keep your phone nearby. Please keep the remaining amount ready if applicable. 💵\n\n"
             . "JazakAllah for choosing Suchi Chakki! 🙏🌾";
 
         // formatting phone for whatsapp
@@ -221,10 +219,23 @@ try {
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
 
-            echo json_encode([
-                "success" => !!$result,
-                "token" => $result ? $result['token'] : null
-            ]);
+            if ($result && !empty($result['token'])) {
+                echo json_encode([
+                    "success" => true,
+                    "token" => $result['token']
+                ]);
+            } else {
+                // Generate a new token if not present
+                $token = bin2hex(random_bytes(16));
+                $expires_at = date('Y-m-d H:i:s', time() + (86400 * 7)); // 7 days validity
+                $ins = $conn->prepare("INSERT INTO tracking_tokens (order_id, token, expires_at) VALUES (?, ?, ?)");
+                $ins->bind_param("iss", $order_id, $token, $expires_at);
+                $ins->execute();
+                echo json_encode([
+                    "success" => true,
+                    "token" => $token
+                ]);
+            }
         } else {
             echo json_encode(["success" => false, "message" => "Provide token or order_id parameter"]);
         }

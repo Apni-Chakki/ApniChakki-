@@ -323,7 +323,7 @@ export function ForgotPassword() {
                   <div className="text-center text-sm">
                     <button
                       type="button"
-                      onClick={() => { setStep(1); setOtp(''); setNewPassword(''); setDebugOtp(''); }}
+                      onClick={() => { setStep(1); setOtp(''); setNewPassword(''); }}
                       style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
                     >
                       {t('Resend OTP')}

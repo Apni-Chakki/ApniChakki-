@@ -13,16 +13,16 @@ header('Content-Type: application/json');
 $results = [];
 
 // 1. Add is_custom_mix column to products table
-$sql1 = "ALTER TABLE products ADD COLUMN IF NOT EXISTS `is_custom_mix` TINYINT(1) DEFAULT 0 AFTER `is_grinding_service`";
-if ($conn->query($sql1)) {
-    $results[] = "✅ Added is_custom_mix column to products table";
-} else {
-    // Column might already exist
-    if ($conn->errno == 1060) {
-        $results[] = "ℹ️ is_custom_mix column already exists";
+$check = $conn->query("SHOW COLUMNS FROM products LIKE 'is_custom_mix'");
+if ($check && $check->num_rows === 0) {
+    $sql1 = "ALTER TABLE products ADD COLUMN `is_custom_mix` TINYINT(1) DEFAULT 0 AFTER `is_grinding_service`";
+    if ($conn->query($sql1)) {
+        $results[] = "✅ Added is_custom_mix column to products table";
     } else {
         $results[] = "❌ Error adding is_custom_mix column: " . $conn->error;
     }
+} else {
+    $results[] = "ℹ️ is_custom_mix column already exists";
 }
 
 // 2. Create product_mix_items table

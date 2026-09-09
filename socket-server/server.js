@@ -39,6 +39,16 @@ transporter.verify((error, success) => {
   }
 });
 
+// Root Health & Status Route
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Suchi Chakki Socket.IO & Mail Service',
+    status: 'online',
+    version: '1.0.0',
+    uptime_seconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
 
 // 1. Order Confirmation Email
 app.post('/send-order-confirmation', async (req, res) => {
@@ -122,9 +132,11 @@ app.post('/send-order-confirmation', async (req, res) => {
     `;
 
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'Suchi Chakki'}" <${process.env.EMAIL_FROM || 'apnichakki897@gmail.com'}>`,
+      replyTo: process.env.EMAIL_FROM || 'apnichakki897@gmail.com',
       to: customerEmail,
-      subject: `Order Confirmation - Order #${orderId}`,
+      subject: `🌾 Order Confirmation - Order #${orderId}`,
+      text: `Assalam-o-Alaikum ${customerName},\n\nThank you for your order! Your Order #${orderId} for Rs. ${totalPrice} has been placed successfully.\n\nDelivery Address: ${deliveryAddress || 'Store Pickup'}\n\nThank you for choosing ${sName}!\nHelpline: ${sPhone}`,
       html: htmlTemplate,
     };
 
@@ -298,9 +310,11 @@ app.post('/send-password-reset', async (req, res) => {
     `;
 
     await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'Suchi Chakki'}" <${process.env.EMAIL_FROM || 'apnichakki897@gmail.com'}>`,
+      replyTo: process.env.EMAIL_FROM || 'apnichakki897@gmail.com',
       to: email,
-      subject: 'Suchi Chakki - Password Reset OTP',
+      subject: 'Suchi Chakki - Password Reset OTP Code',
+      text: `Assalam-o-Alaikum ${name || 'Customer'},\n\nYour OTP Verification Code for password reset is: ${otp}\n\nThis OTP is valid for 15 minutes.\n\nSuchi Chakki Team`,
       html: htmlTemplate,
     });
 
@@ -779,8 +793,8 @@ app.use((err, req, res, next) => {
 
 
 
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',') 
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
   : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
 const io = new Server(httpServer, {

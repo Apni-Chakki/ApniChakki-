@@ -609,9 +609,8 @@ function rejectBankPayment() {
         
         $conn->commit();
 
-        // cURL to Node.js Email Server
+        // Send rejection notification email
         if (!empty($payment['customer_email'])) {
-            $emailServerUrl = EMAIL_SERVER_URL . '/send-payment-rejection';
             $dataToSend = [
                 'customerEmail' => $payment['customer_email'],
                 'customerName' => $payment['customer_name'],
@@ -620,15 +619,8 @@ function rejectBankPayment() {
                 'transactionId' => $payment['transaction_id'],
                 'reason' => $reason
             ];
-            
-            $ch = curl_init($emailServerUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToSend));
-            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            curl_exec($ch);
-            curl_close($ch);
+            require_once __DIR__ . '/../../utils/email_helper.php';
+            send_email_async('/send-payment-rejection', $dataToSend);
         }
         
         echo json_encode([

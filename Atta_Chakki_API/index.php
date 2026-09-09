@@ -85,6 +85,8 @@ $mapping = [
     'login.php' => 'controllers/auth/login.php',
     'google_login.php' => 'controllers/auth/google_login.php',
     'register.php' => 'controllers/auth/register.php',
+    'forgot_password.php' => 'controllers/auth/forgot_password.php',
+    'reset_password.php' => 'controllers/auth/reset_password.php',
     'update_user_profile.php' => 'controllers/users/update_user_profile.php',
     'admin_stats.php' => 'controllers/admin/admin_stats.php',
     'get_products.php' => 'controllers/products/get_products.php',
@@ -104,6 +106,7 @@ $mapping = [
     'submit_custom_mix_request.php' => 'controllers/products/submit_custom_mix_request.php',
     'admin_create_order.php' => 'controllers/orders/admin_create_order.php',
     'place_order.php' => 'controllers/orders/place_order.php',
+    'update_order_status.php' => 'controllers/orders/update_order_status.php',
     'track_order.php' => 'controllers/orders/track_order.php',
     'get_user_orders.php' => 'controllers/orders/get_user_orders.php',
     'cancel_order.php' => 'controllers/orders/cancel_order.php',
@@ -115,6 +118,7 @@ $mapping = [
     'add_product.php' => 'controllers/products/add_product.php',
     'delete_product.php' => 'controllers/products/delete_product.php',
     'update_product.php' => 'controllers/products/update_product.php',
+    'update_inventory.php' => 'controllers/inventory/update_inventory.php',
     'change_password.php' => 'controllers/users/change_password.php',
 ];
 

@@ -81,6 +81,23 @@ try {
         FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    // Ensure order_items has rental and pricing columns
+    $order_items_cols = [
+        'original_price' => 'DECIMAL(10,2) DEFAULT NULL',
+        'is_rental' => 'TINYINT(1) DEFAULT 0',
+        'rental_days' => 'INT(11) DEFAULT NULL',
+        'rental_start_date' => 'DATE DEFAULT NULL',
+        'rental_price_per_day' => 'DECIMAL(10,2) DEFAULT NULL',
+        'security_deposit' => 'DECIMAL(10,2) DEFAULT NULL',
+        'late_penalty_per_day' => 'DECIMAL(10,2) DEFAULT NULL'
+    ];
+    foreach ($order_items_cols as $c_name => $c_def) {
+        $c_chk = $conn->query("SHOW COLUMNS FROM `order_items` LIKE '$c_name'");
+        if ($c_chk && $c_chk->num_rows === 0) {
+            $conn->query("ALTER TABLE `order_items` ADD COLUMN `$c_name` $c_def");
+        }
+    }
+
     // Auto-create business_accounts table if missing
     $conn->query("CREATE TABLE IF NOT EXISTS business_accounts (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -126,6 +143,6 @@ $emailUrl = $envVars['EMAIL_SERVER_URL'] ?? getenv('EMAIL_SERVER_URL');
 if ($emailUrl) {
     define('EMAIL_SERVER_URL', $emailUrl);
 } else {
-    define('EMAIL_SERVER_URL', $is_localhost ? 'http://localhost:3001' : 'https://socket-server-9b9f3ddbe629.herokuapp.com');
+    define('EMAIL_SERVER_URL', $is_localhost ? 'http://127.0.0.1:3001' : 'https://socket-server-9b9f3ddbe629.herokuapp.com');
 }
 ?>

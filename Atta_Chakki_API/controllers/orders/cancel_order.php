@@ -40,24 +40,24 @@ if ($result->num_rows === 0) {
 $order = $result->fetch_assoc();
 $check->close();
 
-// Block customer cancellation if order is assigned to today or a past date (meaning processing started)
-$assigned_date = $order['assigned_date'];
-$today = date('Y-m-d');
+$isAdmin = strtolower(trim($cancelled_by)) === 'admin';
 
-if (strtolower(trim($cancelled_by)) === 'user' && !empty($assigned_date) && $assigned_date <= $today) {
-    echo json_encode([
-        "success" => false, 
-        "message" => "Processing has started, it cannot be cancelled now / پروسیسنگ شروع ہو چکی ہے، اب آرڈر کینسل نہیں کیا جا سکتا۔"
-    ]);
-    exit;
-}
+if (!$isAdmin) {
+    if (!empty($assigned_date) && $assigned_date <= $today) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Processing has started, it cannot be cancelled now / پروسیسنگ شروع ہو چکی ہے، اب آرڈر کینسل نہیں کیا جا سکتا۔"
+        ]);
+        exit;
+    }
 
-if (strtolower(trim($order['status'])) !== 'pending' && strtolower(trim($order['status'])) !== 'pickup_pending') {
-    echo json_encode([
-        "success" => false, 
-        "message" => "Cannot cancel order. Current status: " . $order['status']
-    ]);
-    exit;
+    if (strtolower(trim($order['status'])) !== 'pending' && strtolower(trim($order['status'])) !== 'pickup_pending') {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Cannot cancel order. Current status: " . $order['status']
+        ]);
+        exit;
+    }
 }
 
 // cancelling the order

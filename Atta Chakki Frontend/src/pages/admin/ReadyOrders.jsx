@@ -61,7 +61,11 @@ export function ReadyOrders() {
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, 5000); // Auto-refresh every 5 seconds
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadOrders();
+      }
+    }, 25000); // Auto-refresh every 25 seconds
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize]);

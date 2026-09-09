@@ -133,7 +133,11 @@ export function TomorrowsList() {
     fetchSettings();
     fetchPersonnel();
     loadOrders();
-    const interval = setInterval(loadOrders, 8000);
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadOrders();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 

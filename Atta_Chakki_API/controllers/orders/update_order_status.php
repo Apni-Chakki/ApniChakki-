@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
-require_admin();
+$auth_user = require_driver_or_admin();
 
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
@@ -25,10 +25,10 @@ try {
     $order_id = intval($data['order_id']);
     $status = $conn->real_escape_string($data['status']);
     $reason = isset($data['cancellation_reason']) ? $conn->real_escape_string(trim($data['cancellation_reason'])) : null;
-    $cancelled_by = isset($data['cancelled_by']) ? $conn->real_escape_string(trim($data['cancelled_by'])) : 'Admin';
+    $cancelled_by = isset($data['cancelled_by']) ? $conn->real_escape_string(trim($data['cancelled_by'])) : ($auth_user['name'] ?? 'Admin');
     
     // checking valid status
-    $validStatuses = ['pending', 'processing', 'ready', 'batch_ready', 'out-for-delivery', 'completed', 'cancelled', 'scheduled-tomorrow', 'coming_for_pickup', 'arrived_at_shop'];
+    $validStatuses = ['pending', 'processing', 'ready', 'batch_ready', 'out-for-delivery', 'completed', 'cancelled', 'scheduled-tomorrow', 'scheduled', 'coming_for_pickup', 'arrived_at_shop', 'pickup_assigned', 'pickup_pending'];
     if (!in_array($status, $validStatuses)) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Invalid status value"]);

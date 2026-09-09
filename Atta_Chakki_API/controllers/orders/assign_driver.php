@@ -34,10 +34,21 @@ if (!$driver_phone && $driver_name !== '') {
     $driverCheck->bind_param("s", $driver_name);
     $driverCheck->execute();
     $dResult = $driverCheck->get_result();
-    if ($dResult->num_rows > 0) {
+    if ($dResult && $dResult->num_rows > 0) {
         $driver_phone = $dResult->fetch_assoc()['phone'];
     }
     $driverCheck->close();
+
+    if (!$driver_phone) {
+        $userCheck = $conn->prepare("SELECT phone FROM users WHERE (full_name = ? OR email = ?) AND role IN ('delivery_boy', 'delivery')");
+        $userCheck->bind_param("ss", $driver_name, $driver_name);
+        $userCheck->execute();
+        $uResult = $userCheck->get_result();
+        if ($uResult && $uResult->num_rows > 0) {
+            $driver_phone = $uResult->fetch_assoc()['phone'];
+        }
+        $userCheck->close();
+    }
 }
 
 $current_status = $order['status'];

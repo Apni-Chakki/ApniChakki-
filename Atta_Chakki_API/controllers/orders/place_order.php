@@ -285,12 +285,6 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         $order_id = $conn->insert_id;
         $stmt->close();
 
-        // Check if original_price column exists
-        $orig_check = $conn->query("SHOW COLUMNS FROM order_items LIKE 'original_price'");
-        if (!$orig_check || $orig_check->num_rows === 0) {
-            $conn->query("ALTER TABLE order_items ADD COLUMN original_price DECIMAL(10,2) DEFAULT NULL");
-        }
-
         // items add aur stock update kar rahe han yahan par
         // stock can never be negative logic: using GREATEST(0, stock - qty)
         $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending, is_rental, rental_days, rental_start_date, rental_price_per_day, security_deposit, late_penalty_per_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -433,7 +427,8 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         $user_row = $user_query->get_result()->fetch_assoc();
         $user_query->close();
 
-        if ($user_row && !empty($user_row['email'])) {
+        $target_email = !empty($user_row['email']) ? $user_row['email'] : ($data->email ?? ($data->customer_email ?? ''));
+        if (!empty($target_email)) {
             $email_items = [];
             foreach ($valid_items as $v_item) {
                 // Fetch product name
@@ -461,8 +456,8 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             }
 
             $emailData = [
-                'customerEmail' => $user_row['email'],
-                'customerName' => $user_row['full_name'],
+                'customerEmail' => $target_email,
+                'customerName' => $user_row['full_name'] ?? 'Customer',
                 'orderId' => $order_id,
                 'orderItems' => $email_items,
                 'totalPrice' => $total_amount,

@@ -55,9 +55,15 @@ try {
     }
     
     if ($phone !== null) {
+        $cleanPhone = preg_replace('/\D/', '', $phone);
+        if (!preg_match('/^0\d{10}$/', $cleanPhone)) {
+            http_response_code(400);
+            echo json_encode(["success" => false, "message" => "Phone number must start with 0 and be exactly 11 digits."]);
+            exit;
+        }
         $updates[] = "phone = ?";
         $types .= 's';
-        $values[] = $phone;
+        $values[] = $cleanPhone;
     }
     
     if ($email !== null) {
