@@ -12,6 +12,7 @@ async function fetchBrandSettings() {
         tagline: 'Pure & Fresh Processing',
         address: data.settings.address || 'Main Bazaar, Lahore',
         phone: data.settings.phone || '+92 322 8483029',
+        logo: data.settings.logo || '',
       };
     }
   } catch (err) {
@@ -22,6 +23,7 @@ async function fetchBrandSettings() {
     tagline: 'Pure & Fresh Processing',
     address: 'Main Bazaar, Lahore',
     phone: '+92 322 8483029',
+    logo: '',
   };
 }
 
@@ -39,38 +41,86 @@ const getStatusLabel = (status) => {
   return map[status] || String(status);
 };
 
-// creating svg logo for pdf
-const getLogoDataUrl = () => {
+// creating svg logo for pdf (matches app Header logo)
+const getLogoDataUrl = (customLogoUrl) => {
   return new Promise((resolve) => {
-    const svg = `<svg width="256" height="256" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="32" cy="32" r="32" fill="#78350f" />
-      <ellipse cx="32" cy="38" rx="16" ry="8" fill="#fef3c7" opacity="0.9" />
-      <ellipse cx="32" cy="36" rx="12" ry="6" fill="#f59e0b" opacity="0.8" />
-      <line x1="32" y1="44" x2="32" y2="18" stroke="#fef3c7" stroke-width="2" stroke-linecap="round" />
-      <ellipse cx="27" cy="28" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(-30 27 28)" />
-      <ellipse cx="26" cy="23" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(-25 26 23)" />
-      <ellipse cx="37" cy="28" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(30 37 28)" />
-      <ellipse cx="38" cy="23" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(25 38 23)" />
-      <ellipse cx="32" cy="20" rx="3" ry="4" fill="#fef3c7" />
-    </svg>`;
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+    let resolved = false;
+    const safeResolve = (val) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(val);
+      }
     };
-    img.onerror = () => resolve(null);
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+    // Safety timeout: never hang more than 400ms on logo
+    setTimeout(() => safeResolve(null), 400);
+
+    const renderDefaultHeaderLogo = () => {
+      try {
+        const svg = `<svg width="256" height="256" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="32" fill="#8b6f47" />
+          <g transform="translate(14, 14) scale(1.5)" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 22 16 8"/>
+            <path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+            <path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+            <path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+            <path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/>
+            <path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+            <path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+            <path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1 4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+          </g>
+        </svg>`;
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            safeResolve(canvas.toDataURL('image/png'));
+          } catch (e) {
+            safeResolve(null);
+          }
+        };
+        img.onerror = () => safeResolve(null);
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      } catch (e) {
+        safeResolve(null);
+      }
+    };
+
+    if (customLogoUrl && typeof customLogoUrl === 'string' && customLogoUrl.trim()) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 256;
+          const ctx = canvas.getContext('2d');
+          ctx.beginPath();
+          ctx.arc(128, 128, 128, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(img, 0, 0, 256, 256);
+          safeResolve(canvas.toDataURL('image/png'));
+        } catch (e) {
+          renderDefaultHeaderLogo();
+        }
+      };
+      img.onerror = () => renderDefaultHeaderLogo();
+      img.src = customLogoUrl;
+    } else {
+      renderDefaultHeaderLogo();
+    }
   });
 };
 
 // main pdf generation function
 export async function generateBillPDF(order) {
   const BRAND = await fetchBrandSettings();
-  const logoData = await getLogoDataUrl();
+  const logoData = await getLogoDataUrl(BRAND.logo);
 
   const pageW = 210;
   const margin = 15;
@@ -91,7 +141,7 @@ export async function generateBillPDF(order) {
   if (logoData) {
     doc.addImage(logoData, 'PNG', pageW / 2 - 10, y - 10, 20, 20);
   } else {
-    doc.setFillColor(120, 53, 15);
+    doc.setFillColor(139, 111, 71);
     doc.circle(pageW / 2, y, 10, 'F');
   }
 
@@ -421,6 +471,27 @@ export async function generateBillPDF(order) {
 // downloading the pdf
 export async function downloadBillPDF(order) {
   const { doc, filename } = await generateBillPDF(order);
+  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+  if (isMobile) {
+    try {
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        try { document.body.removeChild(link); } catch (e) {}
+      }, 1000);
+      return filename;
+    } catch (e) {
+      console.warn("Mobile blob download error, fallback to doc.save:", e);
+    }
+  }
+
   doc.save(filename);
   return filename;
 }

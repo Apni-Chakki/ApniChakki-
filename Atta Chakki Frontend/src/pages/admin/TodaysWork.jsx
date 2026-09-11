@@ -54,6 +54,7 @@ export function TodaysWork() {
   const [isSplitting, setIsSplitting] = useState(false);
   const [heavyThreshold, setHeavyThreshold] = useState(100);
   const [storeName, setStoreName] = useState('Suchi Chakki');
+  const [whatsappReadyModal, setWhatsappReadyModal] = useState(null);
 
   const processingOrders = orders.filter(order =>
     (order.items || []).some(item => {
@@ -162,25 +163,29 @@ export function TodaysWork() {
         if (personnelName === '') {
           toast.info('Driver assignment cleared.');
         } else {
-          toast.success(`Assigned to ${personnelName} successfully!`);
-          let targetPhone = personnelPhone;
-          if (!targetPhone) {
-            const found = activePersonnel.find(p => p.name === personnelName);
-            if (found && found.phone) targetPhone = found.phone;
-          }
-          if (targetPhone) {
-            let cleanPhone = String(targetPhone).replace(/\D/g, '');
-            if (cleanPhone.startsWith('0')) {
-              cleanPhone = '92' + cleanPhone.slice(1);
-            } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
-              cleanPhone = '92' + cleanPhone;
+          const orderObj = orders.find(o => o.id === orderId);
+          const isPickup = orderObj && (orderObj.type === 'pickup' || orderObj.order_type === 'pickup');
+
+          if (isPickup) {
+            toast.success(`Assigned to ${personnelName} successfully!`);
+            let targetPhone = personnelPhone;
+            if (!targetPhone) {
+              const found = activePersonnel.find(p => p.name === personnelName);
+              if (found && found.phone) targetPhone = found.phone;
             }
-            const orderObj = orders.find(o => o.id === orderId);
-            const isPickup = orderObj && (orderObj.type === 'pickup' || orderObj.order_type === 'pickup');
-            const typeLabel = isPickup ? 'Pickup Request' : 'Order';
-            const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se naya ${typeLabel} assign hua hai:\n📦 *${typeLabel} #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par mukammal karein.\nShukriya!`;
-            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
+            if (targetPhone) {
+              let cleanPhone = String(targetPhone).replace(/\D/g, '');
+              if (cleanPhone.startsWith('0')) {
+                cleanPhone = '92' + cleanPhone.slice(1);
+              } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
+                cleanPhone = '92' + cleanPhone;
+              }
+              const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se nayi Pickup Request assign hui hai:\n📦 *Pickup Request #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par mukammal karein.\nShukriya!`;
+              const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+              window.open(whatsappUrl, '_blank');
+            }
+          } else {
+            toast.success(`Driver ${personnelName} pre-assigned! Will be dispatched to portal once Ready.`);
           }
         }
       } else {
@@ -390,9 +395,30 @@ export function TodaysWork() {
     }
   };
 
-  // whatsapp message generator
-  const generateWhatsAppMessage = (order) => {
-    if (!order) return '';
+  // Safe external URL opener (dispatches real click to bypass browser popup blockers)
+  const openWhatsAppSafely = (url) => {
+    if (!url) return;
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+      }, 300);
+    } catch (err) {
+      console.warn("Failed to trigger anchor click, fallback to window.open", err);
+      window.open(url, '_blank');
+    }
+  };
+
+  // whatsapp message and details generator
+  const generateWhatsAppDetails = (order) => {
+    if (!order) return null;
     const isDelivery = order.type !== 'pickup';
     const orderType = isDelivery ? "DELIVERY" : "PICKUP";
     
@@ -477,7 +503,17 @@ Suchi Chakki — Pure & Fresh Processing
 `.trim();
     
     const encodedMessage = encodeURIComponent(message);
-    return phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
+    const whatsappUrl = phone 
+      ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodedMessage}` 
+      : `https://api.whatsapp.com/send?text=${encodedMessage}`;
+
+    return {
+      url: whatsappUrl,
+      rawMessage: message,
+      phone: phone || order.customer_phone || order.phone || '',
+      customerName,
+      order
+    };
   };
 
   // mark as ready + download PDF bill + send whatsapp
@@ -562,19 +598,22 @@ Suchi Chakki — Pure & Fresh Processing
         setOrders(prev => prev.filter(o => o.id !== order.id));
         toast.success(`Order #${order.id} is marked as Ready!`);
 
-        // 6. Generate WhatsApp message & open
+        // 6. Generate WhatsApp message & prompt
         try {
-          const whatsappLink = generateWhatsAppMessage(order);
-          if (whatsappLink) {
-            const waWin = window.open(whatsappLink, '_blank');
-            if (!waWin || waWin.closed || typeof waWin.closed === 'undefined') {
-              toast.info('📱 WhatsApp ready', {
-                action: {
-                  label: 'Open WhatsApp',
-                  onClick: () => window.open(whatsappLink, '_blank')
-                }
-              });
-            }
+          const waDetails = generateWhatsAppDetails(order);
+          if (waDetails && waDetails.url) {
+            // Attempt direct open
+            openWhatsAppSafely(waDetails.url);
+
+            // Also open dedicated dialog for instant 1-click fallback & message copy
+            setWhatsappReadyModal(waDetails);
+
+            toast.info(`📱 WhatsApp message ready for ${waDetails.customerName}`, {
+              action: {
+                label: 'Open WhatsApp',
+                onClick: () => openWhatsAppSafely(waDetails.url)
+              }
+            });
           }
         } catch (waErr) {
           console.warn("WhatsApp link warning:", waErr);
@@ -1700,6 +1739,76 @@ Suchi Chakki — Pure & Fresh Processing
               </Button>
             </DialogFooter>
           </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* WhatsApp Ready Confirmation Dialog */}
+        <Dialog open={!!whatsappReadyModal} onOpenChange={(open) => !open && setWhatsappReadyModal(null)}>
+          <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden shadow-2xl border-emerald-100">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-xl">
+                  📱
+                </div>
+                <div>
+                  <DialogTitle className="text-white text-lg font-bold">Order Ready & Bill Generated!</DialogTitle>
+                  <DialogDescription className="text-emerald-100 text-xs">
+                    Order #{whatsappReadyModal?.order?.id} marked as ready
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs font-medium">Customer:</span>
+                  <span className="font-semibold text-slate-800">{whatsappReadyModal?.customerName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs font-medium">WhatsApp Number:</span>
+                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-xs">
+                    {whatsappReadyModal?.phone || 'No phone provided'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-200/60 pt-1.5 mt-1.5">
+                  <span className="text-muted-foreground text-xs font-medium">PDF Bill:</span>
+                  <span className="text-xs text-slate-600 font-medium">Downloaded to device ✓</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5 pt-1">
+                <Button
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 shadow-md shadow-emerald-600/20 text-sm flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (whatsappReadyModal?.url) {
+                      openWhatsAppSafely(whatsappReadyModal.url);
+                    }
+                  }}
+                >
+                  <span className="text-base">📲</span> Open WhatsApp (کسٹمر کو بھیجیں)
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full font-medium h-10 border-slate-200 hover:bg-slate-50 text-xs flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (whatsappReadyModal?.rawMessage) {
+                      navigator.clipboard.writeText(whatsappReadyModal.rawMessage);
+                      toast.success('📋 Message copied to clipboard!');
+                    }
+                  }}
+                >
+                  <span>📋</span> Copy Message Text
+                </Button>
+              </div>
+            </div>
+
+            <DialogFooter className="p-4 bg-slate-50/50 border-t flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setWhatsappReadyModal(null)}>
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

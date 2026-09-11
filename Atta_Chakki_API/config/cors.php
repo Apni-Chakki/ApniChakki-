@@ -14,13 +14,15 @@ $allowed_origins = [
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$isLocalOrigin = (
+    in_array($origin, $allowed_origins) ||
+    preg_match('/^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.\d+\.\d+\.\d+|localhost|127\.0\.0\.1)(:\d+)?$/i', $origin)
+);
 
-if (in_array($origin, $allowed_origins)) {
-    // Specific origin set karo (wildcard * credentials ke saath kaam nahi karta)
+if ($isLocalOrigin && !empty($origin)) {
     header("Access-Control-Allow-Origin: $origin", true);
     header('Access-Control-Allow-Credentials: true', true);
 } else {
-    // Unknown origin — bina credentials ke allow karo
     header('Access-Control-Allow-Origin: *', true);
 }
 

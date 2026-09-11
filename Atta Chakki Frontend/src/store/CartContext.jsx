@@ -97,6 +97,16 @@ export function CartProvider({ children }) {
           return [...prev, { service: roundedService, quantity: quantity, isWeightPending: true }];
       }
 
+      const rawStock = service.stock_quantity;
+      const isTrip = (service.unit || '').toLowerCase() === 'trip';
+      const hasStock = rawStock !== undefined && rawStock !== null && rawStock !== '' && !isNaN(Number(rawStock)) && !isTrip && !isRental;
+      const maxStock = hasStock ? parseFloat(rawStock) : Infinity;
+
+      if (!isWeightPending && maxStock <= 0) {
+        toast.error(`${service.name} is out of stock.`);
+        return prev;
+      }
+
       const key = customizationKey(roundedService);
       const existingItem = prev.find(item => 
         item.service.id === service.id && 
@@ -105,6 +115,11 @@ export function CartProvider({ children }) {
       );
 
       if (existingItem) {
+        if (!isWeightPending && existingItem.quantity + quantity > maxStock) {
+          toast.error(`Cannot add more. Only ${maxStock} available in stock (${existingItem.quantity} already in cart).`);
+          return prev;
+        }
+
         if (window.fbq) {
           window.fbq('track', 'AddToCart', {
             content_name: service.name,
@@ -114,7 +129,6 @@ export function CartProvider({ children }) {
             currency: 'PKR'
           });
         }
-        toast.success(`Updated quantity for ${service.name}`);
         return prev.map(item =>
           item.service.id === service.id && 
           !item.isWeightPending &&
@@ -122,6 +136,11 @@ export function CartProvider({ children }) {
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
+      }
+
+      if (!isWeightPending && quantity > maxStock) {
+        toast.error(`Cannot add more. Only ${maxStock} available in stock.`);
+        return prev;
       }
 
       if (window.fbq) {
@@ -133,7 +152,6 @@ export function CartProvider({ children }) {
           currency: 'PKR'
         });
       }
-      toast.success(`${service.name} added to cart!`);
       return [...prev, { service: roundedService, quantity, isWeightPending: false }];
     });
   };
@@ -159,6 +177,17 @@ export function CartProvider({ children }) {
       if (quantity <= 0) {
         return prev.filter(item => item !== itemInCart);
       }
+
+      const rawStock = itemInCart.service.stock_quantity;
+      const isTrip = (itemInCart.service.unit || '').toLowerCase() === 'trip';
+      const hasStock = rawStock !== undefined && rawStock !== null && rawStock !== '' && !isNaN(Number(rawStock)) && !isTrip && !itemInCart.service.is_rental;
+      const maxStock = hasStock ? parseFloat(rawStock) : Infinity;
+
+      if (quantity > itemInCart.quantity && !itemInCart.isWeightPending && quantity > maxStock) {
+        toast.error(`Cannot increase quantity. Only ${maxStock} available in stock.`);
+        return prev;
+      }
+
       return prev.map(item => item === itemInCart ? { ...item, quantity } : item);
     });
   };

@@ -7,7 +7,7 @@ import { useAuth } from '../../store/AuthContext';
 import { LanguageToggle } from '../../components/common/LanguageToggle';
 import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
 import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../../config';
 
 export function Header() {
@@ -17,6 +17,7 @@ export function Header() {
   const itemCount = getTotalItems();
   const navigate = useNavigate();
   const location = useLocation();
+  const headerRef = useRef(null);
   const [storeName, setStoreName] = useState("Suchi Chakki");
   const [settings, setSettings] = useState({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,34 +26,56 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
+  // Close mobile menu on page/route change
   useEffect(() => {
-    if (user) {
+    setIsMenuOpen(false);
+    setShowNotificationsDropdown(false);
+  }, [location.pathname]);
+
+  // Close mobile menu or notifications dropdown when clicking/tapping outside anywhere on screen
+  useEffect(() => {
+    if (!isMenuOpen && !showNotificationsDropdown) return;
+    const handleOutsideInteraction = (e) => {
+      if (headerRef.current && !headerRef.current.contains(e.target)) {
+        setIsMenuOpen(false);
+        setShowNotificationsDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideInteraction);
+    document.addEventListener('touchstart', handleOutsideInteraction, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideInteraction);
+      document.removeEventListener('touchstart', handleOutsideInteraction);
+    };
+  }, [isMenuOpen, showNotificationsDropdown]);
+
+  useEffect(() => {
+    if (user && window.location.pathname !== '/account') {
       const phoneVal = user.phone || '';
       const isPlaceholderPhone = phoneVal.startsWith('G-') || phoneVal.startsWith('G') || !/^\d{11}$/.test(phoneVal.replace(/\s/g, ''));
       const isEmailMissing = !user.email || user.email.trim() === '';
 
-      const lastPhoneWarn = sessionStorage.getItem('warned_phone');
-      const lastEmailWarn = sessionStorage.getItem('warned_email');
+      const timer = setTimeout(() => {
+        if (isPlaceholderPhone) {
+          toast.warning(t('Please update your phone number in account settings to proceed with orders!'), {
+            duration: 12000,
+            action: {
+              label: t('Update Now'),
+              onClick: () => navigate('/account')
+            }
+          });
+        } else if (isEmailMissing) {
+          toast.warning(t('Please add your Gmail address in account settings to link your Google Account!'), {
+            duration: 12000,
+            action: {
+              label: t('Add Gmail'),
+              onClick: () => navigate('/account')
+            }
+          });
+        }
+      }, 700);
 
-      if (isPlaceholderPhone && !lastPhoneWarn) {
-        toast.warning(t('Please update your phone number in account settings to proceed with orders!'), {
-          duration: 10000,
-          action: {
-            label: t('Update Now'),
-            onClick: () => navigate('/account')
-          }
-        });
-        sessionStorage.setItem('warned_phone', 'true');
-      } else if (isEmailMissing && !lastEmailWarn) {
-        toast.warning(t('Please add your Gmail address in account settings to link your Google Account!'), {
-          duration: 10000,
-          action: {
-            label: t('Add Gmail'),
-            onClick: () => navigate('/account')
-          }
-        });
-        sessionStorage.setItem('warned_email', 'true');
-      }
+      return () => clearTimeout(timer);
     }
   }, [user, navigate, t]);
 
@@ -63,7 +86,19 @@ export function Header() {
       const data = await response.json();
       if (data.success) {
         const dismissedIds = (JSON.parse(localStorage.getItem('dismissed_notifications') || '[]')).map(String);
-        const visibleNotifs = (data.notifications || []).filter(n => !dismissedIds.includes(String(n.id)));
+        
+        // Filter out dismissed notifications & expired promotions
+        const visibleNotifs = (data.notifications || []).filter(n => {
+          if (dismissedIds.includes(String(n.id))) return false;
+          if (n.expires_at) {
+            const expiryTime = new Date(n.expires_at).getTime();
+            if (!isNaN(expiryTime) && expiryTime <= Date.now()) {
+              return false; // Expired promotion, do not show to logged-in user
+            }
+          }
+          return true;
+        });
+
         setNotifications(visibleNotifs);
         
         // Count unread based on local storage
@@ -90,11 +125,14 @@ export function Header() {
   const handleNotificationClick = () => {
     const nextState = !showNotificationsDropdown;
     setShowNotificationsDropdown(nextState);
-    if (nextState && notifications.length > 0) {
-      const readIds = (JSON.parse(localStorage.getItem('read_notifications') || '[]')).map(String);
-      const allIds = Array.from(new Set([...readIds, ...notifications.map(n => String(n.id))]));
-      localStorage.setItem('read_notifications', JSON.stringify(allIds));
+    if (nextState) {
+      // Immediately clear badge counter on bell click
       setUnreadCount(0);
+      if (notifications.length > 0) {
+        const readIds = (JSON.parse(localStorage.getItem('read_notifications') || '[]')).map(String);
+        const allIds = Array.from(new Set([...readIds, ...notifications.map(n => String(n.id))]));
+        localStorage.setItem('read_notifications', JSON.stringify(allIds));
+      }
     }
   };
 
@@ -199,18 +237,19 @@ export function Header() {
         )}
       </Button>
 
-      {/* Notifications Dropdown — end-* classes are logical (flip with dir="rtl") */}
+      {/* Notifications Dropdown */}
       {showNotificationsDropdown && (
-        <div
-          className="absolute mt-2 bg-card border border-border rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden -end-[70px] sm:-end-[10px]"
-          style={{
-            top: 'calc(100% + 5px)',
-            width: '380px',
-            maxWidth: 'calc(100vw - 32px)',
-          }}
-        >
-          <div className="p-4 border-b bg-muted/20 flex justify-between items-center shrink-0">
-            <h3 className="font-semibold text-foreground">{t('Notifications')}</h3>
+        <>
+          <div
+            className="fixed inset-0 z-[95] sm:hidden"
+            onClick={() => setShowNotificationsDropdown(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-[380px] max-w-[calc(100vw-24px)] bg-card border border-border rounded-2xl sm:rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="p-3.5 sm:p-4 border-b bg-muted/20 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-sm sm:text-base text-foreground">{t('Notifications')}</h3>
             <button onClick={() => setShowNotificationsDropdown(false)} className="hover:bg-muted p-1.5 rounded-full transition-colors text-muted-foreground hover:text-foreground" aria-label="Close Notifications">
               <X className="h-4 w-4" />
             </button>
@@ -244,13 +283,14 @@ export function Header() {
             )}
           </div>
         </div>
-      )}
+      </>
+    )}
     </div>
   );
   };
 
   return (
-    <header className="fixed top-0 left-0 w-full flex flex-col shadow-sm" style={{ position: 'fixed', zIndex: 110 }}>
+    <header ref={headerRef} className="sticky top-0 left-0 w-full flex flex-col shadow-sm z-50 bg-card">
       {/* Announcement Bar */}
       {settings.announcement && isAnnouncementVisible && (
         <div className="bg-primary text-primary-foreground py-1.5 px-4 flex items-center justify-between w-full" style={{ zIndex: 110 }}>
@@ -402,6 +442,15 @@ export function Header() {
           </Link>
         )}
       </div>
+
+      {/* Backdrop overlay for mobile menu */}
+      {isMenuOpen && (
+        <div 
+          className="nav-mobile-backdrop" 
+          onClick={() => setIsMenuOpen(false)} 
+          aria-hidden="true"
+        />
+      )}
     </header>
   );
 }

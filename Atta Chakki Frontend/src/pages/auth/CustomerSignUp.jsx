@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { User, Lock, Phone, ArrowLeft, Eye, EyeOff, MapPin } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -26,7 +26,10 @@ export function CustomerSignUp() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentBg, setCurrentBg] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
   const { signup, googleLogin } = useAuth();
+
+  const from = location.state?.from?.pathname || '/';
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -43,10 +46,14 @@ export function CustomerSignUp() {
               {
                 duration: 9000,
                 description: 'آرڈرز جاری رکھنے کے لیے، برائے مہربانی اکاؤنٹ سیٹنگز میں اپنا فون نمبر درج کریں۔',
+                action: {
+                  label: t('Update Now'),
+                  onClick: () => navigate('/account')
+                }
               }
             );
           }
-          navigate('/');
+          navigate(from, { replace: true });
         } else {
           toast.error(t('Google signup failed.'));
         }
@@ -118,7 +125,7 @@ export function CustomerSignUp() {
       const success = await signup(name.trim(), phone, password, address.trim());
       if (success) {
         toast.success(t('Account created successfully! You are now logged in.'));
-        navigate('/');
+        navigate(from, { replace: true });
       } else {
         toast.error(t('An account with this phone number may already exist or registration failed.'));
       }

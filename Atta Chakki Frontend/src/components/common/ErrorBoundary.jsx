@@ -57,14 +57,15 @@ export class ErrorBoundary extends React.Component {
               </Button>
             </div>
             
-            {import.meta.env.DEV && (
-              <div className="mt-6 p-4 bg-muted rounded-md text-left overflow-auto max-h-[200px] border border-border">
-                <p className="text-xs font-mono text-destructive font-semibold mb-2">Developer Details:</p>
-                <p className="text-[10px] font-mono text-muted-foreground whitespace-pre-wrap">
-                  {this.state.error?.toString()}
-                </p>
+            <details className="mt-6 text-left border border-border/60 rounded-lg p-3 bg-muted/40 cursor-pointer group">
+              <summary className="text-xs font-semibold text-muted-foreground group-hover:text-foreground select-none flex items-center justify-between">
+                <span>View Error Details / ایرر کی تفصیل</span>
+                <span className="text-[10px] text-muted-foreground">Click to expand</span>
+              </summary>
+              <div className="mt-2 text-[10px] font-mono text-destructive whitespace-pre-wrap overflow-x-auto p-2.5 bg-background rounded border border-border/70 max-h-[160px]">
+                {this.state.error?.stack || this.state.error?.toString() || 'Unknown error occurred'}
               </div>
-            )}
+            </details>
           </Card>
         </div>
       );

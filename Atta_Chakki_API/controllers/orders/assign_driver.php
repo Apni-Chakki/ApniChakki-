@@ -54,7 +54,9 @@ if (!$driver_phone && $driver_name !== '') {
 $current_status = $order['status'];
 $new_status = $current_status;
 
-if ($driver_name !== '') {
+if (isset($data['status']) && !empty(trim($data['status']))) {
+    $new_status = trim($data['status']);
+} elseif ($driver_name !== '') {
     // Determine new status when assigning driver
     if ($current_status === 'pickup_pending') {
         $new_status = 'pickup_assigned';

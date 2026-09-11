@@ -114,7 +114,7 @@ try {
 
     // Insert payment if amount_paid > 0
     if ($amount_paid > 0) {
-        $stmt = $conn->prepare("INSERT INTO payments (order_id, amount, payment_method, status, created_at) VALUES (?, ?, ?, 'completed', NOW())");
+        $stmt = $conn->prepare("INSERT INTO payments (order_id, amount, payment_method, description, created_at) VALUES (?, ?, ?, 'Rental initial payment', NOW())");
         $stmt->bind_param("ids", $order_id, $amount_paid, $payment_method);
         $stmt->execute();
         $stmt->close();

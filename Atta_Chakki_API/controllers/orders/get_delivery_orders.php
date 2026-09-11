@@ -64,7 +64,7 @@ if (!empty($driver_name)) {
     $types .= 's';
     $params[] = $driver_name;
 }
-$where_clause .= ") AND o.status IN ('out-for-delivery','pickup_assigned','coming_for_pickup','arrived_at_shop','ready','pending','processing','scheduled','scheduled-tomorrow')";
+$where_clause .= ") AND o.status IN ('delivery_assigned', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup')";
 
 // Total count for pagination
 $count_sql = "SELECT COUNT(*) AS c FROM orders o WHERE $where_clause";
@@ -75,16 +75,19 @@ $total = (int)$countStmt->get_result()->fetch_assoc()['c'];
 $countStmt->close();
 
 // Fetch orders
-$sql = "SELECT o.*, o.order_type, u.full_name as customer_name, u.phone as customer_phone
+$sql = "SELECT o.*, o.order_type, 
+        COALESCE(NULLIF(u.full_name, ''), 'Customer') as customer_name, 
+        COALESCE(NULLIF(u.phone, ''), '') as customer_phone
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.id
         WHERE $where_clause
         ORDER BY
             CASE o.status
                 WHEN 'out-for-delivery' THEN 1
-                WHEN 'coming_for_pickup' THEN 2
-                WHEN 'ready' THEN 3
-                WHEN 'pickup_assigned' THEN 4
+                WHEN 'delivery_assigned' THEN 2
+                WHEN 'coming_for_pickup' THEN 3
+                WHEN 'ready' THEN 4
+                WHEN 'pickup_assigned' THEN 5
                 WHEN 'arrived_at_shop' THEN 5
                 WHEN 'processing' THEN 6
                 WHEN 'pending' THEN 7

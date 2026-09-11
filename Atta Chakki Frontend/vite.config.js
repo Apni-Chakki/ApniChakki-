@@ -60,11 +60,16 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
+    port: 5173,
     headers: {
       // Google OAuth popup ke liye zarori hai — bina is ke COOP popup block kar deta hai
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
     },
+  },
+  optimizeDeps: {
+    include: ['mapbox-gl'],
   },
   build: {
     target: 'es2020',
@@ -74,6 +79,9 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (id.includes('mapbox-gl')) {
+              return 'vendor-mapbox';
+            }
             if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
               return 'vendor-react';
             }

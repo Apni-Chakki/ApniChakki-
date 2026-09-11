@@ -3,7 +3,7 @@
 // 2 min per kg speed hai shop ki
 // isme buffer time aur max orders bhi check hoty hain
 
-// Timezone safety net — ensure we always use Pakistan time for scheduling
+// pakistan timezone set kar rahe
 if (date_default_timezone_get() === 'UTC') {
     date_default_timezone_set('Asia/Karachi');
 }
@@ -157,18 +157,18 @@ function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $now = new DateTime();
     
-    // Step 1: TIME CHECK — is current time past the buffer cutoff?
+    // time check buffer k sath
     $closing_dt = new DateTime($today . ' ' . $closing_time . ':00');
     $cutoff_dt = clone $closing_dt;
     $cutoff_dt->modify("-{$buffer_minutes} minutes");
     
     $time_blocked = ($now >= $cutoff_dt);
     
-    // Step 2: LOAD CHECK — has today hit max capacity?
+    // order count check
     $today_count = getActiveOrderCount($conn, $today);
     $load_blocked = ($today_count >= $max_orders);
     
-    // Step 3: CAPACITY CHECK — can the order ETA fit before closing?
+    // capacity check
     $processing_minutes = ceil($estimated_weight_kg * $processing_speed);
     $last_completion = getLastCompletionTime($conn, $today);
     
@@ -184,7 +184,6 @@ function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
     $eta->modify("+{$processing_minutes} minutes");
     $capacity_blocked = ($eta > $closing_dt);
     
-    // Build reason and decision
     $push_to_tomorrow = false;
     $reason = '';
     $reason_code = 'today';
@@ -261,7 +260,7 @@ function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
 
 // main scheduling logic - orders ko aaj ya kal assign kar rahe han hum yahan
 function scheduleOrder($conn, $order_id) {
-    // step 1: get operational hours + scheduling config from db
+    // timings aur config nikal rahe
     $hours = getOperationalHours($conn);
     $opening_time = $hours['opening'];
     $closing_time = $hours['closing'];
@@ -269,16 +268,15 @@ function scheduleOrder($conn, $order_id) {
     $buffer_minutes = $hours['buffer_time_minutes'];
     $max_orders = $hours['max_daily_orders'];
     
-    // step 2: calculate order weight and processing time
+    // weight aur time nikal rahe
     $total_weight = calculateOrderWeight($conn, $order_id);
     $processing_minutes = ceil($total_weight * $processing_speed);
     
-    // step 3: determine today's date and current time
     $today = date('Y-m-d');
     $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $now = new DateTime();
     
-    // step 4: CHECK BUFFER TIME — is current time past cutoff?
+    // buffer time check
     $closing_dt = new DateTime($today . ' ' . $closing_time . ':00');
     $cutoff_dt = clone $closing_dt;
     $cutoff_dt->modify("-{$buffer_minutes} minutes");
@@ -326,11 +324,11 @@ function scheduleOrder($conn, $order_id) {
         ];
     }
     
-    // step 5: CHECK LOAD — has today hit max capacity?
+    // total order capacity check
     $today_count = getActiveOrderCount($conn, $today);
     $load_blocked = ($today_count >= $max_orders);
     
-    // step 6: figure out when this order can start (if today is allowed)
+    // start time check
     $force_tomorrow = ($time_blocked || $load_blocked);
     
     if (!$force_tomorrow) {
@@ -344,28 +342,27 @@ function scheduleOrder($conn, $order_id) {
             $start_time = ($now > $opening_dt) ? clone $now : $opening_dt;
         }
         
-        // step 7: calculate estimated completion time
+        // estimated completion time
         $eta = clone $start_time;
         $eta->modify("+{$processing_minutes} minutes");
         
-        // step 8: check if order fits within today's closing time
+        // closing se pehle ban sakta hai ya nahi
         if ($eta <= $closing_dt) {
-            // order fits today
+            // aaj fit ho gaya
             $assigned_date = $today;
             $estimated_completion = $eta->format('Y-m-d H:i:s');
             $status = 'pending';
             $schedule_reason = 'today';
         } else {
-            // doesn't fit today — capacity overflow
             $force_tomorrow = true;
         }
     }
     
     if ($force_tomorrow) {
-        // push to tomorrow
+        // kal k liye schedule
         $assigned_date = $tomorrow;
         
-        // recalculate ETA from tomorrow's opening time
+        // kal subah k hisab se ETA calculate
         $tomorrow_last = getLastCompletionTime($conn, $tomorrow);
         
         if ($tomorrow_last) {

@@ -5,14 +5,26 @@ import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../../config';
 
 /* Header-style Logo (Wheat icon in primary circle — same as app header) */
-const HeaderLogo = ({ size = 40 }) => (
-  <div
-    className="rounded-full bg-primary flex items-center justify-center shadow-sm flex-shrink-0"
-    style={{ width: size, height: size }}
-  >
-    <Wheat className="text-primary-foreground" style={{ width: size * 0.6, height: size * 0.6 }} />
-  </div>
-);
+const HeaderLogo = ({ size = 40, logo = '' }) => {
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt=""
+        className="rounded-full object-cover shadow-sm flex-shrink-0"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <div
+      className="rounded-full bg-primary flex items-center justify-center shadow-sm flex-shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <Wheat className="text-primary-foreground" style={{ width: size * 0.6, height: size * 0.6 }} />
+    </div>
+  );
+};
 
 export function PrintOrderDetails({ order, open, onClose }) {
   const [lang, setLang] = useState('en');
@@ -20,7 +32,8 @@ export function PrintOrderDetails({ order, open, onClose }) {
     name: 'SUCHI CHAKKI',
     address: 'Main Bazaar, Lahore',
     phone: '+92 322 8483029',
-    tagline: 'Pure & Fresh Processing'
+    tagline: 'Pure & Fresh Processing',
+    logo: ''
   });
 
   useEffect(() => {
@@ -33,7 +46,8 @@ export function PrintOrderDetails({ order, open, onClose }) {
               name: data.settings.storeName || 'SUCHI CHAKKI',
               address: data.settings.address || 'Main Bazaar, Lahore',
               phone: data.settings.phone || '+92 322 8483029',
-              tagline: 'Pure & Fresh Processing'
+              tagline: 'Pure & Fresh Processing',
+              logo: data.settings.logo || ''
             });
           }
         })
@@ -227,11 +241,15 @@ export function PrintOrderDetails({ order, open, onClose }) {
     
     const logoHTMLForPrint = `
       <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 0 10px;">
-        <div style="width:50px;height:50px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:8px;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
-          </svg>
-        </div>
+        ${storeSettings.logo ? `
+          <img src="${storeSettings.logo}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-bottom:8px;" />
+        ` : `
+          <div style="width:50px;height:50px;border-radius:50%;background:#8b6f47;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+            </svg>
+          </div>
+        `}
         <div>
           <div style="font-size:18px;font-weight:900;letter-spacing:${isUrdu ? '0' : '2px'};color:#1a1a1a;text-transform:uppercase;">${translateText(storeSettings.name, lang)}</div>
           <div style="font-size:10px;color:#666;letter-spacing:${isUrdu ? '0' : '1px'};margin-top:2px;">${translateText(storeSettings.tagline, lang)}</div>
@@ -609,15 +627,52 @@ export function PrintOrderDetails({ order, open, onClose }) {
   };
 
   const handlePrint = () => {
-    const printWin = window.open('', '_blank', 'width=700,height=800');
-    printWin.document.open();
-    printWin.document.write(buildPrintHTML());
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => {
-      printWin.print();
-      printWin.close();
-    }, 400);
+    try {
+      let iframe = document.getElementById('print-details-frame');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'print-details-frame';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+      }
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(buildPrintHTML());
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (err) {
+          fallbackPrint();
+        }
+      }, 300);
+    } catch (e) {
+      fallbackPrint();
+    }
+  };
+
+  const fallbackPrint = () => {
+    try {
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(buildPrintHTML());
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          printWin.print();
+        }, 500);
+      }
+    } catch (e) {
+      console.warn("Print error:", e);
+    }
   };
 
   return (
@@ -630,7 +685,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
         <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5 shrink-0">
           <div className="flex items-center justify-between" dir={lang === 'ur' ? 'rtl' : 'ltr'}>
             <div className="flex items-center gap-3 min-w-0">
-              <HeaderLogo size={40} />
+              <HeaderLogo size={40} logo={storeSettings.logo} />
               <div className={`min-w-0 ${lang === 'ur' ? 'text-right' : 'text-left'}`}>
                 <DialogTitle className={`text-sm font-black uppercase break-words ${lang === 'ur' ? 'tracking-normal text-right' : 'tracking-wide'}`}>
                   {translateText(storeSettings.name, lang)}
@@ -657,7 +712,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
             {/* Store Letterhead — Logo centered above text */}
             <div className="pb-4 border-b-2 border-dashed border-border">
               <div className="flex flex-col items-center text-center gap-2 mb-2.5">
-                <HeaderLogo size={50} />
+                <HeaderLogo size={50} logo={storeSettings.logo} />
                 <div className="w-full min-w-0">
                   <h2 className={`text-sm sm:text-base font-black uppercase break-words ${lang === 'ur' ? 'tracking-normal' : 'tracking-widest'}`}>
                     {translateText(storeSettings.name, lang)}

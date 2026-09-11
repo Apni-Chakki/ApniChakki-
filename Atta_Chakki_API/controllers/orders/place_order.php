@@ -57,7 +57,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
     // total calculate ho raha hai products ka
     foreach($cart_items as $item) {
         $pid = $item->id;
-        $query = $conn->prepare("SELECT price, discount_type, discount_value, unit, is_grinding_service, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day FROM products WHERE id = ?");
+        $query = $conn->prepare("SELECT name, price, discount_type, discount_value, unit, is_grinding_service, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty FROM products WHERE id = ?");
         $query->bind_param("i", $pid);
         $query->execute();
         $res = $query->get_result();
@@ -70,20 +70,37 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             $is_grinding = isset($item->is_grinding) ? (int)$item->is_grinding : 0;
             $item_is_pending = isset($item->is_weight_pending) ? (int)$item->is_weight_pending : 0;
 
-            // Dynamic customizations from frontend
+            // customer ki customizations
             $selected_customizations = isset($item->selected_customizations) ? $item->selected_customizations : [];
 
             if ($item_is_pending) $has_pending_weight_item = true;
 
+            $is_rental_val = isset($row['is_rental']) ? (int)$row['is_rental'] : 0;
+
+            // stock check kar rahe
+            if ($unit !== 'trip' && !$item_is_pending) {
+                if ($is_rental_val === 1) {
+                    if (isset($row['rental_available_qty']) && $row['rental_available_qty'] !== null && floatval($row['rental_available_qty']) < $qty) {
+                        echo json_encode(["success" => false, "message" => "Item '" . ($row['name'] ?? 'Product') . "' is out of rental stock."]);
+                        exit();
+                    }
+                } else {
+                    if (isset($row['stock_quantity']) && $row['stock_quantity'] !== null && floatval($row['stock_quantity']) < $qty) {
+                        echo json_encode(["success" => false, "message" => "Item '" . ($row['name'] ?? 'Product') . "' is out of stock or requested quantity exceeds available stock (" . floatval($row['stock_quantity']) . ")."]);
+                        exit();
+                    }
+                }
+            }
+
             if (!empty($selected_customizations)) {
-                // Dynamic pricing: sum only selected customization prices
+                // customization prices add ho rahi hain
                 $base_price = 0;
                 foreach ($selected_customizations as $sc) {
                     $base_price += floatval($sc->option_price ?? 0);
                 }
                 if ($base_price <= 0) $base_price = floatval($row['price']);
             } else if ($is_grinding_service) {
-                // Backward compatible: hardcoded cleaning/grinding
+                // cleaning ya grinding price
                 $base_price = 0;
                 if ($is_cleaning) $base_price += floatval($row['cleaning_price']);
                 if ($is_grinding) $base_price += floatval($row['grinding_price']);
@@ -92,7 +109,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
                 $base_price = floatval($row['price']);
             }
 
-            // Apply product-level discount
+            // product discount apply kar rahe
             $discount_type = isset($row['discount_type']) ? $row['discount_type'] : 'none';
             $discount_value = isset($row['discount_value']) ? floatval($row['discount_value']) : 0;
             
@@ -103,7 +120,6 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
                 $price = max(0, $base_price - $discount_value);
             }
 
-            $is_rental_val = isset($row['is_rental']) ? (int)$row['is_rental'] : 0;
             $rental_days_val = $is_rental_val ? (isset($item->rental_days) ? (int)$item->rental_days : 0) : null;
             $rental_start_date_val = $is_rental_val ? (isset($item->rental_start_date) ? $item->rental_start_date : null) : null;
             $rental_price_per_day_val = $is_rental_val ? (isset($row['rental_price_per_day']) ? floatval($row['rental_price_per_day']) : 0.0) : null;
@@ -168,7 +184,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         $total_amount = $non_trip_total;
     }
 
-    // Coupon validation and discount application
+    // coupon validation
     $coupon_discount = 0;
     $coupon_id = null;
     if ($coupon_code && $total_amount > 0) {
@@ -181,7 +197,6 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             $coupon = $coupon_res->fetch_assoc();
             $coupon_stmt->close();
 
-            // Validate coupon
             $valid = true;
             $error_msg = "";
 
@@ -265,17 +280,22 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         $coupon_col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'coupon_code'");
         $has_coupon_cols = ($coupon_col_check && $coupon_col_check->num_rows > 0);
 
+        $src_col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'source'");
+        if (!$src_col_check || $src_col_check->num_rows === 0) {
+            $conn->query("ALTER TABLE orders ADD COLUMN source VARCHAR(50) DEFAULT 'online'");
+        }
+
         if ($has_amount_paid_col && $has_coupon_cols) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
             $stmt->bind_param("iddsdssddss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         } elseif ($has_amount_paid_col) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
             $stmt->bind_param("iddssddss", $user_id, $total_amount, $amount_paid_input, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         } elseif ($has_coupon_cols) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
             $stmt->bind_param("idsdssddss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         } else {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, latitude, longitude, payment_method, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
             $stmt->bind_param("idssddss", $user_id, $total_amount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         }
         
@@ -390,8 +410,8 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
 
         // payment record kar rahe han agar paise diye hain
         if ($amount_paid_input > 0) {
-            $pay_stmt = $conn->prepare("INSERT INTO payments (order_id, amount, transaction_id, payment_status) VALUES (?, ?, ?, 'completed')");
-            $pay_stmt->bind_param("ids", $order_id, $amount_paid_input, $transaction_id);
+            $pay_stmt = $conn->prepare("INSERT INTO payments (order_id, amount, payment_method, transaction_id, created_at) VALUES (?, ?, ?, ?, NOW())");
+            $pay_stmt->bind_param("idss", $order_id, $amount_paid_input, $payment_method, $transaction_id);
             $pay_stmt->execute();
             $pay_stmt->close();
         }
@@ -412,7 +432,11 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
 
         $conn->commit();
 
-        // Create admin notification
+        // cache clear kar rahe
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
+
+        // admin notification
         require_once __DIR__ . '/../../utils/notification_helper.php';
         if ($is_pickup_request) {
             addAdminNotification($conn, "New Pickup Request", "A new pickup request #$order_id has been placed.", "pickup_request", $order_id);
@@ -420,7 +444,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             addAdminNotification($conn, "New Order Placed", "A new delivery order #$order_id has been placed.", "new_order", $order_id);
         }
 
-        // Send order confirmation email
+        // order confirmation email
         $user_query = $conn->prepare("SELECT email, full_name FROM users WHERE id = ?");
         $user_query->bind_param("i", $user_id);
         $user_query->execute();
@@ -431,7 +455,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         if (!empty($target_email)) {
             $email_items = [];
             foreach ($valid_items as $v_item) {
-                // Fetch product name
+                // product details
                 $p_query = $conn->prepare("SELECT name FROM products WHERE id = ?");
                 $p_query->bind_param("i", $v_item['product_id']);
                 $p_query->execute();

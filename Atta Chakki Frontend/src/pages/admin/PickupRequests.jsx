@@ -342,40 +342,32 @@ export function PickupRequests() {
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border-[1.5px] border-blue-200 text-blue-700 cursor-pointer ${order.driver_name ? 'bg-blue-50' : 'bg-white'}`}>
-                        <Truck className="w-[13px] h-[13px]" />
-                        {order.driver_name ? order.driver_name : 'Assign Driver'}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {activePersonnel.length > 0 ? (
-                        activePersonnel.map(person => (
-                          <DropdownMenuItem key={person.id} onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)} className="cursor-pointer text-xs">
-                            {person.name}
-                          </DropdownMenuItem>
-                        ))
-                      ) : (
-                        <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => handleAssignPersonnel(order.id, '')} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs">
-                        Clear
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleArrivedAtShop(order)}
-                      disabled={order.status !== 'arrived_at_shop'}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-[11px] py-2 rounded-lg text-xs font-semibold border-[1.5px] cursor-pointer border-teal-200 bg-teal-50 text-teal-700 disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer truncate ${order.driver_name ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-white border-blue-200 text-blue-700'}`}>
+                          <Truck className="w-3.5 h-3.5 shrink-0 text-blue-600" />
+                          <span className="truncate">{order.driver_name || t('Assign Driver')}</span>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-48">
+                        <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {activePersonnel.length > 0 ? (
+                          activePersonnel.map(person => (
+                            <DropdownMenuItem key={person.id} onSelect={() => handleAssignPersonnel(order.id, person.name, person.phone)} className="cursor-pointer text-xs">
+                              {person.name}
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <DropdownMenuItem disabled className="text-xs">No active staff</DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => handleAssignPersonnel(order.id, '')} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs">
+                          Clear
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
                     <Button
                       variant="destructive"
@@ -386,6 +378,14 @@ export function PickupRequests() {
                       <Trash2 className="h-4 w-4 text-white" />
                     </Button>
                   </div>
+
+                  <button
+                    onClick={() => handleArrivedAtShop(order)}
+                    disabled={order.status !== 'arrived_at_shop'}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border cursor-pointer border-teal-200 bg-teal-50 text-teal-700 disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
+                  </button>
                 </div>
               </div>
             );
@@ -394,65 +394,65 @@ export function PickupRequests() {
 
         {/* Desktop table (md and up) */}
         <div className="hidden md:block rounded-xl border border-gray-100 shadow-sm overflow-hidden bg-white">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-6 py-4">Order Info</TableHead>
-                  <TableHead className="px-6 py-4">Customer</TableHead>
-                  <TableHead className="px-6 py-4">Address</TableHead>
-                  <TableHead className="px-6 py-4">Service Details</TableHead>
-                  <TableHead className="px-6 py-4">Status / Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-gray-50/60 transition-colors">
-                    <TableCell className="px-6 py-5">
-                      <div className="font-bold text-base text-gray-900">#{order.id}</div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', month: 'short', day: 'numeric' })}
-                      </div>
-                      <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
-                        <AlertCircle className="h-3 w-3" /> TBD – Weight Pending
-                      </div>
-                    </TableCell>
+          <Table className="w-full table-auto">
+            <TableHeader>
+              <TableRow className="bg-slate-50/70 border-b border-gray-100">
+                <TableHead className="px-3.5 py-3 text-xs font-bold text-slate-700 whitespace-nowrap">Order Info</TableHead>
+                <TableHead className="px-3.5 py-3 text-xs font-bold text-slate-700 whitespace-nowrap">Customer</TableHead>
+                <TableHead className="px-3.5 py-3 text-xs font-bold text-slate-700">Address</TableHead>
+                <TableHead className="px-3.5 py-3 text-xs font-bold text-slate-700">Service Details</TableHead>
+                <TableHead className="px-3.5 py-3 text-xs font-bold text-slate-700 text-right whitespace-nowrap">Status / Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow key={order.id} className="hover:bg-gray-50/60 transition-colors">
+                  <TableCell className="px-3.5 py-3 align-top whitespace-normal min-w-[105px]">
+                    <div className="font-bold text-sm text-gray-900">#{order.id}</div>
+                    <div className="mt-0.5 text-[11px] text-gray-500">
+                      {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                      <AlertCircle className="h-2.5 w-2.5 shrink-0" /> TBD
+                    </div>
+                  </TableCell>
 
-                    <TableCell className="px-6 py-5">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                          <User className="h-3.5 w-3.5 text-gray-400" /> {order.customer_name}
+                  <TableCell className="px-3.5 py-3 align-top whitespace-normal min-w-[125px]">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1 text-xs font-semibold text-gray-800">
+                        <User className="h-3 w-3 text-gray-400 shrink-0" /> <span className="truncate max-w-[130px]">{order.customer_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                        <Phone className="h-3 w-3 shrink-0" /> <span>{order.customer_phone}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="px-3.5 py-3 align-top whitespace-normal max-w-[160px]">
+                    <div className="flex items-start gap-1 text-xs text-gray-600">
+                      <MapPin className="h-3 w-3 text-gray-400 shrink-0 mt-0.5" />
+                      <span className="line-clamp-2 leading-tight break-words">{order.shipping_address || 'No address'}</span>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="px-3.5 py-3 align-top whitespace-normal min-w-[130px]">
+                    <div className="space-y-0.5">
+                      {order.items && order.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-1 text-xs">
+                          <Package className="h-3 w-3 text-primary shrink-0" />
+                          <span className="font-medium text-gray-800 truncate max-w-[130px]">{item.name}</span>
+                          <span className="text-[10px] text-gray-400 shrink-0">({item.quantity} {item.unit})</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Phone className="h-3.5 w-3.5" /> {order.customer_phone}
-                        </div>
-                      </div>
-                    </TableCell>
+                      ))}
+                    </div>
+                  </TableCell>
 
-                    <TableCell className="px-6 py-5 max-w-[220px]">
-                      <div className="flex items-start gap-2 text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-2 leading-snug">{order.shipping_address || 'No address'}</span>
-                      </div>
-                    </TableCell>
+                  <TableCell className="px-3.5 py-3 align-top text-right whitespace-normal">
+                    <div className="flex flex-col gap-1.5 items-end justify-start ml-auto">
 
-                    <TableCell className="px-6 py-5">
-                      <div className="space-y-1.5">
-                        {order.items && order.items.map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm">
-                            <Package className="h-3.5 w-3.5 text-primary shrink-0" />
-                            <span className="font-medium text-gray-800">{item.name}</span>
-                            <span className="text-xs text-gray-400">({item.quantity} {item.unit})</span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="px-6 py-5">
-                      <div className="flex flex-col gap-3 min-w-[180px]">
-
-                        {/* Status Badge */}
-                        <span className={`inline-flex w-fit items-center px-2.5 py-[3px] rounded-full text-[11px] font-bold tracking-[0.02em] ${
+                      {/* Status Badge & Compact Assign Driver Button */}
+                      <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight whitespace-nowrap ${
                           (order.status === 'pending' || order.status === 'pickup_pending') ? 'bg-amber-100 text-amber-800'
                           : order.status === 'arrived_at_shop' ? 'bg-teal-100 text-teal-700'
                           : order.status === 'processing' ? 'bg-blue-100 text-blue-800'
@@ -461,15 +461,21 @@ export function PickupRequests() {
                           {order.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                         </span>
 
-                        {/* Assign Driver */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className={`inline-flex items-center gap-1.5 px-3 py-[5px] rounded-lg text-xs font-semibold border-[1.5px] border-blue-200 text-blue-700 cursor-pointer transition-colors ${order.driver_name ? 'bg-blue-50' : 'bg-white'}`}>
-                              <Truck className="w-[13px] h-[13px]" />
-                              {order.driver_name ? order.driver_name.slice(0, 12) : 'Assign Driver'}
+                            <button
+                              title={order.driver_name ? `Assigned: ${order.driver_name}` : "Assign Driver"}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all cursor-pointer hover:bg-blue-50 max-w-[110px] truncate ${
+                                order.driver_name
+                                  ? 'bg-blue-50 border-blue-300 text-blue-800'
+                                  : 'bg-white border-blue-200 text-blue-700'
+                              }`}
+                            >
+                              <Truck className="w-3 h-3 shrink-0 text-blue-600" />
+                              <span className="truncate">{order.driver_name || t('Assign Driver')}</span>
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-48">
+                          <DropdownMenuContent align="end" className="w-44">
                             <DropdownMenuLabel className="text-xs">Assign Driver</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {activePersonnel.length > 0 ? (
@@ -487,34 +493,35 @@ export function PickupRequests() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-
-                        {/* Awaiting Arrival / Update Weight + Delete row */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleArrivedAtShop(order)}
-                            disabled={order.status !== 'arrived_at_shop'}
-                            className="inline-flex items-center gap-1.5 px-[11px] py-[5px] rounded-lg text-xs font-semibold border-[1.5px] cursor-pointer border-teal-200 bg-teal-50 text-teal-700 disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
-                          </button>
-
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="h-8 w-8 px-0 flex items-center justify-center"
-                            onClick={() => setCancelOrder(order)}
-                          >
-                            <Trash2 className="h-4 w-4 text-white" />
-                          </Button>
-                        </div>
-
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+
+                      {/* Awaiting Arrival / Update Weight + Delete row */}
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button
+                          onClick={() => handleArrivedAtShop(order)}
+                          disabled={order.status !== 'arrived_at_shop'}
+                          className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border cursor-pointer border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70 whitespace-nowrap"
+                        >
+                          {order.status === 'arrived_at_shop' ? 'Update Weight' : 'Awaiting Arrival'}
+                        </button>
+
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-6 w-6 px-0 flex items-center justify-center shrink-0"
+                          onClick={() => setCancelOrder(order)}
+                          title="Cancel Request"
+                        >
+                          <Trash2 className="h-3 w-3 text-white" />
+                        </Button>
+                      </div>
+
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
         {totalItems > 0 && (
           <Pagination

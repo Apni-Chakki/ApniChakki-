@@ -242,20 +242,25 @@ export function Homepage() {
   const { t, tDynamic, translateBatch, language } = useDynamicTranslation();
   const { addToCart } = useCart();
 
-  // CHANGED: Fetch from PHP Backend instead of LocalStorage
+  // Fetch from PHP Backend with real-time stock auto-refresh & cache-busting
   useEffect(() => {
-    const fetchData = async () => {
+    let isMounted = true;
+
+    const fetchData = async (isBackground = false) => {
       try {
+        if (!isBackground) setLoading(true);
         const [productsRes, categoriesRes, settingsRes, couponsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/get_products.php`),
-          fetch(`${API_BASE_URL}/get_categories.php`),
-          fetch(`${API_BASE_URL}/get_store_settings.php`),
-          fetch(`${API_BASE_URL}/coupons/get_featured_coupons.php`)
+          fetch(`${API_BASE_URL}/get_products.php?_t=${Date.now()}`, { cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/get_categories.php?_t=${Date.now()}`, { cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/get_store_settings.php?_t=${Date.now()}`, { cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/coupons/get_featured_coupons.php?_t=${Date.now()}`, { cache: 'no-store' })
         ]);
 
         const data = await productsRes.json();
         const catsData = await categoriesRes.json();
         const settingsData = await settingsRes.json();
+
+        if (!isMounted) return;
 
         if (settingsData.success && settingsData.settings) {
           if (settingsData.settings.storeName) {
@@ -284,20 +289,12 @@ export function Homepage() {
           }
         }
 
-        console.log("Categories Response:", catsData);
-        console.log("Products Response:", data);
-
         if (catsData.success) {
-          console.log("Setting categories:", catsData.categories);
           setDbCategories(catsData.categories || []);
-        } else {
-          console.error("Categories API returned success: false", catsData);
         }
 
-        if (data.success) {
+        if (data.success && Array.isArray(data.products)) {
           setServices(data.products);
-        } else {
-          console.error("No products found or backend error");
         }
 
         if (couponsRes.ok) {
@@ -309,20 +306,42 @@ export function Homepage() {
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    fetchData();
+    fetchData(false);
 
-    // Listen for category updates from admin panel
-    const handleCategoryUpdate = () => {
-      console.log("Category update event received, refetching...");
-      fetchData();
+    // Auto-refresh products and stock every 10 seconds in background
+    const stockInterval = setInterval(() => {
+      fetchData(true);
+    }, 10000);
+
+    // Refresh immediately when user returns to the tab or focuses window
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData(true);
+      }
     };
 
-    window.addEventListener('categoriesUpdated', handleCategoryUpdate);
-    return () => window.removeEventListener('categoriesUpdated', handleCategoryUpdate);
+    // Listen for category or order updates
+    const handleRefreshEvent = () => {
+      fetchData(true);
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleRefreshEvent);
+    window.addEventListener('categoriesUpdated', handleRefreshEvent);
+    window.addEventListener('ordersUpdated', handleRefreshEvent);
+
+    return () => {
+      isMounted = false;
+      clearInterval(stockInterval);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleRefreshEvent);
+      window.removeEventListener('categoriesUpdated', handleRefreshEvent);
+      window.removeEventListener('ordersUpdated', handleRefreshEvent);
+    };
   }, []);
   // Pre-fetch translations for all dynamic DB text in one batch call
   useEffect(() => {

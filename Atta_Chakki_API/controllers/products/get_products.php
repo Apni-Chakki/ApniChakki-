@@ -8,19 +8,12 @@ require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
-header('Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 try {
     $category = isset($_GET['category']) && trim($_GET['category']) !== '' ? trim($_GET['category']) : null;
-    $cache_key = 'products_' . ($category ? strtolower($category) : 'all');
-
-    // Return cached response if available
-    $cached = get_api_cache($cache_key, 300);
-    if ($cached !== false) {
-        http_response_code(200);
-        echo $cached;
-        exit;
-    }
     
     if ($category) {
         $sql = "SELECT p.*, c.name as category
@@ -149,8 +142,6 @@ try {
         'products' => $products,
         'count' => count($products)
     ]);
-
-    set_api_cache($cache_key, $response_data);
     
     http_response_code(200);
     echo $response_data;

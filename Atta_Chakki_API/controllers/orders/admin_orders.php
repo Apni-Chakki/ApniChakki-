@@ -1,5 +1,5 @@
 <?php
-// admin orders controller - Server-Side Pagination + Status Filter + Batched Item Fetch
+// admin panel k liye orders list with status filter
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
@@ -24,15 +24,15 @@ try {
     } elseif ($status_filter === 'ready') {
         $whereSql = " WHERE TRIM(LOWER(status)) = 'ready'";
     } elseif ($status_filter === 'active') {
-        $whereSql = " WHERE TRIM(LOWER(status)) IN ('processing', 'ready', 'shipped')";
+        $whereSql = " WHERE TRIM(LOWER(status)) IN ('processing', 'ready', 'shipped', 'out-for-delivery')";
     } elseif ($status_filter === 'history') {
         $whereSql = " WHERE TRIM(LOWER(status)) IN ('completed', 'cancelled', 'split_parent')";
     }
 
-    // Total for pagination
+    // total orders count
     $total = (int)$conn->query("SELECT COUNT(*) AS c FROM orders {$whereSql}")->fetch_assoc()['c'];
 
-    // Paginated orders
+    // orders fetch kar rahe limit aur offset k sath
     $sql = "SELECT * FROM orders {$whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $limit, $offset);
@@ -52,12 +52,11 @@ try {
         $ordersMap[$id]  = $row;
         $orderIds[]      = $id;
         if ($uid > 0) { $userIds[$uid] = true; }
-        // rebind by reference
         $orders[count($orders) - 1] = &$ordersMap[$id];
     }
     $stmt->close();
 
-    // Batch fetch users
+    // user info nikal rahe
     $users = [];
     if (!empty($userIds)) {
         $idList = implode(',', array_map('intval', array_keys($userIds)));
@@ -67,7 +66,7 @@ try {
         }
     }
 
-    // Batch fetch items + product names
+    // items aur product names
     if (!empty($orderIds)) {
         $idList = implode(',', array_map('intval', $orderIds));
         $itemSql = "SELECT oi.order_id, oi.quantity, oi.product_id, p.name AS prod_name
@@ -84,7 +83,7 @@ try {
         }
     }
 
-    // Attach user info
+    // customer name aur phone set kar rahe
     foreach ($ordersMap as $oid => &$row) {
         $uid = (int)$row['user_id'];
         if ($uid > 0 && isset($users[$uid])) {

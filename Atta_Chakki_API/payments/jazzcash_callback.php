@@ -1,12 +1,12 @@
 <?php
-// JazzCash Callback Webhook Handler
+// jazzcash callback handler
 require_once __DIR__ . '/../config/cors.php';
 include __DIR__ . '/../config/connect.php';
 require_once __DIR__ . '/../config/payment_config.php';
 
 header('Content-Type: application/json');
 
-// Read callback parameters from POST request
+// post request se data read kar rahe
 $response_data = $_POST;
 
 if (empty($response_data)) {
@@ -20,7 +20,7 @@ if (empty($response_data)) {
     exit;
 }
 
-// Extract response status and transaction fields
+// response fields
 $response_code = $response_data['pp_ResponseCode'] ?? '';
 $response_message = $response_data['pp_ResponseMessage'] ?? '';
 $txn_ref_no = $response_data['pp_TxnRefNo'] ?? '';

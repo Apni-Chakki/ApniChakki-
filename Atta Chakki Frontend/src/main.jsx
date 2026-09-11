@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import "./index.css";
 import "./App.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 import "./i18n";
 import "./utils/apiInterceptor";
 import { registerSW } from 'virtual:pwa-register';

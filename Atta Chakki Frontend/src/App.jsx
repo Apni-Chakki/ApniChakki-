@@ -10,6 +10,7 @@ import { API_BASE_URL } from './config';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { safeGetStorage } from './utils/projectProtection';
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
+import { PageLoader } from './components/common/PageLoader';
 
 // Importing all layouts
 const CustomerLayout = lazy(() => import('./layouts/CustomerLayout'));
@@ -64,14 +65,6 @@ const ActiveRentals = lazy(() => import('./pages/admin/ActiveRentals').then(modu
 const ManageCustomers = lazy(() => import('./pages/admin/ManageCustomers').then(module => ({ default: module.ManageCustomers })));
 
 
-function PageLoader() {
-  return (
-    <div className="flex h-[50vh] w-full items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-    </div>
-  );
-}
-
 // Function to protect admin routes from normal users
 function ProtectedAdminRoute({ children }) {
   const { user } = useAuth();
@@ -100,6 +93,19 @@ function ProtectedDeliveryRoute({ children }) {
   const role = storedUser?.role ? storedUser.role.toLowerCase() : '';
   if (!storedUser || (role !== 'delivery' && role !== 'delivery_boy' && role !== 'admin')) {
     return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+// Function to protect customer account routes
+function ProtectedCustomerRoute({ children }) {
+  const { user } = useAuth();
+  const location = useLocation();
+  const storedUser = user || safeGetStorage('user', null);
+  const storedToken = localStorage.getItem('token');
+
+  if (!storedUser || !storedToken) {
+    return <Navigate to="/login/customer" state={{ from: location }} replace />;
   }
   return <>{children}</>;
 }
@@ -356,7 +362,8 @@ export default function App() {
               <Route path="/track-order" element={<CustomerLayout><TrackOrder /></CustomerLayout>} />
               <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
               <Route path="/reviews" element={<CustomerLayout><Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense></CustomerLayout>} />
-              <Route path="/account" element={<CustomerLayout><UserAccount /></CustomerLayout>} />
+              <Route path="/account" element={<ProtectedCustomerRoute><CustomerLayout><UserAccount /></CustomerLayout></ProtectedCustomerRoute>} />
+              <Route path="/accounts" element={<Navigate to="/account" replace />} />
 
               {/* WhatsApp Live Tracking Link */}
               <Route path="/track/:token" element={<Suspense fallback={<PageLoader />}><LiveTrackingPage /></Suspense>} />

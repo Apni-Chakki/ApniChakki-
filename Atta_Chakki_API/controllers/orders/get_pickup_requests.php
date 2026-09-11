@@ -14,13 +14,17 @@ try {
     $offset = ($page - 1) * $limit;
 
     // Whitelist orders in SQL so pagination is consistent with the count
-    $baseWhere = "(TRIM(LOWER(o.status)) IN ('pickup_pending','arrived_at_shop'))
-                  OR EXISTS (
-                     SELECT 1 FROM order_items oi2
-                     JOIN products p2 ON p2.id = oi2.product_id
-                     WHERE oi2.order_id = o.id
-                       AND LOWER(TRIM(p2.unit)) = 'trip'
-                       AND TRIM(LOWER(o.status)) IN ('pending','pickup_assigned','coming_for_pickup','arrived_at_shop')
+    // Only return orders that are in active pickup phase OR have pending weight to be determined
+    $baseWhere = "TRIM(LOWER(o.status)) IN ('pickup_pending', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop')
+                  OR (
+                     EXISTS (
+                        SELECT 1 FROM order_items oi2
+                        JOIN products p2 ON p2.id = oi2.product_id
+                        WHERE oi2.order_id = o.id
+                          AND LOWER(TRIM(p2.unit)) = 'trip'
+                     )
+                     AND (o.total_weight_kg IS NULL OR o.total_weight_kg = 0 OR o.total_amount = 0)
+                     AND TRIM(LOWER(o.status)) NOT IN ('completed', 'cancelled')
                   )";
 
     $totalRes = $conn->query("SELECT COUNT(*) AS c FROM orders o WHERE {$baseWhere}");

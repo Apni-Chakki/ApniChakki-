@@ -1,5 +1,5 @@
 <?php
-// Cache helper utility for file-based response caching
+// file cache helper
 
 function get_cache_dir() {
     $dir = __DIR__ . '/../cache';

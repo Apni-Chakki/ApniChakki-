@@ -15,21 +15,23 @@ const getPartialCount = (orders) => orders.filter(o => o.paymentStatus === 'part
 
 const LogoSVG = ({ size = 48 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="32" cy="32" r="32" fill="#78350f" />
-    <ellipse cx="32" cy="38" rx="16" ry="8" fill="#fef3c7" opacity="0.9" />
-    <ellipse cx="32" cy="36" rx="12" ry="6" fill="#f59e0b" opacity="0.8" />
-    <line x1="32" y1="44" x2="32" y2="18" stroke="#fef3c7" strokeWidth="2" strokeLinecap="round" />
-    <ellipse cx="27" cy="28" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(-30 27 28)" />
-    <ellipse cx="26" cy="23" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(-25 26 23)" />
-    <ellipse cx="37" cy="28" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(30 37 28)" />
-    <ellipse cx="38" cy="23" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(25 38 23)" />
-    <ellipse cx="32" cy="20" rx="3" ry="4" fill="#fef3c7" />
+    <circle cx="32" cy="32" r="32" fill="#8b6f47" />
+    <g transform="translate(14, 14) scale(1.5)" stroke="#ffffff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 22 16 8"/>
+      <path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+      <path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+      <path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+      <path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/>
+      <path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+      <path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+      <path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1 4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+    </g>
   </svg>
 );
 
 export function PrintTaskList({ orders, title, open, onClose }) {
 
-  const [storeSettings, setStoreSettings] = useState({ name: "GRISTMILL'S", address: "", phone: "", tagline: "" });
+  const [storeSettings, setStoreSettings] = useState({ name: "SUCHI CHAKKI", address: "", phone: "", tagline: "", logo: "" });
 
   useEffect(() => {
     if (open) {
@@ -41,11 +43,12 @@ export function PrintTaskList({ orders, title, open, onClose }) {
               name: data.settings.storeName || "SUCHI CHAKKI",
               address: data.settings.address || "",
               phone: data.settings.phone || "",
-              tagline: data.settings.tagline || ""
+              tagline: data.settings.tagline || "Pure & Fresh Processing",
+              logo: data.settings.logo || ""
             });
           }
         })
-        .catch(err => console.error("Failed to load store settings", err));
+        .catch(err => console.error("Error fetching store settings:", err));
     }
   }, [open]);
 
@@ -70,17 +73,23 @@ export function PrintTaskList({ orders, title, open, onClose }) {
   const buildPrintHTML = () => {
     const logoHTMLForPrint = `
       <div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 0 10px;">
-        <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="32" r="32" fill="#78350f"/>
-          <ellipse cx="32" cy="38" rx="16" ry="8" fill="#fef3c7" opacity="0.9"/>
-          <ellipse cx="32" cy="36" rx="12" ry="6" fill="#f59e0b" opacity="0.8"/>
-          <line x1="32" y1="44" x2="32" y2="18" stroke="#fef3c7" stroke-width="2" stroke-linecap="round"/>
-          <ellipse cx="27" cy="28" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(-30 27 28)"/>
-          <ellipse cx="26" cy="23" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(-25 26 23)"/>
-          <ellipse cx="37" cy="28" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(30 37 28)"/>
-          <ellipse cx="38" cy="23" rx="4" ry="2.5" fill="#fef3c7" transform="rotate(25 38 23)"/>
-          <ellipse cx="32" cy="20" rx="3" ry="4" fill="#fef3c7"/>
-        </svg>
+        ${storeSettings.logo ? `
+          <img src="${storeSettings.logo}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+        ` : `
+          <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+            <circle cx="32" cy="32" r="32" fill="#8b6f47"/>
+            <g transform="translate(14, 14) scale(1.5)" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 22 16 8"/>
+              <path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+              <path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+              <path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/>
+              <path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/>
+              <path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+              <path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+              <path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/>
+            </g>
+          </svg>
+        `}
         <div>
           <div style="font-size:18px;font-weight:900;letter-spacing:2px;color:#1a1a1a;text-transform:uppercase;">${storeSettings.name}</div>
           <div style="font-size:10px;color:#666;letter-spacing:1px;margin-top:2px;">${storeSettings.tagline}</div>
@@ -220,7 +229,11 @@ export function PrintTaskList({ orders, title, open, onClose }) {
         <DialogHeader className="px-6 pt-4 pb-3 border-b border-border/50 bg-gradient-to-r from-amber-900/10 to-amber-800/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <LogoSVG size={40} />
+              {storeSettings.logo ? (
+                <img src={storeSettings.logo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 40, height: 40 }} />
+              ) : (
+                <LogoSVG size={40} />
+              )}
               <div>
                 <DialogTitle className="text-sm font-black tracking-wide uppercase">{storeSettings.name}</DialogTitle>
                 <p className="text-[10px] text-muted-foreground">Preview: {title}</p>
@@ -239,7 +252,11 @@ export function PrintTaskList({ orders, title, open, onClose }) {
               {/* HEADER */}
           <div className="text-center border-b-2 border-dashed border-black pb-4">
             <div className="flex justify-center mb-2">
-              <LogoSVG size={56} />
+              {storeSettings.logo ? (
+                <img src={storeSettings.logo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
+              ) : (
+                <LogoSVG size={56} />
+              )}
             </div>
             <h2 className="text-2xl font-bold mb-1 uppercase tracking-widest">{storeSettings.name}</h2>
             {storeSettings.tagline && <p className="text-[10px] text-gray-600 uppercase tracking-wide mt-1">{storeSettings.tagline}</p>}

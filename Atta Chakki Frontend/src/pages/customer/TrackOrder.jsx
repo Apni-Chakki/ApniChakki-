@@ -177,6 +177,7 @@ export function TrackOrder() {
       case 'processing':
         return { color: 'text-blue-600', bg: 'bg-blue-100', dot: 'bg-blue-500' };
       case 'ready':
+      case 'delivery_assigned':
         return { color: 'text-indigo-600', bg: 'bg-indigo-100', dot: 'bg-indigo-500' };
       case 'out-for-delivery':
         return { color: 'text-purple-600', bg: 'bg-purple-100', dot: 'bg-purple-500' };
@@ -210,6 +211,8 @@ export function TrackOrder() {
         activeIndex = 0;
       } else if (currentStatus === 'arrived_at_shop') {
         activeIndex = 1;
+      } else if (currentStatus === 'delivery_assigned') {
+        activeIndex = 2; // Ready step
       } else if (currentStatus === 'pending') {
         activeIndex = 0;
       } else {

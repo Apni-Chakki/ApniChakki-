@@ -39,9 +39,9 @@ try {
         $notif_message = "Use code {$code} to get {$discount_text}!";
         $notif_type = "coupon";
         
-        $notif_stmt = $conn->prepare("INSERT INTO global_notifications (title, message, type) VALUES (?, ?, ?)");
+        $notif_stmt = $conn->prepare("INSERT INTO global_notifications (title, message, type, expires_at) VALUES (?, ?, ?, ?)");
         if ($notif_stmt) {
-            $notif_stmt->bind_param("sss", $notif_title, $notif_message, $notif_type);
+            $notif_stmt->bind_param("ssss", $notif_title, $notif_message, $notif_type, $expiry_date);
             $notif_stmt->execute();
             $notif_stmt->close();
         }

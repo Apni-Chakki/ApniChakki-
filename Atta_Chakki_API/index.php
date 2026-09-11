@@ -1,5 +1,5 @@
 <?php
-// Main Front Controller and API Router - GZIP High Speed Enabled
+// Main API router
 if (!ob_start("ob_gzhandler")) ob_start();
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -46,8 +46,12 @@ $allowed_origins = [
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$isLocalOrigin = (
+    in_array($origin, $allowed_origins) ||
+    preg_match('/^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.\d+\.\d+\.\d+|localhost|127\.0\.0\.1)(:\d+)?$/i', $origin)
+);
 
-if (in_array($origin, $allowed_origins)) {
+if ($isLocalOrigin && !empty($origin)) {
     header("Access-Control-Allow-Origin: $origin");
     header('Access-Control-Allow-Credentials: true');
 } else {
@@ -64,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $request_uri = $_SERVER['REQUEST_URI'];
-// Extract base API route path
+// url se base path nikal rahe
 $base_path = '/atta_chakki_api/';
 $pos = stripos($request_uri, $base_path);
 if ($pos !== false) {
@@ -80,7 +84,7 @@ if (empty($path)) {
     exit;
 }
 
-// Route mapping for core endpoints
+// core endpoints ka mapping
 $mapping = [
     'login.php' => 'controllers/auth/login.php',
     'google_login.php' => 'controllers/auth/google_login.php',
@@ -119,7 +123,12 @@ $mapping = [
     'delete_product.php' => 'controllers/products/delete_product.php',
     'update_product.php' => 'controllers/products/update_product.php',
     'update_inventory.php' => 'controllers/inventory/update_inventory.php',
-    'change_password.php' => 'controllers/users/change_password.php',
+    'toggle_driver_status.php' => 'controllers/delivery/toggle_driver_status.php',
+    'get_udhaar_ledger.php' => 'controllers/payments/get_udhaar_ledger.php',
+    'record_udhaar_payment.php' => 'controllers/payments/record_udhaar_payment.php',
+    'get_driver_cash_settlement.php' => 'controllers/payments/get_driver_cash_settlement.php',
+    'record_driver_settlement.php' => 'controllers/payments/record_driver_settlement.php',
+    'get_rental_history.php' => 'controllers/rentals/get_rental_history.php',
 ];
 
 if (isset($mapping[$path])) {
@@ -127,7 +136,7 @@ if (isset($mapping[$path])) {
     exit;
 }
 
-// Utility route handling
+// agar utils ka call ho
 if (strpos($path, 'utils/') === 0) {
     $util_path = str_replace('utils/', '', $path);
     $target = __DIR__ . "/utils/$util_path";
@@ -137,10 +146,9 @@ if (strpos($path, 'utils/') === 0) {
     }
 }
 
-// Domain controller resolution
-$domains = ['admin', 'auth', 'orders', 'delivery', 'products', 'reviews', 'expenses', 'inventory', 'payments', 'cart', 'users', 'coupons', 'dashboard'];
+// controllers check kar rahe domain k hisab se
+$domains = ['admin', 'auth', 'orders', 'delivery', 'products', 'reviews', 'expenses', 'inventory', 'payments', 'cart', 'users', 'coupons', 'dashboard', 'rentals'];
 
-// Check for explicit domain prefix in route
 foreach ($domains as $domain) {
     $prefix = $domain . '/';
     if (stripos($path, $prefix) === 0) {
@@ -153,7 +161,7 @@ foreach ($domains as $domain) {
     }
 }
 
-// Fallback to domain search
+// direct domain me check
 foreach ($domains as $domain) {
     $target = __DIR__ . "/controllers/$domain/$path";
     if (file_exists($target)) {
@@ -162,14 +170,14 @@ foreach ($domains as $domain) {
     }
 }
 
-// Check root controllers directory
+// root controllers folder check
 $root_target = __DIR__ . "/controllers/$path";
 if (file_exists($root_target)) {
     require_once $root_target;
     exit;
 }
 
-// Recursive search for unmapped controller files
+// controllers subfolders me search
 $it = new RecursiveDirectoryIterator(__DIR__ . "/controllers");
 foreach (new RecursiveIteratorIterator($it) as $file) {
     if ($file->getFilename() === $path) {
@@ -178,7 +186,7 @@ foreach (new RecursiveIteratorIterator($it) as $file) {
     }
 }
 
-// 404 Route Not Found
+// route na mile tou 404
 http_response_code(404);
 header('Content-Type: application/json');
 echo json_encode(["success" => false, "message" => "Endpoint not found: $path"]);

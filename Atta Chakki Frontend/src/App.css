@@ -35,6 +35,20 @@
   display: flex;
 }
 
+.nav-mobile-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  z-index: 48;
+  pointer-events: auto;
+  cursor: default;
+}
+
 .nav-mobile-link {
   display: flex;
   align-items: center;

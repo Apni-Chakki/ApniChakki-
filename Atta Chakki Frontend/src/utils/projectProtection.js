@@ -1,10 +1,4 @@
-/* 
- * Global Project Protection & Crash Prevention Shield
- * Prevents third-party script failures, storage corruption, unhandled promise rejections,
- * and JSON parse errors from breaking the Apni Chakki frontend.
- */
-
-// 1. Safe JSON Parse Helper with Auto-Sanitization
+// safe json parse helper
 export function safeJSONParse(value, defaultValue = null, storageKey = null) {
   if (value === null || value === undefined || value === 'undefined' || value === 'null' || value === '') {
     return defaultValue;
@@ -12,35 +6,34 @@ export function safeJSONParse(value, defaultValue = null, storageKey = null) {
   try {
     return JSON.parse(value);
   } catch (error) {
-    console.warn(`⚠️ Corrupted JSON detected${storageKey ? ` in localStorage key "${storageKey}"` : ''}. Resetting to default.`, error);
+    console.warn(`Corrupted JSON detected${storageKey ? ` in localStorage key "${storageKey}"` : ''}. Resetting to default.`, error);
     if (storageKey && typeof window !== 'undefined') {
       try {
         localStorage.removeItem(storageKey);
       } catch (e) {
-        // Ignore storage removal errors
       }
     }
     return defaultValue;
   }
 }
 
-// 2. Safe LocalStorage Get Helper
+// local storage se safe get karna
 export function safeGetStorage(key, defaultValue = null) {
   if (typeof window === 'undefined') return defaultValue;
   try {
     const raw = localStorage.getItem(key);
     return safeJSONParse(raw, defaultValue, key);
   } catch (error) {
-    console.warn(`⚠️ Unable to access localStorage for key "${key}":`, error);
+    console.warn(`Unable to access localStorage for key "${key}":`, error);
     return defaultValue;
   }
 }
 
-// 3. Global Unhandled Error & Promise Rejection Interceptor
+// global error handler to prevent crashing
 export function initGlobalErrorProtection() {
   if (typeof window === 'undefined') return;
 
-  // Prevent third-party external scripts (OneSignal, Meta Pixel, browser extensions, ads) from crashing React
+  // third-party script errors handle kar rahe
   window.addEventListener('error', (event) => {
     const errorSource = event.filename || event.message || '';
     if (
@@ -53,13 +46,12 @@ export function initGlobalErrorProtection() {
       errorSource.includes('doubleclick') ||
       errorSource.includes('Script error')
     ) {
-      console.warn('🛡️ Shielded external script error from crashing app:', event.message || event);
-      event.preventDefault(); // Stop propagating
+      event.preventDefault();
       return true;
     }
   }, true);
 
-  // Prevent unhandled promise rejections (network failures, aborted fetches, WebSocket timeouts) from freezing UI
+  // unhandled promise rejections handle karna
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason && (event.reason.message || event.reason.toString() || '');
     if (
@@ -71,10 +63,7 @@ export function initGlobalErrorProtection() {
       reason.includes('Socket') ||
       reason.includes('timeout')
     ) {
-      console.warn('🛡️ Shielded unhandled network/promise rejection:', reason);
-      event.preventDefault(); // Silently handle common transient network glitches
+      event.preventDefault();
     }
   });
-
-  console.log('🛡️ Suchi Chakki Global Crash Protection Shield initialized.');
 }

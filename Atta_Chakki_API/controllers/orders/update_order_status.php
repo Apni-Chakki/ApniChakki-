@@ -28,7 +28,7 @@ try {
     $cancelled_by = isset($data['cancelled_by']) ? $conn->real_escape_string(trim($data['cancelled_by'])) : ($auth_user['name'] ?? 'Admin');
     
     // checking valid status
-    $validStatuses = ['pending', 'processing', 'ready', 'batch_ready', 'out-for-delivery', 'completed', 'cancelled', 'scheduled-tomorrow', 'scheduled', 'coming_for_pickup', 'arrived_at_shop', 'pickup_assigned', 'pickup_pending'];
+    $validStatuses = ['pending', 'processing', 'ready', 'batch_ready', 'delivery_assigned', 'out-for-delivery', 'completed', 'cancelled', 'scheduled-tomorrow', 'scheduled', 'coming_for_pickup', 'arrived_at_shop', 'pickup_assigned', 'pickup_pending'];
     if (!in_array($status, $validStatuses)) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Invalid status value"]);

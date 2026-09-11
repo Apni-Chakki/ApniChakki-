@@ -66,14 +66,16 @@ export function UserAccount() {
       loadProfile();
       fetchOrders(); 
       fetchRentals();
+    } else if (!localStorage.getItem('token')) {
+      navigate('/login/customer', { replace: true });
     }
-  }, [user]);
+  }, [user, navigate]);
 
   const loadProfile = () => {
-    if (user) {
+    if (user && typeof user === 'object') {
       const dbProfile = {
-       name: user.full_name || user.name || '',        
-       phone: user.phone || user.username || '', 
+        name: user.full_name || user.name || '',        
+        phone: user.phone || user.username || '', 
         email: user.email || '',
         address: user.address || ''
       };
@@ -88,64 +90,74 @@ export function UserAccount() {
   const fetchOrders = async () => {
     setLoading(true);
     if (!user || !user.id || user.id === 0) {
-        setOrders([]);
-        setLoading(false);
-        return;
+      setOrders([]);
+      setLoading(false);
+      return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/get_user_orders.php?user_id=${user.id}`);
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${API_BASE_URL}/get_user_orders.php?user_id=${user.id}`, { headers });
       const data = await response.json();
 
-      if (data.success) {
+      if (data && data.success && Array.isArray(data.orders)) {
         const mappedOrders = data.orders.map(order => {
-          const totalAmount = parseFloat(order.total_amount) || 0;
+          if (!order) return null;
+          const totalAmount = parseFloat(order.total_amount ?? order.total) || 0;
           const amountPaid = parseFloat(order.amount_paid) || 0;
           
           // Determine payment status from DB
-          let paymentStatus = order.payment_status || 'pending';
+          let paymentStatus = String(order.payment_status || 'pending').toLowerCase();
           if (paymentStatus === 'paid' || amountPaid >= totalAmount) {
             paymentStatus = 'paid';
           } else if (amountPaid > 0) {
             paymentStatus = 'partial';
           }
           
+          const shippingAddr = String(order.shipping_address || '');
+          const isPickup = (order.order_type === 'pickup' || (shippingAddr && (
+            shippingAddr.toLowerCase().includes('pickup') || 
+            shippingAddr.toLowerCase().includes('store') || 
+            shippingAddr.toLowerCase().includes('collect') || 
+            shippingAddr.toLowerCase().includes('self') || 
+            shippingAddr.toLowerCase().includes('shop')
+          )));
+
+          const itemsList = Array.isArray(order.items) ? order.items.map(item => ({
+            quantity: Number(item?.quantity) || 1,
+            isWeightPending: item?.is_weight_pending == 1, 
+            service: {
+              name: item?.name || item?.prod_name || 'Product',
+              price: parseFloat(item?.price_at_purchase ?? item?.price) || 0
+            }
+          })) : [];
+
           return {
             id: order.id,
-            status: order.status,
-            createdAt: order.created_at, 
-			  cancelReason: order.cancellation_reason,
-			  cancelledBy: order.cancelled_by,
-              paymentRejectReason: order.payment_reject_reason || null,
-              paymentRejectDate: order.payment_reject_date || null,
-              assignedDate: order.assigned_date || null,
-			  total: totalAmount,
+            status: String(order.status || 'pending'),
+            createdAt: order.created_at || '', 
+            cancelReason: order.cancellation_reason || null,
+            cancelledBy: order.cancelled_by || null,
+            paymentRejectReason: order.payment_reject_reason || null,
+            paymentRejectDate: order.payment_reject_date || null,
+            assignedDate: order.assigned_date || null,
+            total: totalAmount,
             amountPaid: amountPaid,
-            paymentMethod: order.payment_method || 'cod',
+            paymentMethod: String(order.payment_method || 'cod'),
             paymentStatus: paymentStatus,
-            deliveryAddress: order.shipping_address,
-            type: (order.order_type === 'pickup' || (order.shipping_address && (
-              order.shipping_address.toLowerCase().includes('pickup') || 
-              order.shipping_address.toLowerCase().includes('store') || 
-              order.shipping_address.toLowerCase().includes('collect') || 
-              order.shipping_address.toLowerCase().includes('self') || 
-              order.shipping_address.toLowerCase().includes('shop')
-            ))) ? 'pickup' : 'delivery',
-            items: order.items ? order.items.map(item => ({
-               quantity: item.quantity,
-               isWeightPending: item.is_weight_pending == 1, 
-               service: {
-                 name: item.name,
-                 price: item.price_at_purchase || 0
-               }
-            })) : []
+            deliveryAddress: shippingAddr,
+            type: isPickup ? 'pickup' : 'delivery',
+            items: itemsList
           };
-        });
+        }).filter(Boolean);
         setOrders(mappedOrders);
+      } else {
+        setOrders([]);
       }
     } catch (error) {
       console.error("Error loading orders:", error);
-      toast.error("Failed to load order history.");
+      toast.error(t("Failed to load order history."));
     } finally {
       setLoading(false);
     }
@@ -160,11 +172,16 @@ export function UserAccount() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/get_rental_history.php?user_id=${user.id}`);
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${API_BASE_URL}/get_rental_history.php?user_id=${user.id}`, { headers });
       const data = await response.json();
 
-      if (data.success) {
-        setRentals(data.data.rentals || []);
+      if (data && data.success) {
+        const rawRentals = data.data?.rentals || data.rentals || [];
+        setRentals(Array.isArray(rawRentals) ? rawRentals : []);
+      } else {
+        setRentals([]);
       }
     } catch (error) {
       console.error("Error loading rentals:", error);
@@ -356,28 +373,40 @@ export function UserAccount() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString.replace(/-/g, '/')); 
-    return date.toLocaleDateString('en-PK', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const cleanStr = String(dateString).replace(/-/g, '/');
+      const date = new Date(cleanStr); 
+      if (isNaN(date.getTime())) return String(dateString);
+      return date.toLocaleDateString('en-PK', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return String(dateString || '');
+    }
   };
 
   const formatSimpleDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-PK', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(String(dateString));
+      if (isNaN(date.getTime())) return String(dateString);
+      return date.toLocaleDateString('en-PK', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return String(dateString || '');
+    }
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
       case 'completed': return 'bg-green-100 text-green-800';
       case 'ready': return 'bg-orange-100 text-orange-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
@@ -387,7 +416,8 @@ export function UserAccount() {
   };
 
   const getRentalStatusColor = (status) => {
-    switch (status) {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
       case 'returned': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'overdue': return 'bg-red-100 text-red-800 animate-pulse dark:bg-red-900/30 dark:text-red-400';
       case 'cancelled': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
@@ -397,7 +427,8 @@ export function UserAccount() {
   };
 
   const getDepositStatusColor = (status) => {
-    switch (status) {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
       case 'refunded': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'partial_refund': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'forfeited': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
@@ -583,31 +614,36 @@ export function UserAccount() {
               </div>
 
               {/* Management Portals Section */}
-              {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'delivery' || user?.role?.toLowerCase() === 'delivery_boy') && (
-                <div className="mt-8 pt-6 border-t border-border">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                    {t('Management Portals')}
-                  </h3>
-                  <div className="flex flex-wrap gap-3">
-                    {user?.role?.toLowerCase() === 'admin' && (
-                      <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        <Link to="/admin/dashboard">
-                          <ShieldCheck className="h-4 w-4 mr-2" />
-                          {t('Admin Portal')}
-                        </Link>
-                      </Button>
-                    )}
-                    {(user?.role?.toLowerCase() === 'delivery' || user?.role?.toLowerCase() === 'delivery_boy') && (
-                      <Button asChild variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-                        <Link to="/delivery">
-                          <Truck className="h-4 w-4 mr-2" />
-                          {t('Delivery Panel')}
-                        </Link>
-                      </Button>
-                    )}
+              {(() => {
+                const role = String(user?.role || '').toLowerCase();
+                const canAccessPortals = role === 'admin' || role === 'delivery' || role === 'delivery_boy';
+                if (!canAccessPortals) return null;
+                return (
+                  <div className="mt-8 pt-6 border-t border-border">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                      {t('Management Portals')}
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {role === 'admin' && (
+                        <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                          <Link to="/admin/dashboard">
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            {t('Admin Portal')}
+                          </Link>
+                        </Button>
+                      )}
+                      {(role === 'delivery' || role === 'delivery_boy') && (
+                        <Button asChild variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                          <Link to="/delivery">
+                            <Truck className="h-4 w-4 mr-2" />
+                            {t('Delivery Panel')}
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </Card>
 
             {/* Security & Password Card */}
@@ -795,7 +831,14 @@ export function UserAccount() {
                 orders
                   .slice((ordersPage - 1) * ordersPageSize, ordersPage * ordersPageSize)
                   .map((order) => {
-                  const hasPending = order.items.some(i => i.isWeightPending);
+                  if (!order) return null;
+                  const items = Array.isArray(order.items) ? order.items : [];
+                  const hasPending = items.some(i => i?.isWeightPending);
+                  const statusStr = String(order.status || 'pending').toUpperCase();
+                  const paymentMethodStr = String(order.paymentMethod || 'cod').toUpperCase();
+                  const totalAmount = Number(order.total) || 0;
+                  const amountPaid = Number(order.amountPaid) || 0;
+
                   return (
                   <Card key={order.id} className="p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
@@ -803,41 +846,42 @@ export function UserAccount() {
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-foreground">{t('Order ID')}: {order.id}</h3>
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
-                            {order.status.toUpperCase()}
+                            {statusStr}
                           </span>
-                        </div>                          {order.status === 'cancelled' && order.cancelReason && (
-                            <p className="text-sm text-red-600 font-medium mt-1">
-                              {t('Reason:')} {order.cancelReason}
-                              {order.cancelledBy && ` (${t('by')} ${order.cancelledBy})`}
-                            </p>
-                          )}
-                          {order.paymentStatus === 'unpaid' && order.paymentRejectReason && (
-                            <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
-                              <div className="flex items-start gap-2">
-                                <span className="text-red-500 text-base mt-0.5">⚠️</span>
-                                <div className="space-y-1">
-                                  <p className="text-xs font-bold text-red-800 uppercase tracking-wider">
-                                    {t('Payment Verification Failed')} / {t('ادائیگی کی تصدیق نامکمل')}
-                                  </p>
-                                  <p className="text-sm text-red-700">
-                                    <strong>{t('Reason')} / {t('وجہ')}:</strong> {order.paymentRejectReason}
-                                  </p>
-                                  {order.paymentRejectDate && new Date(order.paymentRejectDate).toDateString() === new Date().toDateString() && (
-                                    <div className="mt-2 inline-flex items-center gap-1.5 bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-full animate-bounce">
-                                      <span>🔴</span>
-                                      <span>PAYMENT REJECTED TODAY / ادائیگی آج ہی مسترد کی گئی ہے!</span>
-                                    </div>
-                                  )}
-                                </div>
+                        </div>
+                        {order.status === 'cancelled' && order.cancelReason && (
+                          <p className="text-sm text-red-600 font-medium mt-1">
+                            {t('Reason:')} {order.cancelReason}
+                            {order.cancelledBy && ` (${t('by')} ${order.cancelledBy})`}
+                          </p>
+                        )}
+                        {order.paymentStatus === 'unpaid' && order.paymentRejectReason && (
+                          <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
+                            <div className="flex items-start gap-2">
+                              <span className="text-red-500 text-base mt-0.5">⚠️</span>
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-red-800 uppercase tracking-wider">
+                                  {t('Payment Verification Failed')} / {t('ادائیگی کی تصدیق نامکمل')}
+                                </p>
+                                <p className="text-sm text-red-700">
+                                  <strong>{t('Reason')} / {t('وجہ')}:</strong> {order.paymentRejectReason}
+                                </p>
+                                {order.paymentRejectDate && new Date(order.paymentRejectDate).toDateString() === new Date().toDateString() && (
+                                  <div className="mt-2 inline-flex items-center gap-1.5 bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-full animate-bounce">
+                                    <span>🔴</span>
+                                    <span>PAYMENT REJECTED TODAY / ادائیگی آج ہی مسترد کی گئی ہے!</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          )}
-                          <p className="text-sm text-muted-foreground mt-2">{formatDate(order.createdAt)}</p>
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-2">{formatDate(order.createdAt)}</p>
                       </div>
                       <div className="text-left sm:text-right">
                         <p className="text-sm text-muted-foreground">{t('Total Amount')}</p>
                         <p className="text-primary font-bold">
-                          Rs. {order.total.toLocaleString()}
+                          Rs. {totalAmount.toLocaleString()}
                           {hasPending && <span className="text-xs ml-1">(+ TBD)</span>}
                         </p>
                       </div>
@@ -846,20 +890,25 @@ export function UserAccount() {
                     <div className="border-t border-border pt-4">
                       <h4 className="mb-3 text-sm font-semibold">{t('Order Items')}</h4>
                       <div className="space-y-2">
-                        {order.items.map((item, index) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {item.service.name} <span className="text-foreground">x {item.quantity}</span>
-                            </span>
-                            <span className="text-foreground">
-                              {item.isWeightPending ? (
-                                <span className="text-primary font-medium">{t('Pending Wt.')}</span>
-                              ) : (
-                                `Rs. ${(item.service.price * item.quantity).toLocaleString()}`
-                              )}
-                            </span>
-                          </div>
-                        ))}
+                        {items.map((item, index) => {
+                          const itemName = item?.service?.name || t('Product Item');
+                          const itemPrice = Number(item?.service?.price) || 0;
+                          const itemQty = Number(item?.quantity) || 1;
+                          return (
+                            <div key={index} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {itemName} <span className="text-foreground">x {itemQty}</span>
+                              </span>
+                              <span className="text-foreground">
+                                {item?.isWeightPending ? (
+                                  <span className="text-primary font-medium">{t('Pending Wt.')}</span>
+                                ) : (
+                                  `Rs. ${(itemPrice * itemQty).toLocaleString()}`
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -876,7 +925,7 @@ export function UserAccount() {
                       <div className="flex items-center gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">{t('Payment')}</p>
-                          <p className="text-sm font-medium">{order.paymentMethod.toUpperCase()}</p>
+                          <p className="text-sm font-medium">{paymentMethodStr}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">{t('Status')}</p>
@@ -888,9 +937,9 @@ export function UserAccount() {
                             {order.paymentStatus === 'paid' ? t('Paid') : 
                              order.paymentStatus === 'partial' ? t('Partial') : t('Unpaid')}
                           </span>
-                          {order.amountPaid > 0 && order.paymentStatus !== 'paid' && (
+                          {amountPaid > 0 && order.paymentStatus !== 'paid' && (
                             <p className="text-xs text-green-600 mt-0.5">
-                              {t('Paid:')} Rs. {order.amountPaid.toLocaleString()}
+                              {t('Paid:')} Rs. {amountPaid.toLocaleString()}
                             </p>
                           )}
                         </div>
@@ -946,7 +995,7 @@ export function UserAccount() {
                   <div className="flex flex-col items-start text-left min-w-0">
                     <p className="text-sm text-muted-foreground truncate w-full">{t('Active')}</p>
                     <p className="text-2xl font-bold">
-                      {rentals.filter(r => r.status === 'active' || r.status === 'overdue').length}
+                      {rentals.filter(r => r && (r.status === 'active' || r.status === 'overdue')).length}
                     </p>
                   </div>
                 </Card>
@@ -958,8 +1007,8 @@ export function UserAccount() {
                     <p className="text-sm text-muted-foreground truncate w-full">{t('Refunded Amount')}</p>
                     <p className="text-2xl font-bold truncate w-full">
                       Rs. {rentals
-                        .filter(r => r.deposit_status === 'refunded' || r.deposit_status === 'partial_refund')
-                        .reduce((sum, r) => sum + parseFloat(r.deposit_refund_amount || 0), 0)
+                        .filter(r => r && (r.deposit_status === 'refunded' || r.deposit_status === 'partial_refund'))
+                        .reduce((sum, r) => sum + (parseFloat(r?.deposit_refund_amount) || 0), 0)
                         .toLocaleString()}
                     </p>
                   </div>
@@ -983,11 +1032,26 @@ export function UserAccount() {
                 rentals
                   .slice((rentalsPage - 1) * rentalsPageSize, rentalsPage * rentalsPageSize)
                   .map((rental) => {
-                  const imageSrc = rental.product_image
-                    ? (rental.product_image.startsWith('http') || rental.product_image.startsWith('/')
-                      ? rental.product_image
-                      : `${API_BASE_URL}/${rental.product_image}`)
+                  if (!rental) return null;
+                  const rawImg = rental.product_image;
+                  const imageSrc = (typeof rawImg === 'string' && rawImg.trim())
+                    ? (rawImg.startsWith('http') || rawImg.startsWith('/')
+                      ? rawImg
+                      : `${API_BASE_URL}/${rawImg}`)
                     : null;
+
+                  const statusStr = String(rental.status || 'active');
+                  const displayStatus = statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
+                  const depositStatusStr = String(rental.deposit_status || 'held').replace(/_/g, ' ');
+                  const displayDepositStatus = depositStatusStr.charAt(0).toUpperCase() + depositStatusStr.slice(1);
+
+                  const dailyPrice = parseFloat(rental.rental_price_per_day) || 0;
+                  const rentalDays = rental.rental_days || 1;
+                  const totalRentalAmt = parseFloat(rental.total_rental_amount) || 0;
+                  const secDeposit = parseFloat(rental.security_deposit) || 0;
+                  const latePenaltyTotal = parseFloat(rental.late_penalty_total) || 0;
+                  const depositRefundAmt = parseFloat(rental.deposit_refund_amount) || 0;
+                  const latePenaltyPerDay = parseFloat(rental.late_penalty_per_day) || 0;
 
                   return (
                     <Card key={rental.id} className="p-6 overflow-hidden">
@@ -998,7 +1062,7 @@ export function UserAccount() {
                             {imageSrc ? (
                               <ImageWithFallback
                                 src={imageSrc}
-                                alt={rental.product_name}
+                                alt={rental.product_name || 'Rental item'}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
@@ -1007,10 +1071,10 @@ export function UserAccount() {
                           </div>
                           <div className="flex flex-col gap-2 w-full">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold text-center w-fit ${getRentalStatusColor(rental.status)}`}>
-                              {t(rental.status.charAt(0).toUpperCase() + rental.status.slice(1))}
+                              {t(displayStatus)}
                             </span>
                             <span className="text-xs text-muted-foreground text-center md:text-left">
-                              {t('Qty')}: {rental.quantity}
+                              {t('Qty')}: {rental.quantity || 1}
                             </span>
                           </div>
                         </div>
@@ -1018,7 +1082,7 @@ export function UserAccount() {
                         {/* Middle Side: Main details */}
                         <div className="flex-1 space-y-4">
                           <div>
-                            <h3 className="text-lg font-bold text-foreground mb-1">{rental.product_name}</h3>
+                            <h3 className="text-lg font-bold text-foreground mb-1">{rental.product_name || t('Rental Product')}</h3>
                             <p className="text-xs text-muted-foreground">
                               {t('Order ID')}: {rental.order_id || t('Direct Rental')}
                             </p>
@@ -1059,7 +1123,7 @@ export function UserAccount() {
                             <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-900/50 text-left">
                               <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                               <span>
-                                {t('Late Penalty Applied')}: Rs. {parseFloat(rental.late_penalty_per_day).toLocaleString()}/{t('day')}
+                                {t('Late Penalty Applied')}: Rs. {latePenaltyPerDay.toLocaleString()}/{t('day')}
                               </span>
                             </div>
                           )}
@@ -1070,39 +1134,39 @@ export function UserAccount() {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">{t('Daily Price')}:</span>
-                              <span className="font-medium">Rs. {parseFloat(rental.rental_price_per_day).toLocaleString()}</span>
+                              <span className="font-medium">Rs. {dailyPrice.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">{t('Days')}:</span>
-                              <span className="font-medium">{rental.rental_days}</span>
+                              <span className="font-medium">{rentalDays}</span>
                             </div>
                             <div className="flex justify-between pt-1 border-t border-dashed border-border">
                               <span className="text-muted-foreground font-semibold">{t('Total Rental Amount')}:</span>
-                              <span className="font-bold text-primary">Rs. {parseFloat(rental.total_rental_amount).toLocaleString()}</span>
+                              <span className="font-bold text-primary">Rs. {totalRentalAmt.toLocaleString()}</span>
                             </div>
                           </div>
 
                           <div className="bg-muted/30 p-3 rounded-lg space-y-2 text-xs text-left">
                             <div className="flex justify-between items-center">
                               <span className="text-muted-foreground font-semibold">{t('Security Deposit')}:</span>
-                              <span className="font-bold">Rs. {parseFloat(rental.security_deposit).toLocaleString()}</span>
+                              <span className="font-bold">Rs. {secDeposit.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-muted-foreground">{t('Deposit Status')}:</span>
                               <span className={`px-2 py-0.5 rounded-full font-semibold ${getDepositStatusColor(rental.deposit_status)}`}>
-                                {t(rental.deposit_status.replace('_', ' ').charAt(0).toUpperCase() + rental.deposit_status.replace('_', ' ').slice(1))}
+                                {t(displayDepositStatus)}
                               </span>
                             </div>
-                            {parseFloat(rental.late_penalty_total) > 0 && (
+                            {latePenaltyTotal > 0 && (
                               <div className="flex justify-between text-red-600 font-semibold pt-1 border-t border-border">
                                 <span>{t('Late Penalty')}:</span>
-                                <span>Rs. -{parseFloat(rental.late_penalty_total).toLocaleString()}</span>
+                                <span>Rs. -{latePenaltyTotal.toLocaleString()}</span>
                               </div>
                             )}
                             {(rental.deposit_status === 'refunded' || rental.deposit_status === 'partial_refund') && (
                               <div className="flex justify-between text-green-600 font-semibold pt-1 border-t border-border">
                                 <span>{t('Refunded Deposit')}:</span>
-                                <span>Rs. {parseFloat(rental.deposit_refund_amount).toLocaleString()}</span>
+                                <span>Rs. {depositRefundAmt.toLocaleString()}</span>
                               </div>
                             )}
                           </div>

@@ -10,15 +10,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useCart } from '../../store/CartContext';
 import { toast } from 'sonner';
 import { useAuth } from '../../store/AuthContext';
-import { API_BASE_URL, GOOGLE_MAPS_API_KEY } from "../../config";
+import { API_BASE_URL, MAPBOX_TOKEN } from "../../config";
 import { useTranslation } from 'react-i18next';
 import { SEO } from '../../components/common/SEO';
-import { GoogleMapPicker } from './GoogleMapPicker';
+import { MapboxPicker } from '../../components/common/MapboxPicker';
+import { lookupLahoreLocation, isWithinLahoreBounds, LAHORE_BOUNDS } from '../../utils/lahoreLocations';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-const USE_GOOGLE_MAPS = !!GOOGLE_MAPS_API_KEY;
+const USE_MAPBOX = true;
 
 const customIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -103,14 +105,10 @@ const SANDBOX_TEST_PHONES = {
   timeout: '03999999999',
 };
 
-// Shop location coordinates for distance calculations
+// shop ki location
 const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 };
 
-// When Google Maps isn't available, we fall back to the straight-line (Haversine)
-// distance. Real road distance in Lahore is typically ~1.3–1.5× the straight line,
-// so we scale the fallback up to approximate the driving distance the rider covers.
-// Google Maps' own DistanceMatrixService already returns true road km, so it is
-// NOT multiplied — this factor only applies to the fallback path.
+// road distance factor
 const ROAD_DISTANCE_FACTOR = 1.5;
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -337,7 +335,7 @@ export function Checkout() {
           SHOP_LOCATION.lat, SHOP_LOCATION.lng,
           gpsCoords.lat, gpsCoords.lng
         );
-        // Fallback estimate: Haversine underreports actual road distance
+        // road distance estimate
         const estimatedRoadDist = straightDist * ROAD_DISTANCE_FACTOR;
 
         const updateFee = (distVal) => {
@@ -353,31 +351,16 @@ export function Checkout() {
           setDeliveryFee(fee);
         };
 
-        // Routes API: RouteMatrix — actual road distance (replaces deprecated DistanceMatrix)
-        if (USE_GOOGLE_MAPS && GOOGLE_MAPS_API_KEY) {
+        // mapbox driving distance
+        if (MAPBOX_TOKEN) {
           try {
-            const body = JSON.stringify({
-              origins: [{ waypoint: { location: { latLng: { latitude: SHOP_LOCATION.lat, longitude: SHOP_LOCATION.lng } } } }],
-              destinations: [{ waypoint: { location: { latLng: { latitude: gpsCoords.lat, longitude: gpsCoords.lng } } } }],
-              travelMode: 'DRIVE',
-            });
             const res = await fetch(
-              `https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix?key=${GOOGLE_MAPS_API_KEY}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters,status',
-                },
-                body,
-              }
+              `https://api.mapbox.com/directions/v5/mapbox/driving/${SHOP_LOCATION.lng},${SHOP_LOCATION.lat};${gpsCoords.lng},${gpsCoords.lat}?overview=false&access_token=${MAPBOX_TOKEN}`
             );
             if (res.ok) {
               const data = await res.json();
-              const element = Array.isArray(data) ? data[0] : null;
-              if (element && element.distanceMeters) {
-                // True road km from Google Routes API
-                updateFee(element.distanceMeters / 1000);
+              if (data.routes && data.routes[0] && data.routes[0].distance) {
+                updateFee(data.routes[0].distance / 1000);
               } else {
                 updateFee(estimatedRoadDist);
               }
@@ -385,7 +368,7 @@ export function Checkout() {
               updateFee(estimatedRoadDist);
             }
           } catch (e) {
-            console.warn('RouteMatrix failed, using estimate:', e);
+            console.warn('Mapbox directions failed, using estimate:', e);
             updateFee(estimatedRoadDist);
           }
         } else {
@@ -482,36 +465,19 @@ export function Checkout() {
     let addressText = null;
     let inLahore = false;
 
-    if (USE_GOOGLE_MAPS && window.google?.maps?.Geocoder) {
+    if (MAPBOX_TOKEN) {
       try {
-        const geocoder = new window.google.maps.Geocoder();
-        const res = await new Promise((resolve) => {
-          geocoder.geocode({ location: { lat: parseFloat(lat), lng: parseFloat(lng) } }, (results, status) => {
-            if (status === 'OK' && results && results.length > 0) resolve(results);
-            else resolve(null);
-          });
-        });
-        if (res && res.length > 0) {
-          const bestResult = res.find(r => !r.types.includes('plus_code') && r.formatted_address) || res[0];
-          inLahore = checkIsLahore(bestResult.formatted_address, lat, lng, bestResult.address_components);
-          return { addressText: bestResult.formatted_address, inLahore };
-        }
-      } catch (e) { console.warn('Google JS reverse geocode failed, trying HTTP:', e); }
-    }
-
-    if (USE_GOOGLE_MAPS) {
-      try {
-        const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
+        const apiUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&language=en`;
         const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
-          if (data.status === 'OK' && data.results && data.results.length > 0) {
-            const bestResult = data.results.find(r => !r.types.includes('plus_code') && r.formatted_address) || data.results[0];
-            inLahore = checkIsLahore(bestResult.formatted_address, lat, lng, bestResult.address_components);
-            return { addressText: bestResult.formatted_address, inLahore };
+          if (data.features && data.features.length > 0) {
+            const bestResult = data.features[0];
+            inLahore = checkIsLahore(bestResult.place_name, lat, lng, bestResult.context);
+            return { addressText: bestResult.place_name, inLahore };
           }
         }
-      } catch (e) { console.warn('Google reverse geocode failed:', e); }
+      } catch (e) { console.warn('Mapbox reverse geocode failed:', e); }
     }
 
     try {
@@ -595,39 +561,83 @@ export function Checkout() {
     }
   }, [reverseGeocode, t, houseDetails]);
 
-  // Auto-fill address logic: primary GPS resolution with network fallback
+  // Auto-fill address logic: primary GPS resolution with explicit permission handling
   useEffect(() => {
     if (orderType === 'delivery' && !deliveryArea && !gpsCoords) {
+      let watchId = null;
+      let settled = false;
       const initLocation = async () => {
-        setLocationStatus(`📡 ${t('Getting your exact location...')}`);
-        
-        // Try actual GPS first
-        if (navigator.geolocation) {
-          try {
-            const position = await new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true, timeout: 10000, maximumAge: 0,
-              });
-            });
-            const { latitude: lat, longitude: lng, accuracy } = position.coords;
-            await processLocationFix(lat, lng, accuracy, 'GPS');
-            return; // GPS resolved successfully
-          } catch (geoError) {
-            console.warn('GPS failed on init, using fallback:', geoError.message);
-          }
+        if (!navigator.geolocation) {
+          setLocationStatus(t('Search area or pin on map'));
+          return;
         }
 
-        // Fallback if GPS fails
-        const { addressText, inLahore } = await reverseGeocode(FALLBACK_CENTER.lat, FALLBACK_CENTER.lng);
-        if (addressText) {
-          setDeliveryArea(addressText);
-          setIsOutOfLahore(!inLahore);
-          setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Out of city service not available')}`);
+        // Check if origin is insecure (HTTP on mobile)
+        const isInsecureOrigin = typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        if (isInsecureOrigin) {
+          setLocationStatus(`⚠️ ${t('Chrome blocks GPS on HTTP. Please search area or pin on map (HTTPS required for GPS).')}`);
+          return;
         }
+
+        // Check permission status first (if Permissions API available)
+        try {
+          if (navigator.permissions) {
+            const permStatus = await navigator.permissions.query({ name: 'geolocation' });
+            if (permStatus.state === 'denied') {
+              setLocationStatus(`⚠️ ${t('Location blocked in Chrome settings. Tap lock icon beside URL to allow, or pin on map.')}`);
+              return;
+            }
+          }
+        } catch (_) { /* Permissions API not supported, proceed anyway */ }
+
+        setLocationStatus(`📡 ${t('Requesting your location...')}`);
+
+        // Use watchPosition for progressive GPS refinement on mobile
+        watchId = navigator.geolocation.watchPosition(
+          async (position) => {
+            const { latitude: lat, longitude: lng, accuracy } = position.coords;
+            // Accept first fix that's decent (< 500m) or any fix after 4s
+            if (!settled) {
+              settled = true;
+              if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+              await processLocationFix(lat, lng, accuracy, 'GPS');
+            }
+          },
+          (geoError) => {
+            if (!settled) {
+              settled = true;
+              if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+              console.warn('Initial GPS unavailable:', geoError?.message, 'code:', geoError?.code);
+              if (geoError?.code === 1) {
+                // Permission denied
+                setLocationStatus(`⚠️ ${t('Location access denied by browser. Please allow it in browser settings, or search/pin on the map.')}`);
+              } else {
+                setLocationStatus(t('Search area, use GPS button, or pin on map'));
+              }
+            }
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+
+        // Safety: stop watching after 16s max
+        setTimeout(() => {
+          if (!settled && watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            settled = true;
+            setLocationStatus(t('Search area, use GPS button, or pin on map'));
+          }
+        }, 16000);
       };
       initLocation();
+
+      return () => {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+      };
     }
-  }, [orderType, deliveryArea, gpsCoords, reverseGeocode, processLocationFix, t]);
+  }, [orderType, deliveryArea, gpsCoords, processLocationFix, t]);
 
   const formatCardNumber = (value) => {
     const digits = value.replace(/\D/g, '').slice(0, 16);
@@ -653,132 +663,199 @@ export function Checkout() {
     if (!addressToSearch || addressToSearch.length < 3) return;
     setLocationStatus(`🔍 ${t('Verifying area on map...')}`);
 
+    const lowerStr = addressToSearch.toLowerCase();
+    const hasOtherCity = NON_LAHORE_CITIES.some(c => lowerStr.includes(c));
+
     let foundLocation = null;
 
-    const buildSearchQueries = (orig) => {
-      const str = String(orig || '').trim();
-      if (!str) return [];
-      const queries = [];
-      const hasOtherCity = NON_LAHORE_CITIES.some(c => str.toLowerCase().includes(c));
-      const addPak = (s) => {
-        let tmp = s.trim();
-        if (!tmp.toLowerCase().includes('pakistan')) tmp += ', Pakistan';
-        return tmp;
-      };
-      const addLahorePak = (s) => {
-        let tmp = s.trim();
-        if (!hasOtherCity && !tmp.toLowerCase().includes('lahore')) tmp += ', Lahore';
-        if (!tmp.toLowerCase().includes('pakistan')) tmp += ', Pakistan';
-        return tmp;
-      };
-
-      const plusMatch = str.match(/([A-Z0-9]{4}\+[A-Z0-9]{2,3})/i);
-      if (plusMatch && !hasOtherCity) {
-        queries.push(`${plusMatch[1]}, Lahore, Pakistan`);
-        queries.push(`${plusMatch[1]}, Pakistan`);
-      } else if (plusMatch) {
-        queries.push(`${plusMatch[1]}, Pakistan`);
-      }
-
-      queries.push(addPak(str));
-
-      const noPlus = str.replace(/^[A-Z0-9]{4}\+[A-Z0-9]{2,3}(,\s*)?/i, '').trim();
-      if (noPlus && noPlus !== str) {
-        queries.push(addPak(noPlus));
-      }
-
-      const parts = (noPlus || str).split(',').map(p => p.trim()).filter(p => p && !p.toLowerCase().includes('pakistan') && !p.toLowerCase().includes('lahore'));
-      if (parts.length > 0) {
-        for (let i = parts.length - 1; i >= 0; i--) {
-          queries.push(addLahorePak(parts[i]));
-          const words = parts[i].split(/\s+/);
-          if (words.length > 2) {
-            queries.push(addLahorePak(words.slice(-3).join(' ')));
-            queries.push(addLahorePak(words.slice(-2).join(' ')));
-          }
-        }
-      }
-
-      return queries.filter((q, idx, arr) => q && q.length > 3 && arr.indexOf(q) === idx);
-    };
-
-    const queriesToTry = buildSearchQueries(addressToSearch);
-
-    if (USE_GOOGLE_MAPS && window.google?.maps?.Geocoder) {
-      try {
-        const geocoder = new window.google.maps.Geocoder();
-        for (const q of queriesToTry) {
-          const res = await new Promise((resolve) => {
-            geocoder.geocode({ address: q }, (results, status) => {
-              if (status === 'OK' && results && results.length > 0) resolve(results[0]);
-              else resolve(null);
-            });
-          });
-          if (res) {
-            const lat = res.geometry.location.lat();
-            const lng = res.geometry.location.lng();
-            const isOfficiallyLahore = checkIsLahore(q || res.formatted_address, lat, lng, res.address_components);
-            // Capture Google's corrected formatted address for suggestion
-            const googleFormatted = res.formatted_address || null;
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: googleFormatted };
-            break;
-          }
-        }
-      } catch (e) { console.warn('Google JS Geocoder failed', e); }
-    }
-
-    if (!foundLocation && USE_GOOGLE_MAPS && window.google?.maps?.places?.PlacesService) {
-      try {
-        const service = new window.google.maps.places.PlacesService(document.createElement('div'));
-        for (const q of queriesToTry) {
-          const res = await new Promise((resolve) => {
-            service.findPlaceFromQuery({ query: q, fields: ['geometry', 'formatted_address'] }, (results, status) => {
-              if (status === window.google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) resolve(results[0]);
-              else resolve(null);
-            });
-          });
-          if (res && res.geometry?.location) {
-            const lat = res.geometry.location.lat();
-            const lng = res.geometry.location.lng();
-            const isOfficiallyLahore = checkIsLahore(q || res.formatted_address, lat, lng, null);
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: res.formatted_address || null };
-            break;
-          }
-        }
-      } catch (e) { console.warn('Google Places JS search failed', e); }
-    }
-
-    if (!foundLocation && USE_GOOGLE_MAPS) {
-      for (const q of queriesToTry) {
-        try {
-          const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
-          const response = await fetch(apiUrl);
-          const data = await response.json();
-          if (data.status === 'OK' && data.results.length > 0) {
-            const result = data.results[0];
-            const { lat, lng } = result.geometry.location;
-            const isOfficiallyLahore = checkIsLahore(q || result.formatted_address, lat, lng, result.address_components);
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: result.formatted_address || null };
-            break;
-          }
-        } catch (e) { console.warn('Google forward geocode HTTP failed', e); }
+    // 1. FAST LOCAL LOOKUP: Instant exact coordinates for known Lahore areas & landmarks
+    if (!hasOtherCity) {
+      const localMatch = lookupLahoreLocation(addressToSearch);
+      if (localMatch) {
+        foundLocation = {
+          lat: localMatch.lat,
+          lng: localMatch.lng,
+          isLahore: true,
+          formatted: localMatch.name
+        };
       }
     }
 
+    // 2. If no local match, search via Mapbox & Nominatim
     if (!foundLocation) {
-      for (const q of queriesToTry) {
-        try {
-          const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
-          const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
-          const data = await response.json();
-          if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lng = parseFloat(data[0].lon);
-            const isOfficiallyLahore = checkIsLahore(q || data[0].display_name, lat, lng, null);
-            foundLocation = { lat, lng, isLahore: isOfficiallyLahore };
-            break;
+      const buildSearchQueries = (orig) => {
+        const str = String(orig || '').trim();
+        if (!str) return [];
+        const queries = [];
+
+        const addPak = (s) => {
+          let tmp = s.trim();
+          if (!tmp.toLowerCase().includes('pakistan')) tmp += ', Pakistan';
+          return tmp;
+        };
+        const addLahorePak = (s) => {
+          let tmp = s.trim();
+          if (!hasOtherCity && !tmp.toLowerCase().includes('lahore')) tmp += ', Lahore';
+          if (!tmp.toLowerCase().includes('pakistan')) tmp += ', Pakistan';
+          return tmp;
+        };
+
+        // Plus code handling
+        const plusMatch = str.match(/([A-Z0-9]{4}\+[A-Z0-9]{2,3})/i);
+        if (plusMatch && !hasOtherCity) {
+          queries.push(`${plusMatch[1]}, Lahore, Pakistan`);
+          queries.push(`${plusMatch[1]}, Pakistan`);
+        } else if (plusMatch) {
+          queries.push(`${plusMatch[1]}, Pakistan`);
+        }
+
+        // Full address with Lahore + Pakistan (highest priority)
+        queries.push(addLahorePak(str));
+        queries.push(addPak(str));
+
+        // Without plus code prefix (if present)
+        const noPlus = str.replace(/^[A-Z0-9]{4}\+[A-Z0-9]{2,3}(,\s*)?/i, '').trim();
+        if (noPlus && noPlus !== str) {
+          queries.push(addLahorePak(noPlus));
+          queries.push(addPak(noPlus));
+        }
+
+        // Extract meaningful area segments
+        const parts = (noPlus || str).split(',').map(p => p.trim()).filter(p => {
+          if (!p) return false;
+          const lower = p.toLowerCase();
+          if (lower.includes('pakistan') || lower.includes('lahore')) return false;
+          if (/^\d+$/.test(p) || /^(house|ghar|makan|flat|apt|apartment|floor)\s*[#\-]?\s*\d/i.test(p)) return false;
+          if (/^(street|gali|st\.?|lane)\s*[#\-]?\s*\d/i.test(p)) return false;
+          return true;
+        });
+
+        if (parts.length > 0) {
+          const lastPart = parts[parts.length - 1];
+          queries.push(addLahorePak(lastPart));
+
+          if (parts.length >= 2) {
+            const lastTwo = parts.slice(-2).join(', ');
+            queries.push(addLahorePak(lastTwo));
+            queries.push(addLahorePak(parts[parts.length - 2]));
           }
-        } catch (e) { console.warn('Nominatim forward geocode failed', e); }
+        }
+
+        return queries.filter((q, idx, arr) => q && q.length > 3 && arr.indexOf(q) === idx);
+      };
+
+      const queriesToTry = buildSearchQueries(addressToSearch);
+
+      // Score Mapbox features
+      const scoreFeature = (feat, searchStr) => {
+        let score = 0;
+        const placeLower = (feat.place_name || '').toLowerCase();
+        const textLower = (feat.text || '').toLowerCase();
+        const searchLower = searchStr.toLowerCase().replace(/,?\s*(pakistan|lahore)\s*/gi, '').trim();
+        const searchWords = searchLower.split(/[\s,]+/).filter(w => w.length > 2);
+
+        const placeType = (feat.place_type || [])[0] || '';
+        if (['neighborhood', 'locality', 'place'].includes(placeType)) score += 50;
+        else if (['district', 'region'].includes(placeType)) score += 30;
+        else if (placeType === 'address') score += 20;
+        else if (placeType === 'poi') score += 5;
+
+        for (const word of searchWords) {
+          if (textLower.includes(word)) score += 25;
+          if (placeLower.includes(word)) score += 10;
+        }
+
+        if (textLower === searchLower || textLower.includes(searchLower)) score += 40;
+        if (feat.relevance) score += feat.relevance * 15;
+
+        return score;
+      };
+
+      // 2a. Mapbox search (strictly bounded to Lahore bbox if no other city requested)
+      if (MAPBOX_TOKEN) {
+        for (const q of queriesToTry) {
+          try {
+            const bboxParam = !hasOtherCity ? `&bbox=${LAHORE_BOUNDS.minLng},${LAHORE_BOUNDS.minLat},${LAHORE_BOUNDS.maxLng},${LAHORE_BOUNDS.maxLat}` : '';
+            const apiUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${MAPBOX_TOKEN}&country=PK&proximity=74.3587,31.5204&language=en&limit=5&types=neighborhood,locality,place,district,address,poi${bboxParam}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            if (data.features && data.features.length > 0) {
+              const validFeatures = !hasOtherCity
+                ? data.features.filter(f => isWithinLahoreBounds(f.center[1], f.center[0]))
+                : data.features;
+
+              if (validFeatures.length > 0) {
+                let bestFeat = validFeatures[0];
+                let bestScore = scoreFeature(bestFeat, addressToSearch);
+                for (let i = 1; i < validFeatures.length; i++) {
+                  const s = scoreFeature(validFeatures[i], addressToSearch);
+                  if (s > bestScore) {
+                    bestScore = s;
+                    bestFeat = validFeatures[i];
+                  }
+                }
+
+                // Discard if generic city center (GPO) when searching for a specific area
+                const featName = (bestFeat.place_name || '').toLowerCase();
+                const isCityCenterCoords = Math.abs(bestFeat.center[1] - 31.5656) < 0.01 && Math.abs(bestFeat.center[0] - 74.3141) < 0.01;
+                const isCityLevel = featName.startsWith('lahore,') || featName === 'lahore' || bestFeat.place_type?.includes('place');
+                const searchWords = addressToSearch.toLowerCase().replace(/,?\s*(pakistan|lahore)\s*/gi, '').trim().split(/[\s,]+/).filter(w => w.length > 2);
+                const matchesSpecific = searchWords.some(w => featName.includes(w));
+                const isGenericCity = !hasOtherCity && isCityLevel && isCityCenterCoords && !matchesSpecific;
+
+                if (!isGenericCity) {
+                  const [lng, lat] = bestFeat.center;
+                  const isOfficiallyLahore = checkIsLahore(q || bestFeat.place_name, lat, lng, bestFeat.context);
+                  foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: bestFeat.place_name };
+                  break;
+                }
+              }
+            }
+          } catch (e) { console.warn('Mapbox forward geocode error:', e); }
+        }
+      }
+
+      // 2b. Nominatim fallback (bounded to Lahore)
+      if (!foundLocation) {
+        for (const q of queriesToTry) {
+          try {
+            const nominatimUrl = !hasOtherCity
+              ? `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&viewbox=${LAHORE_BOUNDS.minLng},${LAHORE_BOUNDS.maxLat},${LAHORE_BOUNDS.maxLng},${LAHORE_BOUNDS.minLat}&bounded=1`
+              : `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&countrycodes=pk`;
+            const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
+            const data = await response.json();
+            if (data && data.length > 0) {
+              const validItems = !hasOtherCity
+                ? data.filter(item => isWithinLahoreBounds(parseFloat(item.lat), parseFloat(item.lon)))
+                : data;
+
+              if (validItems.length > 0) {
+                const searchLower = addressToSearch.toLowerCase().replace(/,?\s*(pakistan|lahore)\s*/gi, '').trim();
+                const searchWords = searchLower.split(/[\s,]+/).filter(w => w.length > 2);
+
+                let bestResult = validItems[0];
+                let bestScore = 0;
+                for (const item of validItems) {
+                  const dispLower = (item.display_name || '').toLowerCase();
+                  let score = 0;
+                  for (const word of searchWords) {
+                    if (dispLower.includes(word)) score += 15;
+                  }
+                  if (['suburb', 'neighbourhood', 'residential', 'village'].includes(item.type)) score += 20;
+                  else if (['administrative', 'town'].includes(item.type)) score += 15;
+                  else if (['station', 'park', 'attraction'].includes(item.type)) score += 12;
+                  if (score > bestScore) { bestScore = score; bestResult = item; }
+                }
+
+                const lat = parseFloat(bestResult.lat);
+                const lng = parseFloat(bestResult.lon);
+                const isOfficiallyLahore = checkIsLahore(q || bestResult.display_name, lat, lng, null);
+                foundLocation = { lat, lng, isLahore: isOfficiallyLahore, formatted: bestResult.display_name };
+                break;
+              }
+            }
+          } catch (e) { console.warn('Nominatim forward geocode failed', e); }
+        }
       }
     }
 
@@ -788,65 +865,36 @@ export function Checkout() {
       setShowMap(true);
       setDeliveryArea(addressToSearch);
       setIsOutOfLahore(!foundLocation.isLahore);
-      setAddressSuggestion(null); // reset old suggestion
+      setAddressSuggestion(null);
 
       if (foundLocation.isLahore) {
         setLocationStatus(`✅ ${t('Area verified & mapped!')}`);
 
-        // Suggestion from Geocoder formatted_address (most reliable for Pakistan)
         if (foundLocation.formatted) {
-          // Extract just area + city (drop country and postal code)
           const gParts = foundLocation.formatted.split(',').map(p => p.trim());
           const withoutCountry = gParts
             .filter(p => p.toLowerCase() !== 'pakistan' && !/^\d{5}$/.test(p))
             .join(', ');
-          // Normalize: lowercase + remove all non-alphanumeric (handles spelling like "Twon" vs "Town")
           const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g, '');
-          // Show suggestion if normalized versions differ — e.g., "iqbaltwon" vs "iqbaltown"
           if (withoutCountry && normalize(withoutCountry) !== normalize(addressToSearch)) {
             setAddressSuggestion({ corrected: withoutCountry, original: addressToSearch });
-          }
-        }
-
-        // Address Validation API — extra confirmation badge only
-        if (USE_GOOGLE_MAPS && !foundLocation.formatted) {
-          try {
-            const valRes = await fetch(
-              `https://addressvalidation.googleapis.com/v1:validateAddress?key=${GOOGLE_MAPS_API_KEY}`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  address: { addressLines: [addressToSearch], regionCode: 'PK', locality: 'Lahore' },
-                  enableUspsCass: false,
-                }),
-              }
-            );
-            if (valRes.ok) {
-              const valData = await valRes.json();
-              const formattedAddr = valData.result?.address?.formattedAddress;
-              if (formattedAddr) {
-                const parts = formattedAddr.split(',').map(p => p.trim()).filter(p => p.toLowerCase() !== 'pakistan');
-                const suggestion = parts.slice(0, 2).join(', ');
-                const normalizeStr = (s) => s.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g, '');
-                if (suggestion && normalizeStr(suggestion) !== normalizeStr(addressToSearch)) {
-                  setAddressSuggestion({ corrected: suggestion, original: addressToSearch });
-                }
-              }
-            }
-          } catch (e) {
-            console.warn('Address Validation API error:', e);
           }
         }
       } else {
         setLocationStatus(`❌ ${t('Out of city service not available')}`);
       }
     } else {
-      setLocationStatus(`⚠️ ${t("Can't find your area, select from map or try another nearest area.")}`);
+      if (!hasOtherCity) {
+        setIsOutOfLahore(false);
+        setLocationStatus(`⚠️ ${t("Can't find your area, select from map or try another nearest area.")}`);
+      } else {
+        setIsOutOfLahore(true);
+        setLocationStatus(`❌ ${t('Out of city service not available')}`);
+      }
     }
   };
 
-  // Debounce typed address search to automatically map and calculate distance
+  // address search debounce
   useEffect(() => {
     if (orderType !== 'delivery') return;
     if (!houseDetails || houseDetails.trim().length < 6) return;
@@ -888,41 +936,102 @@ export function Checkout() {
 
 
   const handleGetLocation = async () => {
-    setLocationStatus(t('📡 Getting precise GPS fix...'));
-    setGpsCoords(null);
-    setShowMap(false);
-
-    // Try Google Geolocation API (WiFi+Cell — fast & indoor)
-    try {
-      const res = await fetch(`${API_BASE_URL}/orders/geolocation.php`, { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.lat && data.lng) {
-          await processLocationFix(data.lat, data.lng, data.accuracy || 500, 'Network');
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Google Geolocation API unavailable, trying browser GPS:', e);
-    }
-
-    // Fallback: Browser GPS
     if (!navigator.geolocation) {
+      toast.error(t('Geolocation is not supported by your device'));
       fallbackToManualLocation();
       return;
     }
 
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true, timeout: 15000, maximumAge: 0,
-        });
-      });
-      const { latitude: lat, longitude: lng, accuracy } = position.coords;
-      await processLocationFix(lat, lng, accuracy, 'GPS');
-    } catch (geoError) {
-      fallbackToManualLocation();
+    // Check if origin is insecure (HTTP on mobile)
+    const isInsecureOrigin = typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isInsecureOrigin) {
+      toast.error(t('Chrome blocks GPS on HTTP connections. Please use HTTPS or tap/drag on the map to pin your location.'), { duration: 8000 });
+      setLocationStatus(`⚠️ ${t('GPS requires HTTPS on mobile Chrome. Search area or pin on map.')}`);
+      return;
     }
+
+    // Check permission status first to give immediate feedback
+    try {
+      if (navigator.permissions) {
+        const permStatus = await navigator.permissions.query({ name: 'geolocation' });
+        if (permStatus.state === 'denied') {
+          toast.error(t('Location permission is blocked in Chrome. Tap the lock (🔒) / settings icon next to the address bar -> Permissions -> Location -> Allow.'), { duration: 8000 });
+          setLocationStatus(`⚠️ ${t('Blocked in Chrome — Tap lock icon in address bar, allow Location, then refresh.')}`);
+          return;
+        }
+      }
+    } catch (_) { /* Permissions API not supported, proceed */ }
+
+    setLocationStatus(`📡 ${t('Getting precise GPS fix...')}`);
+
+    // Use watchPosition for progressive GPS — first coarse fix, then refine
+    let bestFix = null;
+    let watchId = null;
+    let fixTimeout = null;
+
+    const finalize = async () => {
+      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+      if (fixTimeout) { clearTimeout(fixTimeout); fixTimeout = null; }
+      if (bestFix) {
+        await processLocationFix(bestFix.lat, bestFix.lng, bestFix.accuracy, 'GPS');
+      }
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const { latitude: lat, longitude: lng, accuracy } = position.coords;
+        // Keep best fix (lowest accuracy value = most precise)
+        if (!bestFix || accuracy < bestFix.accuracy) {
+          bestFix = { lat, lng, accuracy };
+        }
+        // If accuracy is good enough (< 100m), finalize immediately
+        if (accuracy < 100) {
+          await finalize();
+        }
+      },
+      (geoError) => {
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        if (fixTimeout) { clearTimeout(fixTimeout); fixTimeout = null; }
+        console.warn('GPS watch error:', geoError);
+        if (geoError.code === 1) {
+          toast.error(t('Location permission denied. Please allow location access in your browser (click the lock icon in address bar) or drag the pin on the map.'), { duration: 8000 });
+          setLocationStatus(`⚠️ ${t('Permission denied — Allow in browser settings or select on map')}`);
+        } else if (bestFix) {
+          // We got some fix before the error, use it
+          processLocationFix(bestFix.lat, bestFix.lng, bestFix.accuracy, 'GPS-Network');
+        } else {
+          toast.error(t('GPS timed out. Please tap or drag the pin on the map.'));
+          fallbackToManualLocation();
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+
+    // After 6 seconds, finalize with whatever we have
+    fixTimeout = setTimeout(async () => {
+      if (watchId !== null) {
+        await finalize();
+        if (!bestFix) {
+          // No fix at all — retry with low accuracy for PCs
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude: lat, longitude: lng, accuracy } = position.coords;
+              await processLocationFix(lat, lng, accuracy, 'GPS-Network');
+            },
+            (err2) => {
+              if (err2.code === 1) {
+                toast.error(t('Location permission denied. Enable in browser settings or use the map.'), { duration: 8000 });
+                setLocationStatus(`⚠️ ${t('Permission denied — select on map')}`);
+              } else {
+                toast.error(t('GPS timed out. Please tap or drag the pin on the map.'));
+                fallbackToManualLocation();
+              }
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+          );
+        }
+      }
+    }, 6000);
   };
 
   const handleHouseDetailsBlur = () => {
@@ -1640,14 +1749,15 @@ export function Checkout() {
               <button
                 type="button"
                 title={t('Use My GPS Location')}
+                aria-label={t('Use My GPS Location')}
                 onClick={handleGetLocation}
                 disabled={locationStatus?.includes('Refining') || locationStatus?.includes('Getting') || locationStatus?.includes('Verifying')}
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-white"
               >
                 {locationStatus?.includes('Getting') ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 size={18} className="animate-spin text-white" style={{ width: '18px', height: '18px', color: '#ffffff' }} />
                 ) : (
-                  <Crosshair className="h-4 w-4" />
+                  <Crosshair size={20} color="#ffffff" strokeWidth={2.5} className="text-white shrink-0" style={{ width: '20px', height: '20px', color: '#ffffff', stroke: '#ffffff' }} />
                 )}
               </button>
             </div>
@@ -1701,42 +1811,21 @@ export function Checkout() {
 
             {/* Map — Always rendered */}
             <div className="relative">
-              {USE_GOOGLE_MAPS ? (
-                <GoogleMapPicker
-                  position={gpsCoords ? { lat: gpsCoords.lat, lng: gpsCoords.lng } : FALLBACK_CENTER}
-                  onPositionChange={(newPos) => {
-                    setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
-                  }}
-                  onAddressChange={(addr) => {
-                    setDeliveryArea(addr);
-                    if (!houseDetails || houseDetails.trim() === '') {
-                      setHouseDetails(addr);
-                    }
-                    setLocationStatus(`✅ ${t('Area updated')}`);
-                  }}
-                  height="280px"
-                  showSearch={false}
-                />
-              ) : (
-                <div className="h-[280px] w-full relative z-0">
-                  <MapContainer
-                    key={`map-${(gpsCoords || FALLBACK_CENTER).lat}-${(gpsCoords || FALLBACK_CENTER).lng}`}
-                    center={[(gpsCoords || FALLBACK_CENTER).lat, (gpsCoords || FALLBACK_CENTER).lng]}
-                    zoom={17}
-                    scrollWheelZoom={true}
-                    className="h-full w-full z-0"
-                    zoomControl={true}
-                  >
-                    <MapInvalidator />
-                    <RecenterMap center={mapCenter || [FALLBACK_CENTER.lat, FALLBACK_CENTER.lng]} />
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <DraggableMarker 
-                      position={[(gpsCoords || FALLBACK_CENTER).lat, (gpsCoords || FALLBACK_CENTER).lng]} 
-                      onDragEnd={handleMarkerDrag} 
-                    />
-                  </MapContainer>
-                </div>
-              )}
+              <MapboxPicker
+                position={gpsCoords ? { lat: gpsCoords.lat, lng: gpsCoords.lng } : FALLBACK_CENTER}
+                onPositionChange={(newPos) => {
+                  setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
+                }}
+                onAddressChange={(addr) => {
+                  setDeliveryArea(addr);
+                  if (!houseDetails || houseDetails.trim() === '') {
+                    setHouseDetails(addr);
+                  }
+                  setLocationStatus(`✅ ${t('Area updated')}`);
+                }}
+                height="280px"
+                showSearch={false}
+              />
             </div>
 
             {/* Selected area confirmation chip */}

@@ -228,16 +228,16 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   }
   const effectivePrice = hasDiscount ? discountedPrice : baseForDiscount;
   const badgeText = (service.badge_text || '').trim();
-
-  const stock = service.stock_quantity ? parseFloat(service.stock_quantity) : Infinity;
+  const hasStockDefined = service.stock_quantity !== undefined && service.stock_quantity !== null && service.stock_quantity !== '' && !isNaN(Number(service.stock_quantity));
+  const stock = hasStockDefined ? parseFloat(service.stock_quantity) : Infinity;
   const displayUnit = service.unit || 'unit';
   // Only treat as "trip-only" if unit is trip AND dual_unit is NOT enabled
   const isOnlyPickup = displayUnit.toLowerCase() === 'trip' && !service.dual_unit;
   // dual_unit products support both pickup (trip) and kg modes from one card
   const isDualUnit = service.dual_unit === 1 || service.dual_unit === true;
-  const isPickupEligible = isDualUnit || isOnlyPickup;
-  // Pickup/Trip products always remain available for booking
-  const isOutOfStock = isPickupEligible ? false : stock <= 0;
+  // Physical items (kg/unit) are out of stock when stock <= 0 (not for pure pickup trips or rentals)
+  const isOutOfStock = !isOnlyPickup && !isRental && stock <= 0;
+  const isQuantityExceeded = !isOnlyPickup && !isRental && stock !== Infinity && quantity > stock;
 
   // Quick quantity options from admin (works for ALL units)
   const quickOptions = Array.isArray(service.weight_options) && service.weight_options.length > 0
@@ -263,6 +263,10 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   const handleAddToCart = () => {
     if (isOutOfStock) {
       toast.error(t("This item is out of stock."));
+      return;
+    }
+    if (!isOnlyPickup && !isRental && stock !== Infinity && quantity > stock) {
+      toast.error(`${t("Only")} ${stock} ${isDualUnit ? 'kg' : displayUnit} ${t("left")}!`);
       return;
     }
     
@@ -326,6 +330,10 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   const handleQuickAdd = (presetQty) => {
     if (isOutOfStock) {
       toast.error(t("This item is out of stock."));
+      return;
+    }
+    if (!isOnlyPickup && !isRental && stock !== Infinity && presetQty > stock) {
+      toast.error(`${t("Only")} ${stock} ${isDualUnit ? 'kg' : displayUnit} ${t("left")}!`);
       return;
     }
     
@@ -458,24 +466,31 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   // Quick-select chips + manual +/- quantity combined
   const QuantitySelector = ({ disabled = false }) => {
     const unitLabel = isDualUnit ? 'kg' : displayUnit;
+    const isExceeded = !isOnlyPickup && !isRental && stock !== Infinity && quantity > stock;
+    const isMaxReached = !isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock;
+
     return (
       <div className="flex flex-col gap-2">
         {/* Quick-select preset chips — compact, single row */}
         {hasQuickOptions && (
           <div className="flex flex-nowrap justify-center gap-1">
-            {quickOptions.map((qty) => (
-              <button
-                key={qty}
-                type="button"
-                disabled={disabled || isOutOfStock}
-                onClick={() => handleQuickAdd(qty)}
-                className={`flex-1 min-w-0 px-1.5 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 whitespace-nowrap
-                  bg-background text-foreground border-border hover:border-primary hover:bg-primary/10 active:scale-95
-                  ${disabled || isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {qty} {unitLabel}
-              </button>
-            ))}
+            {quickOptions.map((qty) => {
+              const isChipExceeded = !isOnlyPickup && !isRental && stock !== Infinity && qty > stock;
+              const isChipDisabled = disabled || isOutOfStock || isChipExceeded;
+              return (
+                <button
+                  key={qty}
+                  type="button"
+                  disabled={isChipDisabled}
+                  onClick={() => handleQuickAdd(qty)}
+                  className={`flex-1 min-w-0 px-1.5 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 whitespace-nowrap
+                    bg-background text-foreground border-border hover:border-primary hover:bg-primary/10 active:scale-95
+                    ${isChipDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-100 hover:border-slate-200' : 'cursor-pointer'}`}
+                >
+                  {qty} {unitLabel}
+                </button>
+              );
+            })}
           </div>
         )}
         {/* Manual +/- quantity selector */}
@@ -486,7 +501,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
               type="button"
               className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={isOutOfStock || disabled}
+              disabled={isOutOfStock || disabled || quantity <= 1}
               aria-label="Decrease quantity"
             >
               −
@@ -498,7 +513,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
               type="button"
               className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
               onClick={() => setQuantity(quantity + 1)}
-              disabled={isOutOfStock || disabled}
+              disabled={isOutOfStock || disabled || isMaxReached}
               aria-label="Increase quantity"
             >
               +
@@ -506,11 +521,21 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           </div>
           {/* Add to Cart button (own row) */}
           <Button
-            className="w-full bg-success hover:bg-success/90 text-success-foreground text-sm"
+            className={`w-full text-sm font-bold transition-all ${
+              isOutOfStock || isExceeded
+                ? 'bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed hover:bg-slate-200 shadow-none'
+                : 'bg-success hover:bg-success/90 text-success-foreground'
+            }`}
             onClick={handleAddToCart}
-            disabled={isOutOfStock || disabled || (isCustomMix && currentPrice == 0)}
+            disabled={isOutOfStock || isExceeded || disabled || (isCustomMix && currentPrice == 0)}
           >
-            {isOutOfStock ? t("Out of Stock") : isAddedToCart ? t("Added ✓") : t("Add to Cart")}
+            {isOutOfStock
+              ? t("Out of Stock")
+              : isExceeded
+              ? t("Exceeds Stock")
+              : isAddedToCart
+              ? t("Added ✓")
+              : t("Add to Cart")}
           </Button>
         </div>
       </div>
@@ -615,8 +640,10 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           )}
 
           {isOutOfStock && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-              <span className="text-white font-bold">{t('Out of Stock')}</span>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-10 pointer-events-none">
+              <span className="bg-red-600 text-white font-bold text-xs uppercase px-3 py-1.5 rounded-full shadow-md tracking-wider">
+                {t('Out of Stock')}
+              </span>
             </div>
           )}
         </div>
@@ -729,8 +756,11 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                 </button>
               );
             })()}
-            {stock < 10 && stock > 0 && !isOnlyPickup && !isDualUnit && (
-                 <p className="text-xs text-red-500 mt-1">{t('Only')} {stock} {t('left')}!</p>
+            {stock <= 0 && !isOnlyPickup && !isRental && (
+              <p className="text-xs text-red-600 mt-1 font-bold">⚠️ {t('Out of Stock')}</p>
+            )}
+            {stock < 10 && stock > 0 && !isOnlyPickup && !isRental && (
+              <p className="text-xs text-red-500 mt-1 font-semibold">{t('Only')} {stock} {isDualUnit ? 'kg' : displayUnit} {t('left')}!</p>
             )}
           </div>
 

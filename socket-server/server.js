@@ -1,6 +1,4 @@
-// Real-Time Delivery Tracking and Notification Socket Server
-
-// Core Dependencies
+// tracking aur email server
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -11,17 +9,17 @@ const { Server } = require('socket.io');
 const PORT = process.env.PORT || 3001;
 
 const app = express();
-app.use(cors()); // Allow requests from any origin
+app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const httpServer = createServer(app);
 
-// Nodemailer Transporter Setup
+// nodemailer transporter setup
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: (process.env.SMTP_PORT === '465'), // true for 465, false for 587
+  secure: (process.env.SMTP_PORT === '465'),
   auth: {
     user: process.env.SMTP_USER || 'apnichakki897@gmail.com',
     pass: process.env.SMTP_PASS || 'otlg jyzi fvxi ucbi'
@@ -39,7 +37,7 @@ transporter.verify((error, success) => {
   }
 });
 
-// Root Health & Status Route
+// server health check
 app.get('/', (req, res) => {
   res.json({
     name: 'Suchi Chakki Socket.IO & Mail Service',
@@ -50,7 +48,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// 1. Order Confirmation Email
+// order confirmation email
 app.post('/send-order-confirmation', async (req, res) => {
   try {
     const { customerEmail, customerName, orderId, orderItems, totalPrice, deliveryAddress, storePhone, storeName } = req.body;
@@ -159,7 +157,7 @@ app.post('/send-order-confirmation', async (req, res) => {
   }
 });
 
-// 2. Contact Form Email
+// contact form email
 app.post('/send-contact-email', async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
@@ -261,7 +259,7 @@ app.post('/send-contact-email', async (req, res) => {
   }
 });
 
-// 3. Password Reset Email
+// password reset email
 app.post('/send-password-reset', async (req, res) => {
   try {
     const { email, name, otp } = req.body;
@@ -327,7 +325,7 @@ app.post('/send-password-reset', async (req, res) => {
   }
 });
 
-// 4. Welcome Email (for new registrations)
+// welcome email for new user
 app.post('/send-welcome-email', async (req, res) => {
   try {
     const { email, name } = req.body;
@@ -388,7 +386,7 @@ app.post('/send-welcome-email', async (req, res) => {
   }
 });
 
-// 5. Contact Form Reply Email
+// contact inquiry reply email
 app.post('/send-contact-reply', async (req, res) => {
   try {
     const { customerEmail, customerName, originalSubject, originalMessage, replyMessage, storePhone, storeName } = req.body;
@@ -467,7 +465,7 @@ app.post('/send-contact-reply', async (req, res) => {
   }
 });
 
-// 6. Payment Rejection Email
+// payment rejection email
 app.post('/send-payment-rejection', async (req, res) => {
   try {
     const { customerEmail, customerName, orderId, amount, transactionId, reason } = req.body;
@@ -575,7 +573,7 @@ app.post('/send-payment-rejection', async (req, res) => {
 
 
 
-// 7. Order Status Update Email
+// order status update email
 app.post('/send-order-status-update', async (req, res) => {
   try {
     const { customerEmail, customerName, orderId, newStatus, cancellationReason } = req.body;
@@ -681,7 +679,7 @@ app.post('/send-order-status-update', async (req, res) => {
 
 
 
-// 8. VIP Promotion Congratulations Email
+// vip promotion email
 app.post('/send-vip-congratulations', async (req, res) => {
   try {
     const { customerEmail, customerName, vipDiscount, vipFreeShipping } = req.body;
@@ -808,15 +806,15 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 });
 
-// Active driver states and order room tracking
+// drivers aur rooms list
 const activeDrivers = {};
 const orderRooms = {};
 
-// Handle incoming Socket.io connections
+// socket connection handle
 io.on('connection', (socket) => {
   console.log(`✅ Client connected: ${socket.id}`);
 
-  // Driver location broadcast event
+  // driver location update
   socket.on('driver:location_update', (data) => {
     const { order_id, latitude, longitude, heading, speed, driver_name, accuracy } = data;
 
@@ -825,7 +823,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Cache driver coordinate update
+    // memory me driver coordinates save
     activeDrivers[order_id] = {
       order_id,
       latitude,
@@ -838,7 +836,7 @@ io.on('connection', (socket) => {
       socketId: socket.id
     };
 
-    // Broadcast location to order subscribers
+    // customer ko real-time location bhejna
     const roomName = `order_${order_id}`;
     io.to(roomName).emit('tracking:location_update', {
       order_id,
@@ -851,7 +849,7 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     });
 
-    // Notify admin live dashboard
+    // admin map update
     io.to('admin_tracking').emit('tracking:driver_moved', {
       order_id,
       latitude,
@@ -867,7 +865,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle order completion event
+  // delivery complete event
   socket.on('driver:delivery_completed', (data) => {
     const { order_id, driver_name } = data;
     const roomName = `order_${order_id}`;
@@ -888,7 +886,20 @@ io.on('connection', (socket) => {
     console.log(`✅ Delivery completed: Order #${order_id} by ${driver_name}`);
   });
 
-  // Subscribe client to specific order room
+  // driver duty status toggle
+  socket.on('driver:status_changed', (data) => {
+    const { driver_name, driver_phone, isActive } = data;
+    console.log(`🛵 Driver duty status changed: ${driver_name} (${driver_phone}) -> ${isActive ? 'Active (Online)' : 'Inactive (Offline)'}`);
+
+    io.emit('driver:status_changed', {
+      driver_name: driver_name || 'Driver',
+      driver_phone: driver_phone || '',
+      isActive: !!isActive,
+      timestamp: Date.now()
+    });
+  });
+
+  // order room join karna
   socket.on('tracking:subscribe', (data) => {
     const { order_id } = data;
     if (!order_id) return;
@@ -901,7 +912,6 @@ io.on('connection', (socket) => {
 
     console.log(`👀 Customer ${socket.id} watching Order #${order_id} (${orderRooms[order_id].size} watchers)`);
 
-    // Emit initial location if driver is currently active
     if (activeDrivers[order_id]) {
       socket.emit('tracking:location_update', {
         ...activeDrivers[order_id],
@@ -910,7 +920,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Unsubscribe client from order room
+  // order room leave
   socket.on('tracking:unsubscribe', (data) => {
     const { order_id } = data;
     if (!order_id) return;
@@ -924,19 +934,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Join admin monitoring channel
+  // admin tracking room
   socket.on('admin:subscribe', () => {
     socket.join('admin_tracking');
     console.log(`🔑 Admin ${socket.id} joined admin_tracking`);
 
-    // Send active drivers summary
     socket.emit('admin:active_drivers', {
       drivers: Object.values(activeDrivers),
       count: Object.keys(activeDrivers).length
     });
   });
 
-  // Fetch active drivers request
+  // active drivers get karna
   socket.on('tracking:get_active_drivers', () => {
     socket.emit('admin:active_drivers', {
       drivers: Object.values(activeDrivers),
@@ -944,7 +953,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Handle client disconnection
+  // disconnect event
   socket.on('disconnect', (reason) => {
     console.log(`❌ Client disconnected: ${socket.id} (${reason})`);
 
@@ -965,7 +974,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Periodic cleanup for stale driver updates (runs every 30 seconds)
+// har 30 second me inactive drivers remove karna
 setInterval(() => {
   const now = Date.now();
   const STALE_THRESHOLD = 2 * 60 * 1000;
@@ -984,7 +993,7 @@ setInterval(() => {
   }
 }, 30000);
 
-// Start HTTP and WebSocket server
+// server start
 httpServer.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════╗

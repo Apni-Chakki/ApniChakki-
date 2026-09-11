@@ -67,6 +67,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Weights updated and order scheduled',
+        'new_total' => $new_total,
         'schedule' => $schedule_result
     ]);
 

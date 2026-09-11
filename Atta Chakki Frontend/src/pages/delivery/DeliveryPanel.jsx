@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Phone, Navigation, CheckCircle, Package, LogOut, Wheat, Clock, Truck, Radio, MessageCircle, Link2, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Navigation, CheckCircle, Package, LogOut, Wheat, Clock, Truck, Radio, MessageCircle, Link2, Loader2, AlertTriangle, Power } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/button';
 import { Card } from '../../components/common/card';
@@ -17,6 +17,8 @@ export function DeliveryPanel() {
   const [orders, setOrders] = useState([]);
   const [activeTracking, setActiveTracking] = useState({}); // { [orderId]: watchId }
   const [trackingLinks, setTrackingLinks] = useState({}); // { [orderId]: { url, whatsapp_url } }
+  const [isDriverActive, setIsDriverActive] = useState(true);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -90,18 +92,76 @@ export function DeliveryPanel() {
     setPage(1);
   }, [pageSize]);
 
+  // Fetch driver active / inactive duty status
+  const fetchDriverStatus = useCallback(async () => {
+    try {
+      const driverPhone = user?.phone || user?.username;
+      if (!driverPhone) return;
+      const res = await fetch(`${API_BASE_URL}/toggle_driver_status.php?driver_phone=${encodeURIComponent(driverPhone)}`);
+      const data = await res.json();
+      if (data.success && typeof data.isActive === 'boolean') {
+        setIsDriverActive(data.isActive);
+      }
+    } catch (e) {
+      console.warn("Error fetching driver status:", e);
+    }
+  }, [user]);
+
+  // Toggle driver active / inactive duty status
+  const handleToggleDriverStatus = async () => {
+    setIsTogglingStatus(true);
+    try {
+      const driverPhone = user?.phone || user?.username;
+      const nextStatus = !isDriverActive;
+      const res = await fetch(`${API_BASE_URL}/toggle_driver_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_phone: driverPhone,
+          isActive: nextStatus
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsDriverActive(data.isActive);
+        if (data.isActive) {
+          toast.success(t('🟢 You are now Online (Active). Ready to receive orders!'));
+        } else {
+          toast.warning(t('🔴 You are now Offline (Inactive / Emergency). No new orders will be assigned to you.'));
+        }
+
+        // Emit real-time status update via Socket.io
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('driver:status_changed', {
+            driver_name: user?.name || data.driver_name || 'Driver',
+            driver_phone: driverPhone,
+            isActive: data.isActive
+          });
+        }
+      } else {
+        toast.error(data.message || 'Failed to update status');
+      }
+    } catch (e) {
+      toast.error('Network error updating status');
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
+      fetchDriverStatus();
       loadOrders();
       const interval = setInterval(() => {
         if (!document.hidden) {
           loadOrders();
+          fetchDriverStatus();
         }
       }, 20000); // Check every 20s when tab is active
       return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, page, pageSize]);
+  }, [user, page, pageSize, fetchDriverStatus]);
 
   // Cleanup all tracking on unmount
   useEffect(() => {
@@ -135,8 +195,8 @@ export function DeliveryPanel() {
         // Map them to match the UI props
         const mappedOrders = data.orders.map(order => ({
           ...order,
-          customerName: order.customer_name,
-          phone: order.customer_phone,
+          customerName: order.customer_name || order.full_name || 'Customer',
+          phone: order.customer_phone || order.phone || order.user_phone || '',
           deliveryAddress: order.shipping_address,
           total: parseFloat(order.total_amount || 0),
           paymentStatus: order.payment_status || 'pending',
@@ -148,9 +208,9 @@ export function DeliveryPanel() {
           orderType: order.order_type || 'delivery'
         }));
 
-        // Sort: Out for delivery -> Ready -> Coming for Pickup -> Pickup Assigned -> Processing/Pending
+        // Sort: Out for delivery -> Delivery Assigned -> Ready -> Coming for Pickup -> Pickup Assigned -> Processing/Pending
         const sortedOrders = mappedOrders.sort((a, b) => {
-          const statusOrder = { 'out-for-delivery': 1, 'coming_for_pickup': 2, 'ready': 3, 'pickup_assigned': 4, 'processing': 5, 'pending': 6 };
+          const statusOrder = { 'out-for-delivery': 1, 'delivery_assigned': 2, 'coming_for_pickup': 3, 'ready': 4, 'pickup_assigned': 5, 'processing': 6, 'pending': 7 };
           return (statusOrder[a.status] || 10) - (statusOrder[b.status] || 10);
         });
         
@@ -161,12 +221,12 @@ export function DeliveryPanel() {
     }
   };
 
-  // Send GPS coordinates to backend + Socket.io
+  // rider location send karna
   const sendLocationToServer = useCallback(async (orderId, position) => {
     try {
       const { latitude, longitude, accuracy, speed, heading } = position.coords;
       
-      // 1. Send to PHP backend (database storage)
+      // api pe location update
       await fetch(`${API_BASE_URL}/update_driver_location.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,7 +243,7 @@ export function DeliveryPanel() {
         })
       });
 
-      // 2. Emit via Socket.io for real-time customer updates
+      // socket pe emit
       if (socketRef.current?.connected) {
         socketRef.current.emit('driver:location_update', {
           order_id: orderId,
@@ -200,14 +260,14 @@ export function DeliveryPanel() {
     }
   }, [user]);
 
-  // Start GPS tracking for an order
+  // gps tracking start
   const startGpsTracking = useCallback((orderId) => {
     if (!navigator.geolocation) {
       toast.error(t('GPS not supported on this device'));
       return;
     }
 
-    // Use watchPosition for continuous updates
+    // live position watch
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         sendLocationToServer(orderId, position);
@@ -226,7 +286,7 @@ export function DeliveryPanel() {
 
     setActiveTracking(prev => ({ ...prev, [orderId]: watchId }));
 
-    // Also send location via interval as backup (every 8 seconds)
+    // interval backup
     const intervalId = setInterval(() => {
       getCurrentPositionSafe({ timeout: 8000, maximumAge: 3000 })
         .then((position) => {
@@ -237,9 +297,8 @@ export function DeliveryPanel() {
     trackingIntervals.current[orderId] = intervalId;
   }, [sendLocationToServer, t, getCurrentPositionSafe]);
 
-  // Stop GPS tracking for an order
+  // tracking stop karna
   const stopGpsTracking = useCallback((orderId) => {
-    // Clear watchPosition
     if (activeTracking[orderId]) {
       navigator.geolocation.clearWatch(activeTracking[orderId]);
       setActiveTracking(prev => {
@@ -249,14 +308,13 @@ export function DeliveryPanel() {
       });
     }
 
-    // Clear interval
     if (trackingIntervals.current[orderId]) {
       clearInterval(trackingIntervals.current[orderId]);
       delete trackingIntervals.current[orderId];
     }
   }, [activeTracking]);
 
-  // Generate tracking link via API
+  // tracking link generate karna
   const generateTrackingLink = useCallback(async (order) => {
     try {
       const baseUrl = window.location.origin;
@@ -679,6 +737,13 @@ export function DeliveryPanel() {
             {t('Ready for Pickup')}
           </Badge>
         );
+      case 'delivery_assigned':
+        return (
+          <Badge variant="outline" className={`${base} font-bold bg-blue-50 border-blue-200 text-blue-700`}>
+            <Truck className="h-3.5 w-3.5 shrink-0 text-blue-700" />
+            {t('Ready for Delivery')}
+          </Badge>
+        );
       case 'out-for-delivery':
         return (
           <Badge variant="outline" className={`${base} font-bold animate-pulse bg-indigo-100 border-indigo-200 text-indigo-700`}>
@@ -866,18 +931,44 @@ export function DeliveryPanel() {
   return (
     <div className="min-h-screen bg-secondary/30">
       {/* Header */}
-      <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
-        <div className="container mx-auto flex items-center justify-between">
-          <div>
+      <div className="bg-primary text-primary-foreground p-3 sm:p-4 sticky top-0 z-10 shadow-md">
+        <div className="container mx-auto flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Wheat className="h-6 w-6" />
-              <h1 className="text-xl font-bold">{t("GristMill's Delivery")}</h1>
+              <Wheat className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+              <h1 className="text-lg sm:text-xl font-bold truncate">{t("GristMill's Delivery")}</h1>
             </div>
-            <p className="text-xs text-primary-foreground/80 mt-1">
+            <p className="text-xs text-primary-foreground/80 mt-0.5 truncate">
               {user?.name && `Driver: ${user.name}`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Active / Inactive Duty Toggle Button */}
+            <button
+              type="button"
+              onClick={handleToggleDriverStatus}
+              disabled={isTogglingStatus}
+              title={isDriverActive ? t("Click to go Inactive / Off Duty (Emergency)") : t("Click to go Active / On Duty")}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border cursor-pointer active:scale-95 shadow-sm ${
+                isDriverActive
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/60 ring-2 ring-emerald-400/20'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400/60 ring-2 ring-rose-400/20 animate-pulse'
+              }`}
+            >
+              {isTogglingStatus ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-white shrink-0" />
+              ) : (
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isDriverActive ? 'bg-emerald-300 animate-pulse' : 'bg-rose-200'}`} />
+              )}
+              <span className="hidden md:inline">
+                {isDriverActive ? t('Active (On Duty)') : t('Inactive (Emergency / Off Duty)')}
+              </span>
+              <span className="md:hidden">
+                {isDriverActive ? t('On Duty') : t('Off Duty')}
+              </span>
+            </button>
+
             <LanguageToggle className="text-primary-foreground hover:bg-primary-foreground/20 border-white/20" />
             <Button
               variant="ghost"
@@ -890,6 +981,27 @@ export function DeliveryPanel() {
           </div>
         </div>
       </div>
+
+      {/* Offline / Emergency Warning Banner */}
+      {!isDriverActive && (
+        <div className="bg-rose-50 border-b border-rose-200 px-4 py-2.5 shadow-xs">
+          <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-rose-900">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span>{t('You are currently Offline / Inactive. New orders will not be assigned.')}</span>
+            </div>
+            <Button
+              size="sm"
+              className="h-7 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 shrink-0"
+              onClick={handleToggleDriverStatus}
+              disabled={isTogglingStatus}
+            >
+              {isTogglingStatus ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              {t('Go Online')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {totalItems === 0 ? (
@@ -906,7 +1018,7 @@ export function DeliveryPanel() {
               // isStorePickup = customer comes to shop themselves (no driver needed)
               const isStorePickup = order.orderType === 'pickup';
               const isPickupRequest = ['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0;
-              const isActionable = ['pending', 'processing', 'ready', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status);
+              const isActionable = ['ready', 'delivery_assigned', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup'].includes(order.status);
               const isTracking = !!activeTracking[order.id];
               
               return (
@@ -948,18 +1060,29 @@ export function DeliveryPanel() {
                           )}
                         </div>
 
-                        {/* Customer Avatar & Name */}
+                        {/* Customer Avatar, Name & Mobile Number */}
                         <div className="flex items-center gap-3 mt-1.5">
                           <div className="rounded-full flex items-center justify-center font-bold text-sm shrink-0 border w-10 h-10 min-w-10 min-h-10 bg-gradient-to-br from-slate-50 to-slate-200 border-slate-300 text-slate-600">
                             {order.customerName ? order.customerName.charAt(0).toUpperCase() : 'C'}
                           </div>
-                          <div>
+                          <div className="flex flex-col">
                             <h3 className="font-bold text-base leading-tight m-0 text-slate-800">
                               {order.customerName}
                             </h3>
-                            <p className="text-[11px] font-bold leading-none mt-1 uppercase tracking-wider text-slate-400">
-                              {t('Customer')}
-                            </p>
+                            {order.phone ? (
+                              <a
+                                href={`tel:${order.phone}`}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline mt-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/70 w-fit transition-colors"
+                                title={t('Call Customer')}
+                              >
+                                <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                                <span className="font-mono tracking-wide">{order.phone}</span>
+                              </a>
+                            ) : (
+                              <p className="text-[11px] font-bold leading-none mt-1 uppercase tracking-wider text-slate-400">
+                                {t('Customer')}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

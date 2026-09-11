@@ -33,7 +33,9 @@ $aggSql = "
         MAX(o.created_at) AS last_order_date
     FROM orders o
     JOIN users u ON o.user_id = u.id
-    WHERE o.payment_status IN ('pending','partial') AND o.status <> 'cancelled'
+    WHERE o.payment_status IN ('pending','partial') 
+      AND o.status <> 'cancelled'
+      AND (o.source = 'manual' OR o.payment_method = 'udhaar' OR o.user_id = 1 OR o.user_id IS NULL)
     {$searchSql}
     GROUP BY u.id, u.full_name, u.phone
     HAVING total_debt > 0
@@ -89,6 +91,7 @@ if (!empty($userIds)) {
         WHERE o.user_id IN ($idList)
           AND o.payment_status IN ('pending','partial')
           AND o.status <> 'cancelled'
+          AND (o.source = 'manual' OR o.payment_method = 'udhaar' OR o.user_id = 1 OR o.user_id IS NULL)
         ORDER BY o.created_at ASC
     ";
     $ordersRes = $conn->query($ordersSql);

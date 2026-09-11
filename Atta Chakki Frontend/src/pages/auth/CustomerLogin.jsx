@@ -129,7 +129,10 @@ export function CustomerLogin() {
     }
   };
 
-  const handleContinueAsGuest = () => navigate(from, { replace: true });
+  const handleContinueAsGuest = () => {
+    const target = (from === '/account' || from === '/accounts') ? '/' : from;
+    navigate(target, { replace: true });
+  };
 
   return (
     /* Flex column so Back to Home stays at top, card in middle, dots at bottom */
@@ -322,7 +325,7 @@ export function CustomerLogin() {
               <div className="text-center text-sm" style={{ marginTop: '1rem' }}>
                 <p className="text-muted-foreground">
                   {t("Don't have an account?")}{' '}
-                  <Link to="/signup/customer" className="text-primary hover:underline font-medium">
+                  <Link to="/signup/customer" state={{ from: location.state?.from }} className="text-primary hover:underline font-medium">
                     {t('Sign Up')}
                   </Link>
                 </p>
@@ -358,17 +361,25 @@ export function CustomerLogin() {
 
       {/* Phone Update Modal for Google Login */}
       <AlertDialog open={showPhoneUpdateModal} onOpenChange={setShowPhoneUpdateModal}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('Update Your Phone Number')}</AlertDialogTitle>
-            <AlertDialogDescription>
+        <AlertDialogContent className="border-[#e8decb] bg-[#fffdfa] rounded-2xl shadow-xl max-w-md p-6">
+          <AlertDialogHeader className="text-center sm:text-center flex flex-col items-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100/80 text-amber-800 border border-amber-200 shadow-sm">
+              <Phone className="h-7 w-7" />
+            </div>
+            <AlertDialogTitle className="text-center text-[#3d3020] text-lg font-bold">
+              {t('Update Your Phone Number')}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[#6b5d48] mt-1 text-sm">
               {t('Please update your phone number to proceed with orders!')}
               <br />
-              <span className="text-xs text-muted-foreground mt-2 block">آرڈرز جاری رکھنے کے لیے، برائے مہربانی اپنا فون نمبر درج کریں۔</span>
+              <span className="text-xs text-[#8c785f] mt-2 block font-urdu">آرڈرز جاری رکھنے کے لیے، برائے مہربانی اپنا فون نمبر درج کریں۔</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => { setShowPhoneUpdateModal(false); navigate('/account'); }}>
+          <AlertDialogFooter className="sm:justify-center mt-4">
+            <AlertDialogAction 
+              className="w-full sm:w-auto min-w-[140px] bg-[#8b6f47] hover:bg-[#755c3a] text-white font-semibold px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+              onClick={() => { setShowPhoneUpdateModal(false); navigate('/account'); }}
+            >
               {t('Update Now')}
             </AlertDialogAction>
           </AlertDialogFooter>

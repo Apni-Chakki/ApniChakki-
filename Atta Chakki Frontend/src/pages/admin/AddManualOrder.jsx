@@ -153,13 +153,37 @@ export function AddManualOrder() {
     setCart(newCart);
   };
 
+  const handlePhoneChange = (e) => {
+    let val = e.target.value.replace(/\D/g, ''); // only numeric characters
+    if (val.length > 11) {
+      val = val.slice(0, 11);
+    }
+    setCustomer(prev => ({ ...prev, phone: val }));
+  };
+
   const calculateTotal = () => {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   const handleSubmit = async () => {
-    if (!customer.phone || cart.length === 0) {
-      toast.error(t("Please enter customer phone and add items."));
+    const cleanPhone = (customer.phone || '').trim();
+    if (!cleanPhone) {
+      toast.error(t("Please enter customer phone number."));
+      return;
+    }
+
+    if (!cleanPhone.startsWith('0')) {
+      toast.error(t("Phone number must start with 0 (e.g. 03001234567)."));
+      return;
+    }
+
+    if (cleanPhone.length !== 11) {
+      toast.error(t("Phone number must be exactly 11 digits (e.g. 03001234567)."));
+      return;
+    }
+
+    if (cart.length === 0) {
+      toast.error(t("Please add at least one item to the cart."));
       return;
     }
 
@@ -180,7 +204,7 @@ export function AddManualOrder() {
 
       const payload = {
         name: customer.name,
-        phone: customer.phone.trim(),
+        phone: cleanPhone,
         address: customer.address,
         items: cart,
         total: orderTotal,
@@ -240,8 +264,25 @@ export function AddManualOrder() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>{t('Phone Number')} ({t('Required')})</Label>
-              <Input placeholder="03001234567" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
+              <div className="flex items-center justify-between mb-1">
+                <Label>{t('Phone Number')} ({t('Required')})</Label>
+                <span className={`text-[11px] font-mono ${customer.phone.length === 11 && customer.phone.startsWith('0') ? 'text-emerald-600 font-bold' : 'text-muted-foreground'}`}>
+                  {customer.phone.length}/11
+                </span>
+              </div>
+              <Input 
+                type="tel"
+                placeholder="03001234567" 
+                maxLength={11}
+                value={customer.phone} 
+                onChange={handlePhoneChange} 
+              />
+              {customer.phone && !customer.phone.startsWith('0') && (
+                <p className="text-xs text-red-500 mt-1">{t('Phone number must start with 0 (e.g. 03001234567)')}</p>
+              )}
+              {customer.phone && customer.phone.startsWith('0') && customer.phone.length > 0 && customer.phone.length < 11 && (
+                <p className="text-xs text-amber-600 mt-1">{t('Enter 11 digits')} ({11 - customer.phone.length} {t('remaining')})</p>
+              )}
             </div>
             <div>
               <Label>{t('Full Name')}</Label>
