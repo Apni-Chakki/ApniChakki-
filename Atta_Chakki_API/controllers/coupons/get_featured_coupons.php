@@ -1,29 +1,20 @@
 <?php
-// Get featured/active coupons for homepage display
-include __DIR__ . '/../../config/connect.php';
+// Get featured/active coupons for homepage display with caching
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
+$cache_key = 'featured_coupons';
+$cached = get_api_cache($cache_key, 120);
+if ($cached !== false) {
+    echo $cached;
+    exit;
+}
+
+include __DIR__ . '/../../config/connect.php';
 
 try {
-    // Create coupons table if it doesn't exist
-    $conn->query("CREATE TABLE IF NOT EXISTS coupons (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        code VARCHAR(50) NOT NULL UNIQUE,
-        description VARCHAR(255) NULL,
-        discount_type ENUM('percentage','fixed') NOT NULL DEFAULT 'percentage',
-        discount_value DECIMAL(10,2) NOT NULL DEFAULT 0,
-        min_order_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-        usage_limit INT NULL,
-        used_count INT NOT NULL DEFAULT 0,
-        expiry_date DATETIME NULL,
-        is_active TINYINT(1) NOT NULL DEFAULT 1,
-        is_featured TINYINT(1) NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_code (code),
-        INDEX idx_active_featured (is_active, is_featured)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
     $sql = "SELECT id, code, description, discount_type, discount_value, min_order_amount, expiry_date 
             FROM coupons 
             WHERE is_active = 1 
@@ -48,10 +39,13 @@ try {
         }
     }
     
-    echo json_encode([
+    $response = json_encode([
         'success' => true,
         'coupons' => $coupons
     ]);
+
+    set_api_cache($cache_key, $response);
+    echo $response;
 
 } catch (Exception $e) {
     error_log('Get Featured Coupons Error: ' . $e->getMessage());

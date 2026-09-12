@@ -1,22 +1,23 @@
 <?php
-// get categories controller logic
-include __DIR__ . '/../../config/connect.php';
+// get categories controller logic with pre-connect caching
 require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
 header('Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
-try {
-    $isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
-    $cache_key = 'categories_' . ($isAdmin ? 'admin' : 'public');
+$isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
+$cache_key = 'categories_' . ($isAdmin ? 'admin' : 'public');
 
-    $cached = get_api_cache($cache_key, 300);
-    if ($cached !== false) {
-        http_response_code(200);
-        echo $cached;
-        exit;
-    }
-    
+$cached = get_api_cache($cache_key, 300);
+if ($cached !== false) {
+    http_response_code(200);
+    echo $cached;
+    exit;
+}
+
+include __DIR__ . '/../../config/connect.php';
+
+try {
     if ($isAdmin) {
         $sql = "SELECT id, name, image_url, priority, created_at, is_active FROM categories ORDER BY priority ASC, name ASC";
     } else {

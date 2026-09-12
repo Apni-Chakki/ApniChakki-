@@ -1,23 +1,27 @@
 <?php
-/* 
- * Get products with optional category filter (Optimized with Bulk Batch Queries & Caching)
- * API Endpoint: GET /get_products.php?category=wheat
- */
+/*  API Endpoint: GET /get_products.php?category=wheat */
 
-require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
-header('Cache-Control: no-cache, no-store, must-revalidate');
-header('Pragma: no-cache');
-header('Expires: 0');
+header('Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
+$category = isset($_GET['category']) && trim($_GET['category']) !== '' ? trim($_GET['category']) : null;
+$cache_key = 'products_' . ($category ? preg_replace('/[^a-zA-Z0-9_-]/', '', $category) : 'all');
+
+$cached = get_api_cache($cache_key, 120);
+if ($cached !== false) {
+    http_response_code(200);
+    echo $cached;
+    exit;
+}
+
+require_once __DIR__ . '/../../config/connect.php';
 
 try {
-    $category = isset($_GET['category']) && trim($_GET['category']) !== '' ? trim($_GET['category']) : null;
-    
     if ($category) {
         $sql = "SELECT p.*, c.name as category
-                FROM products p IGNORE INDEX (idx_products_is_active)
+                FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 WHERE c.name = ? AND p.is_active = 1 AND (c.id IS NULL OR c.is_active = 1)
                 ORDER BY p.priority DESC, p.created_at DESC";
@@ -32,7 +36,7 @@ try {
         $result = $stmt->get_result();
     } else {
         $sql = "SELECT p.*, c.name as category
-                FROM products p IGNORE INDEX (idx_products_is_active)
+                FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 WHERE p.is_active = 1 AND (c.id IS NULL OR c.is_active = 1)
                 ORDER BY p.priority DESC, p.created_at DESC";
@@ -143,6 +147,8 @@ try {
         'count' => count($products)
     ]);
     
+    set_api_cache($cache_key, $response_data);
+
     http_response_code(200);
     echo $response_data;
     

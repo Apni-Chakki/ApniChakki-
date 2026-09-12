@@ -156,6 +156,9 @@ export function MapboxPicker({
     if (mapRef.current) return;
 
     let resizeObserver = null;
+    let resizeTimers = [];
+    let handleWinResize = null;
+
     try {
       mapboxgl.accessToken = EFFECTIVE_TOKEN;
 
@@ -217,7 +220,7 @@ export function MapboxPicker({
       }
 
       // Staggered resize calls while parent card/fonts settle layout
-      const resizeTimers = [50, 150, 300, 500, 800, 1200].map(delay =>
+      resizeTimers = [50, 150, 300, 500, 800, 1200].map(delay =>
         setTimeout(() => {
           if (mapRef.current) {
             mapRef.current.resize();
@@ -225,7 +228,7 @@ export function MapboxPicker({
         }, delay)
       );
 
-      const handleWinResize = () => {
+      handleWinResize = () => {
         if (mapRef.current) mapRef.current.resize();
       };
       window.addEventListener('resize', handleWinResize);
@@ -313,8 +316,12 @@ export function MapboxPicker({
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
-      resizeTimers.forEach(clearTimeout);
-      window.removeEventListener('resize', handleWinResize);
+      if (Array.isArray(resizeTimers)) {
+        resizeTimers.forEach(clearTimeout);
+      }
+      if (handleWinResize) {
+        window.removeEventListener('resize', handleWinResize);
+      }
 
       if (mapRef.current) {
         mapRef.current.remove();

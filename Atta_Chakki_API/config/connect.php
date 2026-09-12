@@ -36,94 +36,49 @@ if ($is_localhost) {
     $port = isset($envVars['DB_LOCAL_PORT']) ? (int)$envVars['DB_LOCAL_PORT'] : 3306;
 } else {
     // Production Database Configuration
-    $urlStr = getenv("JAWSDB_URL") ?: getenv("CLEARDB_DATABASE_URL");
-    $url = $urlStr ? parse_url($urlStr) : null;
-    if ($url && isset($url["host"])) {
-        $servername = "p:" . $url["host"];
-        $username = $url["user"];
-        $password = $url["pass"];
-        $dbname = substr($url["path"], 1);
-        $port = $url["port"] ?? 3306;
-    } else {
-        $servername = "p:" . (getenv('DB_HOST') ?: ($envVars['DB_PROD_HOST'] ?? "localhost"));
+    if (getenv('DB_HOST') || !empty($envVars['DB_PROD_HOST'])) {
+        $servername = getenv('DB_HOST') ?: ($envVars['DB_PROD_HOST'] ?? "localhost");
         $username = getenv('DB_USER') ?: ($envVars['DB_PROD_USER'] ?? "root");
         $password = getenv('DB_PASS') ?: ($envVars['DB_PROD_PASS'] ?? "");
         $dbname = getenv('DB_NAME') ?: ($envVars['DB_PROD_NAME'] ?? "");
         $port = getenv('DB_PORT') ? (int)getenv('DB_PORT') : (isset($envVars['DB_PROD_PORT']) ? (int)$envVars['DB_PROD_PORT'] : 3306);
+    } else {
+        $urlStr = getenv("JAWSDB_URL") ?: getenv("CLEARDB_DATABASE_URL");
+        $url = $urlStr ? parse_url($urlStr) : null;
+        if ($url && isset($url["host"])) {
+            $servername = "p:" . $url["host"];
+            $username = $url["user"];
+            $password = $url["pass"];
+            $dbname = substr($url["path"], 1);
+            $port = $url["port"] ?? 3306;
+        } else {
+            $servername = "localhost";
+            $username = "root";
+            $password = "";
+            $dbname = "atta_chakki";
+            $port = 3306;
+        }
     }
 }
 
 try {
-    $conn = new mysqli($servername, $username, $password, $dbname, $port);
+    $use_ssl = ($port == 4000) || (strpos($servername, 'tidbcloud.com') !== false) || (getenv('DB_SSL') === 'true');
+    $conn = mysqli_init();
     
-    if ($conn->connect_error) {
-        throw new Exception("Database Connection Failed: " . $conn->connect_error);
+    if ($use_ssl) {
+        $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
+        $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+        $clean_host = preg_replace('/^p:/', '', $servername);
+        $connected = @$conn->real_connect($clean_host, $username, $password, $dbname, $port, NULL, MYSQLI_CLIENT_SSL);
+    } else {
+        $connected = @$conn->real_connect($servername, $username, $password, $dbname, $port);
+    }
+    
+    if (!$connected || $conn->connect_error) {
+        throw new Exception("Database Connection Failed: " . ($conn->connect_error ?: mysqli_connect_error()));
     }
     
     $conn->set_charset("utf8mb4");
-    
-    // Auto-create customization tables if missing
-    $conn->query("CREATE TABLE IF NOT EXISTS product_customizations (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        product_id INT NOT NULL,
-        option_name VARCHAR(100) NOT NULL,
-        option_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-        sort_order INT NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-    $conn->query("CREATE TABLE IF NOT EXISTS order_item_customizations (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        order_item_id INT NOT NULL,
-        option_name VARCHAR(100) NOT NULL,
-        option_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-        FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-    // Ensure order_items has rental and pricing columns
-    $order_items_cols = [
-        'original_price' => 'DECIMAL(10,2) DEFAULT NULL',
-        'is_rental' => 'TINYINT(1) DEFAULT 0',
-        'rental_days' => 'INT(11) DEFAULT NULL',
-        'rental_start_date' => 'DATE DEFAULT NULL',
-        'rental_price_per_day' => 'DECIMAL(10,2) DEFAULT NULL',
-        'security_deposit' => 'DECIMAL(10,2) DEFAULT NULL',
-        'late_penalty_per_day' => 'DECIMAL(10,2) DEFAULT NULL'
-    ];
-    foreach ($order_items_cols as $c_name => $c_def) {
-        $c_chk = $conn->query("SHOW COLUMNS FROM `order_items` LIKE '$c_name'");
-        if ($c_chk && $c_chk->num_rows === 0) {
-            $conn->query("ALTER TABLE `order_items` ADD COLUMN `$c_name` $c_def");
-        }
-    }
-
-    // Auto-create business_accounts table if missing
-    $conn->query("CREATE TABLE IF NOT EXISTS business_accounts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        account_name VARCHAR(150) NOT NULL DEFAULT 'Suchi Chakki',
-        bank_name VARCHAR(100) NOT NULL DEFAULT 'Meezan Bank',
-        account_number VARCHAR(100) NOT NULL DEFAULT '0123-4567890',
-        iban VARCHAR(100) NOT NULL DEFAULT 'PK00 MEZN 0000 0000 0000 0000',
-        balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        is_primary TINYINT(1) NOT NULL DEFAULT 1,
-        is_active TINYINT(1) NOT NULL DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-    // Ensure iban column exists if table existed previously
-    $check_iban = $conn->query("SHOW COLUMNS FROM business_accounts LIKE 'iban'");
-    if ($check_iban && $check_iban->num_rows === 0) {
-        $conn->query("ALTER TABLE business_accounts ADD COLUMN iban VARCHAR(100) NOT NULL DEFAULT 'PK00 MEZN 0000 0000 0000 0000' AFTER account_number");
-    }
-
-    // Insert default business account row if empty
-    $check_rows = $conn->query("SELECT id FROM business_accounts LIMIT 1");
-    if ($check_rows && $check_rows->num_rows === 0) {
-        $conn->query("INSERT INTO business_accounts (account_name, bank_name, account_number, iban, balance, is_primary, is_active) VALUES ('Suchi Chakki', 'Meezan Bank', '0123-4567890', 'PK00 MEZN 0000 0000 0000 0000', 0.00, 1, 1)");
-    }
-    
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     
 } catch (Exception $e) {
