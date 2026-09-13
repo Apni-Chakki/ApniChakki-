@@ -210,7 +210,19 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
       currentPrice = 0;
     }
   } else if (hasCustomizations) {
-    currentPrice = effectiveCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0), 0);
+    const pricingMode = service.customization_pricing_mode || 'additive';
+    const selectedIndices = Object.keys(selectedOptions).filter(i => selectedOptions[i]);
+    
+    if (pricingMode === 'average') {
+      if (selectedIndices.length > 0) {
+        const sum = selectedIndices.reduce((acc, i) => acc + (parseFloat(effectiveCustomizations[i]?.option_price) || 0), 0);
+        currentPrice = Math.round(sum / selectedIndices.length);
+      } else {
+        currentPrice = 0;
+      }
+    } else {
+      currentPrice = effectiveCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0), 0);
+    }
   }
 
   // Apply discount on top of computed price
@@ -731,6 +743,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
             {hasCustomizations && effectiveCustomizations.length > 0 && !isCustomMix && (() => {
               const selectedCount = Object.values(selectedOptions).filter(Boolean).length;
               const noneSelected = selectedCount === 0;
+              const isAvgMode = service.customization_pricing_mode === 'average';
               return (
                 <button
                   type="button"
@@ -738,21 +751,27 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                   className={`mt-3 w-full p-3 rounded-xl border flex items-center justify-between transition-colors text-left shadow-sm ${
                     noneSelected
                       ? 'bg-orange-50/40 border-orange-200 hover:bg-orange-100/40'
-                      : 'bg-orange-50/60 border-orange-200 hover:bg-orange-100/40'
+                      : isAvgMode
+                        ? 'bg-emerald-50/60 border-emerald-200 hover:bg-emerald-100/40'
+                        : 'bg-orange-50/60 border-orange-200 hover:bg-orange-100/40'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse shrink-0" />
+                    <div className={`h-1.5 w-1.5 rounded-full animate-pulse shrink-0 ${isAvgMode ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">{t("Service Customization")}</p>
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${isAvgMode ? 'text-emerald-800' : 'text-orange-800'}`}>
+                        {isAvgMode ? t("Mix Items & Rate") : t("Service Customization")}
+                      </p>
                       <p className={`text-[10px] mt-0.5 truncate ${noneSelected ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
                         {noneSelected
-                          ? `⚠ ${t("Please select at least one service")}`
-                          : `${selectedCount} ${t('selected')} • ${t('Tap to edit')}`}
+                          ? `⚠ ${t("Please select at least one item")}`
+                          : isAvgMode
+                            ? `${selectedCount} ${t('items included')} • Rs. ${Math.round(currentPrice)}/${tDynamic(isDualUnit ? 'kg' : displayUnit)}`
+                            : `${selectedCount} ${t('selected')} • ${t('Tap to edit')}`}
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-orange-600 shrink-0" />
+                  <ChevronRight className={`h-4 w-4 shrink-0 ${isAvgMode ? 'text-emerald-600' : 'text-orange-600'}`} />
                 </button>
               );
             })()}
@@ -1002,49 +1021,66 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
       {/* Service Customization Modal */}
       <Dialog open={showCustomizationsModal} onOpenChange={setShowCustomizationsModal}>
         <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
-          <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-slate-800 text-lg font-black">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-              <span className="truncate text-orange-800">{t("Service Customization")}</span>
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium text-xs pt-1">
-              {t("Select the services you want")}
-            </DialogDescription>
-          </DialogHeader>
+          {(() => {
+            const isAvgMode = service.customization_pricing_mode === 'average';
+            const selectedCount = Object.values(selectedOptions).filter(Boolean).length;
+            const unitText = tDynamic(isDualUnit ? 'kg' : displayUnit);
+            return (
+              <>
+                <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
+                  <DialogTitle className="flex items-center gap-2 text-slate-800 text-lg font-black">
+                    <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isAvgMode ? 'bg-emerald-500' : 'bg-orange-500'}`} />
+                    <span className={`truncate ${isAvgMode ? 'text-emerald-800' : 'text-orange-800'}`}>
+                      {isAvgMode ? t("Product Items & Rates") : t("Service Customization")}
+                    </span>
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-500 font-medium text-xs pt-1">
+                    {isAvgMode ? t("Choose which items to include in this product:") : t("Select the services you want")}
+                  </DialogDescription>
+                </DialogHeader>
 
-          <div className="flex flex-col gap-2.5 overflow-y-auto min-h-0">
-            {effectiveCustomizations.map((cust, idx) => (
-              <div key={cust.id || idx} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${selectedOptions[idx] ? 'bg-orange-100/60 border-orange-200' : 'bg-white border-orange-100'}`}>
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id={`cust-modal-${service.id}-${idx}`}
-                    checked={!!selectedOptions[idx]}
-                    onCheckedChange={() => toggleOption(idx)}
-                    className="checkbox-orange border-orange-500 bg-white"
-                  />
-                  <Label htmlFor={`cust-modal-${service.id}-${idx}`} className="text-sm font-bold text-orange-900 cursor-pointer select-none">{t(cust.option_name)}</Label>
+                <div className="flex flex-col gap-2.5 overflow-y-auto min-h-0">
+                  {effectiveCustomizations.map((cust, idx) => (
+                    <div key={cust.id || idx} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${selectedOptions[idx] ? (isAvgMode ? 'bg-emerald-50/70 border-emerald-200' : 'bg-orange-100/60 border-orange-200') : 'bg-white border-slate-100'}`}>
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id={`cust-modal-${service.id}-${idx}`}
+                          checked={!!selectedOptions[idx]}
+                          onCheckedChange={() => toggleOption(idx)}
+                          className={isAvgMode ? 'checkbox-emerald border-emerald-500 bg-white' : 'checkbox-orange border-orange-500 bg-white'}
+                        />
+                        <Label htmlFor={`cust-modal-${service.id}-${idx}`} className={`text-sm font-bold cursor-pointer select-none ${isAvgMode ? 'text-emerald-950' : 'text-orange-900'}`}>{t(cust.option_name)}</Label>
+                      </div>
+                      <span className={`text-xs font-bold bg-white px-2.5 py-1 rounded-full border ${isAvgMode ? 'text-emerald-800 border-emerald-200' : 'text-orange-700 border-orange-100'}`}>
+                        Rs. {cust.option_price} {isAvgMode ? `/${unitText}` : ''}
+                      </span>
+                    </div>
+                  ))}
+
+                  {selectedCount === 0 && (
+                    <p className="text-xs text-red-500 font-bold text-center italic mt-1">
+                      ⚠ {isAvgMode ? t("Please select at least one item") : t("Please select at least one service")}
+                    </p>
+                  )}
+
+                  <div className={`flex items-center justify-between text-xs rounded-xl px-3 py-2.5 mt-2 border ${isAvgMode ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
+                    <span className="font-semibold text-slate-700">
+                      {isAvgMode ? `${t('Calculated Rate')} (${selectedCount} ${t('items included')}):` : t('Total')}
+                    </span>
+                    <span className={`font-black text-sm ${isAvgMode ? 'text-emerald-800' : 'text-orange-700'}`}>
+                      Rs. {Math.round(parseFloat(currentPrice) || 0)} {isAvgMode ? `/${unitText}` : ''}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-orange-700 bg-white px-2 py-0.5 rounded-full border border-orange-100">Rs. {cust.option_price}</span>
-              </div>
-            ))}
 
-            {Object.values(selectedOptions).every(v => !v) && (
-              <p className="text-xs text-red-500 font-bold text-center italic mt-1">
-                ⚠ {t("Please select at least one service")}
-              </p>
-            )}
-
-            <div className="flex items-center justify-between text-xs bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 mt-2">
-              <span className="font-semibold text-slate-600">{t('Total')}</span>
-              <span className="font-black text-orange-700">Rs. {Math.round(parseFloat(currentPrice) || 0)}</span>
-            </div>
-          </div>
-
-          <DialogFooter className="shrink-0 pt-2 border-t border-slate-100">
-            <Button onClick={() => setShowCustomizationsModal(false)} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl">
-              {t('Done')}
-            </Button>
-          </DialogFooter>
+                <DialogFooter className="shrink-0 pt-2 border-t border-slate-100">
+                  <Button onClick={() => setShowCustomizationsModal(false)} className={`w-full font-bold rounded-xl text-white ${isAvgMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                    {t('Done')}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

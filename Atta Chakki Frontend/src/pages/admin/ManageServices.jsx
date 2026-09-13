@@ -30,6 +30,7 @@ export function ManageServices() {
     imageUrl: '',
     category: '',
     has_customizations: false,
+    customization_pricing_mode: 'average',
     customizations: [],
     track_inventory: true,
     stock_quantity: '100',
@@ -63,10 +64,18 @@ export function ManageServices() {
   // Auto-calculate total price from customizations
   useEffect(() => {
     if (formData.has_customizations && formData.customizations.length > 0) {
-      const total = formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0);
-      setFormData(prev => ({ ...prev, price: total.toString() }));
+      if (formData.customization_pricing_mode === 'average') {
+        const valid = formData.customizations.filter(c => parseFloat(c.option_price) > 0);
+        if (valid.length > 0) {
+          const avg = valid.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0) / valid.length;
+          setFormData(prev => ({ ...prev, price: Math.round(avg).toString() }));
+        }
+      } else {
+        const total = formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0);
+        setFormData(prev => ({ ...prev, price: total.toString() }));
+      }
     }
-  }, [formData.customizations, formData.has_customizations]);
+  }, [formData.customizations, formData.has_customizations, formData.customization_pricing_mode]);
 
   const [imageFile, setImageFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -211,6 +220,7 @@ export function ManageServices() {
       image: formData.imageUrl,
       category: formData.category,
       is_grinding_service: formData.has_customizations ? 1 : 0,
+      customization_pricing_mode: formData.customization_pricing_mode || 'additive',
       cleaning_price: 0,
       grinding_price: 0,
       track_inventory: formData.track_inventory ? 1 : 0,
@@ -311,6 +321,7 @@ export function ManageServices() {
       imageUrl: service.image || service.image_url || service.imageUrl || '',
       category: service.category || service.category_name || (categories.length > 0 ? categories[0].name : ''),
       has_customizations: hasCust && !(service.is_custom_mix === 1 || service.is_custom_mix === '1' || service.is_custom_mix === true),
+      customization_pricing_mode: service.customization_pricing_mode || (service.unit === 'kg' && fallbackCusts.length > 2 ? 'average' : 'additive'),
       customizations: fallbackCusts,
       track_inventory: service.track_inventory === 1 || service.track_inventory === true,
       stock_quantity: (service.stock_quantity ?? 100).toString(),
@@ -437,6 +448,7 @@ export function ManageServices() {
       name: '', price: '', unit: 'kg', description: '', imageUrl: '',
       category: categories.length > 0 ? categories[0].name : '',
       has_customizations: false,
+      customization_pricing_mode: 'average',
       customizations: [],
       track_inventory: true,
       stock_quantity: '100',
@@ -513,7 +525,13 @@ export function ManageServices() {
               <div>
                 <Label htmlFor="price">Price (Rs) *</Label>
                 <Input id="price" type="number" step="0.01" placeholder="e.g., 10" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} disabled={isSaving || formData.has_customizations} />
-                {formData.has_customizations && <p className="text-[10px] text-muted-foreground mt-1">⚡ Auto-calculated from customizations</p>}
+                {formData.has_customizations && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    ⚡ {formData.customization_pricing_mode === 'average'
+                      ? `Auto-calculated average rate: Rs. ${formData.price || 0} / ${formData.unit || 'kg'}`
+                      : 'Auto-calculated sum from customizations'}
+                  </p>
+                )}
               </div>
             </div>
             
@@ -707,46 +725,101 @@ export function ManageServices() {
               </div>
 
               {formData.has_customizations && !formData.is_custom_mix && (
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2 space-y-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-bold text-primary">Customization Options</p>
-                    <Button type="button" size="sm" variant="outline" onClick={addCustomization} disabled={isSaving} className="w-full sm:w-auto">
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2 space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-primary/10">
+                    <div>
+                      <p className="text-sm font-bold text-primary">Customization Options / اجزاء کی تقسیم</p>
+                      <p className="text-[11px] text-muted-foreground">Select how product price should be calculated from items</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-primary/20 shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, customization_pricing_mode: 'average' }))}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                          formData.customization_pricing_mode === 'average'
+                            ? 'bg-primary text-white shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Price is the average of items included (for multigrain flour or mixed products)"
+                      >
+                        ⚖️ Divided Items (Average /{formData.unit || 'kg'})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, customization_pricing_mode: 'additive' }))}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                          formData.customization_pricing_mode !== 'average'
+                            ? 'bg-primary text-white shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Price is sum of selected options (for services like cleaning + grinding)"
+                      >
+                        ➕ Add-on Services (Sum)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-foreground">
+                      {formData.customization_pricing_mode === 'average'
+                        ? `Product Items & Rates per ${formData.unit || 'kg'}:`
+                        : 'Service Options & Fees:'}
+                    </p>
+                    <Button type="button" size="sm" variant="outline" onClick={addCustomization} disabled={isSaving}>
                       <Plus className="h-3 w-3 mr-1" /> Add Option
                     </Button>
                   </div>
 
                   {formData.customizations.map((cust, idx) => (
-                    <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center p-3 bg-white rounded-lg border border-border shadow-sm">
-                      <div className="flex items-center gap-2 sm:contents">
-                        <GripVertical className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
-                        <Input
-                          placeholder="Option name (e.g. Cleaning, Grinding, Roasting...)"
-                          value={cust.option_name}
-                          onChange={(e) => updateCustomization(idx, 'option_name', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm flex-1 min-w-0 sm:flex-1"
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomization(idx)} disabled={isSaving} className="sm:hidden shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg border border-border shadow-sm">
+                      <GripVertical className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
+                      <Input
+                        placeholder={formData.customization_pricing_mode === 'average' ? "Item name (e.g. Wheat Flour, Barley Flour...)" : "Option name (e.g. Cleaning, Grinding...)"}
+                        value={cust.option_name}
+                        onChange={(e) => updateCustomization(idx, 'option_name', e.target.value)}
+                        disabled={isSaving}
+                        className="text-sm flex-1 min-w-0"
+                      />
                       <Input
                         type="number"
-                        placeholder="Rs."
+                        placeholder={formData.customization_pricing_mode === 'average' ? `Rs. / ${formData.unit || 'kg'}` : "Rs."}
                         value={cust.option_price}
                         onChange={(e) => updateCustomization(idx, 'option_price', e.target.value)}
                         disabled={isSaving}
-                        className="text-sm w-full sm:w-28"
+                        className="text-sm w-28 sm:w-32 shrink-0"
                       />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomization(idx)} disabled={isSaving} className="hidden sm:flex shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomization(idx)}
+                        disabled={isSaving}
+                        title="Delete option"
+                        className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600 shrink-0 stroke-[2.5]" />
+                      </button>
                     </div>
                   ))}
 
-                  <p className="text-xs text-muted-foreground">
-                    Total Price (all options selected): Rs. {formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0)}
-                  </p>
+                  {formData.customization_pricing_mode === 'average' ? (
+                    <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                      <div>
+                        <span className="font-bold text-emerald-800">🌾 Overall Product Rate (all items included):</span>
+                        <p className="text-[11px] text-emerald-600 mt-0.5">
+                          When a customer orders, the rate is calculated based on the items they include in their mix.
+                        </p>
+                      </div>
+                      <span className="text-sm font-extrabold text-emerald-800 shrink-0 bg-white px-3 py-1 rounded-md border border-emerald-300">
+                        Rs. {(() => {
+                          const valid = formData.customizations.filter(c => parseFloat(c.option_price) > 0);
+                          return valid.length > 0 ? Math.round(valid.reduce((sum, c) => sum + parseFloat(c.option_price), 0) / valid.length) : 0;
+                        })()} / {formData.unit || 'kg'}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Total Price (all options selected): Rs. {formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0)}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -760,51 +833,50 @@ export function ManageServices() {
                   </div>
 
                   {formData.mix_items.map((item, idx) => (
-                    <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-end p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                      <div className="flex items-end gap-2 sm:contents">
-                        <GripVertical className="hidden sm:block h-4 w-4 text-purple-300 shrink-0 mb-2.5" />
-                        <div className="flex-1 min-w-0 sm:flex-1">
-                          <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
-                          <Input
-                            placeholder="e.g. Wheat, Chana, Bajra"
-                            value={item.item_name}
-                            onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
-                            disabled={isSaving}
-                            className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                          />
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMixItem(idx)} disabled={isSaving} className="sm:hidden shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 mb-1">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    <div key={idx} className="flex items-end gap-2 p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
+                      <GripVertical className="hidden sm:block h-4 w-4 text-purple-300 shrink-0 mb-2.5" />
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
+                        <Input
+                          placeholder="e.g. Wheat, Chana, Bajra"
+                          value={item.item_name}
+                          onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
+                          disabled={isSaving}
+                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                        />
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:contents">
-                        <div className="min-w-0 sm:w-24">
-                          <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
-                          <Input
-                            type="number"
-                            placeholder="Rs."
-                            value={item.price_per_kg}
-                            onChange={(e) => updateMixItem(idx, 'price_per_kg', e.target.value)}
-                            disabled={isSaving}
-                            className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                          />
-                        </div>
-                        <div className="min-w-0 sm:w-24">
-                          <Label className="text-[10px] text-purple-600 mb-1 block">Default Ratio</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            placeholder="e.g. 1"
-                            value={item.default_ratio}
-                            onChange={(e) => updateMixItem(idx, 'default_ratio', e.target.value)}
-                            disabled={isSaving}
-                            className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                          />
-                        </div>
+                      <div className="w-24 sm:w-28 shrink-0">
+                        <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
+                        <Input
+                          type="number"
+                          placeholder="Rs."
+                          value={item.price_per_kg}
+                          onChange={(e) => updateMixItem(idx, 'price_per_kg', e.target.value)}
+                          disabled={isSaving}
+                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                        />
                       </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMixItem(idx)} disabled={isSaving} className="hidden sm:flex shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 mb-1">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="w-16 sm:w-20 shrink-0">
+                        <Label className="text-[10px] text-purple-600 mb-1 block">Ratio</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="e.g. 1"
+                          value={item.default_ratio}
+                          onChange={(e) => updateMixItem(idx, 'default_ratio', e.target.value)}
+                          disabled={isSaving}
+                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeMixItem(idx)}
+                        disabled={isSaving}
+                        title="Delete ingredient"
+                        className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 mb-0.5"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600 shrink-0 stroke-[2.5]" />
+                      </button>
                     </div>
                   ))}
                   

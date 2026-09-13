@@ -133,6 +133,7 @@ try {
             'is_custom_mix' => (int)($row['is_custom_mix'] ?? 0),
             'track_inventory' => (int)($row['track_inventory'] ?? 1),
             'is_grinding_service' => (int)($row['is_grinding_service'] ?? 0),
+            'customization_pricing_mode' => $row['customization_pricing_mode'] ?? 'additive',
             'cleaning_price' => floatval($row['cleaning_price'] ?? 0),
             'grinding_price' => floatval($row['grinding_price'] ?? 0),
             'min_stock_level' => floatval($row['min_stock_level'] ?? 0),

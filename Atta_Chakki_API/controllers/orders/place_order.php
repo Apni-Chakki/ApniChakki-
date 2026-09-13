@@ -57,7 +57,7 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
     // total calculate ho raha hai products ka
     foreach($cart_items as $item) {
         $pid = $item->id;
-        $query = $conn->prepare("SELECT name, price, discount_type, discount_value, unit, is_grinding_service, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty FROM products WHERE id = ?");
+        $query = $conn->prepare("SELECT name, price, discount_type, discount_value, unit, is_grinding_service, customization_pricing_mode, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty FROM products WHERE id = ?");
         $query->bind_param("i", $pid);
         $query->execute();
         $res = $query->get_result();
@@ -93,10 +93,16 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             }
 
             if (!empty($selected_customizations)) {
-                // customization prices add ho rahi hain
+                $pricing_mode = $row['customization_pricing_mode'] ?? 'additive';
                 $base_price = 0;
+                $opt_count = 0;
                 foreach ($selected_customizations as $sc) {
-                    $base_price += floatval($sc->option_price ?? 0);
+                    $opt_p = floatval($sc->option_price ?? 0);
+                    $base_price += $opt_p;
+                    if ($opt_p > 0) $opt_count++;
+                }
+                if ($pricing_mode === 'average' && $opt_count > 0) {
+                    $base_price = round($base_price / $opt_count, 2);
                 }
                 if ($base_price <= 0) $base_price = floatval($row['price']);
             } else if ($is_grinding_service) {

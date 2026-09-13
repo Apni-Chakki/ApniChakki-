@@ -106,6 +106,7 @@ try {
         $row['is_custom_mix'] = (int)($row['is_custom_mix'] ?? 0);
         $row['track_inventory'] = (int)($row['track_inventory'] ?? 1);
         $row['min_stock_level'] = floatval($row['min_stock_level'] ?? 0);
+        $row['customization_pricing_mode'] = $row['customization_pricing_mode'] ?? 'additive';
         $row['customizations'] = $customizations_map[$product_id] ?? [];
         $row['mix_items'] = $mix_items_map[$product_id] ?? [];
 
