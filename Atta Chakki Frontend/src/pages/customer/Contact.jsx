@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Phone, Mail, MapPin, Clock } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Loader2 } from 'lucide-react';
 import { Card } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -29,6 +29,7 @@ export function Contact() {
     subject: 'General Inquiry',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -48,6 +49,8 @@ export function Contact() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const response = await fetch(`${API_BASE_URL}/submit_contact.php`, {
         method: 'POST',
@@ -63,6 +66,8 @@ export function Contact() {
       }
     } catch (error) {
       toast.error('Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -209,8 +214,9 @@ export function Contact() {
                 />
               </div>
 
-              <Button type="submit" size="lg" className="w-full">
-                {t('Send Message')}
+              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                {isSubmitting ? t('Sending...') : t('Send Message')}
               </Button>
             </form>
           </Card>

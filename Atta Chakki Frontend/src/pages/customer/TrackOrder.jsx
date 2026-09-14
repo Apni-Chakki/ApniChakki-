@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Package, Clock, CheckCircle, XCircle, Truck, Loader2, ChevronDown, ChevronUp, MapPin, Phone, CreditCard, User, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
@@ -16,7 +16,7 @@ import {
 import { Textarea } from '../../components/common/textarea';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { API_BASE_URL } from '../../config';
 
@@ -69,7 +69,8 @@ const avatarCircle = {
 export function TrackOrder() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [orderId, setOrderId] = useState('');
+  const location = useLocation();
+  const [orderId, setOrderId] = useState(() => location.state?.orderId ? String(location.state.orderId) : '');
   const [orders, setOrders] = useState([]);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -86,8 +87,8 @@ export function TrackOrder() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSearch = async () => {
-    const term = orderId.trim();
+  const handleSearch = async (termOverride) => {
+    const term = (termOverride ?? orderId).trim();
     if (!term) return;
     setLoading(true);
     setNotFound(false);
@@ -135,6 +136,16 @@ export function TrackOrder() {
       setLoading(false);
     }
   };
+
+  const autoSearchedRef = useRef(false);
+  useEffect(() => {
+    const incomingOrderId = location.state?.orderId;
+    if (incomingOrderId && user && !autoSearchedRef.current) {
+      autoSearchedRef.current = true;
+      handleSearch(String(incomingOrderId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleCancelOrder = async () => {
     if (!cancelOrder) return;
@@ -375,7 +386,7 @@ export function TrackOrder() {
                     />
                   </div>
                   <Button
-                    onClick={handleSearch}
+                    onClick={() => handleSearch()}
                     disabled={loading || !orderId.trim()}
                     className="font-bold rounded-lg"
                     style={{ height: '2.875rem', paddingLeft: '1.75rem', paddingRight: '1.75rem', flexShrink: 0 }}

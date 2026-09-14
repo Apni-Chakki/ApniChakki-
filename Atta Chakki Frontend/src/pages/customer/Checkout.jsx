@@ -148,6 +148,7 @@ export function Checkout() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -1041,6 +1042,7 @@ export function Checkout() {
   };
 
   const handlePlaceOrder = () => {
+    if (isPlacingOrder) return;
     if (!user) {
       toast.error(t('Please log in to place an order'));
       navigate('/login/customer', { state: { from: location } });
@@ -1259,6 +1261,8 @@ export function Checkout() {
   };
 
   const completeOrder = async (paymentStatus, transactionId, paidAmount = 0) => {
+    if (isPlacingOrder) return;
+    setIsPlacingOrder(true);
     // If there are TBD items, and user is paying the current total, it must be 'partial'
     // because more weight/price will be added later.
     let finalStatus = paymentStatus;
@@ -1356,6 +1360,8 @@ export function Checkout() {
     } catch (error) {
       console.error("Order Error:", error);
       toast.error(t("Network error. Check your internet or server."));
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -2015,9 +2021,18 @@ export function Checkout() {
         className="w-full h-12 text-base font-bold shadow-lg"
         size="lg"
         onClick={handlePlaceOrder}
-        disabled={isCartEmpty || isDeliveryInvalid}
+        disabled={isCartEmpty || isDeliveryInvalid || isPlacingOrder}
       >
-        {paymentMethod === 'cash' || isTbdOrder ? t('Place Order') : t('Proceed to Payment')} {isTbdOrder ? '(TBD)' : `(Rs. ${grandTotal})`}{(hasPendingWeightItem && !isTbdOrder) && " + TBD"}
+        {isPlacingOrder ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            {t('Placing Order...')}
+          </>
+        ) : (
+          <>
+            {paymentMethod === 'cash' || isTbdOrder ? t('Place Order') : t('Proceed to Payment')} {isTbdOrder ? '(TBD)' : `(Rs. ${grandTotal})`}{(hasPendingWeightItem && !isTbdOrder) && " + TBD"}
+          </>
+        )}
       </Button>
 
       {/* PAYMENT DIALOG */}
