@@ -9,12 +9,14 @@ if (!isset($data['name']) || !isset($data['email']) || !isset($data['message']))
     exit;
 }
 
-$name = $conn->real_escape_string($data['name']);
-$email = $conn->real_escape_string($data['email']);
-$message = $conn->real_escape_string($data['message']);
+$name = trim($data['name']);
+$email = trim($data['email']);
+$phone = isset($data['phone']) && trim($data['phone']) !== '' ? trim($data['phone']) : null;
+$subject = (isset($data['subject']) && trim($data['subject']) !== '') ? trim($data['subject']) : 'General Inquiry';
+$message = trim($data['message']);
 
-$stmt = $conn->prepare("INSERT INTO contact_messages (name, email, message) VALUES (?, ?, ?)");
-$stmt->bind_param("sss", $name, $email, $message);
+$stmt = $conn->prepare("INSERT INTO contact_messages (name, email, phone, subject, message) VALUES (?, ?, ?, ?, ?)");
+$stmt->bind_param("sssss", $name, $email, $phone, $subject, $message);
 
 if ($stmt->execute()) {
     echo json_encode(["success" => true, "message" => "Message sent successfully! We will get back to you soon."]);

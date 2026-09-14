@@ -1,8 +1,8 @@
 <?php
-// cloudinary upload helper functions
+// Cloudinary Image Service Helper Functions
 require_once __DIR__ . '/../config/cloudinary.php';
 
-// uploading image to cloudinary
+// Upload image file to Cloudinary cloud storage
 function uploadToCloudinary($file, $folder = 'products') {
     if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
         return [
@@ -28,9 +28,14 @@ function uploadToCloudinary($file, $folder = 'products') {
     $folderPath = CLOUDINARY_FOLDERS[$folder] ?? CLOUDINARY_FOLDERS['other'];
     $cloudinaryUrl = CLOUDINARY_BASE_URL . '/image/upload';
     
+    $timestamp = time();
+    $signature = sha1('folder=' . $folderPath . '&timestamp=' . $timestamp . CLOUDINARY_API_SECRET);
+    
     $postFields = [
         'file' => new CURLFile($file['tmp_name'], $file['type'], $file['name']),
-        'upload_preset' => CLOUDINARY_UPLOAD_PRESET,
+        'api_key' => CLOUDINARY_API_KEY,
+        'timestamp' => $timestamp,
+        'signature' => $signature,
         'folder' => $folderPath,
         'resource_type' => 'auto'
     ];
@@ -42,7 +47,8 @@ function uploadToCloudinary($file, $folder = 'products') {
         CURLOPT_POSTFIELDS => $postFields,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
     ]);
     
     $response = curl_exec($ch);
@@ -73,10 +79,10 @@ function uploadToCloudinary($file, $folder = 'products') {
     
     $errorMessage = $result['error']['message'] ?? ($result['error'] ?? 'Unknown error');
     error_log('Cloudinary Upload Error: ' . json_encode(['httpCode' => $httpCode, 'error' => $errorMessage, 'cloudName' => CLOUDINARY_CLOUD_NAME, 'preset' => CLOUDINARY_UPLOAD_PRESET, 'response' => $response]));
-    return ['success' => false, 'message' => 'Cloudinary error: ' . $errorMessage . ' (Check that Cloud Name is correct - should be lowercase without spaces)'];
+    return ['success' => false, 'message' => 'Cloudinary error: ' . $errorMessage];
 }
 
-// deleting image from cloudinary
+// Delete image resource from Cloudinary storage
 function deleteFromCloudinary($publicId) {
     if (empty($publicId)) {
         return [
@@ -104,7 +110,8 @@ function deleteFromCloudinary($publicId) {
         CURLOPT_POSTFIELDS => http_build_query($postData),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
     ]);
     
     $response = curl_exec($ch);
@@ -126,7 +133,7 @@ function deleteFromCloudinary($publicId) {
     }
 }
 
-// extracting public id from cloudinary url
+// Parse public ID from full Cloudinary URL
 function extractCloudinaryPublicIdFromUrl($url) {
     if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
         return null;
@@ -177,7 +184,7 @@ function extractCloudinaryPublicIdFromUrl($url) {
     return implode('/', $assetSegments);
 }
 
-// deleting cloudinary image by url
+// Delete Cloudinary image resource directly using URL
 function deleteCloudinaryImageByUrl($url) {
     $publicId = extractCloudinaryPublicIdFromUrl($url);
 
@@ -191,7 +198,7 @@ function deleteCloudinaryImageByUrl($url) {
     return deleteFromCloudinary($publicId);
 }
 
-// getting upload error message
+// Map PHP file upload error codes to readable messages
 function getUploadErrorMessage($errorCode) {
     $errors = [
         UPLOAD_ERR_OK => 'No error',
@@ -206,3 +213,4 @@ function getUploadErrorMessage($errorCode) {
     
     return $errors[$errorCode] ?? 'No image uploaded';
 }
+?>

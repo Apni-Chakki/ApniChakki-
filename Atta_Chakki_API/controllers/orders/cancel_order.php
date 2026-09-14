@@ -25,8 +25,8 @@ if (strlen($reason) > 500) {
     exit;
 }
 
-// checking if order exists and is pending
-$check = $conn->prepare("SELECT id, status, user_id FROM orders WHERE id = ?");
+// checking if order exists
+$check = $conn->prepare("SELECT id, status, user_id, assigned_date FROM orders WHERE id = ?");
 $check->bind_param("i", $order_id);
 $check->execute();
 $result = $check->get_result();
@@ -40,12 +40,24 @@ if ($result->num_rows === 0) {
 $order = $result->fetch_assoc();
 $check->close();
 
-if (strtolower(trim($order['status'])) !== 'pending') {
-    echo json_encode([
-        "success" => false, 
-        "message" => "Cannot cancel order. Only pending orders can be cancelled. Current status: " . $order['status']
-    ]);
-    exit;
+$isAdmin = strtolower(trim($cancelled_by)) === 'admin';
+
+if (!$isAdmin) {
+    if (!empty($assigned_date) && $assigned_date <= $today) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Processing has started, it cannot be cancelled now / پروسیسنگ شروع ہو چکی ہے، اب آرڈر کینسل نہیں کیا جا سکتا۔"
+        ]);
+        exit;
+    }
+
+    if (strtolower(trim($order['status'])) !== 'pending' && strtolower(trim($order['status'])) !== 'pickup_pending') {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Cannot cancel order. Current status: " . $order['status']
+        ]);
+        exit;
+    }
 }
 
 // cancelling the order

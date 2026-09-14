@@ -34,21 +34,32 @@ if (!$driver_phone && $driver_name !== '') {
     $driverCheck->bind_param("s", $driver_name);
     $driverCheck->execute();
     $dResult = $driverCheck->get_result();
-    if ($dResult->num_rows > 0) {
+    if ($dResult && $dResult->num_rows > 0) {
         $driver_phone = $dResult->fetch_assoc()['phone'];
     }
     $driverCheck->close();
+
+    if (!$driver_phone) {
+        $userCheck = $conn->prepare("SELECT phone FROM users WHERE (full_name = ? OR email = ?) AND role IN ('delivery_boy', 'delivery')");
+        $userCheck->bind_param("ss", $driver_name, $driver_name);
+        $userCheck->execute();
+        $uResult = $userCheck->get_result();
+        if ($uResult && $uResult->num_rows > 0) {
+            $driver_phone = $uResult->fetch_assoc()['phone'];
+        }
+        $userCheck->close();
+    }
 }
 
 $current_status = $order['status'];
 $new_status = $current_status;
 
-if ($driver_name !== '') {
+if (isset($data['status']) && !empty(trim($data['status']))) {
+    $new_status = trim($data['status']);
+} elseif ($driver_name !== '') {
     // Determine new status when assigning driver
     if ($current_status === 'pickup_pending') {
         $new_status = 'pickup_assigned';
-    } else if (in_array($current_status, ['pending', 'processing', 'ready'])) {
-        $new_status = 'out-for-delivery';
     }
 }
 

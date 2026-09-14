@@ -3,6 +3,9 @@
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_auth();
+
 
 try {
     if (!isset($_GET['user_id'])) {

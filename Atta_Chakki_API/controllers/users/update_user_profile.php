@@ -4,6 +4,9 @@ require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_auth();
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -23,6 +26,7 @@ try {
     $user_id = intval($data['user_id']);
     $name = isset($data['name']) ? $conn->real_escape_string(trim($data['name'])) : null;
     $phone = isset($data['phone']) ? $conn->real_escape_string(trim($data['phone'])) : null;
+    $email = isset($data['email']) ? $conn->real_escape_string(trim($data['email'])) : null;
     $address = isset($data['address']) ? $conn->real_escape_string(trim($data['address'])) : null;
     
     // checking if user exists
@@ -51,9 +55,21 @@ try {
     }
     
     if ($phone !== null) {
+        $cleanPhone = preg_replace('/\D/', '', $phone);
+        if (!preg_match('/^0\d{10}$/', $cleanPhone)) {
+            http_response_code(400);
+            echo json_encode(["success" => false, "message" => "Phone number must start with 0 and be exactly 11 digits."]);
+            exit;
+        }
         $updates[] = "phone = ?";
         $types .= 's';
-        $values[] = $phone;
+        $values[] = $cleanPhone;
+    }
+    
+    if ($email !== null) {
+        $updates[] = "email = ?";
+        $types .= 's';
+        $values[] = $email;
     }
     
     if ($address !== null) {

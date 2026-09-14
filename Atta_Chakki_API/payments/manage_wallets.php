@@ -1,5 +1,5 @@
 <?php
-/**
+/* 
  * Manage wallets - proxy to controller
  * API Endpoint: POST /payments/manage_wallets.php
  */

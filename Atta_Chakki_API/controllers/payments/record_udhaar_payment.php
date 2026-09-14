@@ -3,6 +3,9 @@ require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_admin();
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -45,11 +48,14 @@ try {
     $user_id = $user['id'];
     $stmt->close();
     
-    // Get pending orders for this user and distribute payment
+    // Get pending manual orders for this user and distribute payment
     $ordersSql = "SELECT id, total_amount, 
                   COALESCE((SELECT SUM(amount) FROM payments WHERE order_id = orders.id), 0) as amount_paid
                   FROM orders 
-                  WHERE user_id = ? AND payment_status IN ('pending', 'partial') AND status != 'cancelled'
+                  WHERE user_id = ? 
+                    AND payment_status IN ('pending', 'partial') 
+                    AND status != 'cancelled'
+                    AND (source = 'manual' OR payment_method = 'udhaar' OR user_id = 1 OR user_id IS NULL)
                   ORDER BY created_at ASC";
     
     $stmt = $conn->prepare($ordersSql);

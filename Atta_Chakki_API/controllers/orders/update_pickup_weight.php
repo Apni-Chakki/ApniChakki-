@@ -1,9 +1,12 @@
 <?php
-/**
+/* 
  * Controller: update actual weights for pickup items, recalc order totals and schedule
  */
 include __DIR__ . '/../../config/connect.php';
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_driver_or_admin();
+
 
 $raw = file_get_contents('php://input');
 $data = json_decode($raw);
@@ -64,6 +67,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Weights updated and order scheduled',
+        'new_total' => $new_total,
         'schedule' => $schedule_result
     ]);
 
