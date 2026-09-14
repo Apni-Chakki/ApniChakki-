@@ -47,6 +47,7 @@ export function UserAccount() {
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isSaving, setIsSaving] = useState(false); // New loading state for saving
+  const [isCancelling, setIsCancelling] = useState(false);
   const [rentals, setRentals] = useState([]);
   const [loadingRentals, setLoadingRentals] = useState(true);
 
@@ -438,7 +439,7 @@ export function UserAccount() {
   };
 
   const handleCancelOrder = async () => {
-    if (!cancelOrder) return;
+    if (!cancelOrder || isCancelling) return;
 
     // Direct frontend check: block cancellation if order is assigned to today's date or earlier
     const todayStr = new Date().toISOString().split('T')[0];
@@ -449,6 +450,7 @@ export function UserAccount() {
       return;
     }
 
+    setIsCancelling(true);
     try {
       const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
         method: 'POST',
@@ -469,7 +471,8 @@ export function UserAccount() {
     } catch (e) {
       toast.error(t('Network error while cancelling'));
     } finally {
-      setCancelOrder(null); 
+      setIsCancelling(false);
+      setCancelOrder(null);
       setCancelReason('');
     }
   };
@@ -1210,12 +1213,14 @@ export function UserAccount() {
             className="mt-2"
           />
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('No, Keep Order')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCancelling}>{t('No, Keep Order')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={handleCancelOrder}
+              disabled={isCancelling}
             >
-              {t('Yes, Cancel My Order')}
+              {isCancelling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {isCancelling ? t('Cancelling...') : t('Yes, Cancel My Order')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

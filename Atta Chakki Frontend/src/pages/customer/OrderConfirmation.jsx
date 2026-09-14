@@ -73,14 +73,17 @@ export function OrderConfirmation() {
           <p className="text-muted-foreground">Thank you for your order</p>
         </div>
 
+        {/* Order ID - always shown, independent of the order-details fetch */}
+        <div className="bg-secondary/20 border border-border rounded-lg p-4 text-center mb-8">
+          <p className="text-sm text-muted-foreground mb-1">Your Order ID</p>
+          <p className="text-2xl font-bold text-primary">#{orderId}</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            You can track your order status anytime using this order number.
+          </p>
+        </div>
+
         {order && (
           <div className="space-y-6 mb-8">
-            {/* Order ID */}
-            <div className="bg-secondary/20 border border-border rounded-lg p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Your Order ID</p>
-              <p className="text-2xl font-bold text-primary">#{orderId}</p>
-            </div>
-
             {/* Order Details */}
             <div className="space-y-4">
               <h3 className="font-semibold text-foreground">Order Details</h3>
@@ -182,12 +185,21 @@ export function OrderConfirmation() {
           </div>
         )}
         
-        <Button
-          onClick={() => navigate('/')}
-          className="w-full"
-        >
-          Back to Home
-        </Button>
+        <div className="space-y-3">
+          <Button
+            onClick={() => navigate('/track-order', { state: { orderId } })}
+            variant="outline"
+            className="w-full"
+          >
+            Track Your Order
+          </Button>
+          <Button
+            onClick={() => navigate('/')}
+            className="w-full"
+          >
+            Back to Home
+          </Button>
+        </div>
       </Card>
     </div>
   );}
