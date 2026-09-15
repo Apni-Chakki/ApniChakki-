@@ -508,6 +508,7 @@ export function UserAccount() {
 
           <TabsContent value="profile">
             <ProfileTab
+              user={user}
               profile={profile}
               tempProfile={tempProfile}
               setTempProfile={setTempProfile}
@@ -540,7 +541,8 @@ export function UserAccount() {
 
           <TabsContent value="orders">
             <OrdersTab
-              orders={orders}
+                orders={orders}
+                loading={loading}
               ordersPage={ordersPage}
               setOrdersPage={setOrdersPage}
               ordersPageSize={ordersPageSize}
@@ -554,7 +556,8 @@ export function UserAccount() {
 
           <TabsContent value="rentals">
             <RentalsTab
-              rentals={rentals}
+                rentals={rentals}
+                loadingRentals={loadingRentals}
               rentalsPage={rentalsPage}
               setRentalsPage={setRentalsPage}
               rentalsPageSize={rentalsPageSize}
@@ -598,6 +601,8 @@ export function UserAccount() {
     </div>
   );
 }
+
+
 
 
 

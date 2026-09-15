@@ -49,7 +49,9 @@ try {
     
     $response_data = json_encode([
         'success' => true,
+        'status'  => 'success',
         'categories' => $categories,
+        'data'       => $categories,
         'count' => count($categories)
     ]);
     

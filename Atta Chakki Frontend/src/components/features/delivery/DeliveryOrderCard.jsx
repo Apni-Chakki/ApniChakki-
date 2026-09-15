@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../../common/card';
 import { Badge } from '../../common/badge';
-import { Phone, MapPin, Navigation, Radio, CheckCircle, MessageCircle, Truck, Store } from 'lucide-react';
+import { Phone, MapPin, Navigation, Radio, CheckCircle, MessageCircle, Truck, Store, Package } from 'lucide-react';
 import { DeliveryStatusBadge } from './DeliveryStatusBadge';
 
 export const DeliveryOrderCard = ({
@@ -298,3 +298,4 @@ export const DeliveryOrderCard = ({
 };
 
 export default DeliveryOrderCard;
+

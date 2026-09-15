@@ -29,7 +29,7 @@ const LogoSVG = ({ size = 48 }) => (
   </svg>
 );
 
-export function PrintTaskList({ orders, title, open, onClose }) {
+export function PrintTaskList({ orders = [], title = "TOMORROW'S TASK LIST", open = false, onClose = () => {} }) {
 
   const [storeSettings, setStoreSettings] = useState({ name: "SUCHI CHAKKI", address: "", phone: "", tagline: "", logo: "" });
 

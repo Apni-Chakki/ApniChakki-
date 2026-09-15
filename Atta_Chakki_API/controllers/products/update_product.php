@@ -121,7 +121,7 @@ try {
 
         clear_api_cache();
         http_response_code(200);
-        echo json_encode(["success" => true, "message" => "Updated successfully"]);
+        echo json_encode(["success" => true, "status" => "success", "message" => "Updated successfully"]);
     } else {
         throw new Exception("Execute Error: " . $stmt->error);
     }

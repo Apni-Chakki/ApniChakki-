@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Save, X, Loader2, Truck, Weight } from 'lucide-react';
 import { Button } from '../../components/common/button';
@@ -88,12 +88,13 @@ export function ManageServices() {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}?action=get_all_products&include_all=1&refresh=1`);
+      const res = await fetch(`${API_BASE_URL}/get_all_products.php?include_all=1&refresh=1`);
       const data = await res.json();
-      if (data.status === 'success' && data.data) {
-        setServices(data.data);
+      const list = data.data || data.products || [];
+      if ((data.status === 'success' || data.success) && Array.isArray(list)) {
+        setServices(list);
       } else {
-        toast.error(t('Failed to load services'));
+        toast.error(data.message || t('Failed to load services'));
       }
     } catch (error) {
       console.error('Error fetching services:', error);
@@ -105,12 +106,13 @@ export function ManageServices() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}?action=get_categories`);
+      const res = await fetch(`${API_BASE_URL}/get_categories.php`);
       const data = await res.json();
-      if (data.status === 'success' && data.data) {
-        setCategories(data.data);
-        if (data.data.length > 0 && !formData.category) {
-          setFormData(prev => ({ ...prev, category: data.data[0].name }));
+      const list = data.data || data.categories || [];
+      if ((data.status === 'success' || data.success) && Array.isArray(list)) {
+        setCategories(list);
+        if (list.length > 0 && !formData.category) {
+          setFormData(prev => ({ ...prev, category: list[0].name }));
         }
       }
     } catch (error) {
@@ -252,14 +254,14 @@ export function ManageServices() {
         priority: parseInt(formData.priority) || 0,
       };
 
-      const res = await fetch(`${API_BASE_URL}?action=add_product`, {
+      const res = await fetch(`${API_BASE_URL}/add_product.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       const data = await res.json();
-      if (data.status === 'success') {
+      if (data.status === 'success' || data.success) {
         toast.success(t('Service added successfully'));
         setIsAdding(false);
         resetForm();
@@ -385,14 +387,14 @@ export function ManageServices() {
         priority: parseInt(formData.priority) || 0,
       };
 
-      const res = await fetch(`${API_BASE_URL}?action=update_product`, {
+      const res = await fetch(`${API_BASE_URL}/update_product.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       const data = await res.json();
-      if (data.status === 'success') {
+      if (data.status === 'success' || data.success) {
         toast.success(t('Service updated successfully'));
         setEditingId(null);
         resetForm();
@@ -413,14 +415,14 @@ export function ManageServices() {
 
     try {
       setDeletingId(id);
-      const res = await fetch(`${API_BASE_URL}?action=delete_product`, {
+      const res = await fetch(`${API_BASE_URL}/delete_product.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       });
 
       const data = await res.json();
-      if (data.status === 'success') {
+      if (data.status === 'success' || data.success) {
         toast.success(t('Service deleted successfully'));
         fetchServices();
       } else {
@@ -443,14 +445,14 @@ export function ManageServices() {
     );
 
     try {
-      const res = await fetch(`${API_BASE_URL}?action=update_product_status`, {
+      const res = await fetch(`${API_BASE_URL}/update_product.php_status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus })
+        body: JSON.stringify({ id, status: newStatus, is_active: newStatus })
       });
 
       const data = await res.json();
-      if (data.status === 'success') {
+      if (data.status === 'success' || data.success) {
         toast.success(newStatus === 1 ? t('Service is now visible to customers') : t('Service is now hidden from customers'));
         fetchServices();
       } else {
@@ -583,23 +585,26 @@ export function ManageServices() {
             const categoryItems = groupedServices[categoryName];
             return (
               <div key={categoryName} className="space-y-3 sm:space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
-                  <h2 className="text-lg font-bold text-foreground capitalize tracking-tight flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary/80"></span>
-                    {categoryName}
-                  </h2>
-                  <span className="text-xs text-muted-foreground font-medium bg-muted/60 px-2 py-0.5 rounded-full self-start sm:self-auto">
-                    {categoryItems.length} {categoryItems.length === 1 ? 'service' : 'services'}
+                <div className="flex items-center justify-between gap-2 px-1 mb-3">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#fbf6ee] text-[#8c6d3d] border border-[#ecd9be] font-bold text-xs uppercase tracking-wider shadow-xs">
+                    <span className="text-sm">🌾</span>
+                    <span>{categoryName}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {categoryItems.length} {categoryItems.length === 1 ? 'Item' : 'Item(s)'}
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="space-y-4">
                   {categoryItems.map((service) => (
                     <ServiceListItem
                       key={service.id}
                       service={service}
+                      isAdding={isAdding}
+                      editingId={editingId}
+                      onToggleActive={handleToggleStatus}
+                      onToggleStatus={handleToggleStatus}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
-                      onToggleStatus={handleToggleStatus}
                       deletingId={deletingId}
                       t={t}
                     />

@@ -14,12 +14,12 @@ try {
 
     $data = json_decode(file_get_contents("php://input"));
 
-    if (!isset($data->id) || !isset($data->is_active)) {
-        throw new Exception("Product ID and is_active status are required");
+    if (!isset($data->id) || (!isset($data->is_active) && !isset($data->status))) {
+        throw new Exception("Product ID and status are required");
     }
 
     $id = intval($data->id);
-    $is_active = intval($data->is_active) ? 1 : 0;
+    $is_active = isset($data->is_active) ? (intval($data->is_active) ? 1 : 0) : (intval($data->status) ? 1 : 0);
 
     $stmt = $conn->prepare("UPDATE products SET is_active = ? WHERE id = ?");
     $stmt->bind_param("ii", $is_active, $id);
@@ -29,6 +29,7 @@ try {
         clear_api_cache();
         echo json_encode([
             "success" => true,
+            "status"  => "success",
             "message" => "Product status updated successfully"
         ]);
     } else {

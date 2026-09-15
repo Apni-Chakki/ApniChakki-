@@ -1,31 +1,18 @@
-import { useState, useEffect, memo } from 'react';
-import { Minus, Plus, ShoppingCart, Calendar, RotateCcw, ChevronRight } from 'lucide-react';
-import { Button } from '../../components/common/button';
-import { Card } from '../../components/common/card';
-import { useCart } from '../../store/CartContext';
-import { toast } from 'sonner';
-import { ImageWithFallback } from '../../components/common/ImageWithFallback';
-import { motion } from 'framer-motion';
-import { Checkbox } from '../../components/common/checkbox';
-import { Label } from '../../components/common/label';
-import { API_BASE_URL } from '../../config';
-import { useAuth } from '../../store/AuthContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../components/common/dialog';
-import { Input } from '../../components/common/input';
-import { Textarea } from '../../components/common/textarea';
-import { useDynamicTranslation } from '../../hooks/useDynamicTranslation';
+import { useState, useEffect, memo } from "react";
+import { Calendar, RotateCcw, ChevronRight } from "lucide-react";
+import { Button } from "../../components/common/button";
+import { Card } from "../../components/common/card";
+import { useCart } from "../../store/CartContext";
+import { toast } from "sonner";
+import { ImageWithFallback } from "../../components/common/ImageWithFallback";
+import { API_BASE_URL } from "../../config";
+import { useAuth } from "../../store/AuthContext";
+import { useDynamicTranslation } from "../../hooks/useDynamicTranslation";
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
+import { RentalModal } from "../../components/features/services/RentalModal";
+import { CustomMixModal } from "../../components/features/services/CustomMixModal";
+import { CustomizationsModal } from "../../components/features/services/CustomizationsModal";
+import { QuantitySelector } from "../../components/features/services/QuantitySelector";
 
 export const ServiceCard = memo(function ServiceCard({ service }) {
   const [quantity, setQuantity] = useState(1);
@@ -36,41 +23,42 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   const { user } = useAuth();
 
   const isRental = service.is_rental === 1 || service.is_rental === true;
-  
+
   const [showRentalModal, setShowRentalModal] = useState(false);
   const [showMixModal, setShowMixModal] = useState(false);
   const [showCustomizationsModal, setShowCustomizationsModal] = useState(false);
   const [rentalDays, setRentalDays] = useState(1);
-  const [rentalStartDate, setRentalStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [rentalStartDate, setRentalStartDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
   const [rentalQty, setRentalQty] = useState(1);
-  const [rentalName, setRentalName] = useState('');
-  const [rentalPhone, setRentalPhone] = useState('');
-  const [rentalAddress, setRentalAddress] = useState('');
-  const [rentalPaymentMethod, setRentalPaymentMethod] = useState('cash');
-  const [isSubmittingRental, setIsSubmittingRental] = useState(false);
+  const [rentalName, setRentalName] = useState("");
+  const [rentalPhone, setRentalPhone] = useState("");
+  const [rentalAddress, setRentalAddress] = useState("");
+  const [rentalPaymentMethod, setRentalPaymentMethod] = useState("cash");
 
   useEffect(() => {
     if (user && showRentalModal) {
-      setRentalName(user.full_name || user.name || '');
-      setRentalPhone(user.phone || '');
-      setRentalAddress(user.address || '');
+      setRentalName(user.full_name || user.name || "");
+      setRentalPhone(user.phone || "");
+      setRentalAddress(user.address || "");
     }
   }, [user, showRentalModal]);
 
   const handlePlaceRental = () => {
     if (!user) {
-      toast.error(t('Please login to rent this item.'));
+      toast.error(t("Please login to rent this item."));
       return;
     }
     if (rentalQty <= 0) {
-      toast.error(t('Quantity must be greater than 0.'));
+      toast.error(t("Quantity must be greater than 0."));
       return;
     }
     if (rentalQty > parseFloat(service.rental_available_qty || 0)) {
-      toast.error(t('Insufficient available rental quantity.'));
+      toast.error(t("Insufficient available rental quantity."));
       return;
     }
-    
+
     // Construct rental service item to add to cart
     const rentalItem = {
       ...service,
@@ -79,7 +67,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
       rental_days: rentalDays,
       rental_price_per_day: parseFloat(service.rental_price_per_day) || 0,
       security_deposit: parseFloat(service.security_deposit) || 0,
-      late_penalty_per_day: parseFloat(service.late_penalty_per_day) || 0
+      late_penalty_per_day: parseFloat(service.late_penalty_per_day) || 0,
     };
 
     addToCart(rentalItem, rentalQty);
@@ -93,11 +81,11 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   // Add states for Custom Mix
   const isCustomMix = service.is_custom_mix === 1 || service.is_custom_mix === true;
   const mixItems = service.mix_items || [];
-  
+
   // Custom Mix states — ratios always sum to 1 (representing a full 1kg mix)
   const [mixRatios, setMixRatios] = useState(() => {
     if (!isCustomMix || mixItems.length === 0) return {};
-    const raw = mixItems.map(item => parseFloat(item.default_ratio) || 0);
+    const raw = mixItems.map((item) => parseFloat(item.default_ratio) || 0);
     const sum = raw.reduce((s, v) => s + v, 0);
     const round1 = (v) => Math.round(v * 10) / 10;
 
@@ -105,10 +93,14 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
     if (sum <= 0) {
       // No defaults — split equally
       const equal = round1(1 / mixItems.length);
-      mixItems.forEach((_, idx) => { ratios[idx] = equal; });
+      mixItems.forEach((_, idx) => {
+        ratios[idx] = equal;
+      });
     } else {
       // Normalize so ratios sum to 1
-      mixItems.forEach((_, idx) => { ratios[idx] = Math.max(0, round1(raw[idx] / sum)); });
+      mixItems.forEach((_, idx) => {
+        ratios[idx] = Math.max(0, round1(raw[idx] / sum));
+      });
     }
     // Fix rounding drift so the sum is exactly 1
     const total = Object.values(ratios).reduce((s, v) => s + v, 0);
@@ -119,25 +111,34 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
     }
     return ratios;
   });
-  
+
   const [showCustomRequest, setShowCustomRequest] = useState(false);
   const [customRequestData, setCustomRequestData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    message: ''
+    name: "",
+    phone: "",
+    email: "",
+    message: "",
   });
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   // Fallback to old cleaning/grinding if no dynamic customizations exist
-  const effectiveCustomizations = customizations.length > 0
-    ? customizations
-    : (service.is_grinding_service == 1 && !isCustomMix
+  const effectiveCustomizations =
+    customizations.length > 0
+      ? customizations
+      : service.is_grinding_service == 1 && !isCustomMix
       ? [
-          { id: 'legacy-clean', option_name: 'Cleaning', option_price: service.cleaning_price || 0 },
-          { id: 'legacy-grind', option_name: 'Grinding', option_price: service.grinding_price || 0 }
+          {
+            id: "legacy-clean",
+            option_name: "Cleaning",
+            option_price: service.cleaning_price || 0,
+          },
+          {
+            id: "legacy-grind",
+            option_name: "Grinding",
+            option_price: service.grinding_price || 0,
+          },
         ]
-      : []);
+      : [];
 
   // Track which customizations are selected (all selected by default)
   const [selectedOptions, setSelectedOptions] = useState(() =>
@@ -145,32 +146,33 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   );
 
   const toggleOption = (index) => {
-    setSelectedOptions(prev => ({ ...prev, [index]: !prev[index] }));
+    setSelectedOptions((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleRatioChange = (index, value) => {
     const round1 = (v) => Math.round(v * 10) / 10;
     const newVal = round1(Math.max(0, Math.min(1, parseFloat(value) || 0)));
 
-    setMixRatios(prev => {
-      const otherIndices = mixItems.map((_, i) => i).filter(i => i !== index);
+    setMixRatios((prev) => {
+      const otherIndices = mixItems.map((_, i) => i).filter((i) => i !== index);
 
       // Only one ingredient — it always takes 100% of the mix.
       if (otherIndices.length === 0) return { ...prev, [index]: 1 };
 
       const remaining = round1(1 - newVal);
-      const currentOthersSum = otherIndices.reduce((s, i) => s + (parseFloat(prev[i]) || 0), 0);
+      const currentOthersSum = otherIndices.reduce(
+        (s, i) => s + (parseFloat(prev[i]) || 0),
+        0
+      );
 
       const next = { ...prev, [index]: newVal };
 
-      // Distribute `remaining` across the other ingredients.
-      // Proportional to their previous values so the user's relative preferences are preserved.
-      // Fall back to equal split when the others sum to zero.
-      otherIndices.forEach(i => {
+      otherIndices.forEach((i) => {
         const prevVal = parseFloat(prev[i]) || 0;
-        const share = currentOthersSum > 0.0001
-          ? (prevVal / currentOthersSum) * remaining
-          : remaining / otherIndices.length;
+        const share =
+          currentOthersSum > 0.0001
+            ? (prevVal / currentOthersSum) * remaining
+            : remaining / otherIndices.length;
         next[i] = Math.max(0, round1(share));
       });
 
@@ -191,85 +193,102 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
 
   // Calculate current price
   let currentPrice = service.price;
-  
+
   if (isCustomMix) {
-    // Weighted average price per kg for Custom Mix
     let totalPrice = 0;
     let totalRatio = 0;
-    
+
     mixItems.forEach((item, idx) => {
       const ratio = mixRatios[idx] || 0;
       totalPrice += ratio * parseFloat(item.price_per_kg || 0);
       totalRatio += ratio;
     });
-    
-    // Scale price to 1 unit (1kg) if total ratio > 0
+
     if (totalRatio > 0) {
       currentPrice = Math.round(totalPrice / totalRatio);
     } else {
       currentPrice = 0;
     }
   } else if (hasCustomizations) {
-    const pricingMode = service.customization_pricing_mode || 'additive';
-    const selectedIndices = Object.keys(selectedOptions).filter(i => selectedOptions[i]);
-    
-    if (pricingMode === 'average') {
+    const pricingMode = service.customization_pricing_mode || "additive";
+    const selectedIndices = Object.keys(selectedOptions).filter((i) => selectedOptions[i]);
+
+    if (pricingMode === "average") {
       if (selectedIndices.length > 0) {
-        const sum = selectedIndices.reduce((acc, i) => acc + (parseFloat(effectiveCustomizations[i]?.option_price) || 0), 0);
+        const sum = selectedIndices.reduce(
+          (acc, i) =>
+            acc + (parseFloat(effectiveCustomizations[i]?.option_price) || 0),
+          0
+        );
         currentPrice = Math.round(sum / selectedIndices.length);
       } else {
         currentPrice = 0;
       }
     } else {
-      currentPrice = effectiveCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0), 0);
+      currentPrice = effectiveCustomizations.reduce(
+        (sum, c, i) =>
+          sum + (selectedOptions[i] ? parseFloat(c.option_price) || 0 : 0),
+        0
+      );
     }
   }
 
   // Apply discount on top of computed price
-  const discountType = service.discount_type || 'none';
+  const discountType = service.discount_type || "none";
   const discountValue = parseFloat(service.discount_value) || 0;
-  const hasDiscount = discountType !== 'none' && discountValue > 0;
+  const hasDiscount = discountType !== "none" && discountValue > 0;
   const baseForDiscount = parseFloat(currentPrice) || 0;
   let discountedPrice = baseForDiscount;
   if (hasDiscount) {
-    if (discountType === 'percentage') {
-      discountedPrice = Math.max(0, baseForDiscount - (baseForDiscount * Math.min(discountValue, 100) / 100));
-    } else if (discountType === 'fixed') {
+    if (discountType === "percentage") {
+      discountedPrice = Math.max(
+        0,
+        baseForDiscount - (baseForDiscount * Math.min(discountValue, 100)) / 100
+      );
+    } else if (discountType === "fixed") {
       discountedPrice = Math.max(0, baseForDiscount - discountValue);
     }
   }
   const effectivePrice = hasDiscount ? discountedPrice : baseForDiscount;
-  const badgeText = (service.badge_text || '').trim();
-  const hasStockDefined = service.stock_quantity !== undefined && service.stock_quantity !== null && service.stock_quantity !== '' && !isNaN(Number(service.stock_quantity));
+  const badgeText = (service.badge_text || "").trim();
+  const hasStockDefined =
+    service.stock_quantity !== undefined &&
+    service.stock_quantity !== null &&
+    service.stock_quantity !== "" &&
+    !isNaN(Number(service.stock_quantity));
   const stock = hasStockDefined ? parseFloat(service.stock_quantity) : Infinity;
-  const displayUnit = service.unit || 'unit';
-  // Only treat as "trip-only" if unit is trip AND dual_unit is NOT enabled
-  const isOnlyPickup = displayUnit.toLowerCase() === 'trip' && !service.dual_unit;
-  // dual_unit products support both pickup (trip) and kg modes from one card
+  const displayUnit = service.unit || "unit";
+  const isOnlyPickup = displayUnit.toLowerCase() === "trip" && !service.dual_unit;
   const isDualUnit = service.dual_unit === 1 || service.dual_unit === true;
-  // Physical items (kg/unit) are out of stock when stock <= 0 (not for pure pickup trips or rentals)
-  const isOutOfStock = !isOnlyPickup && !isRental && stock <= 0;
-  const isQuantityExceeded = !isOnlyPickup && !isRental && stock !== Infinity && quantity > stock;
 
-  // Quick quantity options from admin (works for ALL units)
-  const quickOptions = Array.isArray(service.weight_options) && service.weight_options.length > 0
-    ? service.weight_options
-    : [];
+  const isOutOfStock = !isOnlyPickup && !isRental && stock <= 0;
+  const isQuantityExceeded =
+    !isOnlyPickup && !isRental && stock !== Infinity && quantity > stock;
+
+  const quickOptions =
+    Array.isArray(service.weight_options) && service.weight_options.length > 0
+      ? service.weight_options
+      : [];
   const hasQuickOptions = quickOptions.length > 0;
 
   const getSelectedCustomizations = () => {
     return effectiveCustomizations
       .filter((_, i) => selectedOptions[i])
-      .map(c => ({ option_name: c.option_name, option_price: parseFloat(c.option_price) || 0 }));
+      .map((c) => ({
+        option_name: c.option_name,
+        option_price: parseFloat(c.option_price) || 0,
+      }));
   };
-  
+
   const getSelectedMixItems = () => {
     if (!isCustomMix) return null;
-    return mixItems.map((item, idx) => ({
-      item_name: item.item_name,
-      price_per_kg: item.price_per_kg,
-      ratio: mixRatios[idx] || 0
-    })).filter(m => m.ratio > 0);
+    return mixItems
+      .map((item, idx) => ({
+        item_name: item.item_name,
+        price_per_kg: item.price_per_kg,
+        ratio: mixRatios[idx] || 0,
+      }))
+      .filter((m) => m.ratio > 0);
   };
 
   const handleAddToCart = () => {
@@ -278,32 +297,36 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
       return;
     }
     if (!isOnlyPickup && !isRental && stock !== Infinity && quantity > stock) {
-      toast.error(`${t("Only")} ${stock} ${isDualUnit ? 'kg' : displayUnit} ${t("left")}!`);
+      toast.error(`${t("Only")} ${stock} ${isDualUnit ? "kg" : displayUnit} ${t("left")}!`);
       return;
     }
-    
+
     if (isCustomMix) {
       const selectedMix = getSelectedMixItems();
       if (selectedMix.length === 0) {
         toast.error(t("Please select at least one ingredient ratio"));
         return;
       }
-      
-      const unitLabel = isDualUnit ? 'kg' : displayUnit;
-      addToCart({
-        ...service,
-        price: parseFloat(effectivePrice),
-        original_price: baseForDiscount,
-        discount_type: discountType,
-        discount_value: discountValue,
-        unit: isDualUnit ? 'kg' : service.unit,
-        is_cleaning: false,
-        is_grinding: false,
-        selected_customizations: [],
-        selected_mix_items: selectedMix,
-        is_custom_mix: true
-      }, quantity, false); 
-      
+
+      const unitLabel = isDualUnit ? "kg" : displayUnit;
+      addToCart(
+        {
+          ...service,
+          price: parseFloat(effectivePrice),
+          original_price: baseForDiscount,
+          discount_type: discountType,
+          discount_value: discountValue,
+          unit: isDualUnit ? "kg" : service.unit,
+          is_cleaning: false,
+          is_grinding: false,
+          selected_customizations: [],
+          selected_mix_items: selectedMix,
+          is_custom_mix: true,
+        },
+        quantity,
+        false
+      );
+
       toast.success(t(`Added ${quantity} ${unitLabel} of Custom Mix to cart`));
       setQuantity(1);
       setIsAddedToCart(true);
@@ -316,88 +339,97 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
       return;
     }
 
-    const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean'));
-    const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind'));
+    const isCleaning = selected.some((s) => s.option_name.toLowerCase().includes("clean"));
+    const isGrinding = selected.some((s) => s.option_name.toLowerCase().includes("grind"));
+    const unitLabel = isDualUnit ? "kg" : displayUnit;
 
-    const unitLabel = isDualUnit ? 'kg' : displayUnit;
-
-    addToCart({
-      ...service,
-      price: effectivePrice,
-      original_price: baseForDiscount,
-      discount_type: discountType,
-      discount_value: discountValue,
-      unit: isDualUnit ? 'kg' : service.unit,
-      is_cleaning: isCleaning,
-      is_grinding: isGrinding,
-      selected_customizations: selected
-    }, quantity, false); 
+    addToCart(
+      {
+        ...service,
+        price: effectivePrice,
+        original_price: baseForDiscount,
+        discount_type: discountType,
+        discount_value: discountValue,
+        unit: isDualUnit ? "kg" : service.unit,
+        is_cleaning: isCleaning,
+        is_grinding: isGrinding,
+        selected_customizations: selected,
+      },
+      quantity,
+      false
+    );
     toast.success(t(`Added ${quantity} ${unitLabel} of ${service.name} to cart`));
     setQuantity(1);
     setIsAddedToCart(true);
     setIsPickupRequested(false);
   };
 
-  // Quick add: directly add a preset quantity to cart
   const handleQuickAdd = (presetQty) => {
     if (isOutOfStock) {
       toast.error(t("This item is out of stock."));
       return;
     }
     if (!isOnlyPickup && !isRental && stock !== Infinity && presetQty > stock) {
-      toast.error(`${t("Only")} ${stock} ${isDualUnit ? 'kg' : displayUnit} ${t("left")}!`);
+      toast.error(`${t("Only")} ${stock} ${isDualUnit ? "kg" : displayUnit} ${t("left")}!`);
       return;
     }
-    
+
     if (isCustomMix) {
       const selectedMix = getSelectedMixItems();
       if (selectedMix.length === 0) {
         toast.error(t("Please select at least one ingredient ratio"));
         return;
       }
-      
-      const unitLabel = isDualUnit ? 'kg' : displayUnit;
-      addToCart({
-        ...service,
-        price: parseFloat(effectivePrice),
-        original_price: baseForDiscount,
-        discount_type: discountType,
-        discount_value: discountValue,
-        unit: isDualUnit ? 'kg' : service.unit,
-        is_cleaning: false,
-        is_grinding: false,
-        selected_customizations: [],
-        selected_mix_items: selectedMix,
-        is_custom_mix: true
-      }, presetQty, false); 
-      
+
+      const unitLabel = isDualUnit ? "kg" : displayUnit;
+      addToCart(
+        {
+          ...service,
+          price: parseFloat(effectivePrice),
+          original_price: baseForDiscount,
+          discount_type: discountType,
+          discount_value: discountValue,
+          unit: isDualUnit ? "kg" : service.unit,
+          is_cleaning: false,
+          is_grinding: false,
+          selected_customizations: [],
+          selected_mix_items: selectedMix,
+          is_custom_mix: true,
+        },
+        presetQty,
+        false
+      );
+
       toast.success(t(`Added ${presetQty} ${unitLabel} of Custom Mix to cart`));
       setIsAddedToCart(true);
       return;
     }
-    
+
     const selected = getSelectedCustomizations();
     if (hasCustomizations && selected.length === 0) {
       toast.error(t("Please select at least one service option"));
       return;
     }
 
-    const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean'));
-    const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind'));
+    const isCleaning = selected.some((s) => s.option_name.toLowerCase().includes("clean"));
+    const isGrinding = selected.some((s) => s.option_name.toLowerCase().includes("grind"));
+    const unitLabel = isDualUnit ? "kg" : displayUnit;
 
-    const unitLabel = isDualUnit ? 'kg' : displayUnit;
-
-    addToCart({
-      ...service,
-      price: effectivePrice,
-      original_price: baseForDiscount,
-      discount_type: discountType,
-      discount_value: discountValue,
-      unit: isDualUnit ? 'kg' : service.unit,
-      is_cleaning: isCleaning,
-      is_grinding: isGrinding,
-      selected_customizations: selected
-    }, presetQty, false); 
+    addToCart(
+      {
+        ...service,
+        price: effectivePrice,
+        original_price: baseForDiscount,
+        discount_type: discountType,
+        discount_value: discountValue,
+        unit: isDualUnit ? "kg" : service.unit,
+        is_cleaning: isCleaning,
+        is_grinding: isGrinding,
+        selected_customizations: selected,
+      },
+      presetQty,
+      false
+    );
     toast.success(t(`Added ${presetQty} ${unitLabel} of ${service.name} to cart`));
     setIsAddedToCart(true);
     setIsPickupRequested(false);
@@ -408,38 +440,42 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
       toast.error(t("Pickup request is not available for custom mixes directly."));
       return;
     }
-    
+
     const selected = getSelectedCustomizations();
     if (hasCustomizations && selected.length === 0) {
       toast.error(t("Please select at least one service option"));
       return;
     }
 
-    const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean'));
-    const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind'));
+    const isCleaning = selected.some((s) => s.option_name.toLowerCase().includes("clean"));
+    const isGrinding = selected.some((s) => s.option_name.toLowerCase().includes("grind"));
 
-    addToCart({
-      ...service,
-      price: effectivePrice,
-      original_price: baseForDiscount,
-      discount_type: discountType,
-      discount_value: discountValue,
-      unit: 'trip',
-      is_cleaning: isCleaning,
-      is_grinding: isGrinding,
-      selected_customizations: selected
-    }, quantity, true); 
-    toast.success(t('Pickup request added to cart.'));
+    addToCart(
+      {
+        ...service,
+        price: effectivePrice,
+        original_price: baseForDiscount,
+        discount_type: discountType,
+        discount_value: discountValue,
+        unit: "trip",
+        is_cleaning: isCleaning,
+        is_grinding: isGrinding,
+        selected_customizations: selected,
+      },
+      quantity,
+      true
+    );
+    toast.success(t("Pickup request added to cart."));
     setIsPickupRequested(true);
     setIsAddedToCart(false);
   };
-  
+
   const submitCustomRequest = async () => {
     if (!customRequestData.name || !customRequestData.phone) {
       toast.error(t("Please enter your name and phone number."));
       return;
     }
-    
+
     setIsSubmittingRequest(true);
     try {
       const payload = {
@@ -451,20 +487,20 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
         selected_items: getSelectedMixItems(),
         custom_items: customRequestData.message,
         total_quantity: quantity,
-        estimated_price: currentPrice
+        estimated_price: currentPrice,
       };
-      
+
       const response = await fetch(`${API_BASE_URL}/submit_custom_mix_request.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      
+
       const data = await response.json();
       if (data.success) {
         toast.success(t(data.message));
         setShowCustomRequest(false);
-        setCustomRequestData({ name: '', phone: '', email: '', message: '' });
+        setCustomRequestData({ name: "", phone: "", email: "", message: "" });
       } else {
         throw new Error(data.message);
       }
@@ -473,85 +509,6 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
     } finally {
       setIsSubmittingRequest(false);
     }
-  };
-
-  // Quick-select chips + manual +/- quantity combined
-  const QuantitySelector = ({ disabled = false }) => {
-    const unitLabel = isDualUnit ? 'kg' : displayUnit;
-    const isExceeded = !isOnlyPickup && !isRental && stock !== Infinity && quantity > stock;
-    const isMaxReached = !isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock;
-
-    return (
-      <div className="flex flex-col gap-2">
-        {/* Quick-select preset chips — compact, single row */}
-        {hasQuickOptions && (
-          <div className="flex flex-nowrap justify-center gap-1">
-            {quickOptions.map((qty) => {
-              const isChipExceeded = !isOnlyPickup && !isRental && stock !== Infinity && qty > stock;
-              const isChipDisabled = disabled || isOutOfStock || isChipExceeded;
-              return (
-                <button
-                  key={qty}
-                  type="button"
-                  disabled={isChipDisabled}
-                  onClick={() => handleQuickAdd(qty)}
-                  className={`flex-1 min-w-0 px-1.5 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 whitespace-nowrap
-                    bg-background text-foreground border-border hover:border-primary hover:bg-primary/10 active:scale-95
-                    ${isChipDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-100 hover:border-slate-200' : 'cursor-pointer'}`}
-                >
-                  {qty} {unitLabel}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {/* Manual +/- quantity selector */}
-        <div className="flex flex-col gap-2">
-          {/* Quantity row — centered */}
-          <div className="flex items-center justify-center gap-1.5">
-            <button
-              type="button"
-              className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={isOutOfStock || disabled || quantity <= 1}
-              aria-label="Decrease quantity"
-            >
-              −
-            </button>
-            <span className="min-w-[2.5rem] px-1 text-center text-sm font-bold leading-none">
-              {quantity} <span className="text-[10px] text-muted-foreground font-medium">{unitLabel}</span>
-            </span>
-            <button
-              type="button"
-              className="h-9 w-9 flex items-center justify-center rounded-md text-lg font-black text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors leading-none"
-              onClick={() => setQuantity(quantity + 1)}
-              disabled={isOutOfStock || disabled || isMaxReached}
-              aria-label="Increase quantity"
-            >
-              +
-            </button>
-          </div>
-          {/* Add to Cart button (own row) */}
-          <Button
-            className={`w-full text-sm font-bold transition-all ${
-              isOutOfStock || isExceeded
-                ? 'bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed hover:bg-slate-200 shadow-none'
-                : 'bg-success hover:bg-success/90 text-success-foreground'
-            }`}
-            onClick={handleAddToCart}
-            disabled={isOutOfStock || isExceeded || disabled || (isCustomMix && currentPrice == 0)}
-          >
-            {isOutOfStock
-              ? t("Out of Stock")
-              : isExceeded
-              ? t("Exceeds Stock")
-              : isAddedToCart
-              ? t("Added ✓")
-              : t("Add to Cart")}
-          </Button>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -567,10 +524,20 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
               <div className="text-center text-muted-foreground">
-                <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16" />
+                <svg
+                  className="w-12 h-12 mx-auto mb-2 opacity-50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16"
+                  />
                 </svg>
-                <p className="text-xs">{t('No image')} </p>
+                <p className="text-xs">{t("No image")} </p>
               </div>
             </div>
           )}
@@ -579,46 +546,46 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           {isRental ? (
             <span
               style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
+                position: "absolute",
+                top: "12px",
+                left: "12px",
                 zIndex: 10,
-                background: 'linear-gradient(135deg, #2c251e 0%, #4a3f35 100%)',
-                color: '#f5ede3',
-                padding: '5px 12px',
-                borderRadius: '8px',
-                fontSize: '10px',
+                background: "linear-gradient(135deg, #2c251e 0%, #4a3f35 100%)",
+                color: "#f5ede3",
+                padding: "5px 12px",
+                borderRadius: "8px",
+                fontSize: "10px",
                 fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                border: '1px solid rgba(212,165,116,0.3)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                border: "1px solid rgba(212,165,116,0.3)",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
               }}
             >
-              <span style={{ fontSize: '11px' }}>🔄</span> {t('FOR RENT')}
+              <span style={{ fontSize: "11px" }}>🔄</span> {t("FOR RENT")}
             </span>
           ) : badgeText ? (
             <span
               style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
+                position: "absolute",
+                top: "12px",
+                left: "12px",
                 zIndex: 10,
-                background: 'linear-gradient(135deg, #ba2d2d 0%, #991b1b 100%)',
-                color: '#fff',
-                padding: '5px 12px',
-                borderRadius: '8px',
-                fontSize: '10px',
+                background: "linear-gradient(135deg, #ba2d2d 0%, #991b1b 100%)",
+                color: "#fff",
+                padding: "5px 12px",
+                borderRadius: "8px",
+                fontSize: "10px",
                 fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                whiteSpace: 'nowrap'
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                whiteSpace: "nowrap",
               }}
             >
               {tDynamic(badgeText)}
@@ -629,23 +596,23 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           {hasDiscount && (
             <span
               style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
+                position: "absolute",
+                top: "12px",
+                right: "12px",
                 zIndex: 10,
-                background: 'linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)',
-                color: '#fff',
-                padding: '5px 12px',
-                borderRadius: '8px',
-                fontSize: '11px',
+                background: "linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)",
+                color: "#fff",
+                padding: "5px 12px",
+                borderRadius: "8px",
+                fontSize: "11px",
                 fontWeight: 700,
-                letterSpacing: '0.03em',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                whiteSpace: 'nowrap'
+                letterSpacing: "0.03em",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                whiteSpace: "nowrap",
               }}
             >
-              {discountType === 'percentage'
+              {discountType === "percentage"
                 ? `-${Math.min(discountValue, 100)}%`
                 : `-Rs.${discountValue}`}
             </span>
@@ -654,12 +621,12 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
           {isOutOfStock && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-10 pointer-events-none">
               <span className="bg-red-600 text-white font-bold text-xs uppercase px-3 py-1.5 rounded-full shadow-md tracking-wider">
-                {t('Out of Stock')}
+                {t("Out of Stock")}
               </span>
             </div>
           )}
         </div>
-        
+
         <div className="p-4 flex flex-col gap-3 flex-1">
           <div className="flex-1">
             <h3 className="text-foreground mb-1 font-bold">{tDynamic(service.name)}</h3>
@@ -674,15 +641,15 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                     Rs. {Math.round(parseFloat(service.rental_price_per_day) || 0)}
                   </p>
                   <span className="text-muted-foreground text-sm font-semibold">
-                    / {t('day')}
+                    / {t("day")}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   <span className="inline-flex items-center text-[10px] text-teal-800 font-bold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
-                    🛡️ {t('Deposit')}: Rs. {Math.round(parseFloat(service.security_deposit) || 0)}
+                    🛡️ {t("Deposit")}: Rs. {Math.round(parseFloat(service.security_deposit) || 0)}
                   </span>
                   <span className="inline-flex items-center text-[10px] text-amber-800 font-bold bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                    ⚠️ {t('Penalty')}: Rs. {Math.round(parseFloat(service.late_penalty_per_day) || 0)}/{t('day')}
+                    ⚠️ {t("Penalty")}: Rs. {Math.round(parseFloat(service.late_penalty_per_day) || 0)}/{t("day")}
                   </span>
                 </div>
               </div>
@@ -693,396 +660,200 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
                     Rs. {Math.round(effectivePrice)}
                   </p>
                   <span className="text-muted-foreground text-sm font-medium">
-                    / {tDynamic(isDualUnit ? 'kg' : displayUnit)}
+                    / {tDynamic(isDualUnit ? "kg" : displayUnit)}
                   </span>
                   <p
                     className="text-muted-foreground text-sm ml-1.5 font-medium"
-                    style={{ textDecoration: 'line-through', textDecorationColor: '#ef4444', textDecorationThickness: '2px' }}
+                    style={{
+                      textDecoration: "line-through",
+                      textDecorationColor: "#ef4444",
+                      textDecorationThickness: "2px",
+                    }}
                   >
                     Rs. {Math.round(baseForDiscount)}
                   </p>
                 </div>
-                <span className="inline-flex items-center w-fit text-[10px] text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
-                  🏷️ {discountType === 'percentage'
-                    ? `${Math.min(discountValue, 100)}% OFF`
-                    : `Save Rs. ${discountValue}`}
-                </span>
               </div>
             ) : (
-              <p className="text-primary font-bold text-lg">
-                Rs. {Math.round(parseFloat(currentPrice) || 0)} <span className="text-sm font-medium text-muted-foreground">/ {tDynamic(isDualUnit ? 'kg' : displayUnit)}</span>
-              </p>
-            )}
-
-            {/* Custom Mix — compact trigger, full builder opens in modal */}
-            {isCustomMix && mixItems.length > 0 && (() => {
-              const activeMixCount = mixItems.reduce((n, _, idx) => n + ((parseFloat(mixRatios[idx]) || 0) > 0 ? 1 : 0), 0);
-              return (
-                <button
-                  type="button"
-                  onClick={() => setShowMixModal(true)}
-                  className="mt-3 w-full p-3 bg-[#fcfaf7] border border-primary/20 rounded-2xl flex items-center justify-between hover:bg-primary/5 hover:border-primary/40 transition-colors text-left shadow-sm"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-black text-primary uppercase tracking-wider">{t("Create Your Mix")}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-                        {activeMixCount > 0
-                          ? `${activeMixCount} ${activeMixCount === 1 ? t('ingredient') : t('ingredients')} • ${t('Tap to edit')}`
-                          : t("Tap to build your mix")}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-primary shrink-0" />
-                </button>
-              );
-            })()}
-
-            {/* Service Customization — compact trigger, full picker opens in modal */}
-            {hasCustomizations && effectiveCustomizations.length > 0 && !isCustomMix && (() => {
-              const selectedCount = Object.values(selectedOptions).filter(Boolean).length;
-              const noneSelected = selectedCount === 0;
-              const isAvgMode = service.customization_pricing_mode === 'average';
-              return (
-                <button
-                  type="button"
-                  onClick={() => setShowCustomizationsModal(true)}
-                  className={`mt-3 w-full p-3 rounded-xl border flex items-center justify-between transition-colors text-left shadow-sm ${
-                    noneSelected
-                      ? 'bg-orange-50/40 border-orange-200 hover:bg-orange-100/40'
-                      : isAvgMode
-                        ? 'bg-emerald-50/60 border-emerald-200 hover:bg-emerald-100/40'
-                        : 'bg-orange-50/60 border-orange-200 hover:bg-orange-100/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`h-1.5 w-1.5 rounded-full animate-pulse shrink-0 ${isAvgMode ? 'bg-emerald-500' : 'bg-orange-500'}`} />
-                    <div className="min-w-0">
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${isAvgMode ? 'text-emerald-800' : 'text-orange-800'}`}>
-                        {isAvgMode ? t("Mix Items & Rate") : t("Service Customization")}
-                      </p>
-                      <p className={`text-[10px] mt-0.5 truncate ${noneSelected ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
-                        {noneSelected
-                          ? `⚠ ${t("Please select at least one item")}`
-                          : isAvgMode
-                            ? `${selectedCount} ${t('items included')} • Rs. ${Math.round(currentPrice)}/${tDynamic(isDualUnit ? 'kg' : displayUnit)}`
-                            : `${selectedCount} ${t('selected')} • ${t('Tap to edit')}`}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className={`h-4 w-4 shrink-0 ${isAvgMode ? 'text-emerald-600' : 'text-orange-600'}`} />
-                </button>
-              );
-            })()}
-            {stock <= 0 && !isOnlyPickup && !isRental && (
-              <p className="text-xs text-red-600 mt-1 font-bold">⚠️ {t('Out of Stock')}</p>
-            )}
-            {stock < 10 && stock > 0 && !isOnlyPickup && !isRental && (
-              <p className="text-xs text-red-500 mt-1 font-semibold">{t('Only')} {stock} {isDualUnit ? 'kg' : displayUnit} {t('left')}!</p>
+              <div className="flex items-baseline gap-1 flex-wrap">
+                <p className="text-primary font-bold text-xl leading-none">
+                  Rs. {Math.round(currentPrice)}
+                </p>
+                <span className="text-muted-foreground text-sm font-medium">
+                  / {tDynamic(isDualUnit ? "kg" : displayUnit)}
+                </span>
+              </div>
             )}
           </div>
 
-          {isRental ? (
-            /* Rental products: Rent Now button */
-            <div className="flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground text-center">
-                {t('Available Qty')}: {service.rental_available_qty}
-              </p>
+          <div className="flex flex-col gap-2 mt-auto">
+            {isRental ? (
               <Button
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold"
+                className="w-full bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-bold shadow-md transition-all active:scale-[0.98] rounded-xl py-2.5"
                 onClick={() => setShowRentalModal(true)}
-                disabled={parseFloat(service.rental_available_qty || 0) <= 0}
               >
-                {parseFloat(service.rental_available_qty || 0) <= 0 ? t('No Rental Qty') : t('Rent Now')}
+                <Calendar className="h-4 w-4 mr-2" />
+                {t("Rent This Item")}
               </Button>
-            </div>
-          ) : isOnlyPickup && !isCustomMix ? (
-            /* Trip-only products: just show pickup button */
-            <div className="flex flex-col gap-2">
-              <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isAddedToCart}>
-                {isPickupRequested ? t('Pickup Request Added ✓') : t('Add Pickup Request')}
-              </Button>
-            </div>
-          ) : isDualUnit && !isCustomMix ? (
-            /* Dual Unit products: pickup + quantity selector with quick chips */
-            <div className="flex flex-col gap-2">
-              <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleAddPickupRequest} disabled={isPickupRequested}>
-                {isPickupRequested ? t('Pickup Request Added ✓') : t('Add Pickup Request')}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">-- {t('OR')} --</p>
-              <QuantitySelector disabled={isPickupRequested} />
-            </div>
-          ) : (
-            /* Regular products: quick chips + manual qty */
-            <QuantitySelector />
-          )}
+            ) : isCustomMix ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/30 text-primary hover:bg-primary/10 font-bold text-xs h-9 rounded-xl flex items-center justify-between px-3 shadow-xs"
+                  onClick={() => setShowMixModal(true)}
+                >
+                  <span className="truncate">{t("Customize Mix & Proportions")}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-primary/70 ml-1" />
+                </Button>
+                <QuantitySelector
+                  hasQuickOptions={hasQuickOptions}
+                  quickOptions={quickOptions}
+                  unitLabel={isDualUnit ? "kg" : displayUnit}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  isOutOfStock={isOutOfStock}
+                  isExceeded={isQuantityExceeded}
+                  isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
+                  isOnlyPickup={isOnlyPickup}
+                  isRental={isRental}
+                  stock={stock}
+                  handleQuickAdd={handleQuickAdd}
+                  handleAddToCart={handleAddToCart}
+                  isAddedToCart={isAddedToCart}
+                  isCustomMix={isCustomMix}
+                  currentPrice={currentPrice}
+                  t={t}
+                />
+              </>
+            ) : hasCustomizations ? (
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className={`w-full font-bold text-xs h-9 rounded-xl flex items-center justify-between px-3 shadow-xs transition-colors ${
+                    service.customization_pricing_mode === "average"
+                      ? "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                      : "border-orange-300 text-orange-800 hover:bg-orange-50"
+                  }`}
+                  onClick={() => setShowCustomizationsModal(true)}
+                >
+                  <span className="truncate">
+                    {service.customization_pricing_mode === "average"
+                      ? `${t("Select Items")} (${Object.values(selectedOptions).filter(Boolean).length}/${effectiveCustomizations.length})`
+                      : `${t("Customize Services")} (${Object.values(selectedOptions).filter(Boolean).length}/${effectiveCustomizations.length})`}
+                  </span>
+                  <ChevronRight
+                    className={`h-4 w-4 shrink-0 ml-1 ${
+                      service.customization_pricing_mode === "average"
+                        ? "text-emerald-600"
+                        : "text-orange-600"
+                    }`}
+                  />
+                </Button>
+
+                <QuantitySelector
+                  hasQuickOptions={hasQuickOptions}
+                  quickOptions={quickOptions}
+                  unitLabel={isDualUnit ? "kg" : displayUnit}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  isOutOfStock={isOutOfStock}
+                  isExceeded={isQuantityExceeded}
+                  isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
+                  isOnlyPickup={isOnlyPickup}
+                  isRental={isRental}
+                  stock={stock}
+                  handleQuickAdd={handleQuickAdd}
+                  handleAddToCart={handleAddToCart}
+                  isAddedToCart={isAddedToCart}
+                  isCustomMix={isCustomMix}
+                  currentPrice={currentPrice}
+                  t={t}
+                />
+
+                {(service.cleaning_price > 0 || service.grinding_price > 0) && (
+                  <Button
+                    variant="outline"
+                    className="w-full text-xs font-semibold py-2 h-auto whitespace-normal"
+                    onClick={handleAddPickupRequest}
+                  >
+                    {isPickupRequested ? t("Pickup Requested ✓") : t("Pickup & Bring Your Own Grains")}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <QuantitySelector
+                hasQuickOptions={hasQuickOptions}
+                quickOptions={quickOptions}
+                unitLabel={isDualUnit ? "kg" : displayUnit}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                isOutOfStock={isOutOfStock}
+                isExceeded={isQuantityExceeded}
+                isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
+                isOnlyPickup={isOnlyPickup}
+                isRental={isRental}
+                stock={stock}
+                handleQuickAdd={handleQuickAdd}
+                handleAddToCart={handleAddToCart}
+                isAddedToCart={isAddedToCart}
+                isCustomMix={isCustomMix}
+                currentPrice={currentPrice}
+                t={t}
+              />
+            )}
+          </div>
         </div>
       </Card>
 
-      {/* Rental Booking Dialog */}
-      <Dialog open={showRentalModal} onOpenChange={setShowRentalModal}>
-        <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
-          <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-slate-800 text-lg sm:text-xl font-black">
-              <div className="bg-teal-100 p-2 sm:p-2.5 rounded-2xl shrink-0">
-                <RotateCcw className="h-5 w-5 text-teal-700" />
-              </div>
-              <div className="flex flex-col items-start gap-0.5 min-w-0">
-                <span className="block text-[10px] text-teal-600 font-bold uppercase tracking-widest">{t('Rent Product')}</span>
-                <span className="leading-tight break-words">{tDynamic(service.name)}</span>
-              </div>
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium text-xs sm:text-sm pt-1">
-              {t('Select your rental duration and quantity below')}
-            </DialogDescription>
-          </DialogHeader>
+      {/* Modals */}
+      <RentalModal
+        showRentalModal={showRentalModal}
+        setShowRentalModal={setShowRentalModal}
+        service={service}
+        rentalDays={rentalDays}
+        setRentalDays={setRentalDays}
+        rentalStartDate={rentalStartDate}
+        setRentalStartDate={setRentalStartDate}
+        rentalQty={rentalQty}
+        setRentalQty={setRentalQty}
+        handlePlaceRental={handlePlaceRental}
+        user={user}
+        t={t}
+        tDynamic={tDynamic}
+      />
 
-          {!user ? (
-            <div className="p-4 text-center space-y-4">
-              <p className="text-muted-foreground text-sm font-semibold">
-                {t('You must be logged in to book a rental.')}
-              </p>
-              <Button
-                onClick={() => window.location.href = '/login/customer'}
-                className="bg-primary text-white"
-              >
-                {t('Go to Login')}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 text-left min-h-0">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
-                <div>
-                  <Label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><span className="text-base">📅</span> {t('Start Date')}</Label>
-                  <input
-                    type="date"
-                    min={new Date().toISOString().slice(0, 10)}
-                    value={rentalStartDate}
-                    onChange={(e) => setRentalStartDate(e.target.value)}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><span className="text-base">⏳</span> {t('Rental Days')}</Label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={rentalDays}
-                    onChange={(e) => setRentalDays(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><span className="text-base">📦</span> {t('Quantity')}</Label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={parseFloat(service.rental_available_qty || 0)}
-                    value={rentalQty}
-                    onChange={(e) => setRentalQty(Math.min(parseFloat(service.rental_available_qty || 1), Math.max(1, parseInt(e.target.value) || 1)))}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-slate-50 hover:bg-white transition-colors text-slate-700 font-semibold shadow-sm"
-                  />
-                </div>
-              </div>
+      <CustomMixModal
+        showMixModal={showMixModal}
+        setShowMixModal={setShowMixModal}
+        mixItems={mixItems}
+        mixRatios={mixRatios}
+        handleRatioChange={handleRatioChange}
+        currentPrice={currentPrice}
+        showCustomRequest={showCustomRequest}
+        setShowCustomRequest={setShowCustomRequest}
+        customRequestData={customRequestData}
+        setCustomRequestData={setCustomRequestData}
+        submitCustomRequest={submitCustomRequest}
+        isSubmittingRequest={isSubmittingRequest}
+        t={t}
+        tDynamic={tDynamic}
+      />
 
-              {/* Total calculations — internal scroll only if it overflows */}
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 border border-slate-200 rounded-xl p-3 sm:p-4 text-xs space-y-2.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] overflow-y-auto min-h-0">
-                <div className="flex justify-between items-center gap-2">
-                  <span className="text-slate-500 font-semibold">{t('Rental Rate')}</span>
-                  <span className="font-bold text-slate-800 whitespace-nowrap">Rs. {Math.round(parseFloat(service.rental_price_per_day) || 0)} <span className="text-slate-400 font-medium">/{t('day')}</span></span>
-                </div>
-                <div className="flex justify-between items-center gap-2">
-                  <span className="text-slate-500 font-semibold">{t('Rental Subtotal')} ({rentalDays} {t('days')} × {rentalQty} {t('qty')})</span>
-                  <span className="font-bold text-slate-800 whitespace-nowrap">Rs. {Math.round((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty)}</span>
-                </div>
-                <div className="flex justify-between items-center gap-2 flex-wrap">
-                  <span className="text-slate-500 font-semibold flex items-center gap-1.5 flex-wrap">🛡️ {t('Refundable Deposit')} <span className="text-[9px] bg-slate-200/80 text-slate-600 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">(Rs. {Math.round(parseFloat(service.security_deposit) || 0)} × {rentalQty})</span></span>
-                  <span className="font-bold text-slate-800 whitespace-nowrap">Rs. {Math.round((parseFloat(service.security_deposit) || 0) * rentalQty)}</span>
-                </div>
-                <div className="flex justify-between items-center gap-2 font-black text-sm sm:text-base text-teal-800 border-t border-slate-200 border-dashed pt-2.5 mt-2.5">
-                  <span className="uppercase tracking-wider text-xs sm:text-sm">{t('Total Amount')}</span>
-                  <span className="bg-teal-100 text-teal-900 px-3 py-1.5 rounded-lg shadow-sm border border-teal-200/50 whitespace-nowrap">Rs. {Math.round(((parseFloat(service.rental_price_per_day) || 0) * rentalDays * rentalQty) + ((parseFloat(service.security_deposit) || 0) * rentalQty))}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-3 sm:justify-between w-full flex-col sm:flex-row shrink-0 pt-2 border-t border-slate-100">
-            <Button variant="outline" className="w-full sm:w-1/2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl py-3 font-bold shadow-sm" onClick={() => setShowRentalModal(false)}>
-              {t('Cancel')}
-            </Button>
-            {user && (
-              <Button
-                onClick={handlePlaceRental}
-                className="w-full sm:w-1/2 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-md text-white rounded-xl py-3 font-bold text-base transition-all active:scale-[0.98]"
-              >
-                {t('Add to Cart')}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Custom Mix Modal */}
-      <Dialog open={showMixModal} onOpenChange={setShowMixModal}>
-        <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
-          <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-slate-800 text-lg font-black">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="truncate">{t("Create Your Mix")}</span>
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium text-xs pt-1">
-              {t("Price updates automatically")}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3 overflow-y-auto min-h-0">
-            <div className="space-y-2">
-              {mixItems.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-primary/10 shadow-sm gap-2">
-                  <div className="flex flex-col min-w-0 text-left items-start">
-                    <span className="text-xs text-slate-900 truncate leading-tight text-left" style={{ fontWeight: '800' }}>{tDynamic(item.item_name)}</span>
-                    <span className="text-[10px] text-slate-500 mt-1 leading-none text-left" style={{ fontWeight: '400' }}>Rs. {item.price_per_kg}/kg</span>
-                  </div>
-
-                  <div className="flex items-center border border-primary/20 rounded-lg overflow-hidden bg-white shadow-sm h-8 shrink-0">
-                    <button
-                      type="button"
-                      className="w-8 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-sm transition-colors select-none"
-                      onClick={() => {
-                        const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
-                        const newVal = Math.max(0, currentVal - 0.1).toFixed(1);
-                        handleRatioChange(idx, parseFloat(newVal));
-                      }}
-                    >
-                      -
-                    </button>
-                    <span className="w-10 text-center text-sm font-black text-slate-800 select-none">
-                      {mixRatios[idx] !== undefined ? parseFloat(mixRatios[idx]).toFixed(1) : '0.0'}
-                    </span>
-                    <button
-                      type="button"
-                      className="w-8 h-full flex items-center justify-center bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-extrabold text-sm transition-colors select-none"
-                      onClick={() => {
-                        const currentVal = parseFloat(mixRatios[idx] !== undefined ? mixRatios[idx] : 0);
-                        const newVal = (currentVal + 0.1).toFixed(1);
-                        handleRatioChange(idx, parseFloat(newVal));
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Live total inside modal */}
-            <div className="flex items-center justify-between text-xs bg-primary/5 border border-primary/20 rounded-xl px-3 py-2">
-              <span className="font-semibold text-slate-600">{t('Total')}</span>
-              <span className="font-black text-primary">Rs. {Math.round(parseFloat(currentPrice) || 0)}</span>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-white font-bold rounded-xl transition-all shadow-sm"
-              onClick={() => setShowCustomRequest(!showCustomRequest)}
-            >
-              {showCustomRequest ? t("Cancel Custom Request") : t("Want something else? Custom Request")}
-            </Button>
-
-            {showCustomRequest && (
-              <div className="p-3.5 bg-[#fcfaf7] border border-primary/20 rounded-2xl space-y-3 shadow-sm animate-in slide-in-from-top-2 fade-in duration-300">
-                <div className="border-b border-primary/10 pb-1.5">
-                  <p className="text-xs font-extrabold text-primary uppercase tracking-wider">{t("Send a Custom Request")}</p>
-                  <p className="text-[9px] text-slate-500 mt-0.5 leading-normal">{t("Tell us what ingredients and proportions you want, and we'll contact you!")}</p>
-                </div>
-                <div className="space-y-2">
-                  <input type="text" placeholder={t("Your Name")} className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" value={customRequestData.name} onChange={e => setCustomRequestData({...customRequestData, name: e.target.value})} />
-                  <input type="text" placeholder={t("Phone Number")} className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all" value={customRequestData.phone} onChange={e => setCustomRequestData({...customRequestData, phone: e.target.value})} />
-                  <textarea placeholder={t("Describe your custom mix (e.g., 50% Wheat, 30% Chana, 20% Oats)")} className="w-full text-xs p-2 rounded-xl border border-primary/15 bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-all min-h-[60px]" value={customRequestData.message} onChange={e => setCustomRequestData({...customRequestData, message: e.target.value})} />
-                  <Button className="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] h-8 text-xs text-white font-bold rounded-xl transition-all shadow-md" onClick={submitCustomRequest} disabled={isSubmittingRequest}>
-                    {isSubmittingRequest ? t("Sending...") : t("Send Request")}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="shrink-0 pt-2 border-t border-slate-100">
-            <Button onClick={() => setShowMixModal(false)} className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl">
-              {t('Done')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Service Customization Modal */}
-      <Dialog open={showCustomizationsModal} onOpenChange={setShowCustomizationsModal}>
-        <DialogContent className="max-w-md bg-white rounded-xl max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 gap-3 flex flex-col overflow-hidden">
-          {(() => {
-            const isAvgMode = service.customization_pricing_mode === 'average';
-            const selectedCount = Object.values(selectedOptions).filter(Boolean).length;
-            const unitText = tDynamic(isDualUnit ? 'kg' : displayUnit);
-            return (
-              <>
-                <DialogHeader className="border-b border-slate-100 pb-3 shrink-0">
-                  <DialogTitle className="flex items-center gap-2 text-slate-800 text-lg font-black">
-                    <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isAvgMode ? 'bg-emerald-500' : 'bg-orange-500'}`} />
-                    <span className={`truncate ${isAvgMode ? 'text-emerald-800' : 'text-orange-800'}`}>
-                      {isAvgMode ? t("Product Items & Rates") : t("Service Customization")}
-                    </span>
-                  </DialogTitle>
-                  <DialogDescription className="text-slate-500 font-medium text-xs pt-1">
-                    {isAvgMode ? t("Choose which items to include in this product:") : t("Select the services you want")}
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="flex flex-col gap-2.5 overflow-y-auto min-h-0">
-                  {effectiveCustomizations.map((cust, idx) => (
-                    <div key={cust.id || idx} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${selectedOptions[idx] ? (isAvgMode ? 'bg-emerald-50/70 border-emerald-200' : 'bg-orange-100/60 border-orange-200') : 'bg-white border-slate-100'}`}>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id={`cust-modal-${service.id}-${idx}`}
-                          checked={!!selectedOptions[idx]}
-                          onCheckedChange={() => toggleOption(idx)}
-                          className={isAvgMode ? 'checkbox-emerald border-emerald-500 bg-white' : 'checkbox-orange border-orange-500 bg-white'}
-                        />
-                        <Label htmlFor={`cust-modal-${service.id}-${idx}`} className={`text-sm font-bold cursor-pointer select-none ${isAvgMode ? 'text-emerald-950' : 'text-orange-900'}`}>{t(cust.option_name)}</Label>
-                      </div>
-                      <span className={`text-xs font-bold bg-white px-2.5 py-1 rounded-full border ${isAvgMode ? 'text-emerald-800 border-emerald-200' : 'text-orange-700 border-orange-100'}`}>
-                        Rs. {cust.option_price} {isAvgMode ? `/${unitText}` : ''}
-                      </span>
-                    </div>
-                  ))}
-
-                  {selectedCount === 0 && (
-                    <p className="text-xs text-red-500 font-bold text-center italic mt-1">
-                      ⚠ {isAvgMode ? t("Please select at least one item") : t("Please select at least one service")}
-                    </p>
-                  )}
-
-                  <div className={`flex items-center justify-between text-xs rounded-xl px-3 py-2.5 mt-2 border ${isAvgMode ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
-                    <span className="font-semibold text-slate-700">
-                      {isAvgMode ? `${t('Calculated Rate')} (${selectedCount} ${t('items included')}):` : t('Total')}
-                    </span>
-                    <span className={`font-black text-sm ${isAvgMode ? 'text-emerald-800' : 'text-orange-700'}`}>
-                      Rs. {Math.round(parseFloat(currentPrice) || 0)} {isAvgMode ? `/${unitText}` : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <DialogFooter className="shrink-0 pt-2 border-t border-slate-100">
-                  <Button onClick={() => setShowCustomizationsModal(false)} className={`w-full font-bold rounded-xl text-white ${isAvgMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                    {t('Done')}
-                  </Button>
-                </DialogFooter>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      <CustomizationsModal
+        showCustomizationsModal={showCustomizationsModal}
+        setShowCustomizationsModal={setShowCustomizationsModal}
+        service={service}
+        effectiveCustomizations={effectiveCustomizations}
+        selectedOptions={selectedOptions}
+        toggleOption={toggleOption}
+        currentPrice={currentPrice}
+        isDualUnit={isDualUnit}
+        displayUnit={displayUnit}
+        t={t}
+        tDynamic={tDynamic}
+      />
     </div>
   );
 });
+
+export default ServiceCard;

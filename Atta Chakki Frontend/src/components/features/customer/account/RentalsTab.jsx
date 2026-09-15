@@ -2,10 +2,12 @@ import React from 'react';
 import { Card } from '../../../common/card';
 import { Pagination } from '../../../common/Pagination';
 import { ImageWithFallback } from '../../../common/ImageWithFallback';
-import { Package, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Package, Calendar, CheckCircle2, AlertCircle, Clock, Coins, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../../../../config';
 
 export const RentalsTab = ({
   rentals = [],
+  loadingRentals = false,
   rentalsPage = 1,
   setRentalsPage,
   rentalsPageSize = 5,
@@ -238,3 +240,4 @@ export const RentalsTab = ({
 };
 
 export default RentalsTab;
+

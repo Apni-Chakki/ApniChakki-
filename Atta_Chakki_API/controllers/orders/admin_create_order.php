@@ -1,6 +1,7 @@
 <?php
 // admin side se manual order create karna
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/order_scheduler.php';
 
 header('Content-Type: application/json');
 
@@ -87,7 +88,7 @@ try {
     // order items save kar rahe
     foreach ($data['items'] as $item) {
         $product_id = intval($item['id'] ?? 0);
-        $quantity = intval($item['quantity'] ?? 1);
+        $quantity = floatval($item['quantity'] ?? 1);
         $price = floatval($item['price'] ?? 0);
         $is_cleaning = intval($item['is_cleaning'] ?? 0);
         $is_grinding = intval($item['is_grinding'] ?? 0);
@@ -131,10 +132,14 @@ try {
         $prod_check->close();
     }
 
+    // Run scheduler algorithm to calculate weight, processing time, and assign date/ETA
+    $schedule_result = scheduleOrder($conn, $order_id);
+
     echo json_encode([
         "success" => true,
         "message" => "Order created successfully",
-        "order_id" => $order_id
+        "order_id" => $order_id,
+        "schedule" => $schedule_result
     ]);
 
 } catch (Exception $e) {

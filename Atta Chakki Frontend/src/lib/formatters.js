@@ -18,7 +18,7 @@ export function formatPKR(value, { decimals = false } = {}) {
 
 /** "15 Sep 2026" — short date. Accepts Date, ISO string, or ms timestamp. */
 export function formatDate(input) {
-  if (input == null || input === '') return '';
+  if ((input === null || input === undefined) || input === '') return '';
   const d = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -26,7 +26,7 @@ export function formatDate(input) {
 
 /** "15 Sep 2026, 03:45 PM" */
 export function formatDateTime(input) {
-  if (input == null || input === '') return '';
+  if ((input === null || input === undefined) || input === '') return '';
   const d = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(d.getTime())) return '';
   const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -36,7 +36,7 @@ export function formatDateTime(input) {
 
 /** "03:45 PM" */
 export function formatTime(input) {
-  if (input == null || input === '') return '';
+  if ((input === null || input === undefined) || input === '') return '';
   const d = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -66,7 +66,7 @@ export function formatOrderId(id, { pad = 5 } = {}) {
 
 /** Relative "2 hours ago" / "in 3 days". Simple, no i18n. */
 export function formatRelative(input) {
-  if (input == null || input === '') return '';
+  if ((input === null || input === undefined) || input === '') return '';
   const d = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(d.getTime())) return '';
   const diffSec = (d.getTime() - Date.now()) / 1000;
@@ -94,3 +94,4 @@ export function truncate(text, max = 60) {
   const s = String(text);
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
+

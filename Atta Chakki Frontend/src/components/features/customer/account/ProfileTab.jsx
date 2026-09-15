@@ -10,6 +10,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  Truck,
   Lock,
   Edit,
   Save,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 
 export const ProfileTab = ({
+  user = {},
   profile = {},
   tempProfile = {},
   setTempProfile,
@@ -371,3 +373,4 @@ export const ProfileTab = ({
 };
 
 export default ProfileTab;
+

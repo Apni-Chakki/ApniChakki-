@@ -1,34 +1,24 @@
+import React from 'react';
 import { Edit, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { Card } from '../../../common/card';
 import { Button } from '../../../common/button';
 
-/**
- * Single service row card on the "Manage Services" admin page.
- * Displays priority badge, image, name, description, tag chips (price/category/
- * customizations/mix/tracked/dual-mode/discount/custom-badge), and the three
- * action buttons (toggle active, edit, delete).
- *
- * Extracted from ManageServices.jsx (Phase 3.2a) — behavior preserved exactly.
- *
- * Parent still owns:
- *  - the services array + category grouping
- *  - the mutation handlers (onToggleActive/onEdit/onDelete)
- *  - the isAdding/editingId flags that disable buttons during a form session
- *
- * @param {{
- *   service: object,
- *   isAdding: boolean,
- *   editingId: string | number | null,
- *   onToggleActive: (id: any, currentStatus: any) => void,
- *   onEdit: (service: object) => void,
- *   onDelete: (id: any) => void,
- * }} props
- */
-export function ServiceListItem({ service, isAdding, editingId, onToggleActive, onEdit, onDelete }) {
+export function ServiceListItem({
+  service,
+  isAdding = false,
+  editingId = null,
+  onToggleActive,
+  onToggleStatus,
+  onEdit,
+  onDelete,
+  deletingId = null,
+  t = (s) => s,
+}) {
   const custs = service.customizations || [];
   const hasCusts = custs.length > 0 || service.is_grinding_service === 1 || service.is_grinding_service === true;
-  const busy = isAdding || editingId !== null;
+  const busy = Boolean(isAdding) || (editingId !== null && editingId !== undefined) || deletingId === service.id;
   const isActive = Number(service.is_active) === 1;
+  const toggleHandler = onToggleActive || onToggleStatus;
 
   return (
     <Card
@@ -129,33 +119,31 @@ export function ServiceListItem({ service, isAdding, editingId, onToggleActive, 
         {/* Actions — full-width 3-col grid on mobile, vertical stack on desktop */}
         <div className="grid grid-cols-3 sm:flex sm:flex-col gap-2 pt-3 sm:pt-0 sm:self-start border-t sm:border-t-0 border-border shrink-0">
           <Button
-            onClick={() => onToggleActive(service.id, service.is_active)}
+            onClick={() => toggleHandler && toggleHandler(service.id, service.is_active)}
             variant="outline"
             size="sm"
             disabled={busy}
-            title={isActive ? 'Visible to customers — click to hide' : 'Hidden from customers — click to show'}
-            className={`w-full sm:w-auto ${
-              isActive
-                ? 'border-emerald-500/40 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800'
-                : 'border-red-500/40 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800'
-            }`}
+            title={isActive ? 'Visible to customers - click to hide' : 'Hidden from customers - click to show'}
+            className="w-full sm:w-auto"
           >
-            {isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            {Number(service.is_active) === 1 ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
           </Button>
           <Button
-            onClick={() => onEdit(service)}
+            onClick={() => onEdit && onEdit(service)}
             variant="outline"
             size="sm"
             disabled={busy}
+            title="Edit service"
             className="w-full sm:w-auto"
           >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
-            onClick={() => onDelete(service.id)}
+            onClick={() => onDelete && onDelete(service.id)}
             variant="destructive"
             size="sm"
             disabled={busy}
+            title="Delete service"
             className="w-full sm:w-auto sm:px-4"
           >
             <Trash2 className="h-4 w-4 text-white" />

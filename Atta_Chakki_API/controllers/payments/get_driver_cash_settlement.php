@@ -163,13 +163,21 @@ try {
         return ($b['total_cash_due'] > $a['total_cash_due']) ? 1 : -1;
     });
 
+    $summary = [
+        "grand_total_cash_due" => $grandTotalCashDue,
+        "grand_total_orders"   => $grandTotalOrders,
+        "drivers_with_due"     => $driversWithDue,
+        "total_drivers"        => count($driversList)
+    ];
+
     echo json_encode([
         "success"              => true,
         "drivers"              => $driversList,
         "grand_total_cash_due" => $grandTotalCashDue,
         "grand_total_orders"   => $grandTotalOrders,
         "drivers_with_due"     => $driversWithDue,
-        "total_drivers"        => count($driversList)
+        "total_drivers"        => count($driversList),
+        "summary"              => $summary
     ]);
 
 } catch (Exception $e) {

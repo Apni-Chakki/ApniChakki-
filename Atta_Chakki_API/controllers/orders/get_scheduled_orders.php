@@ -22,6 +22,7 @@ try {
             WHERE (
                 (o.assigned_date IS NULL OR CHAR_LENGTH(o.assigned_date) = 0 OR o.assigned_date >= ?)
                 AND TRIM(LOWER(o.status)) IN ('pending', 'processing')
+                AND o.total_weight_kg > 0
             )
             ORDER BY o.queue_position ASC, o.created_at ASC";
             
@@ -85,11 +86,11 @@ try {
                             'option_price' => $c['option_price']
                         ];
                     }
-                    foreach ($itemsByOrder as $orderId => &$itemList) {
-                        foreach ($itemList as &$itemRef) {
-                            $itemId = (int)$itemRef['id'];
+                    foreach ($itemsByOrder as $oId => $itemList) {
+                        foreach ($itemList as $idx => $item) {
+                            $itemId = (int)$item['id'];
                             if (isset($custsByItem[$itemId])) {
-                                $itemRef['customizations'] = $custsByItem[$itemId];
+                                $itemsByOrder[$oId][$idx]['customizations'] = $custsByItem[$itemId];
                             }
                         }
                     }

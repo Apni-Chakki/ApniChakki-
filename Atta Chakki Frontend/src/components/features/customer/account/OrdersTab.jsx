@@ -2,10 +2,11 @@ import React from 'react';
 import { Card } from '../../../common/card';
 import { Button } from '../../../common/button';
 import { Pagination } from '../../../common/Pagination';
-import { Package, MapPin } from 'lucide-react';
+import { Package, MapPin, Loader2 } from 'lucide-react';
 
 export const OrdersTab = ({
   orders = [],
+  loading = false,
   ordersPage = 1,
   setOrdersPage,
   ordersPageSize = 5,
@@ -181,3 +182,4 @@ export const OrdersTab = ({
 };
 
 export default OrdersTab;
+

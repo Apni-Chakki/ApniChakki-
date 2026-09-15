@@ -107,7 +107,7 @@ try {
 
             $insStmt = $conn->prepare($insSql);
             $insStmt->bind_param(
-                "idsssssdiissss",
+                "idssssdiiissss",
                 $origOrder['user_id'],
                 $batch_amount,
                 $origOrder['shipping_address'],
@@ -133,7 +133,7 @@ try {
 
             $insStmt = $conn->prepare($insSql);
             $insStmt->bind_param(
-                "idsssssdis",
+                "idssssdis",
                 $origOrder['user_id'],
                 $batch_amount,
                 $origOrder['shipping_address'],

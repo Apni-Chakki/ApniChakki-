@@ -113,7 +113,12 @@ try {
         $products[] = $row;
     }
     
-    $response_data = json_encode(["success" => true, "products" => $products]);
+    $response_data = json_encode([
+        "success" => true,
+        "status"  => "success",
+        "products" => $products,
+        "data"     => $products
+    ]);
     set_api_cache($cache_key, $response_data);
 
     http_response_code(200);

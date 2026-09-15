@@ -84,8 +84,17 @@ $path = explode('?', $path)[0];
 $path = trim($path, '/');
 
 if (empty($path)) {
-    echo json_encode(["message" => "Welcome to Suchi Chakki API MVC"]);
-    exit;
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
+    if (!empty($action)) {
+        $path = trim($action);
+    } else {
+        echo json_encode(["message" => "Welcome to Suchi Chakki API MVC"]);
+        exit;
+    }
+}
+
+if (substr($path, -4) !== '.php' && !str_contains($path, '/')) {
+    $path .= '.php';
 }
 
 // core endpoints ka mapping
@@ -126,13 +135,24 @@ $mapping = [
     'add_product.php' => 'controllers/products/add_product.php',
     'delete_product.php' => 'controllers/products/delete_product.php',
     'update_product.php' => 'controllers/products/update_product.php',
+    'update_product_status.php' => 'controllers/products/update_product_status.php',
+    'update_category_status.php' => 'controllers/products/update_category_status.php',
     'update_inventory.php' => 'controllers/inventory/update_inventory.php',
     'toggle_driver_status.php' => 'controllers/delivery/toggle_driver_status.php',
     'get_udhaar_ledger.php' => 'controllers/payments/get_udhaar_ledger.php',
     'record_udhaar_payment.php' => 'controllers/payments/record_udhaar_payment.php',
     'get_driver_cash_settlement.php' => 'controllers/payments/get_driver_cash_settlement.php',
+    'get_driver_settlements.php' => 'controllers/payments/get_driver_cash_settlement.php',
     'record_driver_settlement.php' => 'controllers/payments/record_driver_settlement.php',
     'get_rental_history.php' => 'controllers/rentals/get_rental_history.php',
+    'get_scheduled_orders.php' => 'controllers/orders/get_scheduled_orders.php',
+    'get_tomorrows_orders.php' => 'controllers/orders/get_scheduled_orders.php',
+    'get_processing_orders.php' => 'controllers/orders/get_processing_orders.php',
+    'get_schedule_capacity.php' => 'controllers/orders/get_schedule_capacity.php',
+    'assign_driver.php' => 'controllers/orders/assign_driver.php',
+    'manage_delivery.php' => 'controllers/delivery/manage_delivery.php',
+    'override_order_schedule.php' => 'controllers/orders/override_order_schedule.php',
+    'split_order_batch.php' => 'controllers/orders/split_order_batch.php',
 ];
 
 if (isset($mapping[$path])) {

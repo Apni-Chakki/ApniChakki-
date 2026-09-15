@@ -117,10 +117,18 @@ if (!empty($userIds)) {
 $ledgers = array_values($customerMap);
 
 echo json_encode([
-    "success"          => true,
-    "ledgers"          => $ledgers,
-    "total"            => $totalCustomers,
-    "totalOutstanding" => $totalOutstanding,
-    "page"             => $page,
-    "limit"            => $limit,
+    "success"           => true,
+    "ledgers"           => $ledgers,
+    "data"              => $ledgers,
+    "total"             => $totalCustomers,
+    "totalOutstanding"  => $totalOutstanding,
+    "total_outstanding" => $totalOutstanding,
+    "pagination"        => [
+        "page"        => $page,
+        "limit"       => $limit,
+        "total_items" => $totalCustomers,
+        "total_pages" => ceil($totalCustomers / $limit)
+    ],
+    "page"              => $page,
+    "limit"             => $limit,
 ]);

@@ -83,7 +83,7 @@ try {
             echo json_encode(["success" => false, "message" => "Product not found"]);
         } else {
             clear_api_cache();
-            echo json_encode(["success" => true, "message" => "Product deleted successfully"]);
+            echo json_encode(["success" => true, "status" => "success", "message" => "Product deleted successfully"]);
         }
     } else {
         echo json_encode(["success" => false, "message" => "Error: " . $stmt->error]);

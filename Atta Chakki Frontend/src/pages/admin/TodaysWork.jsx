@@ -75,6 +75,9 @@ export function TodaysWork() {
     })
   );
 
+  const carriedForwardOrders = processingOrders.filter(o => o.is_carried_forward);
+  const todayNewOrders = processingOrders.filter(o => !o.is_carried_forward);
+
   const totalWeight = processingOrders.reduce((sum, order) => sum + parseFloat(order.total_weight_kg || 0), 0);
   const totalProcessingMinutes = processingOrders.reduce((sum, order) => sum + parseInt(order.processing_time_minutes || 0), 0);
   const activeDrivers = activePersonnel.length;

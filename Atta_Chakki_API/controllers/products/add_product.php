@@ -133,7 +133,7 @@ try {
 
         clear_api_cache();
         http_response_code(201);
-        echo json_encode(["success" => true, "message" => "Product added successfully", "id" => $product_id]);
+        echo json_encode(["success" => true, "status" => "success", "message" => "Product added successfully", "id" => $product_id]);
     } else {
         throw new Exception("Error: " . $stmt->error);
     }
