@@ -1,3 +1,8 @@
+import { LiveTrackingHeader } from '../../components/features/admin/liveTracking/LiveTrackingHeader';
+import { LiveTrackingSidebar } from '../../components/features/admin/liveTracking/LiveTrackingSidebar';
+import { RoutePlannerTab } from '../../components/features/admin/liveTracking/RoutePlannerTab';
+import { RouteReplayTab } from '../../components/features/admin/liveTracking/RouteReplayTab';
+import { GeofenceTab } from '../../components/features/admin/liveTracking/GeofenceTab';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Radio, MapPin, Truck, Phone, Navigation, Clock, RefreshCw, ChevronLeft,
@@ -1611,66 +1616,23 @@ export function LiveTrackingMap() {
 
   return (
     <div className="space-y-4 w-full min-w-0 overflow-x-hidden">
-      {/* Header + Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2 truncate">
-            <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 animate-pulse shrink-0" />
-            <span className="truncate">Live Delivery Tracking</span>
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{drivers.length} active • {completedDeliveries.length} completed today</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Notification Bell */}
-          <div className="relative" ref={notifRef}>
-            <Button variant="outline" size="sm" className="relative gap-1.5 h-8 px-2.5" onClick={() => { setNotifOpen(o => !o); setUnreadCount(0); }}>
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount}</span>}
-            </Button>
-            {notifOpen && (
-              <div className="absolute right-0 top-10 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-white border rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
-                <div className="flex items-center justify-between px-3 py-2 border-b">
-                  <p className="text-sm font-bold">Notifications</p>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setNotifications([])}>Clear all</Button>
-                </div>
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
-                ) : notifications.map(n => (
-                  <div key={n.id} className={`flex items-start gap-2 px-3 py-2 border-b hover:bg-muted/30 text-xs ${NOTIF_TYPES[n.type]?.color}`}>
-                    <span className="text-base shrink-0">{NOTIF_TYPES[n.type]?.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold">{NOTIF_TYPES[n.type]?.label}</p>
-                      <p className="truncate">{n.driverName} • Order #{n.orderId} {n.extra}</p>
-                      <p className="opacity-60">{n.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <span className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full h-8 ${socketConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
-            {socketConnected ? 'Real-time' : 'Polling'}
-          </span>
-          <Button variant="outline" size="sm" onClick={fetchDriverLocations} className="gap-1 h-8 text-xs">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Tab Bar - Horizontally scrollable on mobile */}
-      <div className="w-full overflow-x-auto no-scrollbar pb-1">
-        <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-max min-w-0">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-              {tab.icon} {tab.label}
-              {tab.id === 'live' && drivers.length > 0 && <span className="w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">{drivers.length}</span>}
-            </button>
-          ))}
-        </div>
-      </div>
+      <LiveTrackingHeader
+        driversCount={drivers.length}
+        completedCount={completedDeliveries.length}
+        notifRef={notifRef}
+        notifOpen={notifOpen}
+        setNotifOpen={setNotifOpen}
+        unreadCount={unreadCount}
+        setUnreadCount={setUnreadCount}
+        notifications={notifications}
+        setNotifications={setNotifications}
+        NOTIF_TYPES={NOTIF_TYPES}
+        socketConnected={socketConnected}
+        fetchDriverLocations={fetchDriverLocations}
+        TABS={TABS}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
       {/* TAB: LIVE */}
       {activeTab === 'live' && (
@@ -1706,375 +1668,77 @@ export function LiveTrackingMap() {
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4" /> Active Drivers ({drivers.length})</h3>
-            {loading ? <Card className="p-8 text-center"><div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" /><p className="text-sm text-muted-foreground mt-2">Loading...</p></Card>
-              : drivers.length === 0 ? <Card className="p-8 text-center"><Truck className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-40" /><p className="text-sm text-muted-foreground">No active deliveries</p></Card>
-              : drivers.map(driver => {
-                const orderId = String(driver.order_id);
-                const etaInfo = driverETAs[orderId], progress = routeProgress[orderId];
-                const isNear = nearDestination[orderId], countdown = liveCountdown[orderId];
-                const color = getDriverColor(orderId).main;
-                const speed = formatSpeed(parseFloat(driver.speed || 0));
-                const isSelected = String(selectedOrder) === orderId;
-                return (
-                  <Card key={driver.order_id} className={`p-4 cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-purple-500 bg-purple-50/50' : 'hover:bg-secondary/50'}`} onClick={() => focusDriver(driver)}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: color }}>{driver.driver_name?.charAt(0)}</div>
-                        <div><p className="font-semibold text-sm">{driver.driver_name}</p><p className="text-xs text-muted-foreground">Order #{driver.order_id}</p></div>
-                      </div>
-                      <div className="flex gap-1">
-                        {isNear && <Badge className="bg-green-500 text-white text-[10px] animate-pulse"><Zap className="h-2.5 w-2.5 mr-0.5" />Near!</Badge>}
-                        <Badge className="bg-red-500 text-white text-[10px] animate-pulse"><Radio className="h-2.5 w-2.5 mr-0.5" />LIVE</Badge>
-                      </div>
-                    </div>
-                    {etaInfo && (
-                      <div className="rounded-xl p-2.5 mb-2" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-                        <div className="flex justify-between text-xs">
-                          <div><p className="text-muted-foreground">ETA</p><p className="font-bold" style={{ color }}>{etaInfo.eta}</p></div>
-                          <div className="text-right"><p className="text-muted-foreground">Distance</p><p className="font-bold">{etaInfo.distance}</p></div>
-                          {countdown !== undefined && <div className="text-right"><p className="text-muted-foreground">Left</p><p className="font-mono font-bold text-orange-600">{fmtCountdown(countdown)}</p></div>}
-                        </div>
-                        {etaInfo.arrivalTime && <p className="text-xs mt-1 flex items-center gap-1" style={{ color }}><Clock className="h-3 w-3" /> Arrives at <strong>{etaInfo.arrivalTime}</strong></p>}
-                      </div>
-                    )}
-                    {progress && (
-                      <div className="mb-2">
-                        <div className="flex justify-between text-xs mb-0.5"><span className="text-muted-foreground">Progress</span><span className="font-bold" style={{ color }}>{progress.pct}%</span></div>
-                        <div className="h-1.5 bg-muted rounded-full"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress.pct}%`, background: color }} /></div>
-                      </div>
-                    )}
-                    {speed && <p className="text-xs text-amber-600 flex items-center gap-1 mb-2"><Zap className="h-3 w-3" />{speed}</p>}
-                    <div className="bg-background rounded-lg px-3 py-2 border text-xs space-y-0.5 mb-2">
-                      <p className="flex items-center gap-1.5 truncate"><MapPin className="h-3 w-3 text-red-400 shrink-0" />{driver.shipping_address?.substring(0, 45) || 'N/A'}</p>
-                      {driver.customer_phone && <p className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-blue-400" />{driver.customer_phone}</p>}
-                      <p className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-3 w-3" />Last: {new Date(driver.created_at).toLocaleTimeString()}</p>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <Button variant="outline" size="sm" className="flex-1 text-xs h-7 gap-1" onClick={e => { e.stopPropagation(); focusDriver(driver); }}><Route className="h-3 w-3" />Route</Button>
-                      <Button variant="outline" size="sm" className="flex-1 text-xs h-7 gap-1" onClick={e => { e.stopPropagation(); copyTrackingLink(driver.order_id); }}><Link2 className="h-3 w-3" />Link</Button>
-                      <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={e => { e.stopPropagation(); window.open(`https://www.google.com/maps?q=${driver.latitude},${driver.longitude}`, '_blank'); }}><Navigation className="h-3 w-3" /></Button>
-                      {driver.customer_phone && <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={e => { e.stopPropagation(); window.open(`tel:${driver.customer_phone}`); }}><Phone className="h-3 w-3" /></Button>}
-                    </div>
-                  </Card>
-                );
-              })
-            }
-            {completedDeliveries.length > 0 && (
-              <div className="mt-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2 mb-2"><CheckCircle2 className="h-4 w-4 text-green-600" /> Recently Completed</h3>
-                {completedDeliveries.map((d, i) => (
-                  <Card key={`${d.order_id}-${i}`} className="p-3 mb-2 bg-green-50/50 border-green-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs">✅</div><div><p className="text-xs font-semibold">{d.driver_name}</p><p className="text-[10px] text-muted-foreground">#{d.order_id} • {d.customer_name}</p></div></div>
-                      <Badge variant="outline" className="text-[10px] border-green-300 text-green-700">{d.completed_at}</Badge>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+          <LiveTrackingSidebar
+            drivers={drivers}
+            loading={loading}
+            completedDeliveries={completedDeliveries}
+            driverETAs={driverETAs}
+            routeProgress={routeProgress}
+            nearDestination={nearDestination}
+            liveCountdown={liveCountdown}
+            selectedOrder={selectedOrder}
+            getDriverColor={getDriverColor}
+            formatSpeed={formatSpeed}
+            fmtCountdown={fmtCountdown}
+            focusDriver={focusDriver}
+            copyTrackingLink={copyTrackingLink}
+          />
         </div>
       )}
 
       {/* TAB: ROUTE PLANNER */}
       {activeTab === 'planner' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full min-w-0">
-          <div className="lg:col-span-2 min-w-0">
-            <Card className="overflow-hidden gap-0">
-              <div className="px-4 py-2.5 border-b flex items-center gap-2 bg-blue-50/50">
-                <Route className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-semibold">Multi-Stop Route Optimizer</span>
-                {plannerResult && <Badge className="ml-auto bg-blue-600 text-white text-xs">{plannerResult.totalDist} km • {plannerResult.totalTime} min total</Badge>}
-              </div>
-              <div
-                ref={plannerMapContainerRef}
-                className="relative w-full z-0 overflow-hidden"
-                style={{ height: 'min(540px, 60vh)', minHeight: '340px', width: '100%', background: '#f8fafc' }}
-              />
-            </Card>
-          </div>
-          <div className="space-y-3">
-            <Card className="p-4">
-              <h3 className="text-sm font-semibold mb-1 flex items-center gap-2"><Layers className="h-4 w-4" /> Select Stops (in order)</h3>
-              <p className="text-[11px] text-muted-foreground mb-3">Only home delivery orders shown (Store pickups excluded)</p>
-              {plannerOrders.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No home delivery orders ready for routing</p>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {plannerOrders.map(order => {
-                    const sel = plannerSelected.find(s => s.id === order.id);
-                    const idx = plannerSelected.findIndex(s => s.id === order.id);
-                    return (
-                      <div key={order.id} className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer hover:bg-muted/30 transition-all ${sel ? 'border-blue-400 bg-blue-50/60' : ''}`}
-                        onClick={() => { if (sel) setPlannerSelected(p => p.filter(s => s.id !== order.id)); else setPlannerSelected(p => [...p, order]); }}>
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold" style={{ background: sel ? '#2563eb' : '#e2e8f0', color: sel ? 'white' : '#64748b' }}>{sel ? idx + 1 : '+'}</div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold truncate">Order #{order.id} — {order.customer_name}</p>
-                          <p className="text-muted-foreground truncate">{order.shipping_address?.substring(0, 50)}</p>
-                        </div>
-                        <Badge variant="outline" className="text-[9px] shrink-0">{order.status}</Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="mt-3 space-y-2">
-                {plannerSelected.length > 0 && (
-                  <div className="bg-muted/30 rounded-lg p-2 text-xs">
-                    <p className="font-semibold mb-1">{plannerSelected.length} stops selected:</p>
-                    {plannerSelected.map((s, i) => (
-                      <div key={s.id} className="flex items-center gap-1 text-[11px] py-0.5">
-                        <span className="w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{i + 1}</span>
-                        <span className="truncate">Order #{s.id} — {s.customer_name}</span>
-                        <button onClick={() => setPlannerSelected(p => p.filter(x => x.id !== s.id))} className="ml-auto text-red-400 hover:text-red-600"><X className="h-3 w-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button className="w-full gap-2" disabled={plannerSelected.length < 2 || plannerLoading} onClick={calculateOptimalRoute}>
-                  {plannerLoading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</>
-                    : <><Zap className="h-4 w-4" /> Optimize Route ({plannerSelected.length} stops)</>}
-                </Button>
-                {plannerSelected.length > 0 && <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => { setPlannerSelected([]); plannerMarkersRef.current.forEach(m => m.remove()); plannerMarkersRef.current = []; setPlannerResult(null); }}>
-                  <Trash2 className="h-3 w-3 mr-1" /> Clear All
-                </Button>}
-              </div>
-            </Card>
-            {plannerResult && (
-              <Card className="p-4 bg-blue-50/50 border-blue-200">
-                <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Optimized Route</h4>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-white rounded-lg p-2 text-center"><p className="text-xs text-muted-foreground">Total Distance</p><p className="font-bold text-blue-700">{plannerResult.totalDist} km</p></div>
-                  <div className="bg-white rounded-lg p-2 text-center"><p className="text-xs text-muted-foreground">Total Time</p><p className="font-bold text-blue-700">{plannerResult.totalTime} min</p></div>
-                </div>
-                <div className="space-y-1">
-                  {plannerResult.legs?.map((leg, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{i + 1}</span>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{leg.end_address?.substring(0, 35)}</span>
-                      <span className="text-muted-foreground shrink-0">{leg.duration.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        </div>
+        <RoutePlannerTab
+          plannerMapContainerRef={plannerMapContainerRef}
+          plannerResult={plannerResult}
+          plannerOrders={plannerOrders}
+          plannerSelected={plannerSelected}
+          setPlannerSelected={setPlannerSelected}
+          plannerLoading={plannerLoading}
+          calculateOptimalRoute={calculateOptimalRoute}
+          onClearAll={() => {
+            setPlannerSelected([]);
+            plannerMarkersRef.current.forEach(m => m.remove());
+            plannerMarkersRef.current = [];
+            setPlannerResult(null);
+          }}
+        />
       )}
 
       {/* TAB: REPLAY */}
       {activeTab === 'replay' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full min-w-0">
-          <div className="lg:col-span-2 min-w-0">
-            <Card className="overflow-hidden gap-0">
-              <div className="px-4 py-2.5 border-b flex items-center gap-2 bg-purple-50/50">
-                <History className="h-4 w-4 text-purple-600" />
-                <span className="text-sm font-semibold">Delivery History Replay</span>
-                {replayTrail.length > 0 && <Badge className="ml-auto bg-purple-600 text-white text-xs">{replayTrail.length} GPS points</Badge>}
-              </div>
-              <div
-                ref={replayMapContainerRef}
-                className="relative w-full z-0 overflow-hidden"
-                style={{ height: 'min(540px, 60vh)', minHeight: '340px', width: '100%', background: '#f8fafc' }}
-              />
-              {/* Playback progress */}
-              {replayTrail.length > 0 && (
-                <div className="border-t px-4 py-3 bg-muted/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Button variant={replayPlaying ? 'default' : 'outline'} size="sm" className="h-8 w-8 p-0" onClick={replayPlaying ? pauseReplay : startReplay}>
-                      {replayPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={resetReplay}><RotateCcw className="h-4 w-4" /></Button>
-                    <div className="flex-1 mx-2">
-                      <div className="h-2 bg-muted rounded-full relative">
-                        <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${replayTrail.length > 0 ? (replayIdx / (replayTrail.length - 1)) * 100 : 0}%` }} />
-                      </div>
-                    </div>
-                    <span className="text-xs text-muted-foreground shrink-0">{replayIdx + 1} / {replayTrail.length}</span>
-                    <div className="flex items-center gap-1 border rounded-lg px-2 py-1">
-                      <SkipForward className="h-3 w-3 text-muted-foreground" />
-                      {[1, 2, 5, 10].map(s => (
-                        <button key={s} className={`text-xs px-1.5 py-0.5 rounded transition-all ${replaySpeed === s ? 'bg-purple-500 text-white' : 'hover:bg-muted'}`} onClick={() => setReplaySpeed(s)}>{s}x</button>
-                      ))}
-                    </div>
-                  </div>
-                  {replayTrail[replayIdx] && (
-                    <p className="text-[10px] text-muted-foreground">
-                      📍 {replayTrail[replayIdx].lat.toFixed(5)}, {replayTrail[replayIdx].lng.toFixed(5)}
-                      {replayTrail[replayIdx].created_at && ` • ${new Date(replayTrail[replayIdx].created_at).toLocaleTimeString()}`}
-                    </p>
-                  )}
-                </div>
-              )}
-            </Card>
-          </div>
-          <div className="space-y-3">
-            <Card className="p-4">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><History className="h-4 w-4" /> Load Delivery</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Order ID</label>
-                  <div className="flex gap-2">
-                    <input
-                      value={replayOrderId}
-                      onChange={e => setReplayOrderId(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && fetchReplay()}
-                      className="flex-1 h-9 px-3 text-sm border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      placeholder="e.g. 121"
-                    />
-                    <Button size="sm" className="h-9 gap-1" onClick={() => fetchReplay()} disabled={replayLoading}>
-                      {replayLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Quick select active drivers */}
-                {drivers.length > 0 && (
-                  <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">Active Orders (Click to Replay):</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {drivers.map(d => (
-                        <button
-                          key={d.order_id}
-                          type="button"
-                          onClick={() => {
-                            setReplayOrderId(String(d.order_id));
-                            fetchReplay(d.order_id);
-                          }}
-                          className={`text-xs px-2.5 py-1 rounded-md border transition-all flex items-center gap-1.5 ${
-                            String(replayOrderId) === String(d.order_id)
-                              ? 'bg-purple-100 border-purple-400 text-purple-800 font-semibold'
-                              : 'bg-muted/40 hover:bg-purple-50 hover:border-purple-300'
-                          }`}
-                        >
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          #{d.order_id} ({d.driver_name})
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Quick select recently completed deliveries */}
-                {completedDeliveries.length > 0 && (
-                  <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">Recent Deliveries:</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {completedDeliveries.slice(0, 5).map(d => (
-                        <button
-                          key={d.order_id}
-                          type="button"
-                          onClick={() => {
-                            setReplayOrderId(String(d.order_id));
-                            fetchReplay(d.order_id);
-                          }}
-                          className={`text-xs px-2.5 py-1 rounded-md border transition-all flex items-center gap-1.5 ${
-                            String(replayOrderId) === String(d.order_id)
-                              ? 'bg-purple-100 border-purple-400 text-purple-800 font-semibold'
-                              : 'bg-muted/40 hover:bg-purple-50 hover:border-purple-300'
-                          }`}
-                        >
-                          <span className="w-2 h-2 rounded-full bg-slate-400" />
-                          #{d.order_id} ({d.customer_name?.split(' ')[0] || 'Order'})
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-muted/30 rounded-lg p-3 text-xs space-y-1 text-muted-foreground">
-                  <p className="font-semibold text-foreground">How to use:</p>
-                  <p>1. Enter an Order ID above or pick a delivery</p>
-                  <p>2. Press Play or Enter to load GPS trail</p>
-                  <p>3. Use playback controls to replay path</p>
-                  <p>4. Change speed with 1x/2x/5x/10x</p>
-                </div>
-
-                {replayTrail.length > 0 && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-1 text-xs">
-                    <p className="font-semibold text-purple-800">Trail Loaded ✓</p>
-                    <p>Total points: <strong>{replayTrail.length}</strong></p>
-                    {replayTrail[0]?.created_at && <p>Start: <strong>{new Date(replayTrail[0].created_at).toLocaleString()}</strong></p>}
-                    {replayTrail[replayTrail.length - 1]?.created_at && <p>End: <strong>{new Date(replayTrail[replayTrail.length - 1].created_at).toLocaleString()}</strong></p>}
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        </div>
+        <RouteReplayTab
+          replayMapContainerRef={replayMapContainerRef}
+          replayTrail={replayTrail}
+          replayPlaying={replayPlaying}
+          startReplay={startReplay}
+          pauseReplay={pauseReplay}
+          resetReplay={resetReplay}
+          replayIdx={replayIdx}
+          replaySpeed={replaySpeed}
+          setReplaySpeed={setReplaySpeed}
+          replayOrderId={replayOrderId}
+          setReplayOrderId={setReplayOrderId}
+          fetchReplay={fetchReplay}
+          replayLoading={replayLoading}
+          drivers={drivers}
+          completedDeliveries={completedDeliveries}
+        />
       )}
 
       {/* TAB: GEOFENCE */}
       {activeTab === 'geofence' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full min-w-0">
-          <div className="lg:col-span-2 min-w-0">
-            <Card className="overflow-hidden gap-0">
-              <div className="px-4 py-2.5 border-b flex items-center gap-2 bg-purple-50/50">
-                <Shield className="h-4 w-4 text-purple-600" />
-                <span className="text-sm font-semibold">Geofence Manager</span>
-                <Badge className={`ml-auto text-xs ${geofenceEnabled ? 'bg-green-500' : 'bg-gray-400'} text-white`}>{geofenceEnabled ? '🟢 Active' : '⚫ Disabled'}</Badge>
-              </div>
-              <div
-                ref={geofenceMapContainerRef}
-                className="relative w-full z-0 overflow-hidden"
-                style={{ height: 'min(540px, 60vh)', minHeight: '340px', width: '100%', background: '#f8fafc' }}
-              />
-              <div className="border-t px-4 py-2 bg-muted/20 flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="w-4 h-4 rounded-full border-2 border-purple-500 bg-purple-500/10" /> Geofence Zone
-                <span className="ml-2">•</span>
-                <div className="w-3 h-3 rounded-full bg-purple-500" /> Store Location
-              </div>
-            </Card>
-          </div>
-          <div className="space-y-3">
-            <Card className="p-4">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Shield className="h-4 w-4" /> Geofence Settings</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Enable Monitoring</span>
-                  <button onClick={() => setGeofenceEnabled(e => !e)}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${geofenceEnabled ? 'bg-purple-500' : 'bg-muted'}`}>
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${geofenceEnabled ? 'translate-x-5' : ''}`} />
-                  </button>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2"><label className="text-xs font-semibold text-muted-foreground">Alert Radius</label><span className="text-xs font-bold text-purple-700">{(geofenceRadius / 1000).toFixed(1)} km</span></div>
-                  <input type="range" min={500} max={20000} step={500} value={geofenceRadius} onChange={e => setGeofenceRadius(Number(e.target.value))} className="w-full accent-purple-500" />
-                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>0.5 km</span><span>20 km</span></div>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-xs">
-                  <p className="font-semibold mb-1">Store Location</p>
-                  <p className="text-muted-foreground">{storeAddress || 'Loading...'}</p>
-                  {shopCoords && <p className="font-mono text-purple-700 mt-1">{shopCoords.lat.toFixed(5)}, {shopCoords.lng.toFixed(5)}</p>}
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-xs space-y-2">
-                  <p className="font-semibold">Active Drivers Status</p>
-                  {drivers.length === 0 ? <p className="text-muted-foreground">No active drivers</p>
-                    : drivers.map(d => {
-                      const pos = { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude) };
-                      const inZone = shopCoords ? computeDistanceBetween(shopCoords, pos) <= geofenceRadius : true;
-                      return (
-                        <div key={d.order_id} className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${inZone ? 'bg-green-500' : 'bg-red-500'}`} />
-                          <span className="flex-1">{d.driver_name} (#{d.order_id})</span>
-                          <span className={inZone ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{inZone ? 'In Zone' : '⚠️ Outside!'}</span>
-                        </div>
-                      );
-                    })
-                  }
-                </div>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-                  <p className="font-semibold text-yellow-800 mb-1">ℹ️ How Geofencing Works</p>
-                  <p className="text-yellow-700">When enabled, a notification appears if any driver goes outside the set radius from your store location. Checked every 15 seconds.</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
+        <GeofenceTab
+          geofenceMapContainerRef={geofenceMapContainerRef}
+          geofenceEnabled={geofenceEnabled}
+          setGeofenceEnabled={setGeofenceEnabled}
+          geofenceRadius={geofenceRadius}
+          setGeofenceRadius={setGeofenceRadius}
+          storeAddress={storeAddress}
+          shopCoords={shopCoords}
+          drivers={drivers}
+          computeDistanceBetween={computeDistanceBetween}
+        />
       )}
     </div>
   );
