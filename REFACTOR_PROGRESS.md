@@ -1,0 +1,300 @@
+# Refactor Progress Tracker
+
+Companion to [CODE_QUALITY_AUDIT.md](CODE_QUALITY_AUDIT.md). Update this file at the **end of every working session** so the next session (yours, a teammate's, or Claude's) knows exactly where to resume.
+
+**Started:** 2026-09-15
+
+---
+
+## 👋 For anyone picking this up cold — start here
+
+**Where we are:** Phase 0, 1, 2 fully done. Phase 3 is *in progress* — 2 files partially refactored (Checkout.jsx, ManageServices.jsx) using a "conservative Option 1" approach. Read this file top-to-bottom before touching code.
+
+**The core discipline:**
+1. Every extraction is a **pure copy-paste move** to a new file — no behavior change.
+2. After each extraction: `npm run build` must be clean.
+3. **Nothing is committed to git yet** (as of session end 2026-09-15). Untracked: 15+ new component files, 2 doc files, the file-size ESLint warnings, dead-code deletes.
+4. Manual smoke-testing is on the human — I (Claude) cannot click through the app. Every extraction leaves a "please verify X" note.
+
+**Next up (in order):**
+1. **Continue Phase 3** — pick from the "Phase 3 file targets" table below. Recommended next: `PaymentVerification.jsx` (1111 lines) or `UdhaarKhata.jsx` (1175).
+2. Return to `Checkout.jsx` for Options 2 & 3 (address extraction, then payment) *after* admin files are stable — riskier because customer money is involved.
+3. Then Phase 4 (backend repositories) and Phase 5/6 (state, safety).
+
+**Where the new code lives:**
+- Shared reusable — `Atta Chakki Frontend/src/components/shared/` (5 components) and `src/lib/` (`apiClient.js`, `formatters.js`) and `src/hooks/` (`useApi.js`, `useDebouncedValue.js`, `usePagination.js`). Phase 1 landed these but **no page uses them yet** — that's Phase 3 file-by-file.
+- Feature-specific — `Atta Chakki Frontend/src/components/features/{checkout,admin/services}/` (extracted display components).
+- Backend scaffolding — `Atta_Chakki_API/core/` (`Response.php`, `Request.php`, `autoload.php`) and `Atta_Chakki_API/repositories/BaseRepository.php`. Wired via `require_once __DIR__ . '/core/autoload.php';` in `index.php`. No controller uses it yet — that's Phase 4.
+
+**Known live bugs found & fixed during refactor** — see the [Bug fixes landed](#bug-fixes-landed-during-refactor) section below. There is at least one **pattern of caching bugs likely lurking in other admin mutation endpoints** — see the follow-up list.
+
+---
+
+---
+
+## Baselines (captured 2026-09-15, Phase 0)
+
+| Metric                                    | Value                                     |
+| ----------------------------------------- | ----------------------------------------- |
+| Frontend JS/JSX total lines               | **42,965** (before deletes)               |
+| Backend PHP total lines                   | **~15,442** (before deletes)              |
+| Files > 1000 lines                        | **11**                                    |
+| `vite build` total precache               | **5807.41 KiB** (91 files)                |
+| Biggest chunk — `vendor-mapbox`           | **1861 KB** / 522 KB gzip                 |
+| `vendor-pdf`                              | 594 KB / 177 KB gzip                      |
+| `vendor-charts`                           | 393 KB / 108 KB gzip                      |
+| `vendor-excel`                            | 283 KB / 95 KB gzip                       |
+| `vendor-react`                            | 276 KB / 87 KB gzip                       |
+| `vendor-leaflet` (dead — remove Phase 2)  | 150 KB / 43 KB gzip                       |
+| app index                                 | 244 KB / 73 KB gzip                       |
+| Build time                                | 52.5 s                                    |
+
+---
+
+## How to use this file
+
+- One row per phase task. Status = `⬜ todo` / `🟡 in-progress` / `✅ done` / `⏭️ skipped`.
+- On finish: fill **Done by**, **Date**, **Notes / gotchas**, and a link to the commit or PR.
+- If you interrupt mid-task, leave status `🟡` and add a **Left off at** note so pickup is one line to read.
+- Never mark ✅ without running the Phase Definition-of-Done checklist from the audit §7.
+
+---
+
+## Phase 0 — Prep ✅ DONE (2026-09-15)
+
+| # | Task | Status | Date | Notes |
+| - | ---- | ------ | ---- | ----- |
+| 0.1 | Rewrite `.claude/CLAUDE.md` for real stack (React+Vite / plain PHP) | ✅ | 2026-09-15 | Documented 6 deliberate deviations from `.claude/rules/`. Old file described a different project (Voxhire). |
+| 0.2 | Update `.gitignore` — ignore `.claude/` (per-user, not committed) | ✅ | 2026-09-15 | User chose to keep skills/agents local-only. |
+| 0.3 | Capture `vite build` bundle-size baseline | ✅ | 2026-09-15 | See baselines block above. Build clean (exit 0, 52s). |
+| 0.4 | Turn on ESLint `max-lines` (warn 300), `eqeqeq`, `prefer-const`, `no-var` (warn) | ✅ | 2026-09-15 | `translations.js` + `lahoreLocations.js` exempted (data-only). ⚠ ESLint is not currently in `package.json` devDependencies — config is valid, deps must be added before it actually runs (see follow-ups). |
+| 0.5 | Delete confirmed dead files | ✅ | 2026-09-15 | 6 files removed — see list below. |
+
+### Files deleted in Phase 0
+
+| Path | Reason |
+| ---- | ------ |
+| `Atta Chakki Frontend/src/pages/customer/GoogleMapPicker.jsx` | Zero imports (grep-confirmed). Mapbox is the active picker. |
+| `Atta_Chakki_API/models/add_category.php` | Duplicate of `models/products/add_category.php`; zero references anywhere. |
+| `Atta_Chakki_API/models/delete_category.php` | Duplicate of `models/products/delete_category.php`; zero references anywhere. |
+| `Atta_Chakki_API/models/get_categories.php` | Duplicate of `models/products/get_categories.php`; zero references anywhere. |
+| `Atta_Chakki_API/models/update_category.php` | Duplicate of `models/products/update_category.php`; zero references anywhere. |
+| `Atta_Chakki_API/controllers/admin/admin_stats.php` | Was a 3-line proxy to `dashboard/admin_stats.php`. `index.php` now routes directly. |
+
+### Follow-ups discovered during Phase 0 (not in audit)
+
+1. ✅ **The entire `Atta_Chakki_API/models/` directory was dead — deleted 2026-09-15.** Confirmed with frontend URL grep + controller-existence check: all 5 root-level endpoints (`add_expense`, `delete_expense`, `get_expenses`, `submit_contact`, `translate`) have live controllers (`controllers/expenses/*`, `controllers/admin/submit_contact.php`, `utils/translate.php`) the frontend actually calls. All 4 in `models/products/` were older duplicates of `controllers/products/*` versions. Total: 9 additional files removed, folder gone.
+2. **ESLint isn't installed.** `node_modules/eslint` doesn't exist and `eslint` isn't in `package.json` devDependencies. `eslint.config.js` imports `@eslint/js`, `globals`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `eslint/config` — none present. To actually run lint we'd need to add: `eslint @eslint/js eslint-plugin-react-hooks eslint-plugin-react-refresh globals`. **Ask user before adding deps** (per CLAUDE.md rule 3).
+3. **`.claude/settings.json`** had an Nx plugin enabled; disabled in Phase 0.
+
+### Definition-of-Done check for Phase 0
+
+- ✅ `npm run build` succeeds — captured baselines above (built in 52.5s, exit 0).
+- ✅ No API contract changes (only route-map value swap: `admin_stats.php` → same behavior via direct route instead of proxy).
+- ✅ No behavior changes to any customer-visible or admin-visible flow.
+- ⚠ PHP `-l` syntax check skipped — no PHP CLI in this environment. Changes were: (a) one array-value string swap in `index.php`, (b) file deletion. Both mechanically safe.
+- ✅ Progress tracker updated (this section).
+
+---
+
+## Phase 1 — Foundations ✅ DONE (2026-09-15)
+
+**Frontend**
+
+| # | Task | Status | Done by | Date | Notes |
+| - | ---- | ------ | ------- | ---- | ----- |
+| 1.1 | Create `src/lib/apiClient.js` (apiGet/apiPost/apiPut/apiDelete) | ✅ | Claude | 2026-09-15 | Returns `{ok, data, error, status}`. Unwraps backend `{success, message, ...}` envelope. Uses global `window.fetch` (auth already handled by interceptor). |
+| 1.2 | Create `src/lib/formatters.js` | ✅ | Claude | 2026-09-15 | `formatPKR`, `formatDate`, `formatDateTime`, `formatTime`, `formatPhone`, `formatOrderId`, `formatRelative`, `truncate`. All null-safe. |
+| 1.3 | Create `src/components/shared/PageHeader.jsx` | ✅ | Claude | 2026-09-15 | title + subtitle + actions slot |
+| 1.4 | Create `Loading.jsx` + `EmptyState.jsx` | ✅ | Claude | 2026-09-15 | Loader2 spinner. EmptyState with icon/title/description/action slots. |
+| 1.5 | Create `ConfirmDialog.jsx` | ✅ | Claude | 2026-09-15 | Wraps existing `alert-dialog` primitive. `destructive` prop applies red variant. |
+| 1.6 | Create `OrderStatusBadge.jsx` | ✅ | Claude | 2026-09-15 | 9 statuses colored. Fallback for unknown. |
+| 1.7 | Create hook `useApi.js` | ✅ | Claude | 2026-09-15 | Returns `{data, loading, error, refetch, setData}`. Uses AbortController — auto-cancels on unmount + on refetch. Not idempotent for parallel calls (last wins). |
+| 1.8 | Create hooks `useDebouncedValue.js` + `usePagination.js` | ✅ | Claude | 2026-09-15 | Standard debounce; pagination has both server-mode (total from API) and client-mode (`slice(rows)`). |
+
+**Backend**
+
+| # | Task | Status | Done by | Date | Notes |
+| - | ---- | ------ | ------- | ---- | ----- |
+| 1.9  | ~~Add `composer.json` PSR-4~~ → **Manual autoloader** `core/autoload.php` | ✅ | Claude | 2026-09-15 | Composer isn't installed on the host — used `spl_autoload_register` instead. Same PSR-4 behavior, zero external dependency. Namespace map: `AttaChakki\Core\Response` → `core/Response.php`. |
+| 1.10 | Create `core/Response.php` | ✅ | Claude | 2026-09-15 | `Response::json`, `message`, `error`, `unauthorized`, `forbidden`, `notFound`, `validation`. Enforces `{success, ...}` envelope. `exit`s after send. |
+| 1.11 | Create `core/Request.php` | ✅ | Claude | 2026-09-15 | `body()`, `string`, `int`, `float`, `bool`, `array`, `required` (auto-422), `method`, `requireMethod` (auto-405). Reads JSON body + query string transparently. |
+| 1.12 | Create `repositories/BaseRepository.php` | ✅ | Claude | 2026-09-15 | Wraps MySQLi prepare/bind/execute. `selectOne`, `selectAll`, `selectScalar`, `execute`, `insert`, `transaction`. Auto-infers `i/d/s` types. |
+| 1.13 | Wire autoload in `index.php` | ✅ | Claude | 2026-09-15 | Added `require_once __DIR__ . '/core/autoload.php';` after error handlers. Backward-compat: unused unless a controller calls `AttaChakki\...`. |
+
+### Verification
+
+- ✅ `npm run build` clean — 38.72s, 91 files, 5807.50 KiB precache (identical to baseline — new files aren't imported anywhere yet, so no bundle delta expected).
+- ✅ `index.php` router logic unchanged; autoload include is additive.
+- ✅ No page migrated to use new utilities yet — that's Phase 2/3.
+
+---
+
+## Phase 2 — Sweep wins ✅ PARTIAL DONE (2026-09-15) — see notes
+
+| # | Task | Status | Date | Notes |
+| - | ---- | ------ | ---- | ----- |
+| 2.0 | ~~Delete remaining `Atta_Chakki_API/models/*.php`~~ | ✅ | 2026-09-15 | Done in Phase 0. |
+| 2.1 | Replace `header(...json...); echo json_encode(...)` with `Response::json` across 107 controllers | ⏭️ | 2026-09-15 | **Deferred to Phase 4.** Risk: current controllers emit inconsistent envelopes (`{success:true, orders:[]}` vs `{success:true, data:{}}`) — Response::json wraps in `data`, which would silently break the frontend. Better done per-endpoint alongside repository migration (Phase 4) where we're already reading the exact shape. |
+| 2.2 | Replace inline currency with `formatPKR(x)` across pages | ⏭️ | 2026-09-15 | **Deferred to Phase 3.** Grep found 207 currency sites across 25 files — patterns vary (`Rs `, `Rs.`, embedded strings, conditions). Not a mechanical sweep. Do per-file as part of each Phase 3 split (formatPKR is available in `src/lib/formatters.js`). |
+| 2.3 | Replace inline `toast.error(...)` sites with apiClient error path | ⏭️ | 2026-09-15 | **Deferred to Phase 3.** Requires per-site judgment — many messages are business-specific, not generic. Do per-file during splits. |
+| 2.4 | Dynamic `import()` for `xlsx` and `jspdf` | ✅ | 2026-09-15 | `OrdersRecord.jsx` (xlsx) and `utils/billPdfUtils.js` (jspdf). ⚠ **PWA precache is unchanged** — Workbox precaches every chunk, so the async imports don't reduce initial download. Real win needs 2.5. |
+| 2.5 | Reduce PWA precache size (option A) | ✅ | 2026-09-15 | User chose option A. Added `workbox.globIgnores` for `vendor-mapbox`, `vendor-pdf`, `vendor-excel`, `vendor-charts` — they now load on demand instead of on first visit. Trade-off: those features don't work offline until first used online. |
+| 2.6 | Remove Leaflet + `react-leaflet` | ✅ | 2026-09-15 | Dead code path in `Checkout.jsx` deleted (75 lines: MapContainer/TileLayer/customIcon/MapInvalidator/RecenterMap/DraggableMarker/USE_MAPBOX const, plus unused `useRef`/`useMemo` imports). Both packages `npm uninstall`ed. Removed `vendor-leaflet` from `manualChunks` in vite.config.js. |
+
+### Phase 2 bundle-size delta
+
+| Chunk               | Baseline    | After Phase 2 | Delta        |
+| ------------------- | ----------: | ------------: | -----------: |
+| `vendor-leaflet`    |    150 KB   |    **GONE**   |     −150 KB  |
+| `vendor-excel`      |    283 KB   |      429 KB   |     +146 KB (Vite bundles xlsx async wrappers) |
+| `vendor-pdf`        |    594 KB   |      594 KB   |          — |
+| `vendor-mapbox`     |   1861 KB   |     1861 KB   |          — |
+| `Checkout.jsx`      |     78 KB   |    77.6 KB    |    −0.4 KB (dead Leaflet code removed) |
+| **Total precache**  |   5807 KB   |     **2588 KB**   |     **−3220 KB (−55%)** ✅ |
+| **Precache entries** |     91     |         85    |         −6 |
+| **Build time**      |    52.5 s   |     25.2 s    |    **−52%** ✅ |
+
+**After option A (globIgnores):** mapbox / pdf / excel / charts chunks are no longer precached on first visit. They download on demand when the user actually opens a map, prints a bill, or exports orders. First-visit download budget for a new customer dropped by 3.2 MB.
+
+### What Phase 2 actually delivered
+
+1. **Leaflet fully removed** — 2 packages, ~75 lines of dead code, `Checkout.jsx` cleaner.
+2. **`xlsx` and `jspdf` lazy** — parse-time smaller for `OrdersRecord.jsx` and any page using `billPdfUtils.js`.
+3. **`vite.config.js` cleaned** — dead `vendor-leaflet` chunk rule removed.
+4. **PWA precache: 5807 → 2588 KB (−55%)** — first-visit download less than half. Map/PDF/Excel now download on demand.
+5. **Build 52% faster** (52s → 25s) — nice side effect.
+
+---
+
+## Bug fixes landed during refactor
+
+Kept separate from the split work so the next dev can grep bug fixes if a regression shows up.
+
+### 1. ManageServices — Eye/EyeOff toggle intermittently didn't reflect state (2026-09-15) ✅ FIXED
+
+**Symptom:** Toggling a service on/off would show a green "success" toast but the icon and "Disabled" chip sometimes stayed at the old value. Reproducible ~4 out of 5 clicks within a 5-minute window.
+
+**Root cause (three layers):**
+1. `controllers/products/get_all_products.php` (line 14) uses `get_api_cache('all_products_admin', 300)` — the entire product list is cached in `Atta_Chakki_API/cache/` for 5 minutes with a fixed key.
+2. `controllers/products/update_product_status.php` did NOT call `clear_api_cache()` after the DB UPDATE. So the next reload read the stale cached list.
+3. `get_all_products.php` also sends `Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=600` — telling the *browser* to cache the response for a minute. Even after fixing (2), the browser could still return stale data on the reload.
+
+**Fix (three layers, all landed):**
+- **Backend `update_product_status.php`:** added `require_once utils/cache_helper.php;` and a `clear_api_cache();` call after successful UPDATE. Also added `Cache-Control: no-store` headers on the mutation response itself.
+- **Frontend `fetchServices({ fresh })`:** when called with `{ fresh: true }` it appends `?refresh=1&_t=<timestamp>` (respected by `cache_helper.php` line 19) and sends `cache: 'no-store'` to bypass browser cache.
+- **Frontend `handleToggleActive`:** now does an **optimistic update** — flips `is_active` in local state immediately, then reconciles with the server. On failure, rolls back. Calls `fetchServices({ fresh: true })` on success.
+
+**Files touched:** `Atta_Chakki_API/controllers/products/update_product_status.php`, `Atta Chakki Frontend/src/pages/admin/ManageServices.jsx`.
+
+### ⚠ 🚩 Likely-similar bugs elsewhere — PATTERN TO CHECK
+
+The **same pattern (cached list + mutation that doesn't clear cache)** almost certainly exists on other admin flows. When any of these are used and the change doesn't appear immediately, the fix is identical (add `require_once utils/cache_helper.php;` + `clear_api_cache();` after the DB write, and pass `{ fresh: true }` from the frontend caller):
+
+| Suspected endpoint | Cached by | Called from | Priority |
+| ------------------ | --------- | ----------- | -------- |
+| `controllers/products/add_product.php` | `get_all_products.php`, `get_products.php` | ManageServices form Add | HIGH |
+| `controllers/products/update_product.php` | same | ManageServices form Edit | HIGH |
+| `controllers/products/delete_product.php` | same | ManageServices delete btn | HIGH |
+| `controllers/products/add_category.php` | `get_categories.php` (5-min cache) | ManageCategories Add | MED |
+| `controllers/products/update_category.php` | same | ManageCategories Edit | MED |
+| `controllers/products/delete_category.php` | same | ManageCategories Delete | MED |
+| `controllers/inventory/update_inventory.php` / `_impl.php` | possibly `get_inventory.php` | InventoryManagement | MED |
+| `controllers/admin/update_store_settings.php` | possibly `get_store_settings.php` | Settings, HeroSettings | LOW |
+| `controllers/coupons/create_coupon.php` / `update_coupon.php` / `delete_coupon.php` | possibly `get_coupons.php`, `get_featured_coupons.php` | ManageCoupons | LOW |
+
+**Recommended:** grep for `get_api_cache(` across `controllers/` — every endpoint that reads a cache should have a matching `clear_api_cache()` call in the write endpoints that could invalidate it. Consider adding a narrow `delete_api_cache($key)` helper in `utils/cache_helper.php` for targeted invalidation instead of the current nuke-everything `clear_api_cache()`.
+
+### 2. Dead code cleanup during Phase 0 (recap — see Phase 0 section for details)
+
+- 6 dead files in Phase 0 (GoogleMapPicker + 4 duplicate category models + admin_stats proxy).
+- Entire `Atta_Chakki_API/models/` folder deleted (13 more files). Confirmed via grep: no PHP `include`/`require` references AND no frontend URL fetch references. `.htaccess` on the API side rewrites to `index.php` if the file doesn't exist, and the router only ever scans `controllers/` — so `models/*.php` was unreachable by URL even though Apache would have served it directly.
+
+**Delete-safety checklist for any future PHP file removal:**
+1. `grep -r 'filename.php' Atta_Chakki_API/` — check for `include`/`require`.
+2. `grep -r 'filename.php' 'Atta Chakki Frontend/src/'` — check for frontend URL calls.
+3. `grep 'filename.php' Atta_Chakki_API/index.php` — check the router's explicit mapping.
+4. Even if all above are clean, remember `.htaccess` serves any existing `.php` file directly — someone could bookmark/link it. Only delete files that are demonstrably duplicates of a live file at another path.
+
+---
+
+## Phase 3 — Split monoliths (one file per PR)
+
+### Frontend
+
+| # | File (current lines) | Split target | Status | Done by | Date | PR |
+| - | -------------------- | ------------ | ------ | ------- | ---- | -- |
+| 3.1a-d | `Checkout.jsx` (2343 → **2173**) — Option 1 conservative extraction | ✅ | Claude | 2026-09-15 | Extracted `utils/checkoutHelpers.js` (65 lines: constants + `calculateDistance`), `components/features/checkout/CartItemsList.jsx` (118 lines), `CouponBox.jsx` (82 lines), `PriceSummary.jsx` (93 lines). No payment/map/state logic touched. Visual order preserved via `couponSlot` prop. Removed unused `Trash2` + `Check` icon imports. Build clean, precache unchanged. **User needs to smoke-test:** open Checkout → verify cart items display + coupon apply/remove + price breakdown match before-refactor. |
+| 3.1 Option 2 | `Checkout.jsx` (2173 → ~1200) — extract `<AddressPickerSection>` | ⬜ | | | Deferred. Higher risk (address/GPS/delivery-fee coordination). Do after admin files, with user smoke-testing. |
+| 3.1 Option 3 | `Checkout.jsx` — extract `<PaymentStep>` + `processOnlinePayment` (286 lines) | ⬜ | | | Deferred. Highest risk (production payment flow). Do only with clear time for user to click through all 4 payment methods. |
+| 3.2 | `LiveTrackingMap.jsx` (2083) | `DriverMarkerLayer`, `OrderListPanel`, `RoutePolyline`, `useLiveDrivers` | ⬜ | | | |
+| 3.3 | `TodaysWork.jsx` (1822) | `OrderKanban`, `AssignDriverDialog`, `TaskList` | ⬜ | | | |
+| 3.4 | `DeliveryPanel.jsx` (1353) | route steps + `useDeliveryQueue` | ⬜ | | | |
+| 3.5a | `ManageServices.jsx` (1256 → **1179**) — extract `<ServiceListItem>` | ✅ | Claude | 2026-09-15 | Extracted `components/features/admin/services/ServiceListItem.jsx` (149 lines) — single service card with priority badge, image, chips (price/category/customizations/mix/tracked/dual/discount/badge), and 3 action buttons. Removed unused icon imports (`Edit`, `Eye`, `EyeOff`). Build clean, precache unchanged. |
+| 3.5a-UX | `ServiceListItem.jsx` — UX polish (Option D) | ✅ | Claude | 2026-09-15 | Toggle button now color-coded: **green** (bg+border+icon) when service is visible, **red** when hidden. Whole card dimmed to `opacity-60 grayscale-[0.3]` when hidden. Tooltip on the button explains the action ("Visible to customers — click to hide" / "Hidden from customers — click to show"). |
+| 3.5a-BUG | Toggle intermittent-fail bug fix | ✅ | Claude | 2026-09-15 | See **Bug fix #1** above. Backend + frontend + optimistic-UI three-layer fix. Files: `update_product_status.php`, `ManageServices.jsx`. |
+| 3.5b | `ManageServices.jsx` — extract `<ServiceForm>` (form is ~620 lines) | ⬜ | | | Deferred. Bigger extraction, many props (formData, isSaving, isUploading, handleImageChange, handleAdd/Update/Cancel). Recommended: also extract 3 form subsections (Customizations 247 lines, Discount & Badge 127 lines, Rental Toggle 77 lines) to keep pieces < 300 lines. |
+| 3.6 | `UserAccount.jsx` (1237) | profile / addresses / orders tabs | ⬜ | | | |
+| 3.7 | `UdhaarKhata.jsx` (1175) | ledger table + entry form | ⬜ | | | |
+| 3.8 | `PaymentVerification.jsx` (1111) | queue + verify dialog | ⬜ | | | |
+| 3.9 | `ServiceCard.jsx` (1088) | display card + customize sheet | ⬜ | | | |
+| 3.10 | `TomorrowsList.jsx` (1087) | shares `OrderKanban` from 3.3 | ⬜ | | | |
+
+### Backend
+
+| # | File (current lines) | Split target | Status | Done by | Date | PR |
+| - | -------------------- | ------------ | ------ | ------- | ---- | -- |
+| 3.11 | `place_order.php` (550) | `OrderController::place` + `OrderService` (stock/coupon/split) | ⬜ | | | |
+| 3.12 | `process_online_payment.php` (547) | `PaymentService` + gateway classes (JazzCash/EasyPaisa/Card) | ⬜ | | | |
+| 3.13 | `manage_wallets.php` (646) | one file per action | ⬜ | | | |
+| 3.14 | `order_scheduler.php` (546) | scheduling vs notifications | ⬜ | | | |
+
+---
+
+## Phase 4 — Repositories
+
+| # | Task | Status | Done by | Date | PR |
+| - | ---- | ------ | ------- | ---- | -- |
+| 4.1 | `UserRepository` + migrate `SELECT ... FROM users` sites (~15) | ⬜ | | | |
+| 4.2 | `ProductRepository` + migrate `SELECT ... FROM products` (~20) | ⬜ | | | |
+| 4.3 | `OrderRepository` + migrate order queries | ⬜ | | | |
+| 4.4 | `CartRepository` | ⬜ | | | |
+| 4.5 | `CouponRepository` | ⬜ | | | |
+| 4.6 | `WalletRepository` | ⬜ | | | |
+
+---
+
+## Phase 5 — State (optional, evaluate after Phase 3)
+
+| # | Task | Status | Done by | Date | PR |
+| - | ---- | ------ | ------- | ---- | -- |
+| 5.1 | Evaluate: is re-render pain still real after Checkout split? | ⬜ | | | |
+| 5.2 | If yes: introduce Zustand for `checkout` + `adminOrders` slices | ⬜ | | | |
+| 5.3 | Consider React Query to replace `apiCache.js` | ⬜ | | | |
+
+---
+
+## Phase 6 — Safety & polish
+
+| # | Task | Status | Done by | Date | PR |
+| - | ---- | ------ | ------- | ---- | -- |
+| 6.1 | Migrate JWT → HttpOnly cookie flow (product sign-off first) | ⬜ | | | |
+| 6.2 | Add Vitest baseline + one Playwright smoke test | ⬜ | | | |
+| 6.3 | GitHub Actions: lint + `php -l` on PR | ⬜ | | | |
+| 6.4 | Install ESLint deps in `package.json` so `max-lines` warn actually runs | ⬜ | | | Follow-up from Phase 0 |
+
+---
+
+## Session log
+
+Append short entries at the top when you finish a session — one line each.
+
+- _2026-09-15_ — **Live bug found + fixed on ManageServices toggle.** Root cause was a 5-min server-side file cache in `get_all_products.php` that `update_product_status.php` never invalidated (plus a 60s browser Cache-Control). Fixed with `clear_api_cache()` on the write + `?refresh=1` on the read + optimistic UI. Same pattern probably exists on other admin mutations — see "Likely-similar bugs" table. — _Claude_
+- _2026-09-15_ — **UX polish on ServiceListItem (Option D).** Toggle button now green/red + card dims when hidden. Zero refactor risk. — _Claude_
+- _2026-09-15_ — **Phase 3.5a done on ManageServices.jsx.** Extracted `components/features/admin/services/ServiceListItem.jsx` (149 lines). File 1256 → 1179 (−77 lines). Removed 3 unused icon imports. Build clean, precache unchanged. Next: 3.5b (form extraction) or move to another admin file. — _Claude_
+- _2026-09-15_ — **Phase 3.1 Option 1 done on Checkout.jsx.** Extracted `utils/checkoutHelpers.js` + 3 display components (CartItemsList, CouponBox, PriceSummary) into `components/features/checkout/`. File shrunk 2343 → 2173 (−170 lines). Zero payment/map/state changes. Build clean, precache identical. **Next: user smoke-tests Checkout → then move to Option 4 (admin files).** — _Claude_
+- _2026-09-15_ — **Phase 2 complete (option A applied).** User picked option A → added `workbox.globIgnores` for heavy vendor chunks. **Precache 5807 → 2588 KB (−55%)**. Combined with Leaflet removal + xlsx/jspdf lazy imports. Build 52% faster. Deferred 2.1/2.2/2.3 to Phase 3/4 (per-file judgment, not mechanical). Ready for Phase 3. — _Claude_
+- _2026-09-15_ — **Phase 1 complete.** Added 10 frontend files (`lib/apiClient.js`, `lib/formatters.js`, 5 shared components, 3 hooks) and 4 backend files (`core/autoload.php`, `core/Response.php`, `core/Request.php`, `repositories/BaseRepository.php`). Wired autoload into `index.php`. Build clean, no bundle change (new code not imported yet). Ready for Phase 2. — _Claude_
+- _2026-09-15_ — Deleted entire `Atta_Chakki_API/models/` folder (verified dead — 9 files). Total Phase 0 deletes: 15 files. Updated tracker. — _Claude_
+- _2026-09-15_ — **Phase 0 complete.** Rewrote CLAUDE.md, captured baselines (5.8 MB bundle, `vendor-mapbox` 1.86 MB = biggest target), added ESLint warn rules, deleted 6 dead files (GoogleMapPicker.jsx + 4 duplicate models + admin_stats proxy). Disabled Nx plugin in settings.json. Flagged 3 follow-ups (dead `models/`, ESLint deps missing, Nx). — _Claude_
+- _2026-09-15_ — Audit created. No code changed. Waiting for approval to start Phase 0. — _Claude_

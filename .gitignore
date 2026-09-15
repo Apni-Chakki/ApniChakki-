@@ -3,3 +3,6 @@ node_modules/
 error_log.txt
 *.sql
 *.txt
+
+# Claude Code local config (personal — do not commit)
+.claude/

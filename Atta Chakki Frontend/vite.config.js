@@ -17,6 +17,17 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        // Skip heavy vendor chunks (mapbox/pdf/excel) from the first-visit precache
+        // — they download on demand when the user actually opens a map/print/export
+        // flow. Reduces initial precache from ~5.8 MB to ~2.9 MB. Cost: those
+        // specific features don't work offline until first used online.
+        // Decided 2026-09-15.
+        globIgnores: [
+          '**/vendor-mapbox-*.js',
+          '**/vendor-pdf-*.js',
+          '**/vendor-excel-*.js',
+          '**/vendor-charts-*.js',
+        ],
         importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js']
       },
       devOptions: {
@@ -93,9 +104,6 @@ export default defineConfig({
             }
             if (id.includes('recharts') || id.includes('d3')) {
               return 'vendor-charts';
-            }
-            if (id.includes('leaflet') || id.includes('react-leaflet')) {
-              return 'vendor-leaflet';
             }
             if (id.includes('jspdf') || id.includes('html2canvas')) {
               return 'vendor-pdf';

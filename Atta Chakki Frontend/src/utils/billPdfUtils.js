@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+// jsPDF is lazy-loaded inside generateBillPDF — saves ~594 KB from the initial bundle
 import { API_BASE_URL } from '../config';
 
 // getting store info for the pdf
@@ -119,6 +119,9 @@ const getLogoDataUrl = (customLogoUrl) => {
 
 // main pdf generation function
 export async function generateBillPDF(order) {
+  // Load jspdf on demand — heavy library, only needed when a bill is generated
+  const { jsPDF } = await import('jspdf');
+
   const BRAND = await fetchBrandSettings();
   const logoData = await getLogoDataUrl(BRAND.logo);
 

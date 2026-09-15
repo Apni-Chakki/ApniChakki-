@@ -30,8 +30,8 @@ import {
 import { Checkbox } from '../../components/common/checkbox';
 import { Label } from '../../components/common/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/common/dialog'; 
-import { toast } from 'sonner'; 
-import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
+// XLSX lazy-loaded inside handleExportCSV — saves ~283 KB from admin bundle
 import { API_BASE_URL } from '../../config'; // <-- NEW: Added API Config
 import { Pagination } from '../../components/common/Pagination';
 
@@ -259,6 +259,9 @@ export function OrdersRecord() {
       toast.error('No orders to export');
       return;
     }
+
+    // Load xlsx on demand — heavy library, only needed when exporting
+    const XLSX = await import('xlsx');
 
     const excelData = fullList.map(order => {
       const remainingBalance = order.total - (order.advancePayment || 0);

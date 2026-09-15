@@ -38,6 +38,10 @@ register_shutdown_function(function () {
     }
 });
 
+// Refactor Phase 1: autoloader for AttaChakki\Core, \Repositories, \Services classes.
+// Safe no-op for controllers that don't use those classes yet.
+require_once __DIR__ . '/core/autoload.php';
+
 $allowed_origins = [
     'https://suchi-chakki.vercel.app',
     'http://localhost:5173',
@@ -92,7 +96,7 @@ $mapping = [
     'forgot_password.php' => 'controllers/auth/forgot_password.php',
     'reset_password.php' => 'controllers/auth/reset_password.php',
     'update_user_profile.php' => 'controllers/users/update_user_profile.php',
-    'admin_stats.php' => 'controllers/admin/admin_stats.php',
+    'admin_stats.php' => 'controllers/dashboard/admin_stats.php',
     'get_products.php' => 'controllers/products/get_products.php',
     'get_all_products.php' => 'controllers/products/get_all_products.php',
     'get_categories.php' => 'controllers/products/get_categories.php',

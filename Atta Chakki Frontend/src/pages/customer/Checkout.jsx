@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Trash2, Building2, Smartphone, Banknote, Loader2, WalletCards, CreditCard, Shield, CheckCircle2, AlertCircle, TestTube2, Crosshair, Navigation, Calendar, Clock, Sun, Sunrise, Tag, X, Check } from 'lucide-react';
+import { MapPin, Building2, Smartphone, Banknote, Loader2, WalletCards, CreditCard, Shield, CheckCircle2, AlertCircle, TestTube2, Crosshair, Navigation, Calendar, Clock, Sun, Sunrise, Tag, X } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
@@ -15,113 +15,19 @@ import { useTranslation } from 'react-i18next';
 import { SEO } from '../../components/common/SEO';
 import { MapboxPicker } from '../../components/common/MapboxPicker';
 import { lookupLahoreLocation, isWithinLahoreBounds, LAHORE_BOUNDS } from '../../utils/lahoreLocations';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import {
+  FALLBACK_CENTER,
+  CAROUSEL_SLIDES,
+  SANDBOX_TEST_CARDS,
+  SANDBOX_TEST_PHONES,
+  SHOP_LOCATION,
+  ROAD_DISTANCE_FACTOR,
+  calculateDistance,
+} from '../../utils/checkoutHelpers';
+import { CartItemsList } from '../../components/features/checkout/CartItemsList';
+import { CouponBox } from '../../components/features/checkout/CouponBox';
+import { PriceSummary } from '../../components/features/checkout/PriceSummary';
 import 'mapbox-gl/dist/mapbox-gl.css';
-
-const USE_MAPBOX = true;
-
-const customIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const FALLBACK_CENTER = { lat: 31.5204, lng: 74.3587 };
-
-const CAROUSEL_SLIDES = [
-  "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?w=1400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1623066798929-946425dbe1b0?w=1400&auto=format&fit=crop&q=80",
-];
-
-function MapInvalidator() {
-  const map = useMap();
-  useEffect(() => {
-    const timers = [0, 100, 300, 600, 1000].map((delay) =>
-      setTimeout(() => {
-        if (map) map.invalidateSize({ animate: false });
-      }, delay)
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [map]);
-  return null;
-}
-
-function RecenterMap({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center && map) {
-      map.setView(center, 17, { animate: true });
-      const t1 = setTimeout(() => map.invalidateSize({ animate: false }), 200);
-      return () => clearTimeout(t1);
-    }
-  }, [center, map]);
-  return null;
-}
-
-function DraggableMarker({ position, onDragEnd }) {
-  const markerRef = useRef(null);
-  const eventHandlers = useMemo(
-    () => ({
-      dragend() {
-        const marker = markerRef.current;
-        if (marker) {
-          const latlng = marker.getLatLng();
-          onDragEnd({ lat: latlng.lat, lng: latlng.lng });
-        }
-      },
-    }),
-    [onDragEnd]
-  );
-
-  return (
-    <Marker
-      draggable
-      eventHandlers={eventHandlers}
-      position={position}
-      ref={markerRef}
-      icon={customIcon}
-    />
-  );
-}
-
-const SANDBOX_TEST_CARDS = {
-  visa_success: '4242 4242 4242 4242',
-  mastercard_success: '5555 5555 5555 4444',
-  visa_decline: '4000 0000 0000 0002',
-  insufficient_funds: '4000 0000 0000 9995',
-};
-
-const SANDBOX_TEST_PHONES = {
-  success: '03211234567',
-  insufficient: '03000000000',
-  invalid: '03111111111',
-  timeout: '03999999999',
-};
-
-// shop ki location
-const SHOP_LOCATION = { lat: 31.4973551, lng: 74.2446932 };
-
-// road distance factor
-const ROAD_DISTANCE_FACTOR = 1.5;
-
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; 
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; 
-};
 
 export function Checkout() {
   const navigate = useNavigate();
@@ -1472,180 +1378,38 @@ export function Checkout() {
       <Card className="p-6 mb-6">
         <h3 className="mb-4 text-foreground">{t('Order Summary')}</h3>
         <div className="space-y-4">
-          {cart.map((item, index) => {
-            const isRental = item.service?.is_rental === 1 || item.service?.is_rental === '1' || item.service?.is_rental === true || item.service?.is_rental === 'true';
-            return (
-              <div key={`${item.service.id}-${item.isWeightPending ? 'pending' : 'regular'}-${index}`} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
-                <div className="flex-1">
-                  <h4 className="text-foreground">{item.service.name}</h4>
-                  {isRental ? (
-                    <div className="text-xs text-muted-foreground font-medium space-y-0.5 mt-1">
-                      <p>🗓️ {t('Dates')}: {item.service.rental_start_date} ({item.service.rental_days} {t('days')})</p>
-                      <p>💵 {t('Rental Rate')}: Rs. {Math.round(item.service.rental_price_per_day)}/{t('day')} × {item.quantity}</p>
-                      <p>🔒 {t('Refundable Deposit')}: Rs. {Math.round(item.service.security_deposit)} × {item.quantity}</p>
-                    </div>
-                  ) : (
-                    <>
-                      {(item.service.selected_customizations?.length > 0 || item.service.is_grinding_service) && !item.service.is_custom_mix && (
-                        <p className="text-xs text-muted-foreground font-medium">
-                          ({item.service.selected_customizations?.length > 0
-                            ? item.service.selected_customizations.map(c => t(c.option_name)).join(' + ')
-                            : [item.service.is_cleaning && t('Cleaning'), item.service.is_grinding && t('Grinding')].filter(Boolean).join(' + ')
-                          })
-                        </p>
-                      )}
-                      {item.service.is_custom_mix && item.service.selected_mix_items?.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {item.service.selected_mix_items.map((m, idx) => (
-                            <span key={idx} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">
-                              {m.item_name} ({m.ratio})
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
-                        <p className="text-sm text-primary font-medium">
-                          {t('Weight to be confirmed (Price TBD)')}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Rs. {item.service.price} × {item.quantity} {item.service.unit}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-4">
-                  {item.isWeightPending || item.service?.unit?.toLowerCase() === 'trip' ? (
-                    <p className="text-foreground font-semibold">TBD</p>
-                  ) : (
-                    <p className="text-foreground">Rs. {item.service.price * item.quantity}</p>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 ml-2 bg-red-500 hover:bg-red-600 border-red-600 shadow flex items-center justify-center px-0 py-0"
-                    onClick={() => {
-                      if (isRental) {
-                        removeFromCart(item.service.id, false, false, false, null, false, null, true, item.service.rental_start_date, item.service.rental_days);
-                      } else {
-                        removeFromCart(item.service.id, item.isWeightPending, item.service.is_cleaning, item.service.is_grinding, item.service.selected_customizations, item.service.is_custom_mix, item.service.selected_mix_items);
-                      }
-                    }}
-                    title={t('Remove Item')}
-                  >
-                    <Trash2 className="h-4 w-4 text-white" strokeWidth={3} />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+          <CartItemsList cart={cart} removeFromCart={removeFromCart} t={t} />
 
-          <div className="flex justify-between pt-4 border-t border-border">
-            <span className="text-foreground">{t('Original Subtotal')}</span>
-            <span className="text-foreground font-bold">{isTbdOrder ? 'TBD' : `Rs. ${originalTotal.toFixed(2)}`}</span>
-          </div>
-
-          {productDiscount > 0 && (
-            <div className="flex justify-between pt-2 text-blue-600 dark:text-blue-400">
-              <span className="text-sm font-medium">{t('Product Discount')}</span>
-              <span className="text-sm font-medium">-Rs. {productDiscount.toFixed(2)}</span>
-            </div>
-          )}
-
-          <div className="flex justify-between pt-2 border-t border-border">
-            <span className="text-foreground">{t('Cart Subtotal')}</span>
-            <span className="text-foreground font-bold">{isTbdOrder ? 'TBD' : `Rs. ${total.toFixed(2)}`}</span>
-          </div>
-
-          {orderType === 'delivery' && !isOutOfLahore && (
-            <div className="flex justify-between pt-2">
-              <span className="text-muted-foreground text-sm">
-                {t('Delivery Fee')} ({distanceKm.toFixed(1)} km)
-              </span>
-              <span className={`text-sm ${user?.vip_free_shipping ? 'text-emerald-600 font-semibold' : 'text-muted-foreground'}`}>
-                {user?.vip_free_shipping ? t('Free (VIP Benefit)') : `Rs. ${deliveryFee}`}
-              </span>
-            </div>
-          )}
-
-          {!isTbdOrder && hasActiveCoupons && (
-            <div className="pt-4 border-t border-border">
-              <Label className="text-foreground">{t('Coupon Code')}</Label>
-              {appliedCoupon ? (
-                <div className="mt-2 flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    <div>
-                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{appliedCoupon.code}</span>
-                      <span className="text-sm text-emerald-600 dark:text-emerald-400 ml-2">
-                        {appliedCoupon.discount_type === 'percentage'
-                          ? `${appliedCoupon.discount_value}% OFF`
-                          : `Rs. ${appliedCoupon.discount_value} OFF`}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                    onClick={removeCoupon}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="mt-2 flex gap-2">
-                  <Input
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder={t('Enter coupon code')}
-                    className="flex-1"
-                    disabled={validatingCoupon}
-                  />
-                  <Button
-                    onClick={validateCoupon}
-                    disabled={validatingCoupon || !couponCode.trim()}
-                    className="whitespace-nowrap"
-                  >
-                    {validatingCoupon ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      t('Apply')
-                    )}
-                  </Button>
-                </div>
-              )}
-              {couponError && (
-                <p className="mt-1 text-sm text-destructive">{couponError}</p>
-              )}
-            </div>
-          )}
-
-          {couponDiscount > 0 && (
-            <div className="flex justify-between pt-2 text-emerald-600 dark:text-emerald-400">
-              <span className="text-sm font-medium">{t('Coupon Discount')}</span>
-              <span className="text-sm font-medium">-Rs. {couponDiscount.toFixed(2)}</span>
-            </div>
-          )}
-
-          {vipDiscountAmount > 0 && (
-            <div className="flex justify-between pt-2 text-purple-600 dark:text-purple-400">
-              <span className="text-sm font-medium">{t('VIP 10% Discount')}</span>
-              <span className="text-sm font-medium">-Rs. {vipDiscountAmount.toFixed(2)}</span>
-            </div>
-          )}
-
-          <div className="flex justify-between pt-2 border-t border-border font-bold">
-            <span className="text-foreground">{t('Grand Total')}</span>
-            <span className="text-foreground">{isTbdOrder ? 'TBD' : `Rs. ${grandTotal.toFixed(2)}`}</span>
-          </div>
-
-          {hasPendingWeightItem && (
-            <p className="text-sm text-primary text-right mt-2">
-              {t('Total does not include items with pending weight.')}
-            </p>
-          )}
+          <PriceSummary
+            originalTotal={originalTotal}
+            productDiscount={productDiscount}
+            total={total}
+            orderType={orderType}
+            isOutOfLahore={isOutOfLahore}
+            distanceKm={distanceKm}
+            user={user}
+            deliveryFee={deliveryFee}
+            couponDiscount={couponDiscount}
+            vipDiscountAmount={vipDiscountAmount}
+            grandTotal={grandTotal}
+            isTbdOrder={isTbdOrder}
+            hasPendingWeightItem={hasPendingWeightItem}
+            t={t}
+            couponSlot={
+              !isTbdOrder && hasActiveCoupons ? (
+                <CouponBox
+                  couponCode={couponCode}
+                  setCouponCode={setCouponCode}
+                  appliedCoupon={appliedCoupon}
+                  validatingCoupon={validatingCoupon}
+                  couponError={couponError}
+                  validateCoupon={validateCoupon}
+                  removeCoupon={removeCoupon}
+                  t={t}
+                />
+              ) : null
+            }
+          />
         </div>
       </Card>
 
