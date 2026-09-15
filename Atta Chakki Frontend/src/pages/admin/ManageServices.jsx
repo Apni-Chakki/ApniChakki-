@@ -1,17 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Save, X, Loader2, UploadCloud, GripVertical, Truck, Weight } from 'lucide-react';
+import { Plus, Trash2, Save, X, Loader2, Truck, Weight } from 'lucide-react';
 import { Button } from '../../components/common/button';
-import { Input } from '../../components/common/input';
-import { Label } from '../../components/common/label';
-import { Textarea } from '../../components/common/textarea';
 import { Card } from '../../components/common/card';
 import { toast } from 'sonner';
-import { Checkbox } from '../../components/common/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/common/select';
 import { API_BASE_URL } from '../../config';
 import { compressImage } from '../../utils/imageCompressor';
 import { ServiceListItem } from '../../components/features/admin/services/ServiceListItem';
+import { ServiceForm } from '../../components/features/admin/services/ServiceForm';
 
 export function ManageServices() {
   const { t } = useTranslation();
@@ -40,48 +36,23 @@ export function ManageServices() {
     weight_options: [],
     is_custom_mix: false,
     mix_items: [],
-    discount_type: 'none',
-    discount_value: '',
-    badge_text: '',
     is_rental: false,
     rental_price_per_day: '',
     security_deposit: '',
     late_penalty_per_day: '',
     rental_available_qty: '',
-    priority: '0'
+    discount_type: 'none',
+    discount_value: '',
+    badge_text: '',
+    priority: '0',
   });
-  const [weightInput, setWeightInput] = useState('');
-
-  // Compute discounted price for live preview
-  const computeDiscountedPrice = (price, dType, dValue) => {
-    const p = parseFloat(price) || 0;
-    const v = parseFloat(dValue) || 0;
-    if (!p || dType === 'none' || v <= 0) return p;
-    if (dType === 'percentage') return Math.max(0, p - (p * Math.min(v, 100) / 100));
-    if (dType === 'fixed') return Math.max(0, p - v);
-    return p;
-  };
-
-  // Auto-calculate total price from customizations
-  useEffect(() => {
-    if (formData.has_customizations && formData.customizations.length > 0) {
-      if (formData.customization_pricing_mode === 'average') {
-        const valid = formData.customizations.filter(c => parseFloat(c.option_price) > 0);
-        if (valid.length > 0) {
-          const avg = valid.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0) / valid.length;
-          setFormData(prev => ({ ...prev, price: Math.round(avg).toString() }));
-        }
-      } else {
-        const total = formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0);
-        setFormData(prev => ({ ...prev, price: total.toString() }));
-      }
-    }
-  }, [formData.customizations, formData.has_customizations, formData.customization_pricing_mode]);
-
-  const [imageFile, setImageFile] = useState(null);
+  
   const [isUploading, setIsUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [weightInput, setWeightInput] = useState('');
   const formRef = useRef(null);
 
+  // Auto-scroll to form when opening Add/Edit
   useEffect(() => {
     if (isAdding || editingId) {
       setTimeout(() => {
@@ -90,91 +61,105 @@ export function ManageServices() {
     }
   }, [isAdding, editingId]);
 
+  // Recalculate price when customizations change
+  useEffect(() => {
+    if (formData.has_customizations && formData.customizations.length > 0) {
+      if (formData.customization_pricing_mode === 'average') {
+        const validOptions = formData.customizations.filter(c => parseFloat(c.option_price) > 0);
+        if (validOptions.length > 0) {
+          const sum = validOptions.reduce((acc, c) => acc + parseFloat(c.option_price || 0), 0);
+          const avg = Math.round(sum / validOptions.length);
+          setFormData(prev => ({ ...prev, price: avg.toString() }));
+        } else {
+          setFormData(prev => ({ ...prev, price: '0' }));
+        }
+      } else {
+        const sum = formData.customizations.reduce((acc, c) => acc + (parseFloat(c.option_price) || 0), 0);
+        setFormData(prev => ({ ...prev, price: sum.toString() }));
+      }
+    }
+  }, [formData.customizations, formData.has_customizations, formData.customization_pricing_mode]);
+
   useEffect(() => {
     fetchServices();
+    fetchCategories();
   }, []);
 
-  const fetchServices = async ({ fresh = false } = {}) => {
+  const fetchServices = async () => {
     try {
       setLoading(true);
-      // After a mutation (toggle/add/update/delete) we pass fresh=true so the
-      // backend `cache_helper` skips its 5-minute cache and the browser skips
-      // its 60-second Cache-Control window. `?refresh=1` is recognised by
-      // get_api_cache() in utils/cache_helper.php.
-      const bust = fresh ? `?refresh=1&_t=${Date.now()}` : '';
-      const [servicesRes, categoriesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/get_all_products.php${bust}`, fresh ? { cache: 'no-store' } : undefined),
-        fetch(`${API_BASE_URL}/get_categories.php${bust}`, fresh ? { cache: 'no-store' } : undefined)
-      ]);
-      const data = await servicesRes.json();
-      const catsData = await categoriesRes.json();
-
-      if (catsData.success) {
-        setCategories(catsData.categories);
-        if (!formData.category && catsData.categories.length > 0) {
-          setFormData(prev => ({ ...prev, category: catsData.categories[0].name }));
-        }
-      }
-
-      if (data.success) {
-        setServices(data.products);
+      const res = await fetch(`${API_BASE_URL}?action=get_all_products&include_all=1&refresh=1`);
+      const data = await res.json();
+      if (data.status === 'success' && data.data) {
+        setServices(data.data);
       } else {
-        toast.error(data.message || 'Failed to load services');
+        toast.error(t('Failed to load services'));
       }
     } catch (error) {
-      console.error("Network Error:", error);
-      toast.error('Network Error: Could not connect to database');
+      console.error('Error fetching services:', error);
+      toast.error(t('Network error while loading services'));
     } finally {
       setLoading(false);
     }
   };
 
-  const uploadToCloudinary = async (file) => {
-    setIsUploading(true);
-    const formDataUpload = new FormData();
-    formDataUpload.append('image', file);
-    formDataUpload.append('folder', 'products');
-
+  const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/upload_image.php`, {
-        method: 'POST',
-        body: formDataUpload,
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setFormData(prev => ({ ...prev, imageUrl: data.url }));
-        toast.success('Image uploaded successfully!');
-        return data.url;
-      } else {
-        toast.error(data.message || 'Image upload failed');
-        return null;
+      const res = await fetch(`${API_BASE_URL}?action=get_categories`);
+      const data = await res.json();
+      if (data.status === 'success' && data.data) {
+        setCategories(data.data);
+        if (data.data.length > 0 && !formData.category) {
+          setFormData(prev => ({ ...prev, category: data.data[0].name }));
+        }
       }
     } catch (error) {
-      console.error("Upload Error:", error);
-      toast.error('Network error during upload');
-      return null;
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error(t('Please select an image file'));
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const compressedBase64 = await compressImage(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.8,
+        maxSizeMB: 0.5,
+      });
+
+      setFormData(prev => ({ ...prev, imageUrl: compressedBase64 }));
+      toast.success(t('Image processed successfully'));
+    } catch (error) {
+      console.error('Image compression error:', error);
+      toast.error(t('Failed to process image'));
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleImageChange = async (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const compressedFile = await compressImage(file);
-      setImageFile(compressedFile);
-      await uploadToCloudinary(compressedFile);
-    }
-  };
-
-  const isTracked = formData.category !== 'service';
-
-  // Customization helpers
   const addCustomization = () => {
     setFormData(prev => ({
       ...prev,
-      customizations: [...prev.customizations, { option_name: '', option_price: '', sort_order: prev.customizations.length + 1 }]
+      customizations: [
+        ...prev.customizations,
+        { option_name: '', option_price: '', sort_order: prev.customizations.length + 1 }
+      ]
+    }));
+  };
+
+  const removeCustomization = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      customizations: prev.customizations.filter((_, i) => i !== index)
     }));
   };
 
@@ -186,18 +171,20 @@ export function ManageServices() {
     });
   };
 
-  const removeCustomization = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      customizations: prev.customizations.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Mix Items helpers
   const addMixItem = () => {
     setFormData(prev => ({
       ...prev,
-      mix_items: [...prev.mix_items, { item_name: '', price_per_kg: '', default_ratio: '1', sort_order: prev.mix_items.length + 1 }]
+      mix_items: [
+        ...prev.mix_items,
+        { item_name: '', price_per_kg: '', default_ratio: '1', sort_order: prev.mix_items.length + 1 }
+      ]
+    }));
+  };
+
+  const removeMixItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      mix_items: prev.mix_items.filter((_, i) => i !== index)
     }));
   };
 
@@ -209,258 +196,282 @@ export function ManageServices() {
     });
   };
 
-  const removeMixItem = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      mix_items: prev.mix_items.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Build payload for API
-  const buildPayload = () => {
-    const payload = {
-      name: formData.name,
-      price: parseFloat(formData.price),
-      unit: formData.unit,
-      description: formData.description,
-      image: formData.imageUrl,
-      category: formData.category,
-      is_grinding_service: formData.has_customizations ? 1 : 0,
-      customization_pricing_mode: formData.customization_pricing_mode || 'additive',
-      cleaning_price: 0,
-      grinding_price: 0,
-      track_inventory: formData.track_inventory ? 1 : 0,
-      stock_quantity: parseFloat(formData.stock_quantity) || 0,
-      min_stock_level: parseFloat(formData.min_stock_level) || 0,
-      dual_unit: formData.dual_unit ? 1 : 0,
-      weight_options: formData.weight_options.length > 0 ? formData.weight_options : [],
-      is_custom_mix: formData.is_custom_mix ? 1 : 0,
-      customizations: formData.has_customizations && !formData.is_custom_mix
-        ? formData.customizations.map((c, i) => ({
-            option_name: c.option_name,
-            option_price: parseFloat(c.option_price) || 0,
-            sort_order: i + 1
-          }))
-        : [],
-      mix_items: formData.is_custom_mix
-        ? formData.mix_items.map((m, i) => ({
-            item_name: m.item_name,
-            price_per_kg: parseFloat(m.price_per_kg) || 0,
-            default_ratio: parseFloat(m.default_ratio) || 1,
-            sort_order: i + 1
-          }))
-        : [],
-      discount_type: formData.discount_type || 'none',
-      discount_value: formData.discount_type === 'none' ? 0 : (parseFloat(formData.discount_value) || 0),
-      badge_text: (formData.badge_text || '').trim(),
-      is_rental: formData.is_rental ? 1 : 0,
-      rental_price_per_day: parseFloat(formData.rental_price_per_day) || 0,
-      security_deposit: parseFloat(formData.security_deposit) || 0,
-      late_penalty_per_day: parseFloat(formData.late_penalty_per_day) || 0,
-      rental_available_qty: parseInt(formData.rental_available_qty) || 0,
-      priority: parseInt(formData.priority) || 0
-    };
-    return payload;
-  };
-
   const handleAdd = async () => {
     if (!formData.name || !formData.price) {
-      toast.error('Please fill in all required fields');
+      toast.error(t('Please fill all required fields'));
       return;
     }
-    if (formData.has_customizations) {
-      const invalid = formData.customizations.some(c => !c.option_name || !c.option_price);
-      if (invalid || formData.customizations.length === 0) {
-        toast.error('Please add at least one customization with name and price');
+
+    if (formData.is_rental) {
+      if (!formData.rental_price_per_day || parseFloat(formData.rental_price_per_day) <= 0) {
+        toast.error(t('Rental price per day is required for rental items'));
+        return;
+      }
+      if (!formData.rental_available_qty || parseInt(formData.rental_available_qty) <= 0) {
+        toast.error(t('Available quantity for rental is required'));
         return;
       }
     }
 
-    setIsSaving(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/add_product.php`, {
+      setIsSaving(true);
+      const selectedCat = categories.find(c => c.name === formData.category);
+      const categoryId = selectedCat ? selectedCat.id : null;
+
+      const payload = {
+        name: formData.name,
+        price: parseFloat(formData.price),
+        unit: formData.unit,
+        category_id: categoryId,
+        description: formData.description,
+        image_url: formData.imageUrl,
+        is_grinding_service: formData.has_customizations ? 1 : 0,
+        customization_pricing_mode: formData.customization_pricing_mode || 'average',
+        track_inventory: formData.track_inventory ? 1 : 0,
+        stock_quantity: formData.track_inventory ? (parseFloat(formData.stock_quantity) || 100) : 100,
+        min_stock_level: formData.track_inventory ? (parseFloat(formData.min_stock_level) || 10) : 10,
+        dual_unit: formData.dual_unit ? 1 : 0,
+        weight_options: formData.weight_options && formData.weight_options.length > 0
+          ? JSON.stringify(formData.weight_options)
+          : null,
+        is_custom_mix: formData.is_custom_mix ? 1 : 0,
+        customizations: formData.has_customizations
+          ? formData.customizations.filter(c => c.option_name.trim() !== '')
+          : [],
+        mix_items: formData.is_custom_mix
+          ? formData.mix_items.filter(m => m.item_name.trim() !== '')
+          : [],
+        is_rental: formData.is_rental ? 1 : 0,
+        rental_price_per_day: formData.is_rental ? (parseFloat(formData.rental_price_per_day) || 0) : 0,
+        security_deposit: formData.is_rental ? (parseFloat(formData.security_deposit) || 0) : 0,
+        late_penalty_per_day: formData.is_rental ? (parseFloat(formData.late_penalty_per_day) || 0) : 0,
+        rental_available_qty: formData.is_rental ? (parseInt(formData.rental_available_qty) || 0) : 0,
+        discount_type: formData.discount_type || 'none',
+        discount_value: formData.discount_type !== 'none' ? (parseFloat(formData.discount_value) || 0) : 0,
+        badge_text: formData.badge_text ? formData.badge_text.trim() : null,
+        priority: parseInt(formData.priority) || 0,
+      };
+
+      const res = await fetch(`${API_BASE_URL}?action=add_product`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload())
+        body: JSON.stringify(payload)
       });
-      const result = await response.json();
-      if (result.success) {
-        toast.success('Service added successfully!');
-        resetForm();
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(t('Service added successfully'));
         setIsAdding(false);
+        resetForm();
         fetchServices();
       } else {
-        toast.error(result.message || 'Failed to add service');
+        toast.error(data.message || t('Failed to add service'));
       }
     } catch (error) {
-      toast.error('Network error while saving');
+      console.error('Error adding service:', error);
+      toast.error(t('Network error while adding service'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleEdit = (service) => {
-    const custs = service.customizations && service.customizations.length > 0
-      ? service.customizations.map(c => ({ option_name: c.option_name, option_price: c.option_price.toString(), sort_order: c.sort_order }))
-      : [];
-    
-    const hasCust = custs.length > 0 || service.is_grinding_service === 1 || service.is_grinding_service === true;
-
-    // Fallback: if old product with is_grinding_service but no dynamic customizations, create from old fields
-    const fallbackCusts = (hasCust && custs.length === 0)
-      ? [
-          { option_name: 'Cleaning', option_price: (service.cleaning_price || 0).toString(), sort_order: 1 },
-          { option_name: 'Grinding', option_price: (service.grinding_price || 0).toString(), sort_order: 2 }
-        ]
-      : custs;
-
-    const mixItems = service.mix_items && service.mix_items.length > 0
-      ? service.mix_items.map(m => ({ item_name: m.item_name, price_per_kg: m.price_per_kg.toString(), default_ratio: m.default_ratio.toString(), sort_order: m.sort_order }))
-      : [];
-
     setEditingId(service.id);
+    setIsAdding(false);
+    
+    let parsedWeights = [];
+    if (service.weight_options) {
+      try {
+        parsedWeights = typeof service.weight_options === 'string'
+          ? JSON.parse(service.weight_options)
+          : service.weight_options;
+      } catch (e) {
+        parsedWeights = [];
+      }
+    }
+
     setFormData({
       name: service.name,
       price: service.price.toString(),
       unit: service.unit,
       description: service.description || '',
-      imageUrl: service.image || service.image_url || service.imageUrl || '',
-      category: service.category || service.category_name || (categories.length > 0 ? categories[0].name : ''),
-      has_customizations: hasCust && !(service.is_custom_mix === 1 || service.is_custom_mix === '1' || service.is_custom_mix === true),
-      customization_pricing_mode: service.customization_pricing_mode || (service.unit === 'kg' && fallbackCusts.length > 2 ? 'average' : 'additive'),
-      customizations: fallbackCusts,
-      track_inventory: service.track_inventory === 1 || service.track_inventory === true,
-      stock_quantity: (service.stock_quantity ?? 100).toString(),
-      min_stock_level: (service.min_stock_level ?? 10).toString(),
-      dual_unit: service.dual_unit === 1 || service.dual_unit === true,
-      weight_options: Array.isArray(service.weight_options) ? service.weight_options : [],
-      is_custom_mix: service.is_custom_mix === 1 || service.is_custom_mix === '1' || service.is_custom_mix === true,
-      mix_items: mixItems,
+      imageUrl: service.image_url || '',
+      category: service.category_name || (categories[0]?.name || ''),
+      has_customizations: Boolean(service.is_grinding_service),
+      customization_pricing_mode: service.customization_pricing_mode || 'average',
+      customizations: service.customizations ? service.customizations.map(c => ({
+        option_name: c.option_name,
+        option_price: c.option_price.toString(),
+        sort_order: c.sort_order
+      })) : [],
+      track_inventory: service.track_inventory !== undefined ? Boolean(service.track_inventory) : true,
+      stock_quantity: service.stock_quantity ? service.stock_quantity.toString() : '100',
+      min_stock_level: service.min_stock_level ? service.min_stock_level.toString() : '10',
+      dual_unit: Boolean(service.dual_unit),
+      weight_options: Array.isArray(parsedWeights) ? parsedWeights : [],
+      is_custom_mix: Boolean(service.is_custom_mix),
+      mix_items: service.mix_items ? service.mix_items.map(m => ({
+        item_name: m.item_name,
+        price_per_kg: m.price_per_kg.toString(),
+        default_ratio: (m.default_ratio || 1).toString(),
+        sort_order: m.sort_order
+      })) : [],
+      is_rental: Boolean(service.is_rental),
+      rental_price_per_day: service.rental_price_per_day ? service.rental_price_per_day.toString() : '',
+      security_deposit: service.security_deposit ? service.security_deposit.toString() : '',
+      late_penalty_per_day: service.late_penalty_per_day ? service.late_penalty_per_day.toString() : '',
+      rental_available_qty: service.rental_available_qty !== undefined ? service.rental_available_qty.toString() : '',
       discount_type: service.discount_type || 'none',
-      discount_value: service.discount_value && parseFloat(service.discount_value) > 0 ? service.discount_value.toString() : '',
+      discount_value: service.discount_value ? service.discount_value.toString() : '',
       badge_text: service.badge_text || '',
-      is_rental: service.is_rental === 1 || service.is_rental === true,
-      rental_price_per_day: service.rental_price_per_day && parseFloat(service.rental_price_per_day) > 0 ? service.rental_price_per_day.toString() : '',
-      security_deposit: service.security_deposit && parseFloat(service.security_deposit) > 0 ? service.security_deposit.toString() : '',
-      late_penalty_per_day: service.late_penalty_per_day && parseFloat(service.late_penalty_per_day) > 0 ? service.late_penalty_per_day.toString() : '',
-      rental_available_qty: service.rental_available_qty ? service.rental_available_qty.toString() : '',
-      priority: (service.priority ?? 0).toString()
+      priority: (service.priority !== undefined && service.priority !== null) ? service.priority.toString() : '0',
     });
-    setWeightInput('');
-    setImageFile(null);
   };
 
   const handleUpdate = async () => {
     if (!formData.name || !formData.price) {
-      toast.error('Please fill in all required fields');
+      toast.error(t('Please fill all required fields'));
       return;
     }
 
-    setIsSaving(true);
+    if (formData.is_rental) {
+      if (!formData.rental_price_per_day || parseFloat(formData.rental_price_per_day) <= 0) {
+        toast.error(t('Rental price per day is required for rental items'));
+        return;
+      }
+      if (!formData.rental_available_qty || parseInt(formData.rental_available_qty) <= 0) {
+        toast.error(t('Available quantity for rental is required'));
+        return;
+      }
+    }
+
     try {
-      const payload = { ...buildPayload(), id: editingId };
-      const response = await fetch(`${API_BASE_URL}/update_product.php`, {
+      setIsSaving(true);
+      const selectedCat = categories.find(c => c.name === formData.category);
+      const categoryId = selectedCat ? selectedCat.id : null;
+
+      const payload = {
+        id: editingId,
+        name: formData.name,
+        price: parseFloat(formData.price),
+        unit: formData.unit,
+        category_id: categoryId,
+        description: formData.description,
+        image_url: formData.imageUrl,
+        is_grinding_service: formData.has_customizations ? 1 : 0,
+        customization_pricing_mode: formData.customization_pricing_mode || 'average',
+        track_inventory: formData.track_inventory ? 1 : 0,
+        stock_quantity: formData.track_inventory ? (parseFloat(formData.stock_quantity) || 100) : 100,
+        min_stock_level: formData.track_inventory ? (parseFloat(formData.min_stock_level) || 10) : 10,
+        dual_unit: formData.dual_unit ? 1 : 0,
+        weight_options: formData.weight_options && formData.weight_options.length > 0
+          ? JSON.stringify(formData.weight_options)
+          : null,
+        is_custom_mix: formData.is_custom_mix ? 1 : 0,
+        customizations: formData.has_customizations
+          ? formData.customizations.filter(c => c.option_name.trim() !== '')
+          : [],
+        mix_items: formData.is_custom_mix
+          ? formData.mix_items.filter(m => m.item_name.trim() !== '')
+          : [],
+        is_rental: formData.is_rental ? 1 : 0,
+        rental_price_per_day: formData.is_rental ? (parseFloat(formData.rental_price_per_day) || 0) : 0,
+        security_deposit: formData.is_rental ? (parseFloat(formData.security_deposit) || 0) : 0,
+        late_penalty_per_day: formData.is_rental ? (parseFloat(formData.late_penalty_per_day) || 0) : 0,
+        rental_available_qty: formData.is_rental ? (parseInt(formData.rental_available_qty) || 0) : 0,
+        discount_type: formData.discount_type || 'none',
+        discount_value: formData.discount_type !== 'none' ? (parseFloat(formData.discount_value) || 0) : 0,
+        badge_text: formData.badge_text ? formData.badge_text.trim() : null,
+        priority: parseInt(formData.priority) || 0,
+      };
+
+      const res = await fetch(`${API_BASE_URL}?action=update_product`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const rawText = await response.text();
-      console.log("Raw API Response:", rawText);
-      const result = JSON.parse(rawText);
-      if (result.success) {
-        toast.success('Service updated successfully!');
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(t('Service updated successfully'));
         setEditingId(null);
         resetForm();
         fetchServices();
       } else {
-        toast.error(result.message || 'Failed to update service');
+        toast.error(data.message || t('Failed to update service'));
       }
     } catch (error) {
-      console.error("Network Error Details:", error);
-      toast.error('Network error while updating - Check Console F12');
+      console.error('Error updating service:', error);
+      toast.error(t('Network error while updating service'));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleToggleActive = async (id, currentStatus) => {
-    const newStatus = Number(currentStatus) === 1 ? 0 : 1;
-    // Optimistic update — flip the icon instantly so the user sees the change,
-    // then reconcile with the server's fresh view below.
-    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, is_active: newStatus } : s)));
+  const handleDelete = async (id) => {
+    if (!window.confirm(t('Are you sure you want to delete this service?'))) return;
+
     try {
-      const response = await fetch(`${API_BASE_URL}/update_product_status.php`, {
+      setDeletingId(id);
+      const res = await fetch(`${API_BASE_URL}?action=delete_product`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, is_active: newStatus })
+        body: JSON.stringify({ id })
       });
-      const result = await response.json();
-      if (result.success) {
-        toast.success(result.message);
-        // Force-fresh reload — bypasses server 5-min cache and browser 60s cache.
-        fetchServices({ fresh: true });
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(t('Service deleted successfully'));
+        fetchServices();
       } else {
-        // Roll back the optimistic flip
-        setServices((prev) => prev.map((s) => (s.id === id ? { ...s, is_active: currentStatus } : s)));
-        toast.error(result.message);
+        toast.error(data.message || t('Failed to delete service'));
       }
     } catch (error) {
-      setServices((prev) => prev.map((s) => (s.id === id ? { ...s, is_active: currentStatus } : s)));
-      toast.error('Network error while toggling status');
+      console.error('Error deleting service:', error);
+      toast.error(t('Network error while deleting service'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const handleDelete = async (id) => {
-    const deleteService = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/delete_product.php`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: id })
-        });
-        const result = await response.json();
-        if (result.success) {
-          toast.success('Service deleted successfully!');
-          fetchServices();
-        } else {
-          toast.error(result.message || 'Failed to delete service.');
-        }
-      } catch (error) {
-        toast.error('Network error while deleting');
-      }
-    };
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 1 || currentStatus === '1' ? 0 : 1;
+    const previousServices = [...services];
 
-    toast.custom((toastId) => (
-      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
-        <p className="text-primary-foreground font-medium">Are you sure you want to delete this service?</p>
-        <div className="flex gap-2 justify-end">
-          <Button 
-            onClick={() => toast.dismiss(toastId)} 
-            variant="outline" 
-            size="sm"
-            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={() => {
-              toast.dismiss(toastId);
-              deleteService();
-            }} 
-            size="sm"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
-    ));
+    setServices(prevServices =>
+      prevServices.map(s => s.id === id ? { ...s, status: newStatus } : s)
+    );
+
+    try {
+      const res = await fetch(`${API_BASE_URL}?action=update_product_status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(newStatus === 1 ? t('Service is now visible to customers') : t('Service is now hidden from customers'));
+        fetchServices();
+      } else {
+        setServices(previousServices);
+        toast.error(data.message || t('Failed to update service status'));
+      }
+    } catch (error) {
+      console.error('Error updating service status:', error);
+      setServices(previousServices);
+      toast.error(t('Network error while updating service status'));
+    }
   };
 
   const resetForm = () => {
     setFormData({
-      name: '', price: '', unit: 'kg', description: '', imageUrl: '',
-      category: categories.length > 0 ? categories[0].name : '',
+      name: '',
+      price: '',
+      unit: 'kg',
+      description: '',
+      imageUrl: '',
+      category: categories[0]?.name || '',
       has_customizations: false,
       customization_pricing_mode: 'average',
       customizations: [],
@@ -471,18 +482,17 @@ export function ManageServices() {
       weight_options: [],
       is_custom_mix: false,
       mix_items: [],
-      discount_type: 'none',
-      discount_value: '',
-      badge_text: '',
       is_rental: false,
       rental_price_per_day: '',
       security_deposit: '',
       late_penalty_per_day: '',
       rental_available_qty: '',
-      priority: '0'
+      discount_type: 'none',
+      discount_value: '',
+      badge_text: '',
+      priority: '0',
     });
     setWeightInput('');
-    setImageFile(null);
   };
 
   const handleCancel = () => {
@@ -491,24 +501,35 @@ export function ManageServices() {
     resetForm();
   };
 
+  const computeDiscountedPrice = (origPrice, type, val) => {
+    const p = parseFloat(origPrice) || 0;
+    const v = parseFloat(val) || 0;
+    if (type === 'percentage') {
+      return Math.max(0, p - (p * (v / 100)));
+    } else if (type === 'fixed') {
+      return Math.max(0, p - v);
+    }
+    return p;
+  };
+
+  // Group services by category
+  const groupedServices = services
+    .slice()
+    .sort((a, b) => (parseInt(b.priority || 0) - parseInt(a.priority || 0)))
+    .reduce((acc, service) => {
+      const catName = service.category_name || 'Other Services';
+      if (!acc[catName]) acc[catName] = [];
+      acc[catName].push(service);
+      return acc;
+    }, {});
+
   if (loading && services.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading Services...</p>
       </div>
     );
   }
-
-  // Grouping services by category
-  const groupedServices = services.reduce((groups, service) => {
-    const category = service.category || service.category_name || 'Uncategorized';
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(service);
-    return groups;
-  }, {});
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -527,624 +548,28 @@ export function ManageServices() {
 
       {/* Add/Edit Form */}
       {(isAdding || editingId) && (
-        <div ref={formRef}>
-          <Card className="p-4 sm:p-6">
-          <h2 className="mb-4 text-lg sm:text-xl font-semibold">{editingId ? 'Edit Service' : 'Add New Service'}</h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Service Name *</Label>
-                <Input id="name" placeholder="e.g., Wheat Grinding" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} disabled={isSaving} />
-              </div>
-              <div>
-                <Label htmlFor="price">Price (Rs) *</Label>
-                <Input id="price" type="number" step="0.01" placeholder="e.g., 10" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} disabled={isSaving || formData.has_customizations} />
-                {formData.has_customizations && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    ⚡ {formData.customization_pricing_mode === 'average'
-                      ? `Auto-calculated average rate: Rs. ${formData.price || 0} / ${formData.unit || 'kg'}`
-                      : 'Auto-calculated sum from customizations'}
-                  </p>
-                )}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="unit">Unit</Label>
-                <select id="unit" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 text-sm" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} disabled={isSaving}>
-                  <option value="kg">kg</option>
-                  <option value="bag">bag</option>
-                  <option value="liter">liter</option>
-                  <option value="piece">piece</option>
-                  <option value="trip">trip</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })} disabled={isSaving}>
-                  <SelectTrigger className="text-sm"><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.length > 0 ? categories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.name} className="text-sm">{cat.name}</SelectItem>
-                    )) : (
-                      <SelectItem value="service" className="text-sm">Convenience Services</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="priority">Display Priority</Label>
-                <Input
-                  id="priority"
-                  type="number"
-                  placeholder="e.g., 10 (Highest first)"
-                  value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  disabled={isSaving}
-                  className="text-sm animate-in fade-in"
-                />
-              </div>
-            </div>
-
-            {/* Dual Unit Toggle (Pickup + KG) */}
-            <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dual_unit"
-                  checked={formData.dual_unit}
-                  onCheckedChange={(checked) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      dual_unit: !!checked,
-                      unit: checked ? 'kg' : prev.unit
-                    }));
-                  }}
-                  disabled={isSaving}
-                />
-                <Label htmlFor="dual_unit" className="font-semibold text-blue-700 cursor-pointer">
-                  🚚 Enable Dual Mode (Pickup Request + Per KG)
-                </Label>
-              </div>
-              {formData.dual_unit && (
-                <p className="text-[10px] text-blue-600 mt-1 ml-6">
-                  Card will show both "Add Pickup Request" (unit=trip, weight TBD) and "Add to Cart" (unit=kg) buttons.
-                </p>
-              )}
-            </div>
-
-            {/* Quick Quantity Options (All Units) */}
-            {formData.unit !== 'trip' && (
-              <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-200">
-                <Label className="font-semibold text-emerald-700 mb-2 block">⚖️ Quick {formData.unit?.toUpperCase() || 'QTY'} Options (e.g. 5, 10, 20)</Label>
-                <p className="text-[10px] text-emerald-600 mb-2">Customer will see these as quick-select buttons along with +/- manual selector.</p>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.weight_options.map((w, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300">
-                      {w} {formData.unit || 'unit'}
-                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, weight_options: prev.weight_options.filter((_, i) => i !== idx) }))} className="text-emerald-500 hover:text-red-500 ml-1 font-bold" disabled={isSaving}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    placeholder={`Enter ${formData.unit || 'qty'} value...`}
-                    value={weightInput}
-                    onChange={(e) => setWeightInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const val = parseFloat(weightInput);
-                        if (val > 0 && !formData.weight_options.includes(val)) {
-                           setFormData(prev => ({ ...prev, weight_options: [...prev.weight_options, val].sort((a, b) => a - b) }));
-                          setWeightInput('');
-                        }
-                      }
-                    }}
-                    className="flex-1"
-                    disabled={isSaving}
-                  />
-                  <Button type="button" variant="outline" size="sm" className="border-emerald-400 text-emerald-700 hover:bg-emerald-100" disabled={isSaving} onClick={() => {
-                    const val = parseFloat(weightInput);
-                    if (val > 0 && !formData.weight_options.includes(val)) {
-                      setFormData(prev => ({ ...prev, weight_options: [...prev.weight_options, val].sort((a, b) => a - b) }));
-                      setWeightInput('');
-                    }
-                  }}>
-                    <Plus className="h-4 w-4 mr-1" /> Add
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" placeholder="Brief description of the service" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} disabled={isSaving} />
-            </div>
-
-            <div>
-              <Label>Product Image</Label>
-              <div className="flex flex-col sm:flex-row gap-4 items-start mt-2">
-                <div className="relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors">
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={isUploading || isSaving} />
-                  {isUploading ? (
-                     <div className="flex flex-col items-center">
-                        <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                        <p className="text-sm">Uploading...</p>
-                     </div>
-                  ) : formData.imageUrl ? (
-                     <img src={formData.imageUrl} alt="Product image" className="h-32 object-contain" />
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                      <p className="font-medium text-sm">Click to upload or drag & drop</p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG, WebP up to 10MB</p>
-                    </div>
-                  )}
-                </div>
-                {formData.imageUrl && (
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-success mb-2">✓ Image uploaded successfully</p>
-                    <Input value={formData.imageUrl} onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} className="text-xs" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* DYNAMIC SERVICE CUSTOMIZATIONS */}
-            <div className="flex flex-col gap-4 pt-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="has_customizations"
-                  checked={formData.has_customizations}
-                  onCheckedChange={(checked) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      has_customizations: checked,
-                      is_custom_mix: checked ? false : prev.is_custom_mix,
-                      customizations: checked && prev.customizations.length === 0
-                        ? [{ option_name: '', option_price: '', sort_order: 1 }]
-                        : prev.customizations
-                    }));
-                  }}
-                  disabled={isSaving}
-                />
-                <Label htmlFor="has_customizations" className="font-semibold text-primary">
-                  ⚙️ Enable Service Customizations (Customer can select options)
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_custom_mix"
-                  checked={formData.is_custom_mix}
-                  onCheckedChange={(checked) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      is_custom_mix: checked,
-                      has_customizations: checked ? false : prev.has_customizations,
-                      mix_items: checked && prev.mix_items.length === 0
-                        ? [{ item_name: '', price_per_kg: '', default_ratio: '1', sort_order: 1 }]
-                        : prev.mix_items
-                    }));
-                  }}
-                  disabled={isSaving}
-                />
-                <Label htmlFor="is_custom_mix" className="font-semibold text-purple-700">
-                  🌾 Custom Mix / Multigrain (Customer chooses proportions)
-                </Label>
-              </div>
-
-              {formData.has_customizations && !formData.is_custom_mix && (
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2 space-y-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-primary/10">
-                    <div>
-                      <p className="text-sm font-bold text-primary">Customization Options / اجزاء کی تقسیم</p>
-                      <p className="text-[11px] text-muted-foreground">Select how product price should be calculated from items</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-primary/20 shadow-xs">
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, customization_pricing_mode: 'average' }))}
-                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                          formData.customization_pricing_mode === 'average'
-                            ? 'bg-primary text-white shadow-xs'
-                            : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                        title="Price is the average of items included (for multigrain flour or mixed products)"
-                      >
-                        ⚖️ Divided Items (Average /{formData.unit || 'kg'})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, customization_pricing_mode: 'additive' }))}
-                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                          formData.customization_pricing_mode !== 'average'
-                            ? 'bg-primary text-white shadow-xs'
-                            : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                        title="Price is sum of selected options (for services like cleaning + grinding)"
-                      >
-                        ➕ Add-on Services (Sum)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-foreground">
-                      {formData.customization_pricing_mode === 'average'
-                        ? `Product Items & Rates per ${formData.unit || 'kg'}:`
-                        : 'Service Options & Fees:'}
-                    </p>
-                    <Button type="button" size="sm" variant="outline" onClick={addCustomization} disabled={isSaving}>
-                      <Plus className="h-3 w-3 mr-1" /> Add Option
-                    </Button>
-                  </div>
-
-                  {formData.customizations.map((cust, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg border border-border shadow-sm">
-                      <GripVertical className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
-                      <Input
-                        placeholder={formData.customization_pricing_mode === 'average' ? "Item name (e.g. Wheat Flour, Barley Flour...)" : "Option name (e.g. Cleaning, Grinding...)"}
-                        value={cust.option_name}
-                        onChange={(e) => updateCustomization(idx, 'option_name', e.target.value)}
-                        disabled={isSaving}
-                        className="text-sm flex-1 min-w-0"
-                      />
-                      <Input
-                        type="number"
-                        placeholder={formData.customization_pricing_mode === 'average' ? `Rs. / ${formData.unit || 'kg'}` : "Rs."}
-                        value={cust.option_price}
-                        onChange={(e) => updateCustomization(idx, 'option_price', e.target.value)}
-                        disabled={isSaving}
-                        className="text-sm w-28 sm:w-32 shrink-0"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeCustomization(idx)}
-                        disabled={isSaving}
-                        title="Delete option"
-                        className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600 shrink-0 stroke-[2.5]" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {formData.customization_pricing_mode === 'average' ? (
-                    <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
-                      <div>
-                        <span className="font-bold text-emerald-800">🌾 Overall Product Rate (all items included):</span>
-                        <p className="text-[11px] text-emerald-600 mt-0.5">
-                          When a customer orders, the rate is calculated based on the items they include in their mix.
-                        </p>
-                      </div>
-                      <span className="text-sm font-extrabold text-emerald-800 shrink-0 bg-white px-3 py-1 rounded-md border border-emerald-300">
-                        Rs. {(() => {
-                          const valid = formData.customizations.filter(c => parseFloat(c.option_price) > 0);
-                          return valid.length > 0 ? Math.round(valid.reduce((sum, c) => sum + parseFloat(c.option_price), 0) / valid.length) : 0;
-                        })()} / {formData.unit || 'kg'}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Total Price (all options selected): Rs. {formData.customizations.reduce((sum, c) => sum + (parseFloat(c.option_price) || 0), 0)}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {formData.is_custom_mix && (
-                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 animate-in fade-in slide-in-from-top-2 space-y-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-bold text-purple-800">Mix Ingredients</p>
-                    <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto border-purple-300 text-purple-700 hover:bg-purple-100" onClick={addMixItem} disabled={isSaving}>
-                      <Plus className="h-3 w-3 mr-1" /> Add Ingredient
-                    </Button>
-                  </div>
-
-                  {formData.mix_items.map((item, idx) => (
-                    <div key={idx} className="flex items-end gap-2 p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                      <GripVertical className="hidden sm:block h-4 w-4 text-purple-300 shrink-0 mb-2.5" />
-                      <div className="flex-1 min-w-0">
-                        <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
-                        <Input
-                          placeholder="e.g. Wheat, Chana, Bajra"
-                          value={item.item_name}
-                          onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                        />
-                      </div>
-                      <div className="w-24 sm:w-28 shrink-0">
-                        <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
-                        <Input
-                          type="number"
-                          placeholder="Rs."
-                          value={item.price_per_kg}
-                          onChange={(e) => updateMixItem(idx, 'price_per_kg', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                        />
-                      </div>
-                      <div className="w-16 sm:w-20 shrink-0">
-                        <Label className="text-[10px] text-purple-600 mb-1 block">Ratio</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          placeholder="e.g. 1"
-                          value={item.default_ratio}
-                          onChange={(e) => updateMixItem(idx, 'default_ratio', e.target.value)}
-                          disabled={isSaving}
-                          className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeMixItem(idx)}
-                        disabled={isSaving}
-                        title="Delete ingredient"
-                        className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 mb-0.5"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600 shrink-0 stroke-[2.5]" />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  <p className="text-[10px] text-purple-600 italic">
-                    Note: Price is automatically calculated on the frontend based on user's selected proportions.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="trackInventory"
-                  checked={formData.track_inventory}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, track_inventory: !!checked }))}
-                  disabled={isSaving}
-                />
-                <Label htmlFor="trackInventory" className="text-muted-foreground cursor-pointer">
-                  Track stock for this service in Inventory Management
-                </Label>
-              </div>
-
-              {formData.track_inventory && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-3 sm:pl-6 border-l-2 border-primary/20">
-                  <div>
-                    <Label htmlFor="stock_quantity" className="text-xs font-semibold text-primary">Initial Stock Quantity</Label>
-                    <Input
-                      id="stock_quantity"
-                      type="number"
-                      placeholder="e.g., 100"
-                      value={formData.stock_quantity || ''}
-                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                      disabled={isSaving}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="min_stock_level" className="text-xs font-semibold text-primary">Low Stock Threshold (Alert Level)</Label>
-                    <Input
-                      id="min_stock_level"
-                      type="number"
-                      placeholder="e.g., 10"
-                      value={formData.min_stock_level || ''}
-                      onChange={(e) => setFormData({ ...formData, min_stock_level: e.target.value })}
-                      disabled={isSaving}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* RENTAL TOGGLE */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_rental"
-                  checked={formData.is_rental}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_rental: !!checked }))}
-                  disabled={isSaving}
-                />
-                <Label htmlFor="is_rental" className="font-semibold text-teal-700 cursor-pointer">
-                  🔄 Enable Rental (Rent this item to customers per day)
-                </Label>
-              </div>
-
-              {formData.is_rental && (
-                <div className="p-4 bg-teal-50/50 rounded-lg border border-teal-200 animate-in fade-in slide-in-from-top-2 space-y-3">
-                  <p className="text-sm font-bold text-teal-800">🔄 Rental Configuration</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="rental_price_per_day" className="text-xs font-semibold text-teal-700">Rental Price / Day (Rs.) *</Label>
-                      <Input
-                        id="rental_price_per_day"
-                        type="number"
-                        step="1"
-                        placeholder="e.g., 500"
-                        value={formData.rental_price_per_day}
-                        onChange={(e) => setFormData({ ...formData, rental_price_per_day: e.target.value })}
-                        disabled={isSaving}
-                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="security_deposit" className="text-xs font-semibold text-teal-700">Security Deposit (Rs.) *</Label>
-                      <Input
-                        id="security_deposit"
-                        type="number"
-                        step="1"
-                        placeholder="e.g., 5000"
-                        value={formData.security_deposit}
-                        onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
-                        disabled={isSaving}
-                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="late_penalty_per_day" className="text-xs font-semibold text-teal-700">Late Return Penalty / Day (Rs.)</Label>
-                      <Input
-                        id="late_penalty_per_day"
-                        type="number"
-                        step="1"
-                        placeholder="e.g., 200"
-                        value={formData.late_penalty_per_day}
-                        onChange={(e) => setFormData({ ...formData, late_penalty_per_day: e.target.value })}
-                        disabled={isSaving}
-                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="rental_available_qty" className="text-xs font-semibold text-teal-700">Available Qty for Rental *</Label>
-                      <Input
-                        id="rental_available_qty"
-                        type="number"
-                        step="1"
-                        placeholder="e.g., 5"
-                        value={formData.rental_available_qty}
-                        onChange={(e) => setFormData({ ...formData, rental_available_qty: e.target.value })}
-                        disabled={isSaving}
-                        className="mt-1 border-teal-200 focus-visible:ring-teal-400"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-teal-600 italic">
-                    Note: When a customer rents this item, Available Qty will auto-decrement. On return it will increment back.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* DISCOUNT & BADGE */}
-            <div className="p-4 bg-rose-50/50 rounded-lg border border-rose-200 space-y-3">
-              <p className="text-sm font-bold text-rose-700">🏷️ Discount & Badge (Optional)</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label htmlFor="discount_type" className="text-xs font-semibold text-rose-700">Discount Type</Label>
-                  <select
-                    id="discount_type"
-                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={formData.discount_type}
-                    onChange={(e) => setFormData({ ...formData, discount_type: e.target.value, discount_value: e.target.value === 'none' ? '' : formData.discount_value })}
-                    disabled={isSaving}
-                  >
-                    <option value="none">No Discount</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount (Rs.)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="discount_value" className="text-xs font-semibold text-rose-700">
-                    Discount Value {formData.discount_type === 'percentage' ? '(%)' : formData.discount_type === 'fixed' ? '(Rs.)' : ''}
-                  </Label>
-                  <Input
-                    id="discount_value"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max={formData.discount_type === 'percentage' ? 100 : undefined}
-                    placeholder={formData.discount_type === 'percentage' ? 'e.g., 10' : 'e.g., 50'}
-                    value={formData.discount_value}
-                    onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                    disabled={isSaving || formData.discount_type === 'none'}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="badge_text" className="text-xs font-semibold text-rose-700">Badge Text (max 50)</Label>
-                  <Input
-                    id="badge_text"
-                    type="text"
-                    maxLength={50}
-                    placeholder="e.g., New, Hot Deal, Best Seller"
-                    value={formData.badge_text}
-                    onChange={(e) => setFormData({ ...formData, badge_text: e.target.value })}
-                    disabled={isSaving}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-
-              {/* Live Preview */}
-              {(formData.name || formData.price) && (
-                <div className="mt-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Live Preview</p>
-                  <div className="relative w-full max-w-xs bg-white rounded-xl border border-border shadow-md overflow-hidden">
-                    {/* Badge */}
-                    {formData.badge_text && formData.badge_text.trim() && (
-                      <span className="absolute top-2 left-2 z-10 bg-rose-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md uppercase tracking-wide">
-                        {formData.badge_text.trim()}
-                      </span>
-                    )}
-                    {/* Discount badge */}
-                    {formData.discount_type !== 'none' && parseFloat(formData.discount_value) > 0 && (
-                      <span className="absolute top-2 right-2 z-10 bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md">
-                        {formData.discount_type === 'percentage'
-                          ? `-${Math.min(parseFloat(formData.discount_value), 100)}%`
-                          : `-Rs.${parseFloat(formData.discount_value)}`}
-                      </span>
-                    )}
-
-                    <div className="h-32 bg-muted flex items-center justify-center overflow-hidden">
-                      {formData.imageUrl ? (
-                        <img src={formData.imageUrl} alt="preview" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No image</span>
-                      )}
-                    </div>
-
-                    <div className="p-3 space-y-1">
-                      <p className="font-bold text-sm truncate">{formData.name || 'Product Name'}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{formData.description || 'Short description...'}</p>
-                      <div className="flex items-baseline gap-2 pt-1">
-                        {formData.discount_type !== 'none' && parseFloat(formData.discount_value) > 0 ? (
-                          <>
-                            <span className="text-base font-bold text-rose-700">
-                              Rs. {computeDiscountedPrice(formData.price, formData.discount_type, formData.discount_value).toFixed(2)}
-                            </span>
-                            <span className="text-xs text-muted-foreground line-through">
-                              Rs. {parseFloat(formData.price || 0).toFixed(2)}
-                            </span>
-                            <span className="text-[10px] text-emerald-700 font-semibold">
-                              / {formData.unit}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-base font-bold text-primary">
-                            Rs. {parseFloat(formData.price || 0).toFixed(2)} <span className="text-[10px] text-muted-foreground font-normal">/ {formData.unit}</span>
-                          </span>
-                        )}
-                      </div>
-                      {formData.discount_type !== 'none' && parseFloat(formData.discount_value) > 0 && (
-                        <p className="text-[10px] text-emerald-700 font-semibold">
-                          You save Rs. {(parseFloat(formData.price || 0) - computeDiscountedPrice(formData.price, formData.discount_type, formData.discount_value)).toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button onClick={editingId ? handleUpdate : handleAdd} size="lg" disabled={isSaving || isUploading} className="w-full sm:w-auto">
-                {isSaving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
-                {editingId ? 'Update Service' : 'Add Service'}
-              </Button>
-              <Button onClick={handleCancel} variant="outline" size="lg" disabled={isSaving || isUploading} className="w-full sm:w-auto">
-                <X className="h-5 w-5 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
+        <ServiceForm
+          editingId={editingId}
+          formData={formData}
+          setFormData={setFormData}
+          categories={categories}
+          weightInput={weightInput}
+          setWeightInput={setWeightInput}
+          isSaving={isSaving}
+          isUploading={isUploading}
+          formRef={formRef}
+          handleImageChange={handleImageChange}
+          handleAdd={handleAdd}
+          handleUpdate={handleUpdate}
+          handleCancel={handleCancel}
+          addCustomization={addCustomization}
+          removeCustomization={removeCustomization}
+          updateCustomization={updateCustomization}
+          addMixItem={addMixItem}
+          removeMixItem={removeMixItem}
+          updateMixItem={updateMixItem}
+          computeDiscountedPrice={computeDiscountedPrice}
+        />
       )}
 
       {/* Services List Grouped by Category */}
@@ -1159,26 +584,24 @@ export function ManageServices() {
             return (
               <div key={categoryName} className="space-y-3 sm:space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
-                  <div className="inline-flex self-start items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm uppercase tracking-wider">
-                    <span>{categoryName.toLowerCase() === 'service' || categoryName.toLowerCase() === 'services' ? '💼' : '🌾'}</span>
-                    <span className="break-words">{categoryName}</span>
-                  </div>
-                  <div className="hidden sm:block flex-1 h-[1px] bg-gradient-to-r from-slate-200 to-transparent" />
-                  <span className="text-[11px] sm:text-xs text-slate-500 font-semibold">
-                    {categoryItems.length} Item(s)
+                  <h2 className="text-lg font-bold text-foreground capitalize tracking-tight flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary/80"></span>
+                    {categoryName}
+                  </h2>
+                  <span className="text-xs text-muted-foreground font-medium bg-muted/60 px-2 py-0.5 rounded-full self-start sm:self-auto">
+                    {categoryItems.length} {categoryItems.length === 1 ? 'service' : 'services'}
                   </span>
                 </div>
-
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {categoryItems.map((service) => (
                     <ServiceListItem
                       key={service.id}
                       service={service}
-                      isAdding={isAdding}
-                      editingId={editingId}
-                      onToggleActive={handleToggleActive}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onToggleStatus={handleToggleStatus}
+                      deletingId={deletingId}
+                      t={t}
                     />
                   ))}
                 </div>
