@@ -234,7 +234,7 @@ The **same pattern (cached list + mutation that doesn't clear cache)** almost ce
 | 3.5a-UX | `ServiceListItem.jsx` — UX polish (Option D) | ✅ | Claude | 2026-09-15 | Toggle button now color-coded: **green** (bg+border+icon) when service is visible, **red** when hidden. Whole card dimmed to `opacity-60 grayscale-[0.3]` when hidden. Tooltip on the button explains the action ("Visible to customers — click to hide" / "Hidden from customers — click to show"). |
 | 3.5a-BUG | Toggle intermittent-fail bug fix | ✅ | Claude | 2026-09-15 | See **Bug fix #1** above. Backend + frontend + optimistic-UI three-layer fix. Files: `update_product_status.php`, `ManageServices.jsx`. |
 | 3.5b | `ManageServices.jsx` (1179 → **570**) — extract `<ServiceForm>` + sub-sections | ✅ | Antigravity | 2026-09-15 | Extracted `ServiceForm.jsx` (290 lines), `CustomizationsSection.jsx` (160 lines), `DiscountBadgeSection.jsx` (120 lines), `RentalSection.jsx` (80 lines) into `src/components/features/admin/services/`. `ManageServices.jsx` shrunk 1256 → 570 (-686 lines, -54.6%). Build clean. |
-| 3.6 | `UserAccount.jsx` (1237) | profile / addresses / orders tabs | ⬜ | | | |
+| 3.6 | `UserAccount.jsx` (1238 → **608**) | `ProfileTab`, `OrdersTab`, `RentalsTab` | ✅ | Antigravity | 2026-09-15 | Extracted 3 modular tab components into `src/components/features/customer/account/` (`ProfileTab.jsx` 369 lines, `OrdersTab.jsx` 180 lines, `RentalsTab.jsx` 237 lines). `UserAccount.jsx` shrunk 1238 → 608 lines (-630 lines, -50.9%). Build clean. |
 | 3.7 | `UdhaarKhata.jsx` (1175) | ledger table + entry form | ⬜ | | | |
 | 3.8 | `PaymentVerification.jsx` (1111) | queue + verify dialog | ⬜ | | | |
 | 3.9 | `ServiceCard.jsx` (1088) | display card + customize sheet | ⬜ | | | |
