@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Search, User, Mail, Phone, Award, Ban, CheckCircle, MessageSquare, Loader2, Sparkles, UserCheck } from 'lucide-react';
+import { CustomerStatsCards } from '../../components/features/admin/customers/CustomerStatsCards';
+import { VipConfigDialog } from '../../components/features/admin/customers/VipConfigDialog';
+import { ManagePrivilegesDialog } from '../../components/features/admin/customers/ManagePrivilegesDialog';
+import { Search, Mail, Phone, Award, Ban, CheckCircle, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '../../components/common/button';
 import { Card } from '../../components/common/card';
 import { Input } from '../../components/common/input';
-import { Label } from '../../components/common/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/common/dialog';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
@@ -314,47 +315,13 @@ export function ManageCustomers() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-3 sm:p-4 flex flex-col items-center text-center gap-2 border-l-4 border-blue-500 shadow-sm">
-          <div className="p-2 sm:p-3 bg-blue-100 rounded-full text-blue-600">
-            <User className="h-4 w-4 sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">{t('Total Customers')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-gray-900">{totalCustomersCount}</p>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4 flex flex-col items-center text-center gap-2 border-l-4 border-green-500 shadow-sm">
-          <div className="p-2 sm:p-3 bg-green-100 rounded-full text-green-600">
-            <UserCheck className="h-4 w-4 sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">{t('Active Accounts')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-gray-900">{activeCustomersCount}</p>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4 flex flex-col items-center text-center gap-2 border-l-4 border-purple-500 shadow-sm">
-          <div className="p-2 sm:p-3 bg-purple-100 rounded-full text-purple-600">
-            <Award className="h-4 w-4 sm:h-6 sm:w-6" />
-          </div>
-          <div>
-            <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">{t('VIP Customers')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-gray-900">{vipCustomersCount}</p>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4 flex flex-col items-center text-center gap-2 border-l-4 border-amber-500 shadow-sm">
-          <div className="p-2 sm:p-3 bg-amber-100 rounded-full text-amber-600">
-            <Sparkles className="h-4 w-4 sm:h-6 sm:w-6" />
-          </div>
-          <div className="w-full">
-            <p className="text-[11px] sm:text-sm font-medium text-gray-500 leading-tight">{t('Total Spent')}</p>
-            <p className="text-sm sm:text-2xl font-bold text-gray-900 break-all">Rs. {totalSalesAmount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</p>
-          </div>
-        </Card>
-      </div>
+      <CustomerStatsCards
+        totalCustomersCount={totalCustomersCount}
+        activeCustomersCount={activeCustomersCount}
+        vipCustomersCount={vipCustomersCount}
+        totalSalesAmount={totalSalesAmount}
+        t={t}
+      />
 
       {/* Filter & List Card */}
       <Card className="p-3 sm:p-6 shadow-sm">
@@ -627,260 +594,31 @@ export function ManageCustomers() {
         )}
       </Card>
 
-      {/* VIP Config Dialog */}
-      <Dialog open={isVipModalOpen} onOpenChange={setIsVipModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-purple-900">
-              <Award className="h-5 w-5 text-purple-600" />
-              {t('Configure VIP Status')}
-            </DialogTitle>
-            <DialogDescription>
-              {t('Manage VIP privileges for')} <strong className="text-gray-900">{selectedCustomer?.full_name}</strong>.
-            </DialogDescription>
-          </DialogHeader>
+      <VipConfigDialog
+        isVipModalOpen={isVipModalOpen}
+        setIsVipModalOpen={setIsVipModalOpen}
+        selectedCustomer={selectedCustomer}
+        vipForm={vipForm}
+        setVipForm={setVipForm}
+        vipLoading={vipLoading}
+        handleSaveVip={handleSaveVip}
+        privileges={privileges}
+        t={t}
+      />
 
-          <div className="grid gap-4 py-4">
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-semibold text-purple-900">{t('Promote to VIP Member')}</Label>
-                <p className="text-xs text-purple-700">{t('Enable VIP badges and special benefits.')}</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={vipForm.is_vip}
-                onChange={(e) => {
-                  const val = e.target.checked;
-                  setVipForm({
-                    ...vipForm,
-                    is_vip: val,
-                    // Clear selected privileges if not VIP
-                    privilege_ids: val ? vipForm.privilege_ids : []
-                  });
-                }}
-                className="w-5 h-5 accent-purple-600 cursor-pointer rounded"
-              />
-            </div>
-
-            <div className={`space-y-3 p-3 border rounded-lg transition-all ${
-              vipForm.is_vip ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50/50 opacity-60 pointer-events-none'
-            }`}>
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('Active Privileges')}</h4>
-              
-              {privileges.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-2">{t('No privileges defined. Create some first.')}</p>
-              ) : (
-                privileges.map((priv, idx) => (
-                  <div key={priv.id}>
-                    {idx > 0 && <hr className="border-gray-100 my-2" />}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-semibold text-gray-800">{priv.name}</Label>
-                        {priv.description && (
-                          <p className="text-xs text-gray-500">{priv.description}</p>
-                        )}
-                      </div>
-                      <input
-                        type="checkbox"
-                        disabled={!vipForm.is_vip}
-                        checked={vipForm.privilege_ids.includes(priv.id)}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          let nextIds = [...vipForm.privilege_ids];
-                          if (checked) {
-                            if (!nextIds.includes(priv.id)) nextIds.push(priv.id);
-                          } else {
-                            nextIds = nextIds.filter(id => id !== priv.id);
-                          }
-                          setVipForm({ ...vipForm, privilege_ids: nextIds });
-                        }}
-                        className="w-4 h-4 accent-purple-600 cursor-pointer rounded"
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsVipModalOpen(false)}
-              disabled={vipLoading}
-            >
-              {t('Cancel')}
-            </Button>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium"
-              onClick={handleSaveVip}
-              disabled={vipLoading}
-            >
-              {vipLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('Saving...')}
-                </>
-              ) : (
-                t('Save Changes')
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage Privileges Dialog */}
-      <Dialog open={isManagePrivilegesOpen} onOpenChange={setIsManagePrivilegesOpen}>
-        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-purple-900 text-base sm:text-lg">
-              <Award className="h-5 w-5 text-purple-600 shrink-0" />
-              {t('Manage VIP Privileges')}
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              {t('Create, edit, or delete the VIP customer privileges available in the system.')}
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Privilege Form */}
-          <div className="bg-purple-50/50 p-3 sm:p-4 rounded-xl border border-purple-100 space-y-3 sm:space-y-4">
-            <h4 className="text-sm font-bold text-purple-900">
-              {privilegeForm.id ? t('Edit Privilege') : t('Create New Privilege')}
-            </h4>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="priv-name" className="text-xs font-semibold text-gray-700">{t('Privilege Name')}</Label>
-                <Input
-                  id="priv-name"
-                  placeholder={t('e.g., 20% Discount, Priority Support')}
-                  value={privilegeForm.name}
-                  onChange={(e) => setPrivilegeForm({ ...privilegeForm, name: e.target.value })}
-                  className="h-9"
-                />
-                {privilegeFormErrors.name && (
-                  <p className="text-[10px] text-red-500">{privilegeFormErrors.name}</p>
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="priv-desc" className="text-xs font-semibold text-gray-700">{t('Description')}</Label>
-                <Input
-                  id="priv-desc"
-                  placeholder={t('Short description of the benefit')}
-                  value={privilegeForm.description}
-                  onChange={(e) => setPrivilegeForm({ ...privilegeForm, description: e.target.value })}
-                  className="h-9"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="priv-type" className="text-xs font-semibold text-gray-700">{t('Type')}</Label>
-                  <select
-                    id="priv-type"
-                    value={privilegeForm.type}
-                    onChange={(e) => setPrivilegeForm({ ...privilegeForm, type: e.target.value })}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
-                  >
-                    <option value="discount">{t('Discount')}</option>
-                    <option value="free_shipping">{t('Free Shipping')}</option>
-                    <option value="custom">{t('Custom / Badge')}</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="priv-val" className="text-xs font-semibold text-gray-700">{t('Value (if applicable)')}</Label>
-                  <Input
-                    id="priv-val"
-                    type="number"
-                    placeholder={t('e.g., 10 for 10%')}
-                    value={privilegeForm.value}
-                    onChange={(e) => setPrivilegeForm({ ...privilegeForm, value: e.target.value })}
-                    className="h-9"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-              {privilegeForm.id && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPrivilegeForm({ id: null, name: '', description: '', type: 'custom', value: 0 })}
-                  className="h-9 w-full sm:w-auto"
-                >
-                  {t('Clear')}
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={handleSavePrivilege}
-                disabled={privilegeActionLoading}
-                className="bg-purple-600 hover:bg-purple-700 text-white h-9 w-full sm:w-auto"
-              >
-                {privilegeActionLoading ? t('Saving...') : privilegeForm.id ? t('Update') : t('Create')}
-              </Button>
-            </div>
-          </div>
-
-          {/* Privilege List */}
-          <div className="space-y-2 mt-4">
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('Existing Privileges')}</h4>
-            <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto pr-1">
-              {privileges.length === 0 ? (
-                <p className="text-sm text-gray-500 py-3 text-center">{t('No privileges defined yet.')}</p>
-              ) : (
-                privileges.map((priv) => (
-                  <div key={priv.id} className="py-2.5 flex items-start justify-between gap-2 group">
-                    <div className="space-y-0.5 min-w-0 flex-1">
-                      <div className="font-semibold text-gray-800 text-sm flex items-center gap-1.5 flex-wrap">
-                        <span className="break-words">{priv.name}</span>
-                        <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-full uppercase shrink-0">
-                          {priv.type}
-                        </span>
-                      </div>
-                      {priv.description && (
-                        <p className="text-xs text-gray-500 break-words">{priv.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditPrivilegeClick(priv)}
-                        className="h-7 w-7 p-0 text-gray-600 hover:text-purple-600"
-                        title={t('Edit')}
-                      >
-                        <Award className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeletePrivilege(priv.id)}
-                        className="h-7 w-7 p-0 text-gray-600 hover:text-red-600"
-                        title={t('Delete')}
-                      >
-                        <Ban className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <DialogFooter className="pt-4 border-t border-gray-100">
-            <Button
-              className="bg-gray-950 hover:bg-gray-900 text-white font-medium w-full sm:w-auto"
-              onClick={() => setIsManagePrivilegesOpen(false)}
-            >
-              {t('Close')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ManagePrivilegesDialog
+        isManagePrivilegesOpen={isManagePrivilegesOpen}
+        setIsManagePrivilegesOpen={setIsManagePrivilegesOpen}
+        privileges={privileges}
+        privilegeForm={privilegeForm}
+        setPrivilegeForm={setPrivilegeForm}
+        privilegeFormErrors={privilegeFormErrors}
+        privilegeActionLoading={privilegeActionLoading}
+        handleSavePrivilege={handleSavePrivilege}
+        handleEditPrivilegeClick={handleEditPrivilegeClick}
+        handleDeletePrivilege={handleDeletePrivilege}
+        t={t}
+      />
     </div>
   );
 }
