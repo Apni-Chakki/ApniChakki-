@@ -32,10 +32,7 @@ const URDU_DICT = {
   'Coriander': 'دھنیا',
 };
 
-/**
- * Translate an English string to Urdu using the built-in bill dictionary.
- * Falls back to the original text when no match is found or lang is 'en'.
- */
+// urdu translation dictionary se match karna
 export function translateText(text, lang) {
   if (lang === 'en') return text;
   if (!text) return '';
@@ -43,7 +40,7 @@ export function translateText(text, lang) {
 
   if (URDU_DICT[clean]) return URDU_DICT[clean];
 
-  // Case-insensitive fallback lookup.
+  // small capital letters check karna
   const lower = clean.toLowerCase();
   for (const key in URDU_DICT) {
     if (key.toLowerCase() === lower) return URDU_DICT[key];
@@ -52,7 +49,7 @@ export function translateText(text, lang) {
   return text;
 }
 
-/** Human-readable order status label. */
+// order status show karna
 export function getStatusLabel(status, lang = 'en') {
   const mapEn = {
     pending: 'Pending',

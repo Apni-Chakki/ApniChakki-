@@ -454,3 +454,29 @@ export const lookupLahoreLocation = (query) => {
 
   return null;
 };
+
+export const findNearestLahoreArea = (lat, lng, maxDistKm = 2.5) => {
+  const lt = parseFloat(lat);
+  const lg = parseFloat(lng);
+  if (isNaN(lt) || isNaN(lg)) return null;
+
+  let nearest = null;
+  let minDist = Infinity;
+  for (const area of LAHORE_KNOWN_AREAS) {
+    const dLat = (area.lat - lt) * (Math.PI / 180);
+    const dLng = (area.lng - lg) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lt * (Math.PI / 180)) *
+        Math.cos(area.lat * (Math.PI / 180)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distKm = 6371 * c;
+    if (distKm < minDist && distKm <= maxDistKm) {
+      minDist = distKm;
+      nearest = { ...area, distanceKm: distKm };
+    }
+  }
+  return nearest;
+};

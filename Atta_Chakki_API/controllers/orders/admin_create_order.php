@@ -59,6 +59,11 @@ try {
         }
     }
 
+    $order_type = isset($data['order_type']) ? strtolower(trim($data['order_type'])) : '';
+    if ($order_type !== 'pickup' && $order_type !== 'delivery') {
+        $order_type = (stripos($address, 'pickup') !== false || stripos($address, 'shop') !== false || stripos($address, 'self') !== false) ? 'pickup' : 'delivery';
+    }
+
     // check column
     $src_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'source'");
     if (!$src_check || $src_check->num_rows === 0) {
@@ -66,8 +71,8 @@ try {
     }
 
     // order save kar rahe
-    $order_stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, payment_status, payment_method, shipping_address, amount_paid, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', NOW(), NOW())");
-    $order_stmt->bind_param("idssssd", $user_id, $total_amount, $status, $payment_status, $payment_method, $address, $amount_paid);
+    $order_stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, payment_status, payment_method, order_type, shipping_address, amount_paid, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', NOW(), NOW())");
+    $order_stmt->bind_param("idsssssd", $user_id, $total_amount, $status, $payment_status, $payment_method, $order_type, $address, $amount_paid);
     $order_stmt->execute();
     $order_id = $conn->insert_id;
     $order_stmt->close();

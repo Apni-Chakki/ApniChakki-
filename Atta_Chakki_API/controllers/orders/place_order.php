@@ -237,10 +237,12 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
 
         $remaining = $total_amount - $amount_paid_input;
         $message = "Order placed successfully";
-        if ($final_payment_status === 'partial') {
-            $message .= ". Rs. " . number_format($remaining, 2) . " added to Udhaar.";
-        } elseif ($final_payment_status === 'pending' && $total_amount > 0) {
-            $message .= ". Full amount Rs. " . number_format($total_amount, 2) . " added to Udhaar.";
+        if ($db_payment_method === 'udhaar') {
+            if ($final_payment_status === 'partial') {
+                $message .= ". Rs. " . number_format($remaining, 2) . " added to Udhaar.";
+            } elseif ($final_payment_status === 'pending' && $total_amount > 0) {
+                $message .= ". Full amount Rs. " . number_format($total_amount, 2) . " added to Udhaar.";
+            }
         }
 
         if ($schedule_result && isset($schedule_result['schedule_reason'])) {

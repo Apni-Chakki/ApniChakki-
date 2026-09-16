@@ -17,7 +17,7 @@ function customizationKey(service) {
       .join('|');
   }
   if (!service.selected_customizations || service.selected_customizations.length === 0) {
-    // Backward compat: fallback to old is_cleaning/is_grinding
+    // purane items ke liye cleaning aur grinding check
     return `${service.is_cleaning || false}_${service.is_grinding || false}`;
   }
   return service.selected_customizations

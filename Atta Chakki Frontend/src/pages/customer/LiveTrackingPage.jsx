@@ -193,7 +193,7 @@ export function LiveTrackingPage() {
     };
   }, [orderInfo, isDelivered, socketEnabled]);
 
-  // Fallback polling (in case socket fails)
+  // agar socket na chale to api se location poochna
   useEffect(() => {
     if (!orderInfo || isDelivered) return;
 
@@ -246,7 +246,7 @@ export function LiveTrackingPage() {
           }
         }
 
-        // Nominatim fallback
+        // openstreetmap se address nikalna
         const nomRes = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(orderInfo.shipping_address + ', Lahore')}&limit=1`,
           { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } }
@@ -268,7 +268,7 @@ export function LiveTrackingPage() {
     geocodeAddress();
   }, [orderInfo?.shipping_address, destinationCoords]);
 
-  // Draw route and calculate ETA
+  // rasta draw karna aur time nikalna
   const drawRoute = useCallback(async () => {
     const loc = driverLocRef.current;
     if (!mapRef.current || !loc || !destinationCoords) return;
@@ -276,7 +276,7 @@ export function LiveTrackingPage() {
     try {
       let routeData = null;
 
-      // 1. Try Mapbox Directions API
+      // mapbox se rasta lena
       if (MAPBOX_TOKEN) {
         try {
           const res = await fetch(
@@ -293,7 +293,7 @@ export function LiveTrackingPage() {
         }
       }
 
-      // 2. Fallback to OSRM
+      // agar mapbox na chale to osrm se try karna
       if (!routeData) {
         try {
           const osrmRes = await fetch(
@@ -311,7 +311,7 @@ export function LiveTrackingPage() {
       }
 
       if (!routeData) {
-        // Fallback straight line
+        // seedhi line draw karna agar rasta na mile
         routeData = {
           distance: 1000,
           duration: 300,

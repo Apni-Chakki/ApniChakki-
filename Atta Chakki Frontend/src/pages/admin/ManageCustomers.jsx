@@ -103,9 +103,11 @@ export function ManageCustomers() {
 
   const handleToggleStatus = async (customer) => {
     const nextActive = !customer.is_active;
-    const actionLabel = nextActive ? t('Enable') : t('Disable');
+    const confirmMessage = nextActive
+      ? t('Are you sure you want to enable this customer account?')
+      : t('Are you sure you want to disable this customer account?');
     
-    toast.warning(t('Are you sure you want to {{action}} this customer account?', { action: actionLabel }), {
+    toast.warning(confirmMessage, {
       action: {
         label: t('Yes'),
         onClick: async () => {
@@ -211,7 +213,7 @@ export function ManageCustomers() {
         });
         setPrivilegeFormErrors({});
         fetchPrivileges();
-        fetchCustomers(); // Refetch customers to ensure their labels and counts are up-to-date
+        fetchCustomers(); // customers ki list dobara load karna
       } else {
         toast.error(data.message || t('Operation failed'));
       }

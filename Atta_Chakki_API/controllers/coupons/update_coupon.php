@@ -27,6 +27,12 @@ try {
     $is_active = isset($data['is_active']) ? (int)$data['is_active'] : 1;
     $is_featured = isset($data['is_featured']) ? (int)$data['is_featured'] : 0;
 
+    // Ensure is_featured column exists
+    $col_check = $conn->query("SHOW COLUMNS FROM coupons LIKE 'is_featured'");
+    if ($col_check && $col_check->num_rows == 0) {
+        $conn->query("ALTER TABLE coupons ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active");
+    }
+
     $stmt = $conn->prepare("UPDATE coupons SET code=?, description=?, discount_type=?, discount_value=?, min_order_amount=?, usage_limit=?, expiry_date=?, is_active=?, is_featured=? WHERE id=?");
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
@@ -35,6 +41,8 @@ try {
     $stmt->bind_param("sssdidssii", $code, $description, $discount_type, $discount_value, $min_order_amount, $usage_limit, $expiry_date, $is_active, $is_featured, $id);
 
     if ($stmt->execute()) {
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
         http_response_code(200);
         echo json_encode(["success" => true, "message" => "Updated successfully"]);
     } else {

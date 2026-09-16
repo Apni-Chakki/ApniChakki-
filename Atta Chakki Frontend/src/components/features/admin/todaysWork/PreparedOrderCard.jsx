@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../common/card';
 import { Badge } from '../../../common/badge';
 import { Button } from '../../../common/button';
@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../common/dropdown-menu';
-import { Clock, User, Phone, MapPin, Truck, Package, FileDown, Loader2, Printer, Trash2 } from 'lucide-react';
+import { Clock, User, Phone, MapPin, Truck, Package, FileDown, Loader2, Printer, Trash2, Store } from 'lucide-react';
 
 export function PreparedOrderCard({
   order,
@@ -21,6 +21,16 @@ export function PreparedOrderCard({
   handlePrint,
   setCancelOrder,
 }) {
+  const isPickup = order.type === 'pickup' || order.order_type === 'pickup' || (
+    order.shipping_address && (
+      order.shipping_address.toLowerCase().includes('pickup') ||
+      order.shipping_address.toLowerCase().includes('store') ||
+      order.shipping_address.toLowerCase().includes('shop') ||
+      order.shipping_address.toLowerCase().includes('self') ||
+      order.shipping_address.toLowerCase().includes('collect')
+    )
+  );
+
   return (
     <Card className="border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white border-l-emerald-600">
       <CardHeader className="pb-2 rounded-t-xl mb-3 sm:mb-4 px-3 sm:px-6 pt-3 sm:pt-6 bg-slate-50/50">
@@ -31,6 +41,15 @@ export function PreparedOrderCard({
               <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-2 py-0.5 font-bold uppercase">
                 Prepared Item
               </Badge>
+              {isPickup ? (
+                <Badge variant="outline" className="text-purple-700 bg-purple-50 border-purple-200 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Store className="h-3 w-3" /> Self Pickup
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Truck className="h-3 w-3" /> Home Delivery
+                </Badge>
+              )}
             </CardTitle>
             <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1.5 sm:mt-2 flex items-center gap-2">
               <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
@@ -76,8 +95,17 @@ export function PreparedOrderCard({
             <span>{order.customer_phone}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{order.shipping_address}</span>
+            {isPickup ? (
+              <>
+                <Store className="h-4 w-4 text-purple-600 shrink-0" />
+                <span className="font-semibold text-purple-800">{order.shipping_address || 'Self Pickup (Store)'}</span>
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
+                <span>{order.shipping_address || 'Address not provided'}</span>
+              </>
+            )}
           </div>
           {order.driver_name && (
             <div className="flex items-center gap-2">
@@ -119,7 +147,7 @@ export function PreparedOrderCard({
             )}
           </Button>
 
-          {order.type === 'delivery' ? (
+          {!isPickup ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className={`w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium text-sm ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
@@ -146,8 +174,8 @@ export function PreparedOrderCard({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="outline" disabled className="w-full border-2 border-slate-200 text-slate-500 opacity-60 cursor-default text-sm">
-              <Package className="h-4 w-4 mr-2 shrink-0" />
+            <Button variant="outline" disabled className="w-full border-2 border-purple-200 bg-purple-50/70 text-purple-700 opacity-90 cursor-default text-sm font-semibold">
+              <Store className="h-4 w-4 mr-2 shrink-0 text-purple-600" />
               Self Pickup
             </Button>
           )}

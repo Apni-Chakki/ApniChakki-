@@ -1,7 +1,7 @@
-// jsPDF is lazy-loaded inside generateBillPDF — saves ~594 KB from the initial bundle
+// pdf generate karne ke liye jspdf library
 import { API_BASE_URL } from '../config';
 
-// getting store info for the pdf
+// store ki setting lana
 async function fetchBrandSettings() {
   try {
     const res = await fetch(`${API_BASE_URL}/get_store_settings.php`);
@@ -27,7 +27,7 @@ async function fetchBrandSettings() {
   };
 }
 
-// status label mapping
+// order status ke labels
 const getStatusLabel = (status) => {
   if (!status) return 'Unknown';
   const map = {
@@ -41,7 +41,7 @@ const getStatusLabel = (status) => {
   return map[status] || String(status);
 };
 
-// creating svg logo for pdf (matches app Header logo)
+// bill par logo draw karna
 const getLogoDataUrl = (customLogoUrl) => {
   return new Promise((resolve) => {
     let resolved = false;
@@ -52,7 +52,7 @@ const getLogoDataUrl = (customLogoUrl) => {
       }
     };
 
-    // Safety timeout: never hang more than 400ms on logo
+    // logo na mile to 400ms me skip karna
     setTimeout(() => safeResolve(null), 400);
 
     const renderDefaultHeaderLogo = () => {

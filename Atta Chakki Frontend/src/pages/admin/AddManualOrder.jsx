@@ -4,7 +4,7 @@ import { Input } from '../../components/common/input';
 import { Label } from '../../components/common/label';
 import { Button } from '../../components/common/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/common/select';
-import { Plus, Trash2, Save, ShoppingCart, User, Settings2 } from 'lucide-react';
+import { Plus, Trash2, Save, ShoppingCart, User, Settings2, Store, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
@@ -18,6 +18,7 @@ export function AddManualOrder() {
   
   const [products, setProducts] = useState([]); 
   
+  const [orderType, setOrderType] = useState('pickup'); // 'pickup' | 'delivery'
   const [customer, setCustomer] = useState({
     name: '',
     phone: '',
@@ -32,7 +33,7 @@ export function AddManualOrder() {
   const [amountPaid, setAmountPaid] = useState('');
   const [orderStatus, setOrderStatus] = useState('pending');
 
-  // Dynamic customization selections for currently selected product
+  // selected item ke add-ons / options
   const [selectedOptions, setSelectedOptions] = useState({});
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function AddManualOrder() {
        const product = products.find(p => p.id.toString() === selectedProduct.toString());
        if (product) {
           const custs = getEffectiveCustomizations(product);
-          // Select all by default
+          // shuru me sab options tick honge
           const defaults = {};
           custs.forEach((_, i) => { defaults[i] = true; });
           setSelectedOptions(defaults);
@@ -81,6 +82,50 @@ export function AddManualOrder() {
     loadProducts();
   }, []);
 
+  const computeProductPrice = (product, selOptions) => {
+    if (!product) return { originalPrice: 0, finalPrice: 0 };
+    const custs = getEffectiveCustomizations(product);
+    const hasCustomizations = custs.length > 0;
+    let basePrice = parseFloat(product.price) || 0;
+
+    if (hasCustomizations) {
+      const pricingMode = product.customization_pricing_mode || (product.is_grinding_service == 1 ? "additive" : "average");
+      const selectedIndices = Object.keys(selOptions).filter(i => selOptions[i]);
+
+      if (pricingMode === "average") {
+        if (selectedIndices.length > 0) {
+          const sum = selectedIndices.reduce(
+            (acc, i) => acc + (parseFloat(custs[i]?.option_price) || 0),
+            0
+          );
+          basePrice = Math.round(sum / selectedIndices.length);
+        } else {
+          basePrice = 0;
+        }
+      } else {
+        // additive mode
+        basePrice = custs.reduce(
+          (sum, c, i) => sum + (selOptions[i] ? (parseFloat(c.option_price) || 0) : 0),
+          0
+        );
+        if (basePrice === 0 && selectedIndices.length === 0) {
+          basePrice = parseFloat(product.price) || 0;
+        }
+      }
+    }
+
+    let finalPrice = basePrice;
+    const discountType = product.discount_type || 'none';
+    const discountValue = parseFloat(product.discount_value) || 0;
+    if (discountType === 'percentage' && discountValue > 0) {
+      finalPrice = Math.max(0, basePrice - (basePrice * Math.min(discountValue, 100)) / 100);
+    } else if (discountType === 'fixed' && discountValue > 0) {
+      finalPrice = Math.max(0, basePrice - discountValue);
+    }
+
+    return { originalPrice: basePrice, finalPrice };
+  };
+
   const addToCart = () => {
     if (!selectedProduct) return;
     
@@ -102,38 +147,25 @@ export function AddManualOrder() {
       return;
     }
 
-    let originalPrice = parseFloat(product.price);
-    const selected = [];
+    const { originalPrice, finalPrice } = computeProductPrice(product, selectedOptions);
 
+    const selected = [];
     if (hasCustomizations) {
-      originalPrice = 0;
       custs.forEach((c, i) => {
         if (selectedOptions[i]) {
-          originalPrice += parseFloat(c.option_price || 0);
           selected.push({ option_name: c.option_name, option_price: parseFloat(c.option_price || 0) });
         }
       });
-      if (originalPrice === 0 && selected.length === 0) originalPrice = parseFloat(product.price);
     }
 
-    let itemPrice = originalPrice;
-    const discountType = product.discount_type || 'none';
-    const discountValue = parseFloat(product.discount_value) || 0;
-    
-    if (discountType === 'percentage') {
-      itemPrice = Math.max(0, itemPrice - (itemPrice * discountValue / 100));
-    } else if (discountType === 'fixed') {
-      itemPrice = Math.max(0, itemPrice - discountValue);
-    }
-
-    // Backward compat
+    // cleaning pisai check
     const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean')) ? 1 : 0;
     const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind')) ? 1 : 0;
 
     const newItem = {
       id: product.id,
       name: product.name,
-      price: itemPrice,
+      price: finalPrice,
       original_price: originalPrice,
       quantity: parseInt(qty),
       is_cleaning: hasCustomizations ? isCleaning : 0,
@@ -187,6 +219,14 @@ export function AddManualOrder() {
       return;
     }
 
+    if (orderType === 'delivery') {
+      const addr = (customer.address || '').trim();
+      if (!addr || addr.toLowerCase() === 'shop pickup') {
+        toast.error(t("Please enter a valid delivery address for Home Delivery."));
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const orderTotal = calculateTotal();
@@ -202,10 +242,15 @@ export function AddManualOrder() {
         }
       }
 
+      const finalAddress = orderType === 'pickup'
+        ? (customer.address?.trim() || 'Shop Pickup')
+        : customer.address.trim();
+
       const payload = {
         name: customer.name,
         phone: cleanPhone,
-        address: customer.address,
+        order_type: orderType,
+        address: finalAddress,
         items: cart,
         total: orderTotal,
         status: orderStatus,
@@ -289,8 +334,32 @@ export function AddManualOrder() {
               <Input placeholder={t('Guest Customer')} value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
             </div>
             <div>
-              <Label>{t('Address')} / {t('Notes')}</Label>
-              <Input placeholder={t('Shop Pickup')} value={customer.address} onChange={e => setCustomer({...customer, address: e.target.value})} />
+              <div className="flex items-center justify-between mb-1">
+                <Label>
+                  {orderType === 'delivery' ? (
+                    <span className="flex items-center gap-1.5 text-blue-700 font-semibold">
+                      <Truck className="h-3.5 w-3.5" />
+                      {t('Delivery Address')} ({t('Required')})
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-purple-700 font-semibold">
+                      <Store className="h-3.5 w-3.5" />
+                      {t('Pickup Notes')} ({t('Optional')})
+                    </span>
+                  )}
+                </Label>
+              </div>
+              <Input 
+                placeholder={orderType === 'delivery' ? t('e.g. House #14, Street 5, Sector B...') : t('Shop Pickup')} 
+                value={customer.address} 
+                onChange={e => setCustomer({...customer, address: e.target.value})} 
+                className={orderType === 'delivery' && !customer.address ? 'border-blue-300 focus:border-blue-500' : ''}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {orderType === 'delivery' 
+                  ? t('Order will require delivery driver dispatch.')
+                  : t('Customer will self-collect from the store. No driver dispatch needed.')}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -306,6 +375,46 @@ export function AddManualOrder() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label className="mb-1.5 block font-semibold text-xs sm:text-sm">{t('Fulfillment Type')}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderType('pickup');
+                    if (!customer.address || customer.address === '') {
+                      setCustomer(prev => ({ ...prev, address: 'Shop Pickup' }));
+                    }
+                  }}
+                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-xs sm:text-sm font-semibold transition-all ${
+                    orderType === 'pickup'
+                      ? 'border-purple-600 bg-purple-50 text-purple-800 shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Store className="h-4 w-4 shrink-0" />
+                  <span>{t('Self Pickup')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderType('delivery');
+                    if (customer.address === 'Shop Pickup') {
+                      setCustomer(prev => ({ ...prev, address: '' }));
+                    }
+                  }}
+                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-xs sm:text-sm font-semibold transition-all ${
+                    orderType === 'delivery'
+                      ? 'border-blue-600 bg-blue-50 text-blue-800 shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Truck className="h-4 w-4 shrink-0" />
+                  <span>{t('Home Delivery')}</span>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label>{t('Payment Status')}</Label>
@@ -391,14 +500,38 @@ export function AddManualOrder() {
                     checked={!!selectedOptions[idx]}
                     onCheckedChange={(checked) => setSelectedOptions(prev => ({ ...prev, [idx]: !!checked }))}
                   />
-                  <Label htmlFor={`admin-cust-${idx}`} className="text-sm font-medium">
-                    {t(cust.option_name)} (Rs. {cust.option_price})
+                  <Label htmlFor={`admin-cust-${idx}`} className="text-sm font-medium cursor-pointer">
+                    {t(cust.option_name)} (Rs. {cust.option_price}{currentProduct?.customization_pricing_mode === 'average' ? `/${currentProduct?.unit || 'kg'}` : ''})
                   </Label>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground sm:ml-auto flex items-center">
-                {t('Current Price')}: Rs. {currentCustomizations.reduce((sum, c, i) => sum + (selectedOptions[i] ? parseFloat(c.option_price || 0) : 0), 0)}
-              </p>
+              {(() => {
+                const { originalPrice, finalPrice } = computeProductPrice(currentProduct, selectedOptions);
+                const isAvg = currentProduct?.customization_pricing_mode === 'average';
+                return (
+                  <div className="text-xs sm:ml-auto flex items-center gap-2 flex-wrap">
+                    {isAvg && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                        {t('Mix Proportion Rate')}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground font-medium">
+                      {t('Current Price')}:
+                    </span>
+                    {originalPrice > finalPrice ? (
+                      <span>
+                        <span className="line-through text-muted-foreground mr-1">Rs. {originalPrice}</span>
+                        <span className="text-green-600 font-bold">Rs. {finalPrice}</span>
+                      </span>
+                    ) : (
+                      <span className="font-bold text-slate-800">Rs. {finalPrice}</span>
+                    )}
+                    {currentProduct?.unit && (
+                      <span className="text-muted-foreground">/{currentProduct.unit}</span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

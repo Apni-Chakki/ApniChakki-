@@ -98,8 +98,17 @@ export const TomorrowPreparedCard = ({
               <span>{order.customer_phone || "No phone"}</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">{order.shipping_address || "Store Pickup"}</span>
+              {isPickup ? (
+                <>
+                  <Store className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                  <span className="truncate font-medium text-purple-800">{order.shipping_address || "Store Pickup"}</span>
+                </>
+              ) : (
+                <>
+                  <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                  <span className="truncate">{order.shipping_address || "No address provided"}</span>
+                </>
+              )}
             </div>
             {order.deliveryPersonnel && (
               <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 font-medium text-blue-700 text-xs">

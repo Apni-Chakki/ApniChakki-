@@ -38,7 +38,7 @@ export function HeroSettings() {
             setSlides([]);
           }
         } else {
-          // Default fallback if nothing in DB
+          // agar db me kuch na ho to default slides
           setSlides([
             {
               image: "https://images.unsplash.com/photo-1731082300550-8093311708ef?w=1400&auto=format&fit=crop&q=80",
@@ -98,7 +98,7 @@ export function HeroSettings() {
     try {
       setSaving(true);
       
-      // Ensure all slides have data
+      // khali slides ko filter karna
       const validSlides = slides.filter(s => s.image || s.title || s.subtitle);
       const validStorySlides = storySlides.filter(s => s && s.trim() !== '');
       

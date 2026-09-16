@@ -249,13 +249,13 @@ export function UserAccount() {
           address: tempProfile.address
         };
 
-        // Update React Auth Context (this syncs the whole app)
+        // user context update karna
         setUser(updatedUser);
 
-        // Also directly update localStorage to ensure it's synced immediately
+        // local storage me bhi user save karna
         localStorage.setItem('user', JSON.stringify(updatedUser));
 
-        // Update local UI state
+        // profile state update
         const updatedProfile = { ...tempProfile, phone: cleanPhone };
         setProfile(updatedProfile);
         setTempProfile(updatedProfile);

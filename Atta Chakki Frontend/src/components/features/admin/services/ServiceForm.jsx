@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Card } from '../../../common/card';
 import { Button } from '../../../common/button';
 import { Input } from '../../../common/input';
@@ -257,8 +257,8 @@ export function ServiceForm({
                     <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
                     <p className="text-sm">Uploading...</p>
                   </div>
-                ) : formData.imageUrl ? (
-                  <img src={formData.imageUrl} alt="Product image" className="h-32 object-contain" />
+                ) : (formData.imageUrl && typeof formData.imageUrl === 'string' && !formData.imageUrl.includes('[object')) ? (
+                  <img src={formData.imageUrl} alt="Product image" className="h-32 object-contain rounded" />
                 ) : (
                   <div className="flex flex-col items-center">
                     <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
@@ -267,13 +267,14 @@ export function ServiceForm({
                   </div>
                 )}
               </div>
-              {formData.imageUrl && (
+              {(formData.imageUrl && typeof formData.imageUrl === 'string' && !formData.imageUrl.includes('[object')) && (
                 <div className="flex-1">
                   <p className="text-sm font-medium text-success mb-2">✅ Image uploaded successfully</p>
                   <Input
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    className="text-xs"
+                    className="text-xs font-mono"
+                    placeholder="https://res.cloudinary.com/..."
                   />
                 </div>
               )}

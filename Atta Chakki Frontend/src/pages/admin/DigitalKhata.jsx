@@ -154,7 +154,7 @@ export function DigitalKhata() {
       const finalCategory = category === "Other" ? customCategory.trim() : category;
 
       const payload = {
-        user_id: user?.id || 1, // Fallback to 1 (Admin) if missing
+        user_id: user?.id || 1, // admin id 1 rakhna
         category: finalCategory,
         amount: numAmount,
         description: description,

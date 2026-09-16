@@ -369,19 +369,19 @@ export function Homepage() {
     const selectedCat = allCategories.find(c => c.id === categoryId);
     if (!selectedCat) return [];
 
-    // Filter by category NAME (products are saved with category name, not ID)
+    // category name se filter karna
     return services.filter(s => s.category && s.category.toLowerCase() === selectedCat.labelKey.toLowerCase());
   };
 
   const getOtherServices = () => {
-    return services.filter(service => !service.category); // Basic fallback
+    return services.filter(service => !service.category); // baghair category wali items
   };
 
   const displayedServices = selectedCategory
     ? (selectedCategory === 'other' ? getOtherServices() : getServicesByCategory(selectedCategory))
     : [];
 
-  // Helper to handle Add to Cart using the CartContext
+  // cart me add karna
   const handleAddToCart = (product) => {
     addToCart(product);
   };

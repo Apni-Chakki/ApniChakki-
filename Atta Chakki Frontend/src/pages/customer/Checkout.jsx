@@ -14,7 +14,7 @@ import { API_BASE_URL, MAPBOX_TOKEN } from "../../config";
 import { useTranslation } from 'react-i18next';
 import { SEO } from '../../components/common/SEO';
 import { MapboxPicker } from '../../components/common/MapboxPicker';
-import { lookupLahoreLocation, isWithinLahoreBounds, LAHORE_BOUNDS } from '../../utils/lahoreLocations';
+import { lookupLahoreLocation, isWithinLahoreBounds, LAHORE_BOUNDS, findNearestLahoreArea } from '../../utils/lahoreLocations';
 import {
   FALLBACK_CENTER,
   CAROUSEL_SLIDES,
@@ -369,9 +369,9 @@ export function Checkout() {
   };
 
   const reverseGeocode = useCallback(async (lat, lng) => {
-    let addressText = null;
     let inLahore = false;
 
+    // 1. Try Mapbox Geocoding for a SPECIFIC feature (neighborhood, address, locality, poi)
     if (MAPBOX_TOKEN) {
       try {
         const apiUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&language=en`;
@@ -379,33 +379,61 @@ export function Checkout() {
         if (response.ok) {
           const data = await response.json();
           if (data.features && data.features.length > 0) {
-            const bestResult = data.features[0];
-            inLahore = checkIsLahore(bestResult.place_name, lat, lng, bestResult.context);
-            return { addressText: bestResult.place_name, inLahore };
+            // Find a specific sub-city feature, NOT generic city/country 'Lahore, Punjab, Pakistan'
+            const specificFeature = data.features.find(f => {
+              const types = f.place_type || [];
+              const isGeneric = types.includes('place') || types.includes('region') || types.includes('country');
+              const nameLower = (f.place_name || '').toLowerCase().trim();
+              const isGenericCity = nameLower === 'lahore' || nameLower === 'lahore, punjab, pakistan' || nameLower === 'lahore, pakistan';
+              return !isGeneric && !isGenericCity;
+            });
+
+            if (specificFeature) {
+              const formattedName = specificFeature.place_name;
+              inLahore = checkIsLahore(formattedName, lat, lng, specificFeature.context);
+              return { addressText: formattedName, inLahore };
+            }
           }
         }
       } catch (e) { console.warn('Mapbox reverse geocode failed:', e); }
     }
 
+    // 2. OpenStreetMap / Nominatim has high-density local street & neighborhood coverage for Lahore
     try {
       const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
       const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'ApniChakki-DeliveryApp/1.0' } });
       if (response.ok) {
         const data = await response.json();
-        if (data && data.display_name) {
+        if (data && (data.address || data.display_name)) {
           inLahore = checkIsLahore(data.display_name, lat, lng, null);
-          const addr = data.address;
-          if (addr) {
-            const parts = [ addr.house_number, addr.road, addr.neighbourhood || addr.suburb, addr.city || addr.town || addr.village, addr.state, addr.country ].filter(Boolean);
-            if (parts.length >= 3) addressText = parts.join(', ');
+          const addr = data.address || {};
+          const localParts = [
+            addr.amenity || addr.building,
+            addr.road || addr.pedestrian,
+            addr.neighbourhood || addr.suburb || addr.quarter || addr.residential || addr.commercial,
+            addr.city_district || addr.town || addr.city
+          ].filter(Boolean);
+
+          let addressText = localParts.length > 0 ? localParts.join(', ') : data.display_name;
+          // sirf lahore na ho balkay proper area ho
+          const cleanName = addressText.toLowerCase().replace(/,?\s*(punjab|pakistan)/gi, '').trim();
+          if (cleanName !== 'lahore' && cleanName.length > 3) {
+            return { addressText, inLahore };
           }
-          if (!addressText) addressText = data.display_name;
-          return { addressText, inLahore };
         }
       }
     } catch (e) { console.warn('Nominatim failed:', e); }
 
-    return { addressText: null, inLahore: false };
+    // lahore ke landmark se check karna
+    const nearest = findNearestLahoreArea(lat, lng, 2.5);
+    if (nearest) {
+      return { addressText: `Near ${nearest.name}`, inLahore: true };
+    }
+
+    return { 
+      addressText: `Near GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, 
+      inLahore: checkIsLahore('', lat, lng, null) 
+    };
   }, []);
 
 
@@ -722,7 +750,7 @@ export function Checkout() {
         }
       }
 
-      // 2b. Nominatim fallback (bounded to Lahore)
+      // openstreetmap se search
       if (!foundLocation) {
         for (const q of queriesToTry) {
           try {
@@ -801,23 +829,27 @@ export function Checkout() {
     }
   };
 
-  // address search debounce
+  // address search debounce: only search when user is typing an address AND no map pin is placed yet
   useEffect(() => {
     if (orderType !== 'delivery') return;
     if (!houseDetails || houseDetails.trim().length < 6) return;
     if (houseDetails === deliveryArea) return;
-    setAddressSuggestion(null); // clear suggestion when user types new address
+    // CRITICAL: If location is already pinned with GPS coordinates, do not let houseDetails typing trigger auto-search that overrides the user's map pin!
+    if (gpsCoords && gpsCoords.lat && gpsCoords.lng) return;
+
+    setAddressSuggestion(null);
 
     const delayDebounceFn = setTimeout(() => {
       searchTypedAddress(houseDetails);
     }, 1800);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [houseDetails, orderType, deliveryArea]);
+  }, [houseDetails, orderType, deliveryArea, gpsCoords]);
 
   const handleMarkerDrag = useCallback(async (newPos) => {
     setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
     setLocationStatus(`📡 ${t('Fetching area...')}`);
+    setAddressSuggestion(null);
     
     const { addressText, inLahore } = await reverseGeocode(newPos.lat, newPos.lng);
     
@@ -825,20 +857,16 @@ export function Checkout() {
 
     if (addressText) {
       setDeliveryArea(addressText);
-      if (!houseDetails || houseDetails.trim() === '') {
-        setHouseDetails(addressText);
-      }
+      setHouseDetails(prev => (!prev || prev.trim() === '' || prev.toLowerCase().includes('lahore, punjab') ? addressText : prev));
       setLocationStatus(inLahore ? `✅ ${t('Area updated')}` : `❌ ${t('Out of city service not available')}`);
       if(inLahore) toast.success(t('Area updated from new pin location'));
     } else {
       const nearText = `Near GPS: ${newPos.lat.toFixed(5)}, ${newPos.lng.toFixed(5)}`;
       setDeliveryArea(nearText);
-      if (!houseDetails || houseDetails.trim() === '') {
-        setHouseDetails(nearText);
-      }
+      setHouseDetails(prev => (!prev || prev.trim() === '' || prev.toLowerCase().includes('lahore, punjab') ? nearText : prev));
       setLocationStatus(inLahore ? `✅ ${t('Location pinned')}` : `❌ ${t('Out of city service not available')}`);
     }
-  }, [reverseGeocode, t, houseDetails]);
+  }, [reverseGeocode, t]);
 
 
 
@@ -1257,7 +1285,11 @@ export function Checkout() {
             currency: 'PKR'
           });
         }
-        toast.success(result.message || t("Order placed successfully!"));
+        let displayMessage = result.message || t("Order placed successfully!");
+        if (paymentMethod === 'cod' || paymentMethod === 'cash') {
+          displayMessage = displayMessage.replace(/\.?\s*(Full amount\s*)?Rs\.?\s*[\d,.]+\s*added to Udhaar\.?/gi, '').trim();
+        }
+        toast.success(displayMessage || t("Order placed successfully!"));
         clearCart(); 
         navigate(`/order-confirmation/${result.order_id}`); 
       } else {
@@ -1583,15 +1615,14 @@ export function Checkout() {
             <div className="relative">
               <MapboxPicker
                 position={gpsCoords ? { lat: gpsCoords.lat, lng: gpsCoords.lng } : FALLBACK_CENTER}
-                onPositionChange={(newPos) => {
-                  setGpsCoords(prev => ({ ...prev, lat: newPos.lat, lng: newPos.lng }));
-                }}
+                onPositionChange={handleMarkerDrag}
                 onAddressChange={(addr) => {
-                  setDeliveryArea(addr);
-                  if (!houseDetails || houseDetails.trim() === '') {
-                    setHouseDetails(addr);
+                  if (addr) {
+                    setDeliveryArea(addr);
+                    setAddressSuggestion(null);
+                    setHouseDetails(prev => (!prev || prev.trim() === '' || prev.toLowerCase().includes('lahore, punjab') ? addr : prev));
+                    setLocationStatus(`✅ ${t('Area updated')}`);
                   }
-                  setLocationStatus(`✅ ${t('Area updated')}`);
                 }}
                 height="280px"
                 showSearch={false}

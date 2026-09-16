@@ -1,9 +1,9 @@
-/* ============================================================
+/* 
    RESPONSIVE STYLES — ApniChakki
    Plain CSS so these work without Tailwind recompilation.
-   ============================================================ */
+  */
 
-/* ---- Header: Desktop nav vs Mobile hamburger ---- */
+/* Header: Desktop nav vs Mobile hamburger  */
 .nav-desktop-actions {
   display: flex;
   align-items: center;
@@ -1015,7 +1015,7 @@ body {
   transform: scale(1.05) !important;
 }
 
-/* ---- Lazy Animated Section & Smooth Scroll ---- */
+/*  Lazy Animated Section & Smooth Scroll  */
 html {
   scroll-behavior: smooth;
 }

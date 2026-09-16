@@ -24,9 +24,19 @@ try {
         INDEX idx_active_featured (is_active, is_featured)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    $sql = "SELECT id, code, description, discount_type, discount_value, min_order_amount, usage_limit, used_count, expiry_date, is_active 
+    // Ensure is_featured column exists if table existed previously without it
+    $col_check = $conn->query("SHOW COLUMNS FROM coupons LIKE 'is_featured'");
+    if ($col_check && $col_check->num_rows == 0) {
+        $conn->query("ALTER TABLE coupons ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active");
+    }
+
+    $active_only = isset($_GET['active_only']) && $_GET['active_only'] == '1';
+    $where = $active_only ? "WHERE is_active = 1" : "";
+
+    $sql = "SELECT id, code, description, discount_type, discount_value, min_order_amount, usage_limit, used_count, expiry_date, is_active, is_featured 
             FROM coupons 
-            WHERE is_active = 1";
+            $where
+            ORDER BY id DESC";
     
     $result = $conn->query($sql);
     
@@ -43,7 +53,8 @@ try {
                 'usage_limit' => $row['usage_limit'] !== null ? (int)$row['usage_limit'] : null,
                 'used_count' => (int)$row['used_count'],
                 'expiry_date' => $row['expiry_date'],
-                'is_active' => (int)$row['is_active']
+                'is_active' => (int)$row['is_active'],
+                'is_featured' => (int)($row['is_featured'] ?? 0)
             ];
         }
     }

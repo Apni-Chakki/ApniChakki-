@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { Calendar, RotateCcw, ChevronRight } from "lucide-react";
+import { Calendar, RotateCcw, ChevronRight, Truck } from "lucide-react";
 import { Button } from "../../components/common/button";
 import { Card } from "../../components/common/card";
 import { useCart } from "../../store/CartContext";
@@ -121,7 +121,7 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   });
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
-  // Fallback to old cleaning/grinding if no dynamic customizations exist
+  // agar custom options na hon to safai aur pisai rakhna
   const effectiveCustomizations =
     customizations.length > 0
       ? customizations
@@ -258,8 +258,13 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
     !isNaN(Number(service.stock_quantity));
   const stock = hasStockDefined ? parseFloat(service.stock_quantity) : Infinity;
   const displayUnit = service.unit || "unit";
-  const isOnlyPickup = displayUnit.toLowerCase() === "trip" && !service.dual_unit;
-  const isDualUnit = service.dual_unit === 1 || service.dual_unit === true;
+  const isDualUnit = Number(service.dual_unit) === 1 || service.dual_unit === true || service.dual_unit === "1";
+  const isOnlyPickup = (displayUnit.toLowerCase() === "trip" || String(service.unit).toLowerCase() === "trip") && !isDualUnit;
+  const showPickupButton = !isCustomMix && !isRental && !isOnlyPickup && (
+    isDualUnit ||
+    parseFloat(service.cleaning_price) > 0 ||
+    parseFloat(service.grinding_price) > 0
+  );
 
   const isOutOfStock = !isOnlyPickup && !isRental && stock <= 0;
   const isQuantityExceeded =
@@ -292,6 +297,10 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
   };
 
   const handleAddToCart = () => {
+    if (isOnlyPickup) {
+      handleAddPickupRequest();
+      return;
+    }
     if (isOutOfStock) {
       toast.error(t("This item is out of stock."));
       return;
@@ -727,79 +736,101 @@ export const ServiceCard = memo(function ServiceCard({ service }) {
               </>
             ) : hasCustomizations ? (
               <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className={`w-full font-bold text-xs h-9 rounded-xl flex items-center justify-between px-3 shadow-xs transition-colors ${
-                    service.customization_pricing_mode === "average"
-                      ? "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                      : "border-orange-300 text-orange-800 hover:bg-orange-50"
-                  }`}
+                <button
+                  type="button"
                   onClick={() => setShowCustomizationsModal(true)}
+                  className="w-full text-left p-2.5 rounded-xl border border-amber-300/80 bg-amber-50/40 hover:bg-amber-50/80 transition-all flex items-center justify-between group shadow-2xs"
                 >
-                  <span className="truncate">
-                    {service.customization_pricing_mode === "average"
-                      ? `${t("Select Items")} (${Object.values(selectedOptions).filter(Boolean).length}/${effectiveCustomizations.length})`
-                      : `${t("Customize Services")} (${Object.values(selectedOptions).filter(Boolean).length}/${effectiveCustomizations.length})`}
-                  </span>
-                  <ChevronRight
-                    className={`h-4 w-4 shrink-0 ml-1 ${
-                      service.customization_pricing_mode === "average"
-                        ? "text-emerald-600"
-                        : "text-orange-600"
-                    }`}
-                  />
-                </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-700 shrink-0"></span>
+                    <div>
+                      <div className="text-[11px] font-bold tracking-wider text-amber-900 uppercase">
+                        {service.customization_pricing_mode === "average" ? t("SELECT ITEMS") : t("SERVICE CUSTOMIZATION")}
+                      </div>
+                      <div className="text-[10px] text-amber-700/80 font-medium">
+                        {Object.values(selectedOptions).filter(Boolean).length} {t("selected")} • {t("Tap to edit")}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-amber-700/70 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </button>
 
-                <QuantitySelector
-                  hasQuickOptions={hasQuickOptions}
-                  quickOptions={quickOptions}
-                  unitLabel={isDualUnit ? "kg" : displayUnit}
-                  quantity={quantity}
-                  setQuantity={setQuantity}
-                  isOutOfStock={isOutOfStock}
-                  isExceeded={isQuantityExceeded}
-                  isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
-                  isOnlyPickup={isOnlyPickup}
-                  isRental={isRental}
-                  stock={stock}
-                  handleQuickAdd={handleQuickAdd}
-                  handleAddToCart={handleAddToCart}
-                  isAddedToCart={isAddedToCart}
-                  isCustomMix={isCustomMix}
-                  currentPrice={currentPrice}
-                  t={t}
-                />
-
-                {(service.cleaning_price > 0 || service.grinding_price > 0) && (
+                {showPickupButton && (
                   <Button
-                    variant="outline"
-                    className="w-full text-xs font-semibold py-2 h-auto whitespace-normal"
+                    className="w-full text-sm font-bold btn-brand-primary text-white rounded-xl py-2.5 h-10 transition-all shadow-xs"
                     onClick={handleAddPickupRequest}
                   >
-                    {isPickupRequested ? t("Pickup Requested ✓") : t("Pickup & Bring Your Own Grains")}
+                    {isPickupRequested ? t("Pickup Requested ✓") : t("Add Pickup Request")}
                   </Button>
+                )}
+
+                {showPickupButton && isDualUnit && !isOnlyPickup && (
+                  <div className="text-center text-[11px] text-muted-foreground font-medium py-0.5 tracking-wider">
+                    -- OR --
+                  </div>
+                )}
+
+                {!isOnlyPickup && (
+                  <QuantitySelector
+                    hasQuickOptions={hasQuickOptions}
+                    quickOptions={quickOptions}
+                    unitLabel={isDualUnit ? "kg" : displayUnit}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    isOutOfStock={isOutOfStock}
+                    isExceeded={isQuantityExceeded}
+                    isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
+                    isOnlyPickup={isOnlyPickup}
+                    isRental={isRental}
+                    stock={stock}
+                    handleQuickAdd={handleQuickAdd}
+                    handleAddToCart={handleAddToCart}
+                    isAddedToCart={isAddedToCart}
+                    isCustomMix={isCustomMix}
+                    currentPrice={currentPrice}
+                    t={t}
+                  />
                 )}
               </div>
             ) : (
-              <QuantitySelector
-                hasQuickOptions={hasQuickOptions}
-                quickOptions={quickOptions}
-                unitLabel={isDualUnit ? "kg" : displayUnit}
-                quantity={quantity}
-                setQuantity={setQuantity}
-                isOutOfStock={isOutOfStock}
-                isExceeded={isQuantityExceeded}
-                isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
-                isOnlyPickup={isOnlyPickup}
-                isRental={isRental}
-                stock={stock}
-                handleQuickAdd={handleQuickAdd}
-                handleAddToCart={handleAddToCart}
-                isAddedToCart={isAddedToCart}
-                isCustomMix={isCustomMix}
-                currentPrice={currentPrice}
-                t={t}
-              />
+              <div className="space-y-2">
+                {showPickupButton && (
+                  <Button
+                    className="w-full text-sm font-bold btn-brand-primary text-white rounded-xl py-2.5 h-10 transition-all shadow-xs"
+                    onClick={handleAddPickupRequest}
+                  >
+                    {isPickupRequested ? t("Pickup Requested ✓") : t("Add Pickup Request")}
+                  </Button>
+                )}
+
+                {showPickupButton && isDualUnit && !isOnlyPickup && (
+                  <div className="text-center text-[11px] text-muted-foreground font-medium py-0.5 tracking-wider">
+                    -- OR --
+                  </div>
+                )}
+
+                {!isOnlyPickup && (
+                  <QuantitySelector
+                    hasQuickOptions={hasQuickOptions}
+                    quickOptions={quickOptions}
+                    unitLabel={isDualUnit ? "kg" : displayUnit}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    isOutOfStock={isOutOfStock}
+                    isExceeded={isQuantityExceeded}
+                    isMaxReached={!isOnlyPickup && !isRental && stock !== Infinity && quantity >= stock}
+                    isOnlyPickup={isOnlyPickup}
+                    isRental={isRental}
+                    stock={stock}
+                    handleQuickAdd={handleQuickAdd}
+                    handleAddToCart={handleAddToCart}
+                    isAddedToCart={isAddedToCart}
+                    isCustomMix={isCustomMix}
+                    currentPrice={currentPrice}
+                    t={t}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>

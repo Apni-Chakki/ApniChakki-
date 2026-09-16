@@ -17,48 +17,57 @@ try {
     $name = $data['name'];
     $price = floatval($data['price']);
     $unit = isset($data['unit']) ? $data['unit'] : 'kg';
-    $category_name = isset($data['category']) ? $data['category'] : 'wheat';
     $description = isset($data['description']) ? $data['description'] : '';
-    $image = isset($data['image']) ? $data['image'] : '';
+    $image = isset($data['image']) ? $data['image'] : (isset($data['image_url']) ? $data['image_url'] : '');
+    $category_id = null;
 
-    error_log('add_product.php: Processing - name=' . $name . ', price=' . $price . ', category=' . $category_name);
+    // 1. Check category_id if provided
+    if (isset($data['category_id']) && !empty($data['category_id'])) {
+        $cid = intval($data['category_id']);
+        $chk = $conn->prepare("SELECT id FROM categories WHERE id = ?");
+        if ($chk) {
+            $chk->bind_param("i", $cid);
+            $chk->execute();
+            $res = $chk->get_result();
+            if ($res && $res->num_rows > 0) {
+                $category_id = $cid;
+            }
+            $chk->close();
+        }
+    }
 
-    // getting category id
-    $cat_stmt = $conn->prepare("SELECT id FROM categories WHERE name = ?");
-    if (!$cat_stmt) {
-        throw new Exception("Category SELECT prepare failed: " . $conn->error);
-    }
-    $cat_stmt->bind_param("s", $category_name);
-    if (!$cat_stmt->execute()) {
-        throw new Exception("Category SELECT execute failed: " . $cat_stmt->error);
-    }
-    $cat_result = $cat_stmt->get_result();
-    if (!$cat_result) {
-        throw new Exception("Category SELECT get_result failed: " . $cat_stmt->error);
-    }
-    
-    error_log('add_product.php: Category rows found = ' . $cat_result->num_rows);
-    
-    if ($cat_result->num_rows === 0) {
-        // creating category if it doesnt exist
-        error_log('add_product.php: Creating new category: ' . $category_name);
-        $insert_cat = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
-        if (!$insert_cat) {
-            throw new Exception("Category INSERT prepare failed: " . $conn->error);
+    // 2. Check category name if category_id not found
+    if (!$category_id && isset($data['category']) && trim($data['category']) !== '') {
+        $category_name = trim($data['category']);
+        $cat_stmt = $conn->prepare("SELECT id FROM categories WHERE name = ?");
+        if ($cat_stmt) {
+            $cat_stmt->bind_param("s", $category_name);
+            $cat_stmt->execute();
+            $cat_result = $cat_stmt->get_result();
+            if ($cat_result && $cat_result->num_rows > 0) {
+                $cat_row = $cat_result->fetch_assoc();
+                $category_id = intval($cat_row['id']);
+            } else {
+                $insert_cat = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
+                if ($insert_cat) {
+                    $insert_cat->bind_param("s", $category_name);
+                    if ($insert_cat->execute()) {
+                        $category_id = $insert_cat->insert_id;
+                    }
+                    $insert_cat->close();
+                }
+            }
+            $cat_stmt->close();
         }
-        $insert_cat->bind_param("s", $category_name);
-        if (!$insert_cat->execute()) {
-            throw new Exception("Category INSERT execute failed: " . $insert_cat->error);
-        }
-        $category_id = $insert_cat->insert_id;
-        $insert_cat->close();
-        error_log('add_product.php: Created category with id = ' . $category_id);
-    } else {
-        $cat_row = $cat_result->fetch_assoc();
-        $category_id = $cat_row['id'];
-        error_log('add_product.php: Found existing category with id = ' . $category_id);
     }
-    $cat_stmt->close();
+
+    // 3. Fallback to first existing active category
+    if (!$category_id) {
+        $fb = $conn->query("SELECT id FROM categories WHERE is_active = 1 ORDER BY id ASC LIMIT 1");
+        if ($fb && $fb->num_rows > 0) {
+            $category_id = intval($fb->fetch_assoc()['id']);
+        }
+    }
 
     $is_grinding_service = isset($data['is_grinding_service']) ? (int)$data['is_grinding_service'] : 0;
     $cleaning_price = isset($data['cleaning_price']) ? floatval($data['cleaning_price']) : 0.00;

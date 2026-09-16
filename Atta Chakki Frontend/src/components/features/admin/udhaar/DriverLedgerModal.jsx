@@ -28,7 +28,7 @@ export const DriverLedgerModal = ({
           setSelectedOrderForSettle(null);
         }
       }}>
-        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-2xl w-full flex flex-col p-4 sm:p-6" style={{ maxHeight: '90vh', overflow: 'hidden' }}>
+        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl w-full flex flex-col p-4 sm:p-6" style={{ maxHeight: '92vh', overflow: 'hidden' }}>
           <DialogHeader className="flex-shrink-0 border-b pb-3 text-left">
             <div className="flex items-start justify-between gap-2 pr-10 sm:pr-12">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -67,7 +67,7 @@ export const DriverLedgerModal = ({
                   </div>
                   <Button
                     size="sm"
-                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs shrink-0 font-semibold w-full sm:w-auto"
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs shrink-0 font-semibold w-full sm:w-auto shadow-xs"
                     onClick={() => {
                       setSelectedOrderForSettle(null);
                       setDriverPayAmount(String(selectedDriver.total_cash_due));
@@ -163,7 +163,7 @@ export const DriverLedgerModal = ({
                             <Phone className="h-2.5 w-2.5 shrink-0" /> {ord.customer_phone}
                           </p>
                           {ord.shipping_address && (
-                            <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                               <MapPin className="h-2.5 w-2.5 shrink-0" /> {ord.shipping_address}
                             </p>
                           )}
@@ -206,16 +206,16 @@ export const DriverLedgerModal = ({
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden sm:block border rounded-lg overflow-x-auto" style={{ maxHeight: 'calc(80vh - 280px)', overflowY: 'auto' }}>
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background border-b">
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="text-xs px-3 py-2">{t("Order #")}</TableHead>
-                      <TableHead className="text-xs px-3 py-2">{t("Customer")}</TableHead>
-                      <TableHead className="text-xs px-3 py-2">{t("Status")}</TableHead>
-                      <TableHead className="text-xs px-3 py-2">{t("Total")}</TableHead>
-                      <TableHead className="text-xs px-3 py-2">{t("COD Due")}</TableHead>
-                      <TableHead className="text-xs px-3 py-2 text-right">{t("Action")}</TableHead>
+              <div className="hidden sm:block border border-border rounded-lg overflow-x-auto overflow-y-auto bg-card" style={{ maxHeight: 'min(420px, calc(80vh - 260px))' }}>
+                <Table className="min-w-[650px] w-full">
+                  <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b">
+                    <TableRow>
+                      <TableHead className="text-xs px-3 py-2.5 whitespace-nowrap w-[90px]">{t("Order #")}</TableHead>
+                      <TableHead className="text-xs px-3 py-2.5 min-w-[150px]">{t("Customer")}</TableHead>
+                      <TableHead className="text-xs px-3 py-2.5 whitespace-nowrap w-[130px]">{t("Status")}</TableHead>
+                      <TableHead className="text-xs px-3 py-2.5 whitespace-nowrap w-[90px]">{t("Total")}</TableHead>
+                      <TableHead className="text-xs px-3 py-2.5 whitespace-nowrap w-[100px]">{t("COD Due")}</TableHead>
+                      <TableHead className="text-xs px-4 py-2.5 text-right whitespace-nowrap min-w-[120px] pr-5">{t("Action")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -230,24 +230,24 @@ export const DriverLedgerModal = ({
                         const isPaid = ord.payment_status === 'paid' || ord.cash_due <= 0;
                         return (
                           <TableRow key={ord.order_id} className={isPaid ? 'opacity-70 bg-muted/20' : ''}>
-                            <TableCell className="px-3 py-2 font-mono text-xs font-bold">
+                            <TableCell className="px-3 py-2 font-mono text-xs font-bold whitespace-nowrap">
                               #{ord.order_id}
                               <p className="text-[10px] text-muted-foreground font-normal">
                                 {new Date(ord.created_at).toLocaleDateString()}
                               </p>
                             </TableCell>
                             <TableCell className="px-3 py-2 text-xs">
-                              <p className="font-semibold truncate max-w-[140px]">{ord.customer_name}</p>
+                              <p className="font-semibold truncate max-w-[160px]">{ord.customer_name}</p>
                               <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-2.5 w-2.5" /> {ord.customer_phone}
+                                <Phone className="h-2.5 w-2.5 shrink-0" /> {ord.customer_phone}
                               </p>
                               {ord.shipping_address && (
-                                <p className="text-[10px] text-muted-foreground truncate max-w-[140px] flex items-center gap-1">
-                                  <MapPin className="h-2.5 w-2.5" /> {ord.shipping_address}
+                                <p className="text-[10px] text-muted-foreground truncate max-w-[180px] flex items-center gap-1" title={ord.shipping_address}>
+                                  <MapPin className="h-2.5 w-2.5 shrink-0" /> {ord.shipping_address}
                                 </p>
                               )}
                             </TableCell>
-                            <TableCell className="px-3 py-2">
+                            <TableCell className="px-3 py-2 whitespace-nowrap">
                               <div className="space-y-1">
                                 <Badge 
                                   variant="outline" 
@@ -263,7 +263,7 @@ export const DriverLedgerModal = ({
                                   <Badge 
                                     className={`text-[10px] px-1.5 py-0 capitalize ${
                                       isPaid 
-                                        ? 'bg-emerald-600 text-white'
+                                        ? 'bg-emerald-600 text-white' 
                                         : 'bg-amber-600 text-white'
                                     }`}
                                   >
@@ -272,21 +272,21 @@ export const DriverLedgerModal = ({
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="px-3 py-2 text-xs font-medium">
+                            <TableCell className="px-3 py-2 text-xs font-medium whitespace-nowrap">
                               Rs. {ord.total_amount?.toLocaleString()}
                             </TableCell>
-                            <TableCell className="px-3 py-2 text-xs font-bold">
+                            <TableCell className="px-3 py-2 text-xs font-bold whitespace-nowrap">
                               {ord.cash_due > 0 ? (
                                 <span className="text-amber-600 dark:text-amber-400">Rs. {ord.cash_due?.toLocaleString()}</span>
                               ) : (
                                 <span className="text-emerald-600 font-normal">Rs. 0</span>
                               )}
                             </TableCell>
-                            <TableCell className="px-3 py-2 text-right">
+                            <TableCell className="px-4 py-2 text-right whitespace-nowrap pr-5">
                               {ord.cash_due > 0 ? (
                                 <Button
                                   size="sm"
-                                  className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5"
+                                  className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 whitespace-nowrap shrink-0 shadow-xs"
                                   onClick={() => {
                                     setSelectedOrderForSettle(ord);
                                     setDriverPayAmount(String(ord.cash_due));
@@ -296,8 +296,8 @@ export const DriverLedgerModal = ({
                                   {t("Collect Cash")}
                                 </Button>
                               ) : (
-                                <span className="text-xs text-emerald-600 font-semibold flex items-center justify-end gap-1">
-                                  <CheckCircle className="h-3.5 w-3.5" /> {t("Settled")}
+                                <span className="text-xs text-emerald-600 font-semibold flex items-center justify-end gap-1 whitespace-nowrap">
+                                  <CheckCircle className="h-3.5 w-3.5 shrink-0" /> {t("Settled")}
                                 </span>
                               )}
                             </TableCell>

@@ -45,7 +45,13 @@ export function ManageCategories() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/get_categories.php?admin=1`);
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
+      const response = await fetch(`${API_BASE_URL}/get_categories.php?admin=1&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -131,9 +137,13 @@ export function ManageCategories() {
     }
 
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
       const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(payload)
       });
       
@@ -168,9 +178,13 @@ export function ManageCategories() {
 
   const handleToggleActive = async (id, currentStatus) => {
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
       const response = await fetch(`${API_BASE_URL}/update_category_status.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ id: id, is_active: Number(currentStatus) === 1 ? 0 : 1 })
       });
       const result = await response.json();
@@ -189,9 +203,13 @@ export function ManageCategories() {
   const handleDelete = async (id) => {
     const deleteCategory = async () => {
       try {
+        const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
         const response = await fetch(`${API_BASE_URL}/delete_category.php`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({ id: id })
         });
         

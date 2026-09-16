@@ -23,6 +23,12 @@ try {
     $is_active = isset($data['is_active']) ? (int)$data['is_active'] : 1;
     $is_featured = isset($data['is_featured']) ? (int)$data['is_featured'] : 0;
 
+    // Ensure is_featured column exists
+    $col_check = $conn->query("SHOW COLUMNS FROM coupons LIKE 'is_featured'");
+    if ($col_check && $col_check->num_rows == 0) {
+        $conn->query("ALTER TABLE coupons ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active");
+    }
+
     $stmt = $conn->prepare("INSERT INTO coupons (code, description, discount_type, discount_value, min_order_amount, usage_limit, expiry_date, is_active, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
@@ -47,6 +53,8 @@ try {
         }
 
         http_response_code(201);
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
         echo json_encode(["success" => true, "message" => "Coupon created successfully", "id" => $coupon_id]);
     } else {
         throw new Exception("Execute Error: " . $stmt->error);

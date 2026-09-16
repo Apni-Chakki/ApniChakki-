@@ -21,30 +21,74 @@ try {
     $name = $data['name'];
     $price = floatval($data['price']);
     $unit = (isset($data['unit']) && $data['unit'] !== null) ? $data['unit'] : 'kg';
-    $category_name = (isset($data['category']) && $data['category'] !== null) ? $data['category'] : 'wheat';
     $description = (isset($data['description']) && $data['description'] !== null) ? $data['description'] : '';
-    $image = (isset($data['image']) && $data['image'] !== null) ? $data['image'] : '';
+    $image = (isset($data['image']) && $data['image'] !== null) ? $data['image'] : (isset($data['image_url']) ? $data['image_url'] : '');
+    $category_id = null;
 
-    // getting or creating category
-    $cat_stmt = $conn->prepare("SELECT id FROM categories WHERE name = ?");
-    $cat_stmt->bind_param("s", $category_name);
-    $cat_stmt->execute();
-    $cat_result = $cat_stmt->get_result();
-    
-    if ($cat_result->num_rows === 0) {
-        $insert_cat = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
-        $insert_cat->bind_param("s", $category_name);
-        if ($insert_cat->execute()) {
-            $category_id = $insert_cat->insert_id;
-            $insert_cat->close();
-        } else {
-            throw new Exception("Failed to create category: " . $insert_cat->error);
+    // 1. Check category_id if provided
+    if (isset($data['category_id']) && !empty($data['category_id'])) {
+        $cid = intval($data['category_id']);
+        $chk = $conn->prepare("SELECT id FROM categories WHERE id = ?");
+        if ($chk) {
+            $chk->bind_param("i", $cid);
+            $chk->execute();
+            $res = $chk->get_result();
+            if ($res && $res->num_rows > 0) {
+                $category_id = $cid;
+            }
+            $chk->close();
         }
-    } else {
-        $cat_row = $cat_result->fetch_assoc();
-        $category_id = $cat_row['id'];
     }
-    $cat_stmt->close();
+
+    // 2. Check category name if category_id not found
+    if (!$category_id && isset($data['category']) && trim($data['category']) !== '') {
+        $category_name = trim($data['category']);
+        $cat_stmt = $conn->prepare("SELECT id FROM categories WHERE name = ?");
+        if ($cat_stmt) {
+            $cat_stmt->bind_param("s", $category_name);
+            $cat_stmt->execute();
+            $cat_result = $cat_stmt->get_result();
+            if ($cat_result && $cat_result->num_rows > 0) {
+                $cat_row = $cat_result->fetch_assoc();
+                $category_id = intval($cat_row['id']);
+            } else {
+                $insert_cat = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
+                if ($insert_cat) {
+                    $insert_cat->bind_param("s", $category_name);
+                    if ($insert_cat->execute()) {
+                        $category_id = $insert_cat->insert_id;
+                    }
+                    $insert_cat->close();
+                }
+            }
+            $cat_stmt->close();
+        }
+    }
+
+    // 3. Retain current product category_id if still not set
+    if (!$category_id) {
+        $cur_stmt = $conn->prepare("SELECT category_id FROM products WHERE id = ?");
+        if ($cur_stmt) {
+            $cur_stmt->bind_param("i", $id);
+            $cur_stmt->execute();
+            $cur_res = $cur_stmt->get_result();
+            if ($cur_res && $cur_res->num_rows > 0) {
+                $cur_cid = $cur_res->fetch_assoc()['category_id'];
+                if ($cur_cid) {
+                    $category_id = intval($cur_cid);
+                }
+            }
+            $cur_stmt->close();
+        }
+    }
+
+    // 4. Fallback to first existing active category
+    if (!$category_id) {
+        $fb = $conn->query("SELECT id FROM categories WHERE is_active = 1 ORDER BY id ASC LIMIT 1");
+        if ($fb && $fb->num_rows > 0) {
+            $category_id = intval($fb->fetch_assoc()['id']);
+        }
+    }
 
     $is_grinding_service = isset($data['is_grinding_service']) ? (int)$data['is_grinding_service'] : 0;
     $cleaning_price = isset($data['cleaning_price']) ? floatval($data['cleaning_price']) : 0.00;

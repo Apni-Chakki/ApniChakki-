@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../config';
 import { Search, MapPin, Navigation, Loader2, Crosshair } from 'lucide-react';
-import { lookupLahoreLocation, LAHORE_BOUNDS, isWithinLahoreBounds } from '../../utils/lahoreLocations';
+import { lookupLahoreLocation, LAHORE_BOUNDS, isWithinLahoreBounds, findNearestLahoreArea } from '../../utils/lahoreLocations';
 
 const DEFAULT_CENTER = { lat: 31.5204, lng: 74.3587 }; // Lahore, Pakistan
 
@@ -40,7 +40,7 @@ export function MapboxPicker({
 
   // lat lng se address nikal rahe
   const reverseGeocode = useCallback(async (lat, lng) => {
-    // mapbox geocoding check
+    // mapbox se address search
     if (EFFECTIVE_TOKEN && !EFFECTIVE_TOKEN.includes('demo_token')) {
       try {
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${EFFECTIVE_TOKEN}&language=en&country=PK`;
@@ -48,7 +48,16 @@ export function MapboxPicker({
         if (res.ok) {
           const data = await res.json();
           if (data.features && data.features.length > 0) {
-            return data.features[0].place_name;
+            const specificFeature = data.features.find(f => {
+              const types = f.place_type || [];
+              const isGeneric = types.includes('place') || types.includes('region') || types.includes('country');
+              const nameLower = (f.place_name || '').toLowerCase().trim();
+              const isGenericCity = nameLower === 'lahore' || nameLower === 'lahore, punjab, pakistan' || nameLower === 'lahore, pakistan';
+              return !isGeneric && !isGenericCity;
+            });
+            if (specificFeature) {
+              return specificFeature.place_name;
+            }
           }
         }
       } catch (err) {
@@ -56,68 +65,84 @@ export function MapboxPicker({
       }
     }
 
-    // openstreetmap fallback
+    // agar mapbox na chale to openstreetmap se try karna
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
       const res = await fetch(url, { headers: { 'User-Agent': 'SuchiChakki-DeliveryApp/1.0' } });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.display_name) {
-          const addr = data.address;
-          if (addr) {
-            const parts = [
-              addr.house_number, addr.road,
-              addr.neighbourhood || addr.suburb,
-              addr.city || addr.town || addr.village,
-              addr.state, addr.country
-            ].filter(Boolean);
-            if (parts.length >= 3) return parts.join(', ');
+        if (data && (data.address || data.display_name)) {
+          const addr = data.address || {};
+          const parts = [
+            addr.amenity || addr.building,
+            addr.road || addr.pedestrian,
+            addr.neighbourhood || addr.suburb || addr.quarter || addr.residential,
+            addr.city_district || addr.town || addr.city
+          ].filter(Boolean);
+
+          if (parts.length > 0) {
+            return parts.slice(0, 3).join(', ') + ', Lahore';
           }
-          return data.display_name;
+          if (data.display_name) {
+            const split = data.display_name.split(',').map(s => s.trim());
+            return split.slice(0, 3).join(', ');
+          }
         }
       }
     } catch (err) {
-      console.warn('Nominatim reverse geocode failed:', err);
+      console.warn('OSM reverse geocode error:', err);
     }
-    return null;
+
+    // agar dono fail ho jayein to lahore ki list se match karna
+    const nearest = findNearestLahoreArea(lat, lng);
+    if (nearest && nearest.name) {
+      return nearest.name + ', Lahore';
+    }
+
+    return `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
   }, []);
 
   const reverseGeocodeRef = useRef(reverseGeocode);
   useEffect(() => { reverseGeocodeRef.current = reverseGeocode; }, [reverseGeocode]);
 
-  // address search se lat lng nikal rahe
+  // forward geocoding: text search se lat lng nikalna
   const forwardGeocode = useCallback(async (query) => {
-    const q = query.trim();
-    if (!q) return [];
+    if (!query || !query.trim()) return [];
 
-    // 1. Fast local Lahore dictionary match
+    const q = query.trim();
+
+    // pehle lahore dictionary check karna
     const localMatch = lookupLahoreLocation(q);
+    const results = [];
     if (localMatch) {
-      return [{
+      results.push({
         lat: localMatch.lat,
         lng: localMatch.lng,
-        address: localMatch.name,
-        text: localMatch.name.split(',')[0]
-      }];
+        address: `${localMatch.name}, Lahore`,
+        place_name: `${localMatch.name}, Lahore`,
+        text: localMatch.name
+      });
     }
 
-    // 2. Mapbox search with Lahore bounding box
+    // mapbox search
     if (EFFECTIVE_TOKEN && !EFFECTIVE_TOKEN.includes('demo_token')) {
       try {
-        const bboxParam = `&bbox=${LAHORE_BOUNDS.minLng},${LAHORE_BOUNDS.minLat},${LAHORE_BOUNDS.maxLng},${LAHORE_BOUNDS.maxLat}`;
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${EFFECTIVE_TOKEN}&autocomplete=true&limit=5&country=PK&proximity=74.3587,31.5204${bboxParam}`;
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${EFFECTIVE_TOKEN}&country=PK&bbox=${LAHORE_BOUNDS.minLng},${LAHORE_BOUNDS.minLat},${LAHORE_BOUNDS.maxLng},${LAHORE_BOUNDS.maxLat}&limit=5&language=en`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           if (data.features && data.features.length > 0) {
-            const valid = data.features.filter(f => isWithinLahoreBounds(f.center[1], f.center[0]));
-            if (valid.length > 0) {
-              return valid.map(f => ({
+            const mapboxResults = data.features
+              .filter(f => isWithinLahoreBounds(f.center[1], f.center[0]))
+              .map(f => ({
                 lat: f.center[1],
                 lng: f.center[0],
                 address: f.place_name,
+                place_name: f.place_name,
                 text: f.text
               }));
+            if (mapboxResults.length > 0) {
+              return mapboxResults;
             }
           }
         }
@@ -126,7 +151,7 @@ export function MapboxPicker({
       }
     }
 
-    // 3. Nominatim fallback with bounded Lahore viewbox
+    // agar mapbox na mile to openstreetmap search
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=5&addressdetails=1&accept-language=en&viewbox=${LAHORE_BOUNDS.minLng},${LAHORE_BOUNDS.maxLat},${LAHORE_BOUNDS.maxLng},${LAHORE_BOUNDS.minLat}&bounded=1`;
       const res = await fetch(url, { headers: { 'User-Agent': 'SuchiChakki-DeliveryApp/1.0' } });
@@ -138,19 +163,21 @@ export function MapboxPicker({
             return valid.map(item => ({
               lat: parseFloat(item.lat),
               lng: parseFloat(item.lon),
-              address: item.display_name,
+              address: item.display_name.split(',').slice(0, 3).join(', '),
+              place_name: item.display_name.split(',').slice(0, 3).join(', '),
               text: item.display_name.split(',')[0]
             }));
           }
         }
       }
     } catch (err) {
-      console.warn('Nominatim forward search error:', err);
+      console.warn('OSM forward geocode error:', err);
     }
-    return [];
+
+    return results;
   }, []);
 
-  // Initialize Mapbox Map ONCE on mount
+  // mapbox map setup karna
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapRef.current) return;
@@ -160,10 +187,10 @@ export function MapboxPicker({
     let handleWinResize = null;
 
     try {
-      mapboxgl.accessToken = EFFECTIVE_TOKEN;
+      const initialLat = Number.isFinite(position?.lat) ? position.lat : DEFAULT_CENTER.lat;
+      const initialLng = Number.isFinite(position?.lng) ? position.lng : DEFAULT_CENTER.lng;
 
-      const initialLng = position?.lng || DEFAULT_CENTER.lng;
-      const initialLat = position?.lat || DEFAULT_CENTER.lat;
+      mapboxgl.accessToken = EFFECTIVE_TOKEN;
 
       const mapStyle = (EFFECTIVE_TOKEN && !EFFECTIVE_TOKEN.includes('demo_token'))
         ? 'mapbox://styles/mapbox/streets-v12'
@@ -196,20 +223,21 @@ export function MapboxPicker({
         container: mapContainerRef.current,
         style: mapStyle,
         center: [initialLng, initialLat],
-        zoom: 15,
+        zoom: 14,
         interactive: interactive,
         attributionControl: false,
       });
 
+      // navigation buttons
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
       map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left');
 
-      // Trigger resize as soon as map finishes loading
+      // map load hone par screen fit karna
       map.on('load', () => {
         map.resize();
       });
 
-      // Automatic ResizeObserver to ensure canvas dynamically adapts to parent container width
+      // container resize hone par map bhi adjust ho
       if (typeof window !== 'undefined' && window.ResizeObserver && mapContainerRef.current) {
         resizeObserver = new ResizeObserver(() => {
           if (mapRef.current) {
@@ -219,7 +247,7 @@ export function MapboxPicker({
         resizeObserver.observe(mapContainerRef.current);
       }
 
-      // Staggered resize calls while parent card/fonts settle layout
+      // page layout banne tak resize check
       resizeTimers = [50, 150, 300, 500, 800, 1200].map(delay =>
         setTimeout(() => {
           if (mapRef.current) {

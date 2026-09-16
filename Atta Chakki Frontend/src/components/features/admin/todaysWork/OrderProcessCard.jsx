@@ -29,17 +29,27 @@ import {
   Trash2,
   Lock,
   Loader2,
+  Store,
 } from 'lucide-react';
 
-  export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTimeRemaining, markAsReady, markBatchProcessed, sendingBill, openSplitModal, moveToTomorrow, overriding, activePersonnel = [], handleAssignPersonnel, handlePrint, setCancelOrder }) => {
-    const isOverdue = order.estimated_completion_time ? new Date(order.estimated_completion_time) < new Date() : false;
-    const isSplitBatch = order.is_split_batch === true;
-    const allSiblingsReady = order.all_siblings_ready === true;
-    // If this is a split batch, Mark as Ready is only allowed when ALL siblings are ready
-    const canMarkReady = !isSplitBatch || allSiblingsReady;
-    const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTimeRemaining, markAsReady, markBatchProcessed, sendingBill, openSplitModal, moveToTomorrow, overriding, activePersonnel = [], handleAssignPersonnel, handlePrint, setCancelOrder }) => {
+  const isOverdue = order.estimated_completion_time ? new Date(order.estimated_completion_time) < new Date() : false;
+  const isSplitBatch = order.is_split_batch === true;
+  const allSiblingsReady = order.all_siblings_ready === true;
+  // If this is a split batch, Mark as Ready is only allowed when ALL siblings are ready
+  const canMarkReady = !isSplitBatch || allSiblingsReady;
+  const isHeavy = parseFloat(order.total_weight_kg || 0) > heavyThreshold;
+  const isPickup = order.type === 'pickup' || order.order_type === 'pickup' || (
+    order.shipping_address && (
+      order.shipping_address.toLowerCase().includes('pickup') ||
+      order.shipping_address.toLowerCase().includes('store') ||
+      order.shipping_address.toLowerCase().includes('shop') ||
+      order.shipping_address.toLowerCase().includes('self') ||
+      order.shipping_address.toLowerCase().includes('collect')
+    )
+  );
 
-    return (
+  return (
     <Card className={`border-l-[6px] shadow-lg hover:shadow-xl transition-all border-t border-r border-b rounded-xl bg-white ${
       isOverdue 
         ? 'border-l-red-600 animate-glow-red relative z-10'
@@ -56,6 +66,15 @@ import {
           <div className="min-w-0">
             <CardTitle className="text-lg sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
               Order #{order.id}
+              {isPickup ? (
+                <Badge variant="outline" className="text-purple-700 bg-purple-50 border-purple-200 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Store className="h-3 w-3" /> Self Pickup
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Truck className="h-3 w-3" /> Home Delivery
+                </Badge>
+              )}
               {isSplitBatch && (
                 <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] px-2 py-0.5 font-bold">
                   <SplitSquareHorizontal className="h-3 w-3 mr-1" />
@@ -191,8 +210,17 @@ import {
             <span>{order.customer_phone}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{order.shipping_address}</span>
+            {isPickup ? (
+              <>
+                <Store className="h-4 w-4 text-purple-600 shrink-0" />
+                <span className="font-semibold text-purple-800">{order.shipping_address || 'Self Pickup (Store)'}</span>
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
+                <span>{order.shipping_address || 'Address not provided'}</span>
+              </>
+            )}
           </div>
           {order.driver_name && (
             <div className="flex items-center gap-2">
@@ -310,7 +338,7 @@ import {
             )}
           </Button>
 
-          {order.type === 'delivery' ? (
+          {!isPickup ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className={`w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm font-medium text-sm ${order.deliveryPersonnel ? 'bg-blue-50' : ''}`}>
@@ -337,8 +365,8 @@ import {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="outline" disabled className="w-full border-2 border-slate-200 text-slate-500 opacity-60 cursor-default text-sm">
-              <Package className="h-4 w-4 mr-2 shrink-0" />
+            <Button variant="outline" disabled className="w-full border-2 border-purple-200 bg-purple-50/70 text-purple-700 opacity-90 cursor-default text-sm font-semibold">
+              <Store className="h-4 w-4 mr-2 shrink-0 text-purple-600" />
               Self Pickup
             </Button>
           )}
@@ -353,7 +381,7 @@ import {
         </div>
       </CardContent>
     </Card>
-    );
-  };
+  );
+};
 
 export default OrderProcessCard;

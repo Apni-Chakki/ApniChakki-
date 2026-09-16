@@ -1,5 +1,6 @@
 <?php
 // update category controller logic
+require_once __DIR__ . '/../../utils/cache_helper.php';
 include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
@@ -53,6 +54,9 @@ try {
     
     $stmt->bind_param("ssii", $name, $image_url, $priority, $id);
     $stmt->execute();
+    
+    // Invalidate cache
+    clear_api_cache();
     
     http_response_code(200);
     echo json_encode([

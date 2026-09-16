@@ -121,7 +121,7 @@ export function ManageServices() {
   };
 
   const handleImageChange = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -131,20 +131,60 @@ export function ManageServices() {
 
     try {
       setIsUploading(true);
-      const compressedBase64 = await compressImage(file, {
-        maxWidth: 800,
-        maxHeight: 800,
-        quality: 0.8,
-        maxSizeMB: 0.5,
-      });
+      const compressedFile = await compressImage(file, 800, 800, 0.8);
 
-      setFormData(prev => ({ ...prev, imageUrl: compressedBase64 }));
-      toast.success(t('Image processed successfully'));
+      const uploadData = new FormData();
+      uploadData.append('image', compressedFile);
+      uploadData.append('folder', 'products');
+
+      let uploadedUrl = null;
+
+      // 1. Try backend Cloudinary upload endpoint
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/upload_image.php`, {
+          method: 'POST',
+          body: uploadData,
+        });
+        const data = await response.json();
+        if (data.success && data.url) {
+          uploadedUrl = data.url;
+        }
+      } catch (beErr) {
+        console.warn('Backend upload failed, attempting direct fallback:', beErr);
+      }
+
+      // agar backend upload na chale to direct cloudinary par bhej do
+      if (!uploadedUrl) {
+        try {
+          const directData = new FormData();
+          directData.append('file', compressedFile);
+          directData.append('upload_preset', 'ml_default');
+          directData.append('folder', 'apni-chakki/products');
+          const directRes = await fetch(`https://api.cloudinary.com/v1_1/dy4k5rbuf/image/upload`, {
+            method: 'POST',
+            body: directData,
+          });
+          const directJson = await directRes.json();
+          if (directJson.secure_url) {
+            uploadedUrl = directJson.secure_url;
+          }
+        } catch (dirErr) {
+          console.error('Direct Cloudinary upload failed:', dirErr);
+        }
+      }
+
+      if (uploadedUrl) {
+        setFormData(prev => ({ ...prev, imageUrl: uploadedUrl }));
+        toast.success(t('Image uploaded successfully!'));
+      } else {
+        toast.error(t('Failed to upload image. Please try again.'));
+      }
     } catch (error) {
-      console.error('Image compression error:', error);
-      toast.error(t('Failed to process image'));
+      console.error('Image compression/upload error:', error);
+      toast.error(t('Failed to process and upload image'));
     } finally {
       setIsUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -224,6 +264,7 @@ export function ManageServices() {
         name: formData.name,
         price: parseFloat(formData.price),
         unit: formData.unit,
+        category: formData.category,
         category_id: categoryId,
         description: formData.description,
         image_url: formData.imageUrl,
@@ -292,13 +333,16 @@ export function ManageServices() {
       }
     }
 
+    const currentCat = categories.find(c => (c.id && Number(c.id) === Number(service.category_id)) || (c.name && c.name === service.category_name));
+    const initialCatName = currentCat ? currentCat.name : (service.category_name || (categories[0]?.name || ''));
+
     setFormData({
       name: service.name,
       price: service.price.toString(),
       unit: service.unit,
       description: service.description || '',
       imageUrl: service.image_url || '',
-      category: service.category_name || (categories[0]?.name || ''),
+      category: initialCatName,
       has_customizations: Boolean(service.is_grinding_service),
       customization_pricing_mode: service.customization_pricing_mode || 'average',
       customizations: service.customizations ? service.customizations.map(c => ({
@@ -357,6 +401,7 @@ export function ManageServices() {
         name: formData.name,
         price: parseFloat(formData.price),
         unit: formData.unit,
+        category: formData.category,
         category_id: categoryId,
         description: formData.description,
         image_url: formData.imageUrl,
@@ -410,9 +455,7 @@ export function ManageServices() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(t('Are you sure you want to delete this service?'))) return;
-
+  const confirmDelete = async (id) => {
     try {
       setDeletingId(id);
       const res = await fetch(`${API_BASE_URL}/delete_product.php`, {
@@ -423,17 +466,31 @@ export function ManageServices() {
 
       const data = await res.json();
       if (data.status === 'success' || data.success) {
-        toast.success(t('Service deleted successfully'));
+        toast.success(t('Product deleted successfully'));
         fetchServices();
       } else {
-        toast.error(data.message || t('Failed to delete service'));
+        toast.error(data.message || t('Failed to delete product'));
       }
     } catch (error) {
-      console.error('Error deleting service:', error);
-      toast.error(t('Network error while deleting service'));
+      console.error('Error deleting product:', error);
+      toast.error(t('Network error while deleting product'));
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleDelete = (id) => {
+    toast.warning(t('Are you sure you want to delete this product?'), {
+      duration: 8000,
+      action: {
+        label: t('Yes, Delete'),
+        onClick: () => confirmDelete(id),
+      },
+      cancel: {
+        label: t('Cancel'),
+        onClick: () => {},
+      },
+    });
   };
 
   const handleToggleStatus = async (id, currentStatus) => {

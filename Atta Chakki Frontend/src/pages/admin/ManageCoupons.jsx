@@ -87,8 +87,8 @@ export function ManageCoupons() {
       min_order_amount: coupon.min_order_amount,
       usage_limit: coupon.usage_limit || '',
       expiry_date: coupon.expiry_date ? coupon.expiry_date.slice(0, 16) : '',
-      is_active: coupon.is_active === 1,
-      is_featured: coupon.is_featured === 1
+      is_active: Number(coupon.is_active) === 1 || coupon.is_active === true,
+      is_featured: Number(coupon.is_featured) === 1 || coupon.is_featured === true
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -383,14 +383,14 @@ export function ManageCoupons() {
             </div>
             <div className="flex items-center gap-3 mt-4 pt-3 border-t">
               <div className="flex items-center gap-1 text-sm">
-                {coupon.is_active ? (
+                {(Number(coupon.is_active) === 1 || coupon.is_active === true) ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : (
                   <X className="h-4 w-4 text-red-600" />
                 )}
-                <span>{coupon.is_active ? t('Active') : t('Inactive')}</span>
+                <span>{(Number(coupon.is_active) === 1 || coupon.is_active === true) ? t('Active') : t('Inactive')}</span>
               </div>
-              {coupon.is_featured && (
+              {(Number(coupon.is_featured) === 1 || coupon.is_featured === true) && (
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                   {t('Featured')}
                 </span>

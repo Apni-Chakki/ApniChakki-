@@ -1,5 +1,6 @@
 <?php
 // add category controller logic
+require_once __DIR__ . '/../../utils/cache_helper.php';
 include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
@@ -50,6 +51,9 @@ try {
     $stmt->execute();
     
     $new_id = $conn->insert_id;
+    
+    // Invalidate cache
+    clear_api_cache();
     
     http_response_code(201);
     echo json_encode([

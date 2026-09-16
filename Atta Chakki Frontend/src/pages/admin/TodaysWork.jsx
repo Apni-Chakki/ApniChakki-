@@ -610,10 +610,10 @@ Suchi Chakki — Pure & Fresh Processing
         try {
           const waDetails = generateWhatsAppDetails(order);
           if (waDetails && waDetails.url) {
-            // Attempt direct open
+            // direct whatsapp kholna
             openWhatsAppSafely(waDetails.url);
 
-            // Also open dedicated dialog for instant 1-click fallback & message copy
+            // whatsapp ka modal show karna
             setWhatsappReadyModal(waDetails);
 
             toast.info(`📱 WhatsApp message ready for ${waDetails.customerName}`, {

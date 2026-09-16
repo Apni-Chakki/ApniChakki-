@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../utils/cache_helper.php';
 require_once __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
@@ -21,6 +22,7 @@ try {
     $stmt->bind_param("ii", $is_active, $id);
     
     if ($stmt->execute()) {
+        clear_api_cache();
         echo json_encode([
             "success" => true,
             "message" => "Category status updated successfully"
