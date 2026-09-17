@@ -1,15 +1,7 @@
 import { useMemo, useState } from 'react';
 
-/**
- * Client-side pagination state + helpers. For server-paginated endpoints, pass
- * `total` from the API response and use `page` to build the next request.
- *
- * const p = usePagination({ total: 132, pageSize: 20 });
- * // p.page, p.pageSize, p.totalPages, p.next(), p.prev(), p.setPage(3)
- *
- * For pure client-side slicing:
- * const paged = p.slice(rows);
- */
+// pagination state + helpers, use p.slice(rows) for client-side paging
+// or use p.page with a server-paginated api
 export function usePagination({ total = 0, pageSize = 20, initialPage = 1 } = {}) {
   const [page, setPage] = useState(initialPage);
   const [size, setSize] = useState(pageSize);

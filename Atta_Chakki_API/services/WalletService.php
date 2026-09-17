@@ -3,14 +3,10 @@ namespace AttaChakki\Services;
 
 use Exception;
 
-/**
- * Service to handle business wallets, bank account details, and payment verification/rejection
- */
+// service to handle business wallets, bank account details, and payment verification/rejection
 class WalletService {
 
-    /**
-     * Check if user has admin privileges
-     */
+    // check if user has admin privileges
     public static function checkAdminAuth($conn, $userId) {
         if ($userId <= 0) return false;
 
@@ -30,9 +26,7 @@ class WalletService {
         return (strtolower($user['role']) === 'admin');
     }
 
-    /**
-     * Get primary business bank account details
-     */
+    // get primary business bank account details
     public static function getBankDetails($conn) {
         $stmt = $conn->prepare("SELECT id, account_name, bank_name, account_number, iban FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
         $stmt->execute();
@@ -66,9 +60,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Update primary business bank account details
-     */
+    // update primary business bank account details
     public static function updateBankDetails($conn, array $data) {
         $bank_name = isset($data['bank_name']) ? trim($data['bank_name']) : '';
         $account_name = isset($data['account_name']) ? trim($data['account_name']) : '';
@@ -106,9 +98,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Get business account balance and quick statistics
-     */
+    // get business account balance and quick statistics
     public static function getBusinessBalance($conn) {
         $stmt = $conn->prepare("SELECT id, account_name, balance, account_number, bank_name, iban FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
         $stmt->execute();
@@ -157,9 +147,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Get wallet transactions
-     */
+    // get wallet transactions
     public static function getWalletTransactions($conn, array $data) {
         $limit = isset($data['limit']) ? intval($data['limit']) : 50;
         $offset = isset($data['offset']) ? intval($data['offset']) : 0;
@@ -197,9 +185,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Get payment history with pagination and search
-     */
+    // get payment history with pagination and search
     public static function getPaymentHistory($conn, array $data) {
         $page   = max(1, isset($data['page']) ? intval($data['page']) : 1);
         $limit  = max(1, min(200, isset($data['limit']) ? intval($data['limit']) : 10));
@@ -295,9 +281,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Get payment statistics
-     */
+    // get payment statistics
     public static function getPaymentStats($conn) {
         $method_stmt = $conn->prepare("SELECT 
             payment_method, 
@@ -369,9 +353,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Get pending bank transfers
-     */
+    // get pending bank transfers
     public static function getPendingBankTransfers($conn) {
         $stmt = $conn->prepare("SELECT 
             pt.id,
@@ -423,9 +405,7 @@ class WalletService {
         ];
     }
 
-    /**
-     * Verify pending bank payment
-     */
+    // verify pending bank payment
     public static function verifyBankPayment($conn, array $data) {
         if (!isset($data['payment_transaction_id'])) {
             return ["success" => false, "message" => "Payment transaction ID required"];
@@ -509,9 +489,7 @@ class WalletService {
         }
     }
 
-    /**
-     * Reject pending bank payment
-     */
+    // reject pending bank payment
     public static function rejectBankPayment($conn, array $data) {
         if (!isset($data['payment_transaction_id'])) {
             return ["success" => false, "message" => "Payment transaction ID required"];

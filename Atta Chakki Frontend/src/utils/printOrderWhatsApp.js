@@ -1,26 +1,5 @@
-/**
- * WhatsApp bill message builder for orders. Extracted from PrintOrderDetails.jsx
- * (Phase 3.7b) — behavior preserved exactly.
- *
- * Builds a URL-encoded message body (with `%0A` newlines) that the caller then
- * hands to `window.open('https://wa.me/<phone>?text=<message>', ...)`.
- *
- * The Urdu branch uses hardcoded 'ur' inside its item loop (matching the
- * original behavior where the WhatsApp share always renders the *whole* message
- * in whichever language is currently active).
- *
- * @param {{
- *   order: any,
- *   lang: 'en' | 'ur',
- *   storeSettings: { name: string, tagline: string, address: string, phone: string },
- *   hasPendingItems: boolean,
- *   hasDiscount: boolean,
- *   originalSubtotal: number,
- *   itemDiscountsTotal: number,
- *   couponDiscount: number,
- * }} params
- * @returns {string} URL-encoded WhatsApp message body
- */
+// builds the whatsapp order message, caller opens it with wa.me link
+// urdu items always show in urdu here, regardless of active language
 
 import { translateText, translateUnit, getCustomizationsText } from './printOrderHelpers';
 

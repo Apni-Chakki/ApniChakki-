@@ -1,15 +1,6 @@
 import { cn } from '../../utils/utils';
 
-/**
- * Colored status pill for order status. Central place so all admin views agree on
- * the same color coding.
- *
- * Known statuses (add more as the backend grows):
- *   pending, confirmed, processing, ready, out_for_delivery, delivered,
- *   cancelled, refunded, on_hold
- *
- * <OrderStatusBadge status="ready" />
- */
+// colored status pill, one place so all admin pages use same colors
 
 const STATUS_STYLES = {
   pending:          'bg-amber-100 text-amber-800 ring-amber-200',

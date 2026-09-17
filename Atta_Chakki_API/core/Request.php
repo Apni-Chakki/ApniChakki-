@@ -1,25 +1,12 @@
 <?php
 namespace AttaChakki\Core;
 
-/**
- * Input helpers. Replaces the repeated pattern:
- *
- *   $data = json_decode(file_get_contents("php://input"));
- *   $x = isset($data->x) ? floatval($data->x) : 0;
- *   $y = isset($data->y) ? filter_var($data->y, FILTER_VALIDATE_BOOLEAN) : false;
- *
- * These read from JSON body AND query string transparently — controllers stop
- * caring about the method. `body()` still exposes the raw decoded array if a
- * caller wants nested fields.
- */
+// input helpers, reads from json body or query string, whichever has the key
 class Request
 {
     private static ?array $bodyCache = null;
 
-    /**
-     * Full decoded JSON body as an associative array. Cached per request.
-     * Returns [] on non-JSON or empty body — safe to use with `??`.
-     */
+    // decoded json body as array, cached, returns [] if empty/non-json
     public static function body(): array
     {
         if (self::$bodyCache !== null) return self::$bodyCache;
@@ -33,9 +20,7 @@ class Request
         return self::$bodyCache;
     }
 
-    /**
-     * Look in body then query string.
-     */
+    // look in body then query string
     public static function get(string $key, $default = null)
     {
         $body = self::body();
@@ -75,10 +60,7 @@ class Request
         return is_array($v) ? $v : $default;
     }
 
-    /**
-     * Require a field or send a 422 and exit.
-     * Use for endpoints where a missing key is programmer error, not user error.
-     */
+    // require a field, sends 422 and exits if missing
     public static function required(string $key)
     {
         $v = self::get($key, null);
@@ -88,17 +70,13 @@ class Request
         return $v;
     }
 
-    /**
-     * "POST", "GET", "PUT", "DELETE", "OPTIONS".
-     */
+    // current http method, uppercase
     public static function method(): string
     {
         return strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
     }
 
-    /**
-     * Enforce an HTTP method or send 405 and exit.
-     */
+    // enforce allowed method(s), sends 405 and exits otherwise
     public static function requireMethod(string ...$allowed): void
     {
         $m = self::method();

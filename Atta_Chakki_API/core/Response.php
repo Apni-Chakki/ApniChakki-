@@ -1,43 +1,23 @@
 <?php
 namespace AttaChakki\Core;
 
-/**
- * Standard JSON response helpers.
- *
- * Replaces the ~107 hand-written blocks of:
- *   header('Content-Type: application/json');
- *   echo json_encode([...]);
- *
- * Every response follows one of these two envelopes:
- *   { "success": true,  "data": ... }
- *   { "success": false, "message": "...", "code": "OPTIONAL" }
- *
- * Do NOT introduce new response shapes. If a caller today returns
- * `{ success: true, orders: [...] }` (no `data` key), migrate it during Phase 2
- * to `{ success: true, data: { orders: [...] } }` — but only when the calling
- * page is also updated.
- */
+// standard json response helpers, keep envelope shape consistent everywhere:
+// success -> {success: true, data}, error -> {success: false, message, code}
 class Response
 {
-    /**
-     * 200 OK success payload.
-     */
+    // 200 ok with data
     public static function json($data = null, int $status = 200): void
     {
         self::send(['success' => true, 'data' => $data], $status);
     }
 
-    /**
-     * Success with a message but no data (e.g. "Order updated").
-     */
+    // success with just a message, no data
     public static function message(string $message, int $status = 200): void
     {
         self::send(['success' => true, 'message' => $message], $status);
     }
 
-    /**
-     * 4xx/5xx error envelope.
-     */
+    // 4xx/5xx error envelope
     public static function error(string $message, int $status = 400, ?string $code = null, array $extra = []): void
     {
         $payload = ['success' => false, 'message' => $message];
@@ -66,10 +46,7 @@ class Response
         self::error($message, 422, 'VALIDATION_ERROR', ['errors' => $errors]);
     }
 
-    /**
-     * Server-side send. Called by every helper.
-     * Exits after sending — controllers should not do additional output.
-     */
+    // actually sends response and exits, called by all helpers above
     private static function send(array $payload, int $status): void
     {
         if (!headers_sent()) {

@@ -1,13 +1,6 @@
 import { cn } from '../../utils/utils';
 
-/**
- * Standard admin page header. Replaces the ~15 hand-rolled title+subtitle+search
- * blocks across pages/admin/*.
- *
- * <PageHeader title="New Orders" subtitle="Awaiting confirmation" actions={<Button/>}>
- *   optional children rendered under the header
- * </PageHeader>
- */
+// standard admin page header, title + subtitle + actions
 export function PageHeader({ title, subtitle, actions, className, children }) {
   return (
     <div className={cn('mb-6', className)}>

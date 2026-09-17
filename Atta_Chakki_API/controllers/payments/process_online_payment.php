@@ -1,11 +1,5 @@
 <?php
-/* 
- * Process Online Payment Controller
- * Handles JazzCash (MWALLET), Credit Card, and Bank Transfer payments
- * Supports both Sandbox simulation and real API calls
- * 
- * API Endpoint: POST /payments/process_online_payment.php
- */
+// handles jazzcash, card and bank transfer payments, sandbox or real api
 include __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/../../config/payment_config.php';
 require_once __DIR__ . '/../../core/autoload.php';

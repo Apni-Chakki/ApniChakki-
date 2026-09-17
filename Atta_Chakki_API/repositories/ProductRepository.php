@@ -1,14 +1,10 @@
 <?php
 namespace AttaChakki\Repositories;
 
-/**
- * Repository for Product and Service entity operations
- */
+// repository for Product and Service entity operations
 class ProductRepository extends BaseRepository
 {
-    /**
-     * Find a product by its primary key ID
-     */
+    // find a product by its primary key ID
     public function findById(int $id): ?array
     {
         return $this->selectOne(
@@ -20,9 +16,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Find product info needed for order validation & cart pricing
-     */
+    // find product info needed for order validation & cart pricing
     public function findForOrderValidation(int $id): ?array
     {
         return $this->selectOne(
@@ -35,9 +29,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get all active products with category information
-     */
+    // get all active products with category information
     public function getActiveProducts(?int $categoryId = null): array
     {
         if ($categoryId !== null) {
@@ -60,9 +52,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get all products (active & inactive) for admin management
-     */
+    // get all products (active & inactive) for admin management
     public function getAllProductsForAdmin(): array
     {
         return $this->selectAll(
@@ -73,9 +63,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get all active rental items
-     */
+    // get all active rental items
     public function getActiveRentals(): array
     {
         return $this->selectAll(
@@ -87,9 +75,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update stock quantity (deduct or add)
-     */
+    // update stock quantity (deduct or add)
     public function adjustStock(int $id, float $qtyDelta): int
     {
         return $this->execute(
@@ -98,9 +84,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update rental available quantity
-     */
+    // update rental available quantity
     public function adjustRentalStock(int $id, int $qtyDelta): int
     {
         return $this->execute(
@@ -109,9 +93,7 @@ class ProductRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update product active status
-     */
+    // update product active status
     public function updateStatus(int $id, int $isActive): int
     {
         return $this->execute(

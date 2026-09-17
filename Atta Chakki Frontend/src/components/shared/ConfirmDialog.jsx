@@ -11,19 +11,7 @@ import {
 import { cn } from '../../utils/utils';
 import { buttonVariants } from '../common/button';
 
-/**
- * Yes/No confirmation prompt. Replaces the ~10 hand-rolled delete confirmations.
- *
- * <ConfirmDialog
- *   open={openConfirm}
- *   onOpenChange={setOpenConfirm}
- *   title="Delete this order?"
- *   description="This cannot be undone."
- *   confirmLabel="Delete"
- *   destructive
- *   onConfirm={handleDelete}
- * />
- */
+// generic yes/no confirm dialog, used for delete confirmations etc
 export function ConfirmDialog({
   open,
   onOpenChange,

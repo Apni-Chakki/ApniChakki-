@@ -1,19 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/**
- * Standard "fetch on mount + expose loading/error/data" hook.
- * Replaces the `useEffect(() => { setLoading(true); fetch(...).then(...) }, [])`
- * pattern that appears ~50 times across pages/.
- *
- * Usage:
- *   const { data, loading, error, refetch } = useApi(
- *     () => apiGet('/get_all_orders.php', { query: { page } }),
- *     [page]                        // deps — re-run when they change
- *   );
- *
- * `fetcher` MUST return an ApiResult ({ok, data, error}). Use apiClient.js.
- * If you need lazy execution (button click), pass `{immediate: false}` and call refetch().
- */
+// fetch on mount, gives back {data, loading, error, refetch}
+// fetcher must return apiClient's {ok, data, error} shape
+// pass {immediate: false} for lazy fetch (call refetch on click)
 export function useApi(fetcher, deps = [], { immediate = true } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(!!immediate);

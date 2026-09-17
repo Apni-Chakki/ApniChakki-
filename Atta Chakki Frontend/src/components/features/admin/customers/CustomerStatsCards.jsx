@@ -1,20 +1,7 @@
 import { User, UserCheck, Award, Sparkles } from 'lucide-react';
 import { Card } from '../../../common/card';
 
-/**
- * Four stat cards on the "Manage Customers" admin page:
- * Total Customers, Active Accounts, VIP Customers, Total Spent.
- *
- * Extracted from ManageCustomers.jsx (Phase 3.8a) — behavior preserved exactly.
- *
- * @param {{
- *   totalCustomersCount: number,
- *   activeCustomersCount: number,
- *   vipCustomersCount: number,
- *   totalSalesAmount: number,
- *   t: (s: string) => string,
- * }} props
- */
+// 4 stat cards for manage customers page: total, active, vip, total spent
 export function CustomerStatsCards({
   totalCustomersCount,
   activeCustomersCount,

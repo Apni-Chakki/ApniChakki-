@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/**
- * Debounce a fast-changing value (e.g. a search input) so downstream effects run
- * only after the user pauses typing.
- *
- * Usage:
- *   const [q, setQ] = useState('');
- *   const debouncedQ = useDebouncedValue(q, 300);
- *   useEffect(() => { search(debouncedQ); }, [debouncedQ]);
- */
+// debounces a fast-changing value, useful for search inputs
 export function useDebouncedValue(value, delayMs = 300) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {

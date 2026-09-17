@@ -1,16 +1,6 @@
 <?php
-/* 
- * API Endpoint: Check Schedule Availability
- * 
- * Called from frontend checkout to determine if a new order will be processed 
- * today or tomorrow, BEFORE the order is actually placed.
- * 
- * GET  /check_schedule.php                → check with default 1 kg weight
- * GET  /check_schedule.php?weight=10      → check with specific weight estimate
- * POST /check_schedule.php { weight: 10 } → check with specific weight estimate
- * 
- * Returns: assigned_date, is_today, reason, estimated_completion, capacity info
- */
+// checks if new order goes today or tomorrow, called before order is placed
+// accepts weight via GET or POST, returns assigned_date/is_today/reason/capacity
 require_once __DIR__ . '/../../config/cors.php';
 include __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/order_scheduler.php';

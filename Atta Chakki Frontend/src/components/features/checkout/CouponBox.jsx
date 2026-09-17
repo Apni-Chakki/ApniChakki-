@@ -3,19 +3,8 @@ import { Input } from '../../common/input';
 import { Button } from '../../common/button';
 import { Label } from '../../common/label';
 
-/**
- * Coupon-code input UI. Handles both the un-applied state (input + Apply button)
- * and the applied state (green pill + remove button). Errors shown below.
- *
- * Extracted from Checkout.jsx (Phase 3.1c) — behavior preserved exactly.
- *
- * Parent still owns:
- *  - couponCode (controlled input value)
- *  - validation (validateCoupon does the API call + sets appliedCoupon)
- *  - removeCoupon (clears appliedCoupon)
- *
- * Wrapped in the parent's `hasActiveCoupons` check — this component is unconditional.
- */
+// coupon input box, shows input+apply or applied pill+remove depending on state
+// parent handles the actual api call and coupon state
 export function CouponBox({
   couponCode,
   setCouponCode,

@@ -1,14 +1,10 @@
 <?php
 namespace AttaChakki\Repositories;
 
-/**
- * Repository for Coupons and discount validation operations
- */
+// repository for Coupons and discount validation operations
 class CouponRepository extends BaseRepository
 {
-    /**
-     * Find coupon by promo code
-     */
+    // find coupon by promo code
     public function findByCode(string $code): ?array
     {
         return $this->selectOne(
@@ -17,9 +13,7 @@ class CouponRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get all active coupons
-     */
+    // get all active coupons
     public function getActiveCoupons(): array
     {
         return $this->selectAll(
@@ -31,9 +25,7 @@ class CouponRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get featured coupons for promo banners
-     */
+    // get featured coupons for promo banners
     public function getFeaturedCoupons(): array
     {
         return $this->selectAll(
@@ -44,9 +36,7 @@ class CouponRepository extends BaseRepository
         );
     }
 
-    /**
-     * Increment coupon usage count
-     */
+    // increment coupon usage count
     public function incrementUsage(int $couponId): int
     {
         return $this->execute(
@@ -55,9 +45,7 @@ class CouponRepository extends BaseRepository
         );
     }
 
-    /**
-     * Check how many times a user has used a specific coupon
-     */
+    // check how many times a user has used a specific coupon
     public function getUserUsageCount(int $couponId, int $userId): int
     {
         return (int)$this->selectScalar(
@@ -66,9 +54,7 @@ class CouponRepository extends BaseRepository
         );
     }
 
-    /**
-     * Record a user coupon usage entry
-     */
+    // record a user coupon usage entry
     public function recordUserUsage(int $couponId, int $userId, int $orderId, float $discountAmount): int
     {
         return $this->insert(

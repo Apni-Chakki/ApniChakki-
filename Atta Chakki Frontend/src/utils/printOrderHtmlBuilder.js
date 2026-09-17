@@ -1,23 +1,4 @@
-/**
- * Print-ready HTML generator for order bills. Extracted from PrintOrderDetails.jsx
- * (Phase 3.7b) — behavior preserved exactly.
- *
- * This is a pure function: it takes an order + settings + pre-computed totals and
- * returns an HTML string suitable for `iframe.contentWindow.document.write()`.
- *
- * @param {{
- *   order: any,
- *   lang: 'en' | 'ur',
- *   storeSettings: { name: string, tagline: string, address: string, phone: string, logo?: string },
- *   hasPendingItems: boolean,
- *   itemsSubtotal: number,
- *   itemDiscountsTotal: number,
- *   couponDiscount: number,
- *   deliveryFee: number,
- *   remainingBalance: number,
- * }} params
- * @returns {string} full HTML document
- */
+// builds the print-ready bill html, gets written straight into the print iframe
 
 import {
   translateText,

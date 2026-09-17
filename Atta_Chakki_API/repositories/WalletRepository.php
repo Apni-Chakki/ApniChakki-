@@ -1,14 +1,10 @@
 <?php
 namespace AttaChakki\Repositories;
 
-/**
- * Repository for User Wallets, Business Accounts, and Ledger Transactions
- */
+// repository for User Wallets, Business Accounts, and Ledger Transactions
 class WalletRepository extends BaseRepository
 {
-    /**
-     * Get wallet details for a user
-     */
+    // get wallet details for a user
     public function getUserWallet(int $userId): ?array
     {
         return $this->selectOne(
@@ -17,9 +13,7 @@ class WalletRepository extends BaseRepository
         );
     }
 
-    /**
-     * Create wallet for a user if not exists
-     */
+    // create wallet for a user if not exists
     public function createUserWallet(int $userId, float $initialBalance = 0.00): int
     {
         return $this->insert(
@@ -28,9 +22,7 @@ class WalletRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update user wallet balance
-     */
+    // update user wallet balance
     public function updateUserBalance(int $userId, float $newBalance): int
     {
         return $this->execute(
@@ -39,9 +31,7 @@ class WalletRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get active primary business bank account
-     */
+    // get active primary business bank account
     public function getPrimaryBusinessAccount(): ?array
     {
         return $this->selectOne(
@@ -52,9 +42,7 @@ class WalletRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update business account balance
-     */
+    // update business account balance
     public function updateBusinessBalance(int $accountId, float $newBalance): int
     {
         return $this->execute(
@@ -63,9 +51,7 @@ class WalletRepository extends BaseRepository
         );
     }
 
-    /**
-     * Log a transaction in wallet_transactions table
-     */
+    // log a transaction in wallet_transactions table
     public function logWalletTransaction(int $userId, string $type, float $amount, string $description, float $balanceBefore, float $balanceAfter): int
     {
         return $this->insert(
@@ -75,9 +61,7 @@ class WalletRepository extends BaseRepository
         );
     }
 
-    /**
-     * Record a payment entry in payments table
-     */
+    // record a payment entry in payments table
     public function recordPayment(int $orderId, float $amount, string $method, ?string $transactionId = null): int
     {
         return $this->insert(

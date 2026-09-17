@@ -3,16 +3,10 @@ namespace AttaChakki\Services;
 
 use Exception;
 
-/**
- * Service to handle online payment processing (JazzCash, Cards, Bank Transfers, Wallets)
- */
+// handles online payment processing: jazzcash, cards, bank transfer, wallet
 class PaymentService {
 
-    /**
-     * Validate payment inputs
-     * @param array $data
-     * @return array [bool $valid, string|null $error]
-     */
+    // checks required fields are present
     public static function validatePaymentInput($data) {
         if (!isset($data['order_id']) || !isset($data['user_id']) || !isset($data['payment_method']) || !isset($data['amount'])) {
             return [false, "Missing required fields"];
@@ -66,9 +60,7 @@ class PaymentService {
         return [true, null];
     }
 
-    /**
-     * Process JazzCash MWALLET Payment
-     */
+    // processes jazzcash mwallet payment
     public static function processJazzCashPayment($phone, $amount, $transaction_id, $cnic_last6 = null) {
         $phone = preg_replace('/[-\s]/', '', $phone);
 
@@ -128,7 +120,7 @@ class PaymentService {
             }
         }
 
-        // Real JazzCash Production API Integration
+        // real jazzcash api call
         $datetime = date('YmdHis');
         $expiry = date('YmdHis', strtotime('+1 hour'));
         $amount_in_paisa = intval($amount * 100);
@@ -214,9 +206,7 @@ class PaymentService {
         ];
     }
 
-    /**
-     * Process Credit/Debit Card Payment
-     */
+    // processes credit/debit card payment
     public static function processCreditCardPayment($card_number, $expiry, $cvv, $card_name, $amount, $transaction_id) {
         $card_type = function_exists('detectCardType') ? detectCardType($card_number) : 'card';
         $masked_card = str_repeat('*', max(0, strlen($card_number) - 4)) . substr($card_number, -4);
@@ -262,7 +252,7 @@ class PaymentService {
                 }
             }
 
-            // Validate expiry date for non-test cards
+            // check expiry for non-test cards
             if (strpos($expiry, '/') !== false) {
                 list($exp_month, $exp_year) = explode('/', $expiry);
                 $exp_year = intval('20' . $exp_year);
@@ -316,9 +306,7 @@ class PaymentService {
         ];
     }
 
-    /**
-     * Deduct user wallet and credit primary business account
-     */
+    // deducts from user wallet, credits primary business account
     public static function deductUserWalletAndCreditBusiness($conn, $user_id, $amount) {
         $wallet_check = $conn->prepare("SELECT id, balance FROM user_wallets WHERE user_id = ?");
         $wallet_check->bind_param("i", $user_id);
@@ -337,7 +325,7 @@ class PaymentService {
         }
         $wallet_check->close();
 
-        // Deduct from user wallet
+        // deduct from user
         $user_balance_after = $user_balance_before - $amount;
         $deduct_stmt = $conn->prepare("UPDATE user_wallets SET balance = ? WHERE user_id = ?");
         $deduct_stmt->bind_param("di", $user_balance_after, $user_id);
@@ -347,7 +335,7 @@ class PaymentService {
         }
         $deduct_stmt->close();
 
-        // Credit to primary business account
+        // credit to business
         $business_stmt = $conn->prepare("SELECT id, balance FROM business_accounts WHERE is_primary = 1 AND is_active = 1 LIMIT 1");
         $business_stmt->execute();
         $business_result = $business_stmt->get_result();
@@ -365,9 +353,7 @@ class PaymentService {
         $business_stmt->close();
     }
 
-    /**
-     * Full execution of online payment for an order
-     */
+    // runs the full online payment flow for an order
     public static function processOnlinePaymentTransaction($conn, array $data) {
         list($isValid, $errorMsg) = self::validatePaymentInput($data);
         if (!$isValid) {
@@ -393,7 +379,7 @@ class PaymentService {
         $conn->begin_transaction();
 
         try {
-            // 1. Verify order exists and get details
+            // 1. check order exists
             $order_stmt = $conn->prepare("SELECT o.id, o.total_amount, o.user_id, o.payment_status FROM orders o WHERE o.id = ? AND o.user_id = ?");
             $order_stmt->bind_param("ii", $order_id, $user_id);
             $order_stmt->execute();
@@ -410,10 +396,10 @@ class PaymentService {
                 throw new Exception("Order already paid");
             }
 
-            // 2. Generate unique transaction reference
+            // 2. make transaction id
             $transaction_id = strtoupper($payment_method) . '-' . date('YmdHis') . '-' . rand(1000, 9999);
 
-            // 3. Create payment transaction record (initially processing)
+            // 3. save payment record as processing
             $payment_stmt = $conn->prepare("INSERT INTO payment_transactions (order_id, user_id, payment_method, amount, transaction_id, payment_status, user_phone, bank_account_number, gateway_response) VALUES (?, ?, ?, ?, ?, 'processing', ?, ?, ?)");
             $initial_response = json_encode(['status' => 'initiated', 'sandbox' => defined('JAZZCASH_SANDBOX_MODE') ? JAZZCASH_SANDBOX_MODE : true]);
             $payment_stmt->bind_param("iisdssss", $order_id, $user_id, $payment_method, $amount, $transaction_id, $user_phone, $bank_account_number, $initial_response);
@@ -425,7 +411,7 @@ class PaymentService {
             $payment_transaction_id = $conn->insert_id;
             $payment_stmt->close();
 
-            // 4. Process payment based on method
+            // 4. run payment for the chosen method
             $payment_gateway_response = null;
             $payment_successful = false;
             $gateway_transaction_id = null;
@@ -459,19 +445,19 @@ class PaymentService {
                 ]);
             }
 
-            // 5. If payment successful, update wallet and balances
+            // 5. update wallet if payment went through
             if ($payment_successful) {
                 self::deductUserWalletAndCreditBusiness($conn, $user_id, $amount);
             }
 
-            // 6. Update payment transaction status
+            // 6. update payment status
             $status = $payment_successful ? 'completed' : 'pending';
             $update_payment = $conn->prepare("UPDATE payment_transactions SET payment_status = ?, gateway_response = ?, completed_at = NOW() WHERE id = ?");
             $update_payment->bind_param("ssi", $status, $payment_gateway_response, $payment_transaction_id);
             $update_payment->execute();
             $update_payment->close();
 
-            // 7. Update order payment status and amount_paid
+            // 7. update order's payment status + amount paid
             $new_order_status = $payment_successful ? 'paid' : 'pending';
             $amount_paid = $payment_successful ? $amount : 0;
             $db_txn_id = $gateway_transaction_id ?? $transaction_id;
@@ -484,7 +470,7 @@ class PaymentService {
             }
             $update_order->close();
 
-            // 8. Also record in payments table for financial tracking
+            // 8. also log in payments table
             if ($payment_successful) {
                 $pay_stmt = $conn->prepare("INSERT INTO payments (order_id, amount, payment_method, transaction_id) VALUES (?, ?, ?, ?)");
                 $pay_stmt->bind_param("idss", $order_id, $amount, $payment_method, $db_txn_id);
@@ -494,7 +480,7 @@ class PaymentService {
 
             $conn->commit();
 
-            // Build response message
+            // build response
             if ($payment_successful) {
                 $method_label = $payment_method === 'jazzcash' ? 'JazzCash' : ($payment_method === 'card' ? 'Credit/Debit Card' : 'Bank Transfer');
                 $message = "Payment of Rs. " . number_format($amount, 2) . " via {$method_label} processed successfully!";

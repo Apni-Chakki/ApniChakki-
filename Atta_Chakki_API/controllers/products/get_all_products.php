@@ -10,7 +10,8 @@ try {
         throw new Exception("Database connection failed");
     }
 
-    $cache_key = 'all_products_admin';
+    $category_id = isset($_GET['category_id']) && $_GET['category_id'] !== '' ? (int)$_GET['category_id'] : null;
+    $cache_key = $category_id ? "all_products_admin_cat_{$category_id}" : 'all_products_admin';
     $cached = get_api_cache($cache_key, 300);
     if ($cached !== false) {
         http_response_code(200);
@@ -18,11 +19,24 @@ try {
         exit;
     }
 
-    $sql = "SELECT p.*, p.image_url AS image, c.name as category_name FROM products p 
-            LEFT JOIN categories c ON p.category_id = c.id 
-            ORDER BY p.priority DESC, p.created_at DESC";
-    
-    $result = $conn->query($sql);
+    if ($category_id) {
+        $sql = "SELECT p.*, p.image_url AS image, c.name as category_name FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                WHERE p.category_id = ?
+                ORDER BY p.priority DESC, p.created_at DESC";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+        $stmt->bind_param("i", $category_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $sql = "SELECT p.*, p.image_url AS image, c.name as category_name FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                ORDER BY p.priority DESC, p.created_at DESC";
+        $result = $conn->query($sql);
+    }
     if (!$result) {
         throw new Exception("Query failed: " . $conn->error);
     }

@@ -1,12 +1,5 @@
-/**
- * Price breakdown block below the cart items list on the Checkout page.
- * Shows: subtotal, product discount, cart total, delivery fee, coupon discount,
- * VIP discount, grand total, and the "TBD" pending-weight notice.
- *
- * Extracted from Checkout.jsx (Phase 3.1d) — behavior preserved exactly.
- *
- * Pure display: takes all values as props, contains no state and no callbacks.
- */
+// price breakdown below cart items: subtotal, discounts, delivery fee, grand total
+// just a display component, no state of its own
 export function PriceSummary({
   originalTotal,
   productDiscount,

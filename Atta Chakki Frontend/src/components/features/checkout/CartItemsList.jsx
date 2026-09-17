@@ -1,17 +1,8 @@
 import { Trash2 } from 'lucide-react';
 import { Button } from '../../common/button';
 
-/**
- * Displays the list of items in the cart with per-item pricing and a remove button.
- * Extracted from Checkout.jsx (Phase 3.1b) — behavior preserved exactly.
- *
- * Handles three variants of each item:
- *  - Regular product (price × quantity, unit label)
- *  - Rental item (dates, per-day rate, refundable deposit)
- *  - Weight-pending / trip items (shows "TBD" instead of a price)
- *
- * @param {{ cart: any[], removeFromCart: Function, t: Function }} props
- */
+// cart items list with price + remove button
+// handles 3 item types: regular, rental (dates+deposit), weight-pending (shows TBD)
 export function CartItemsList({ cart, removeFromCart, t }) {
   return (
     <>

@@ -2,10 +2,7 @@
 // utils/email_helper.php
 require_once __DIR__ . '/../config/connect.php';
 
-/**
- * Direct native PHP SMTP Mailer with STARTTLS encryption
- * Used as a zero-dependency fallback when Node.js socket server is unavailable or sleeping.
- */
+// direct smtp mailer with starttls, fallback when node socket server is down
 function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEmail = null) {
     global $envVars;
     
@@ -109,9 +106,7 @@ function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEm
     return (substr($res, 0, 3) === '250');
 }
 
-/**
- * Render email HTML templates directly in PHP if falling back to direct SMTP
- */
+// renders email html templates for the direct smtp fallback path
 function render_php_email_template($endpoint, $payload) {
     $storeName = $payload['storeName'] ?? 'Suchi Chakki';
     $storePhone = $payload['storePhone'] ?? '+92 322 8483029';
@@ -247,26 +242,17 @@ function render_php_email_template($endpoint, $payload) {
     }
 }
 
-/**
- * Universal Resilient Email Sender
- * 1. Tries primary Node.js socket server endpoint via reliable cURL.
- * 2. If on localhost and local server fails, tries Live cloud socket server.
- * 3. If socket servers fail, automatically falls back to native direct PHP SMTP mailer.
- *
- * @param string $endpoint The endpoint path (e.g. '/send-order-confirmation')
- * @param array $payload The JSON-serializable data payload
- * @return bool True if successfully sent/dispatched, false otherwise
- */
+// tries node socket server first (local then cloud backup), falls back to direct smtp
 function send_email_async($endpoint, $payload) {
     global $is_localhost;
 
-    // Collect URLs to attempt in priority order
+    // urls to try, in priority order
     $urls = [];
     if (defined('EMAIL_SERVER_URL') && EMAIL_SERVER_URL) {
         $urls[] = rtrim(EMAIL_SERVER_URL, '/') . $endpoint;
     }
-    
-    // If running on localhost and primary is local port 3001, add cloud server as backup
+
+    // on localhost, add cloud server as backup too
     if ($is_localhost) {
         $cloudUrl = 'https://socket-server-9b9f3ddbe629.herokuapp.com' . $endpoint;
         if (!in_array($cloudUrl, $urls)) {

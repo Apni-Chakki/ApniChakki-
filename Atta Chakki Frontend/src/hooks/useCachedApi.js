@@ -1,18 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCached, setCache, invalidateCache } from '../utils/apiCache';
 
-/**
- * Custom Stale-While-Revalidate (SWR) hook for instant cached rendering
- * with automatic background data synchronization.
- *
- * @param {string} cacheKey - Unique cache key identifier
- * @param {string|function} urlOrFetcher - API URL string or custom async fetcher function
- * @param {object} options - Configuration options
- * @param {number} options.ttlSeconds - Cache TTL in seconds (default: 300)
- * @param {boolean} options.revalidateOnMount - Revalidate from network on mount (default: true)
- * @param {any} options.initialData - Fallback data when cache is empty
- * @returns {{ data: any, loading: boolean, error: any, isValidating: boolean, mutate: Function, refetch: Function }}
- */
+// stale-while-revalidate hook, shows cached data instantly then refetches in bg
 export function useCachedApi(cacheKey, urlOrFetcher, options = {}) {
   const {
     ttlSeconds = 300,
@@ -20,7 +9,7 @@ export function useCachedApi(cacheKey, urlOrFetcher, options = {}) {
     initialData = null,
   } = options;
 
-  // 1. Synchronously read from cache for 0ms initial render
+  // read from cache first for instant render
   const cachedValue = typeof window !== 'undefined' ? getCached(cacheKey, ttlSeconds) : null;
 
   const [data, setData] = useState(cachedValue !== null ? cachedValue : initialData);
@@ -60,7 +49,6 @@ export function useCachedApi(cacheKey, urlOrFetcher, options = {}) {
           setError(null);
           setLoading(false);
           setIsValidating(false);
-          // Update cache
           setCache(cacheKey, result);
         }
       } catch (err) {
@@ -80,9 +68,7 @@ export function useCachedApi(cacheKey, urlOrFetcher, options = {}) {
     }
   }, [fetchData, revalidateOnMount]);
 
-  /**
-   * Optimistic local data update + cache write
-   */
+  // update data locally + cache, optionally refetch after
   const mutate = useCallback(
     (nextData, shouldRevalidate = false) => {
       const updated = typeof nextData === 'function' ? nextData(data) : nextData;

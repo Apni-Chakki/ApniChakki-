@@ -1,16 +1,5 @@
-/**
- * Thin fetch wrapper for the Atta Chakki backend.
- *
- * Purpose:
- *  - Replace the ~200 raw `fetch(...)` calls scattered across pages with 4 helpers
- *    that always return the same {ok, data, error} shape.
- *  - Auth (JWT), 401 logout, and HTML-instead-of-JSON retry are already handled by
- *    `utils/apiInterceptor.js` (monkey-patches window.fetch globally). This file
- *    does NOT duplicate any of that — it only removes per-call boilerplate.
- *  - Backend response envelope is {success, message?, data?, ...rest}. We unwrap it.
- *
- * Not migrated yet: existing pages keep raw fetch until Phase 2/3 touches them.
- */
+// small fetch wrapper, always returns {ok, data, error, status}
+// jwt/401/retry stuff is already handled by apiInterceptor.js, this just unwraps the response
 
 import { API_BASE_URL } from '../config';
 
@@ -27,10 +16,6 @@ function buildUrl(path, query) {
   const qs = usp.toString();
   return qs ? `${base}${base.includes('?') ? '&' : '?'}${qs}` : base;
 }
-
-/**
- * @typedef {{ ok: boolean, data: any, error: string | null, status: number }} ApiResult
- */
 
 async function request(method, path, { body, query, headers, signal } = {}) {
   const url = buildUrl(path, query);
@@ -52,10 +37,9 @@ async function request(method, path, { body, query, headers, signal } = {}) {
       return { ok: false, data: null, error: 'Invalid server response', status: res.status };
     }
 
-    // Backend envelope: {success: true/false, message?, ...}
+    // unwrap {success, message, data} envelope
     if (json && typeof json === 'object' && 'success' in json) {
       if (json.success) {
-        // Prefer json.data when present; otherwise return the whole payload without the envelope key.
         const { success: _s, message: _m, ...rest } = json;
         const data = json.data !== undefined ? json.data : rest;
         return { ok: true, data, error: null, status: res.status };
@@ -68,11 +52,10 @@ async function request(method, path, { body, query, headers, signal } = {}) {
       };
     }
 
-    // No envelope — return raw JSON as data if HTTP OK.
+    // no envelope, just return raw json
     if (res.ok) return { ok: true, data: json, error: null, status: res.status };
     return { ok: false, data: null, error: `Request failed (${res.status})`, status: res.status };
   } catch (err) {
-    // Network error / aborted / offline
     if (err?.name === 'AbortError') {
       return { ok: false, data: null, error: 'Cancelled', status: 0 };
     }
@@ -90,10 +73,7 @@ export const apiPost = (path, body, options) => request('POST', path, { ...optio
 export const apiPut = (path, body, options) => request('PUT', path, { ...options, body });
 export const apiDelete = (path, options) => request('DELETE', path, options);
 
-/**
- * Convenience: raise a toast on error automatically.
- * Usage: const r = await apiGetWithToast('/get_orders.php'); if (!r.ok) return;
- */
+// runs fn and auto shows toast on error
 export async function apiWithToast(fn, toast) {
   const r = await fn();
   if (!r.ok && toast?.error) toast.error(r.error);

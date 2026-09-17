@@ -1,14 +1,10 @@
 <?php
 namespace AttaChakki\Repositories;
 
-/**
- * Repository for Orders and Order Items operations
- */
+// repository for Orders and Order Items operations
 class OrderRepository extends BaseRepository
 {
-    /**
-     * Find order by ID with customer details
-     */
+    // find order by ID with customer details
     public function findById(int $id): ?array
     {
         return $this->selectOne(
@@ -22,9 +18,7 @@ class OrderRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get all items for an order
-     */
+    // get all items for an order
     public function getOrderItems(int $orderId): array
     {
         return $this->selectAll(
@@ -36,9 +30,7 @@ class OrderRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get customer order history
-     */
+    // get customer order history
     public function getOrdersByUserId(int $userId, int $limit = 50, int $offset = 0): array
     {
         return $this->selectAll(
@@ -52,9 +44,7 @@ class OrderRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update order status
-     */
+    // update order status
     public function updateStatus(int $orderId, string $status): int
     {
         return $this->execute(
@@ -63,9 +53,7 @@ class OrderRepository extends BaseRepository
         );
     }
 
-    /**
-     * Update order payment details
-     */
+    // update order payment details
     public function updatePaymentStatus(int $orderId, string $paymentStatus, string $paymentMethod = 'online', ?string $txnId = null, float $amountPaid = 0.0): int
     {
         return $this->execute(
@@ -74,9 +62,7 @@ class OrderRepository extends BaseRepository
         );
     }
 
-    /**
-     * Assign a driver to an order
-     */
+    // assign a driver to an order
     public function assignDriver(int $orderId, int $driverId): int
     {
         return $this->execute(
@@ -85,9 +71,7 @@ class OrderRepository extends BaseRepository
         );
     }
 
-    /**
-     * Cancel an order with reason
-     */
+    // cancel an order with reason
     public function cancelOrder(int $orderId, ?string $reason = null): int
     {
         return $this->execute(

@@ -10,15 +10,7 @@ import {
 import { Button } from "../../../components/common/button";
 import { RotateCcw, Calendar, Hourglass, Package, ShieldCheck } from "lucide-react";
 
-/**
- * Rental product modal — customer-facing "Rent [Product]" flow.
- *
- * Layout (matches product spec):
- *  - Header: "RENT PRODUCT" eyebrow + product name, teal circular icon on the left
- *  - Row: [Start Date] [Rental Days] [Quantity] as three equal columns
- *  - Card: Rental Rate, Rental Subtotal, Refundable Deposit, TOTAL AMOUNT (green pill)
- *  - Footer: Cancel + Add to Cart (always visible; never behind scroll)
- */
+// customer facing "rent this product" modal, date+days+qty then rate/deposit/total
 export const RentalModal = ({
   showRentalModal,
   setShowRentalModal,

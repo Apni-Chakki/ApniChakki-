@@ -13,7 +13,10 @@ export function ManageServices() {
   const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
+  const productsCacheRef = useRef({});
   const [isSaving, setIsSaving] = useState(false);
   
   const [isAdding, setIsAdding] = useState(false);
@@ -81,17 +84,31 @@ export function ManageServices() {
   }, [formData.customizations, formData.has_customizations, formData.customization_pricing_mode]);
 
   useEffect(() => {
-    fetchServices();
     fetchCategories();
   }, []);
 
-  const fetchServices = async () => {
+  useEffect(() => {
+    if (activeCategoryId) {
+      fetchServicesForCategory(activeCategoryId);
+    }
+  }, [activeCategoryId]);
+
+  const fetchServicesForCategory = async (categoryId, { force = false } = {}) => {
+    if (!categoryId) return;
+
+    if (!force && productsCacheRef.current[categoryId]) {
+      setServices(productsCacheRef.current[categoryId]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/get_all_products.php?include_all=1&refresh=1`);
+      setTabLoading(true);
+      const res = await fetch(`${API_BASE_URL}/get_all_products.php?category_id=${categoryId}`);
       const data = await res.json();
       const list = data.data || data.products || [];
       if ((data.status === 'success' || data.success) && Array.isArray(list)) {
+        productsCacheRef.current[categoryId] = list;
         setServices(list);
       } else {
         toast.error(data.message || t('Failed to load services'));
@@ -101,6 +118,15 @@ export function ManageServices() {
       toast.error(t('Network error while loading services'));
     } finally {
       setLoading(false);
+      setTabLoading(false);
+    }
+  };
+
+  // Invalidate cached tabs and reload the active tab after a mutation
+  const refreshActiveCategory = () => {
+    productsCacheRef.current = {};
+    if (activeCategoryId) {
+      fetchServicesForCategory(activeCategoryId, { force: true });
     }
   };
 
@@ -111,13 +137,26 @@ export function ManageServices() {
       const list = data.data || data.categories || [];
       if ((data.status === 'success' || data.success) && Array.isArray(list)) {
         setCategories(list);
-        if (list.length > 0 && !formData.category) {
-          setFormData(prev => ({ ...prev, category: list[0].name }));
+        if (list.length > 0) {
+          if (!formData.category) {
+            setFormData(prev => ({ ...prev, category: list[0].name }));
+          }
+          setActiveCategoryId(prev => prev ?? list[0].id);
+        } else {
+          setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      setLoading(false);
     }
+  };
+
+  const handleTabChange = (categoryId) => {
+    if (categoryId === activeCategoryId) return;
+    setActiveCategoryId(categoryId);
   };
 
   const handleImageChange = async (e) => {
@@ -306,7 +345,7 @@ export function ManageServices() {
         toast.success(t('Service added successfully'));
         setIsAdding(false);
         resetForm();
-        fetchServices();
+        refreshActiveCategory();
       } else {
         toast.error(data.message || t('Failed to add service'));
       }
@@ -443,7 +482,7 @@ export function ManageServices() {
         toast.success(t('Service updated successfully'));
         setEditingId(null);
         resetForm();
-        fetchServices();
+        refreshActiveCategory();
       } else {
         toast.error(data.message || t('Failed to update service'));
       }
@@ -467,7 +506,7 @@ export function ManageServices() {
       const data = await res.json();
       if (data.status === 'success' || data.success) {
         toast.success(t('Product deleted successfully'));
-        fetchServices();
+        refreshActiveCategory();
       } else {
         toast.error(data.message || t('Failed to delete product'));
       }
@@ -498,11 +537,11 @@ export function ManageServices() {
     const previousServices = [...services];
 
     setServices(prevServices =>
-      prevServices.map(s => s.id === id ? { ...s, status: newStatus } : s)
+      prevServices.map(s => s.id === id ? { ...s, is_active: newStatus } : s)
     );
 
     try {
-      const res = await fetch(`${API_BASE_URL}/update_product.php_status`, {
+      const res = await fetch(`${API_BASE_URL}/update_product_status.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: newStatus, is_active: newStatus })
@@ -511,7 +550,7 @@ export function ManageServices() {
       const data = await res.json();
       if (data.status === 'success' || data.success) {
         toast.success(newStatus === 1 ? t('Service is now visible to customers') : t('Service is now hidden from customers'));
-        fetchServices();
+        productsCacheRef.current = {};
       } else {
         setServices(previousServices);
         toast.error(data.message || t('Failed to update service status'));
@@ -571,18 +610,11 @@ export function ManageServices() {
     return p;
   };
 
-  // Group services by category
-  const groupedServices = services
+  const sortedServices = services
     .slice()
-    .sort((a, b) => (parseInt(b.priority || 0) - parseInt(a.priority || 0)))
-    .reduce((acc, service) => {
-      const catName = service.category_name || 'Other Services';
-      if (!acc[catName]) acc[catName] = [];
-      acc[catName].push(service);
-      return acc;
-    }, {});
+    .sort((a, b) => (parseInt(b.priority || 0) - parseInt(a.priority || 0)));
 
-  if (loading && services.length === 0) {
+  if (loading && categories.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -631,45 +663,64 @@ export function ManageServices() {
         />
       )}
 
-      {/* Services List Grouped by Category */}
-      <div className="space-y-8 animate-in fade-in duration-500">
-        {services.length === 0 ? (
+      {/* Category Tabs — each tab lazily fetches its own products from the server */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+          {categories.map((cat) => {
+            const isActive = Number(cat.id) === Number(activeCategoryId);
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => handleTabChange(cat.id)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border font-bold text-xs uppercase tracking-wider shadow-xs transition-colors ${
+                  isActive
+                    ? 'bg-[#8c6d3d] text-white border-[#8c6d3d]'
+                    : 'bg-[#fbf6ee] text-[#8c6d3d] border-[#ecd9be] hover:bg-[#f3e8d5]'
+                }`}
+              >
+                <span className="text-sm">🌾</span>
+                <span>{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Services List for the Active Category */}
+      <div className="space-y-4 animate-in fade-in duration-500">
+        {tabLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : sortedServices.length === 0 ? (
           <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No services available. Add your first service!</p>
+            <p className="text-muted-foreground">No services available in this category. Add your first service!</p>
           </Card>
         ) : (
-          Object.keys(groupedServices).map((categoryName) => {
-            const categoryItems = groupedServices[categoryName];
-            return (
-              <div key={categoryName} className="space-y-3 sm:space-y-4">
-                <div className="flex items-center justify-between gap-2 px-1 mb-3">
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#fbf6ee] text-[#8c6d3d] border border-[#ecd9be] font-bold text-xs uppercase tracking-wider shadow-xs">
-                    <span className="text-sm">🌾</span>
-                    <span>{categoryName}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {categoryItems.length} {categoryItems.length === 1 ? 'Item' : 'Item(s)'}
-                  </span>
-                </div>
-                <div className="space-y-4">
-                  {categoryItems.map((service) => (
-                    <ServiceListItem
-                      key={service.id}
-                      service={service}
-                      isAdding={isAdding}
-                      editingId={editingId}
-                      onToggleActive={handleToggleStatus}
-                      onToggleStatus={handleToggleStatus}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      deletingId={deletingId}
-                      t={t}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })
+          <>
+            <div className="flex items-center justify-end px-1">
+              <span className="text-xs text-muted-foreground font-medium">
+                {sortedServices.length} {sortedServices.length === 1 ? 'Item' : 'Item(s)'}
+              </span>
+            </div>
+            <div className="space-y-4">
+              {sortedServices.map((service) => (
+                <ServiceListItem
+                  key={service.id}
+                  service={service}
+                  isAdding={isAdding}
+                  editingId={editingId}
+                  onToggleActive={handleToggleStatus}
+                  onToggleStatus={handleToggleStatus}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  deletingId={deletingId}
+                  t={t}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

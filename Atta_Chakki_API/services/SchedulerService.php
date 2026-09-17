@@ -3,24 +3,17 @@ namespace AttaChakki\Services;
 
 use DateTime;
 
-/**
- * Service for calculating order queue processing, weight calculation,
- * today vs tomorrow scheduling, and daily capacity limits.
- */
+// handles order queue, weight calc, today/tomorrow scheduling, daily capacity
 class SchedulerService {
 
-    /**
-     * Set default timezone to Asia/Karachi
-     */
+    // set default timezone to asia/karachi
     public static function initTimezone() {
         if (date_default_timezone_get() === 'UTC') {
             date_default_timezone_set('Asia/Karachi');
         }
     }
 
-    /**
-     * Retrieve operational hours and configuration from store_settings
-     */
+    // get operational hours + config from store_settings
     public static function getOperationalHours($conn) {
         $opening = '09:00';
         $closing = '20:00';
@@ -64,9 +57,7 @@ class SchedulerService {
         ];
     }
 
-    /**
-     * Calculate total grinding / processing weight for an order
-     */
+    // total grinding weight for an order
     public static function calculateOrderWeight($conn, $order_id) {
         $total_weight = 0;
 
@@ -99,9 +90,7 @@ class SchedulerService {
         return $total_weight;
     }
 
-    /**
-     * Get estimated completion time of last scheduled grinding order on a given date
-     */
+    // completion time of last scheduled order on a date
     public static function getLastCompletionTime($conn, $date) {
         $sql = "SELECT estimated_completion_time FROM orders 
                 WHERE assigned_date = ? 
@@ -122,9 +111,7 @@ class SchedulerService {
         return null;
     }
 
-    /**
-     * Get next queue position for a given date
-     */
+    // next queue position for a date
     public static function getNextQueuePosition($conn, $date) {
         $sql = "SELECT MAX(queue_position) as max_pos FROM orders 
                 WHERE assigned_date = ? 
@@ -143,9 +130,7 @@ class SchedulerService {
         return 1;
     }
 
-    /**
-     * Get count of active grinding orders for a given date
-     */
+    // count of active grinding orders on a date
     public static function getActiveOrderCount($conn, $date) {
         $sql = "SELECT COUNT(*) as order_count FROM orders 
                 WHERE assigned_date = ? 
@@ -160,9 +145,7 @@ class SchedulerService {
         return intval($row['order_count']);
     }
 
-    /**
-     * Check if shop can take orders today or push to tomorrow
-     */
+    // checks if shop can take order today, or pushes to tomorrow
     public static function getScheduleAvailability($conn, $estimated_weight_kg = 1) {
         self::initTimezone();
         $hours = self::getOperationalHours($conn);
@@ -272,9 +255,7 @@ class SchedulerService {
         ];
     }
 
-    /**
-     * Schedule a specific order into the queue
-     */
+    // schedules an order into the queue
     public static function scheduleOrder($conn, $order_id) {
         self::initTimezone();
         $hours = self::getOperationalHours($conn);
@@ -426,9 +407,7 @@ class SchedulerService {
         ];
     }
 
-    /**
-     * Recalculate schedule ETAs for a date
-     */
+    // recalculates schedule etas for a date
     public static function recalculateSchedule($conn, $date) {
         self::initTimezone();
         $hours = self::getOperationalHours($conn);
@@ -478,9 +457,7 @@ class SchedulerService {
         return count($orders);
     }
 
-    /**
-     * Get shop processing capacity info for a date
-     */
+    // shop processing capacity info for a date
     public static function getCapacityInfo($conn, $date) {
         self::initTimezone();
         $hours = self::getOperationalHours($conn);

@@ -1,14 +1,10 @@
 <?php
 namespace AttaChakki\Repositories;
 
-/**
- * Repository for User entity operations
- */
+// repository for User entity operations
 class UserRepository extends BaseRepository
 {
-    /**
-     * Find a user by their primary key ID
-     */
+    // find a user by their primary key ID
     public function findById(int $id): ?array
     {
         return $this->selectOne(
@@ -18,9 +14,7 @@ class UserRepository extends BaseRepository
         );
     }
 
-    /**
-     * Find a user including their hashed password (for authentication)
-     */
+    // find a user including their hashed password (for authentication)
     public function findForAuth(int $id): ?array
     {
         return $this->selectOne(
@@ -30,9 +24,7 @@ class UserRepository extends BaseRepository
         );
     }
 
-    /**
-     * Find a user by phone number
-     */
+    // find a user by phone number
     public function findByPhone(string $phone): ?array
     {
         return $this->selectOne(
@@ -42,9 +34,7 @@ class UserRepository extends BaseRepository
         );
     }
 
-    /**
-     * Find a user by email
-     */
+    // find a user by email
     public function findByEmail(string $email): ?array
     {
         return $this->selectOne(
@@ -54,27 +44,21 @@ class UserRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get user role by user ID
-     */
+    // get user role by user ID
     public function getUserRole(int $id): ?string
     {
         $res = $this->selectOne("SELECT role FROM users WHERE id = ?", [$id]);
         return $res ? $res['role'] : null;
     }
 
-    /**
-     * Check if user is an admin
-     */
+    // check if user is an admin
     public function isAdmin(int $id): bool
     {
         $role = $this->getUserRole($id);
         return $role !== null && strtolower($role) === 'admin';
     }
 
-    /**
-     * Get active drivers
-     */
+    // get active drivers
     public function getActiveDrivers(): array
     {
         return $this->selectAll(
@@ -84,9 +68,7 @@ class UserRepository extends BaseRepository
         );
     }
 
-    /**
-     * Get paginated customers list with optional search query
-     */
+    // get paginated customers list with optional search query
     public function getCustomers(int $limit = 50, int $offset = 0, string $search = ''): array
     {
         if (!empty($search)) {
@@ -109,9 +91,7 @@ class UserRepository extends BaseRepository
         );
     }
 
-    /**
-     * Count total customers with optional search query
-     */
+    // count total customers with optional search query
     public function countCustomers(string $search = ''): int
     {
         if (!empty($search)) {
@@ -125,9 +105,7 @@ class UserRepository extends BaseRepository
         return (int)$this->selectScalar("SELECT COUNT(*) FROM users WHERE role = 'customer'");
     }
 
-    /**
-     * Update user profile
-     */
+    // update user profile
     public function updateProfile(int $id, array $data): int
     {
         $fields = [];
@@ -150,17 +128,13 @@ class UserRepository extends BaseRepository
         return $this->execute($sql, $params);
     }
 
-    /**
-     * Update user password
-     */
+    // update user password
     public function updatePassword(int $id, string $passwordHash): int
     {
         return $this->execute("UPDATE users SET password = ? WHERE id = ?", [$passwordHash, $id]);
     }
 
-    /**
-     * Create a new user
-     */
+    // create a new user
     public function create(array $data): int
     {
         return $this->insert(

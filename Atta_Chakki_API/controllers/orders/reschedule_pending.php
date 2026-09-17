@@ -1,11 +1,6 @@
 <?php
-/* 
- * One-time utility: reschedule all today's pending/processing orders.
- * Use after changing scheduling logic (e.g. adding liter support) so
- * existing orders pick up the new weight calculation.
- * 
- * Run from browser: http://localhost/atta_chakki_api/reschedule_pending.php
- */
+// one-time utility, reschedules today's pending/processing orders
+// run after changing scheduling logic so old orders pick up new calc
 require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/order_scheduler.php';
 

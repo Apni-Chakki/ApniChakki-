@@ -1,16 +1,7 @@
-/* 
- * Compresses an image file before uploading to keep file sizes small
- * and avoid HTTP timeouts/network failures.
- * 
- * @param {File} file - The original Image file object.
- * @param {number} maxWidth - Maximum width of the compressed image. Default is 1024.
- * @param {number} maxHeight - Maximum height of the compressed image. Default is 1024.
- * @param {number} quality - Compression quality between 0.0 and 1.0. Default is 0.75.
- * @returns {Promise<File>} A Promise that resolves to the compressed File object.
- */
+// shrinks image before upload so it doesn't timeout on slow network
 export const compressImage = (file, maxWidth = 1024, maxHeight = 1024, quality = 0.75) => {
   return new Promise((resolve) => {
-    // If the file is not an image or is already small (e.g. less than 200KB), don't compress
+    // skip small files, not worth compressing
     if (!file.type.startsWith('image/') || file.size < 200 * 1024) {
       resolve(file);
       return;
@@ -43,7 +34,7 @@ export const compressImage = (file, maxWidth = 1024, maxHeight = 1024, quality =
         canvas.height = height;
 
         const ctx = canvas.getContext('2d');
-        // Fill white background (useful if transparent PNG is converted to JPEG to avoid black background)
+        // white bg so transparent png doesn't turn black in jpeg
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, width, height);
         

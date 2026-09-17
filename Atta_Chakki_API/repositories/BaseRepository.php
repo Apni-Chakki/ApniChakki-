@@ -3,19 +3,8 @@ namespace AttaChakki\Repositories;
 
 use mysqli;
 
-/**
- * Base class for all repositories. Wraps the MySQLi prepare/bind/execute dance
- * that today gets copy-pasted into ~92 controllers.
- *
- * Convention for Phase 4 subclasses (UserRepository, ProductRepository, ...):
- *   - Constructor takes the existing $conn (from config/connect.php).
- *   - Public methods return arrays / scalars, never mysqli_stmt objects.
- *   - Only parameterized SQL — no interpolation. See selectOne/selectAll/execute.
- *
- * Type string reminder for bind_param:
- *   i = int, d = double, s = string, b = blob
- * Passed automatically by inferParamTypes() for common cases.
- */
+// base class for all repositories, wraps mysqli prepare/bind/execute
+// subclasses: only parameterized sql, never return raw mysqli_stmt objects
 class BaseRepository
 {
     protected mysqli $db;
@@ -25,9 +14,7 @@ class BaseRepository
         $this->db = $db;
     }
 
-    /**
-     * Return the first row as an assoc array, or null if none.
-     */
+    // first row as assoc array, or null
     protected function selectOne(string $sql, array $params = []): ?array
     {
         $stmt = $this->prepareBind($sql, $params);
@@ -37,9 +24,7 @@ class BaseRepository
         return $row ?: null;
     }
 
-    /**
-     * Return all rows as an array of assoc arrays.
-     */
+    // all rows as array of assoc arrays
     protected function selectAll(string $sql, array $params = []): array
     {
         $stmt = $this->prepareBind($sql, $params);
@@ -49,9 +34,7 @@ class BaseRepository
         return $rows;
     }
 
-    /**
-     * Fetch a single scalar (first column of first row) — useful for COUNT/SUM.
-     */
+    // single value, first column of first row, for count/sum queries
     protected function selectScalar(string $sql, array $params = [])
     {
         $stmt = $this->prepareBind($sql, $params);
@@ -61,9 +44,7 @@ class BaseRepository
         return $row[0] ?? null;
     }
 
-    /**
-     * Run INSERT/UPDATE/DELETE. Returns affected rows.
-     */
+    // insert/update/delete, returns affected rows
     protected function execute(string $sql, array $params = []): int
     {
         $stmt = $this->prepareBind($sql, $params);
@@ -73,9 +54,7 @@ class BaseRepository
         return $affected;
     }
 
-    /**
-     * Run INSERT and return the auto-generated ID.
-     */
+    // insert, returns new auto-generated id
     protected function insert(string $sql, array $params = []): int
     {
         $stmt = $this->prepareBind($sql, $params);
@@ -85,14 +64,7 @@ class BaseRepository
         return $id;
     }
 
-    /**
-     * Wrap several writes in a transaction. Rolls back on any exception.
-     *
-     *   $repo->transaction(function() use (...) {
-     *       $this->execute('...');
-     *       $this->insert('...');
-     *   });
-     */
+    // wraps writes in a transaction, rolls back on any exception
     protected function transaction(callable $fn)
     {
         $this->db->begin_transaction();

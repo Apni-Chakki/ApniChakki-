@@ -1,16 +1,7 @@
 import { Inbox } from 'lucide-react';
 import { cn } from '../../utils/utils';
 
-/**
- * Empty state placeholder. Use when a list/table has no rows.
- *
- * <EmptyState
- *   icon={<Package />}
- *   title="No orders yet"
- *   description="New customer orders will appear here."
- *   action={<Button>Refresh</Button>}
- * />
- */
+// placeholder shown when a list/table has no rows
 export function EmptyState({ icon, title, description, action, className }) {
   return (
     <div
