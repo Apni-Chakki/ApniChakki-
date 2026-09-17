@@ -8,7 +8,7 @@ Companion to [CODE_QUALITY_AUDIT.md](CODE_QUALITY_AUDIT.md). Update this file at
 
 ## 👋 For anyone picking this up cold — start here
 
-**Where we are:** Phase 0, 1, 2 fully done. Phase 3 is *in progress* — 2 files partially refactored (Checkout.jsx, ManageServices.jsx) using a "conservative Option 1" approach. Read this file top-to-bottom before touching code.
+**Where we are:** Phase 0, 1, 2 fully done. Phase 3 is *in progress* — 8 files fully or partially split so far (`Checkout.jsx`, `LiveTrackingMap.jsx`, `TodaysWork.jsx`, `DeliveryPanel.jsx`, `ManageServices.jsx`, `UserAccount.jsx`, `ManageCustomers.jsx`, `PrintOrderDetails.jsx`), plus 3 more confirmed done in an untracked commit (`UdhaarKhata.jsx`, `PaymentVerification.jsx`, `TomorrowsList.jsx`). A 2026-09-17 LOC audit (see "Frontend LOC audit" section below) found 13 more files >600 lines that were never touched, plus 5 duplicated-logic patterns worth centralizing (2 of which — `OrderStatusBadge` and `formatPKR` — already have a shared component/helper built and just sitting unused). Read this file top-to-bottom before touching code.
 
 **The core discipline:**
 1. Every extraction is a **pure copy-paste move** to a new file — no behavior change.
@@ -17,9 +17,11 @@ Companion to [CODE_QUALITY_AUDIT.md](CODE_QUALITY_AUDIT.md). Update this file at
 4. Manual smoke-testing is on the human — I (Claude) cannot click through the app. Every extraction leaves a "please verify X" note.
 
 **Next up (in order):**
-1. **Continue Phase 3** — pick from the "Phase 3 file targets" table below. Recommended next: `PaymentVerification.jsx` (1111 lines) or `UdhaarKhata.jsx` (1175).
-2. Return to `Checkout.jsx` for Options 2 & 3 (address extraction, then payment) *after* admin files are stable — riskier because customer money is involved.
-3. Then Phase 4 (backend repositories) and Phase 5/6 (state, safety).
+1. Adopt `OrderStatusBadge.jsx` across the 11 files that reimplement its logic — zero risk, component already built (see "Duplication highlights" below).
+2. **Continue Phase 3** on the never-touched files >600 lines. Recommended next: `Homepage.jsx` (987) or `ServiceCard.jsx` (890 — this is 3.9's actual remaining target).
+3. Centralize the WhatsApp-button (12 files) and Cancel-Order (6 files) duplicated logic into a helper/hook.
+4. Return to `Checkout.jsx` for Options 2 & 3 (address extraction, then payment) *after* admin files are stable — riskier because customer money is involved.
+5. Then Phase 4 (backend repositories) and Phase 5/6 (state, safety).
 
 **Where the new code lives:**
 - Shared reusable — `Atta Chakki Frontend/src/components/shared/` (5 components) and `src/lib/` (`apiClient.js`, `formatters.js`) and `src/hooks/` (`useApi.js`, `useDebouncedValue.js`, `usePagination.js`). Phase 1 landed these but **no page uses them yet** — that's Phase 3 file-by-file.
@@ -235,10 +237,68 @@ The **same pattern (cached list + mutation that doesn't clear cache)** almost ce
 | 3.5a-BUG | Toggle intermittent-fail bug fix | ✅ | Claude | 2026-09-15 | See **Bug fix #1** above. Backend + frontend + optimistic-UI three-layer fix. Files: `update_product_status.php`, `ManageServices.jsx`. |
 | 3.5b | `ManageServices.jsx` (1179 → **570**) — extract `<ServiceForm>` + sub-sections | ✅ | Antigravity | 2026-09-15 | Extracted `ServiceForm.jsx` (290 lines), `CustomizationsSection.jsx` (160 lines), `DiscountBadgeSection.jsx` (120 lines), `RentalSection.jsx` (80 lines) into `src/components/features/admin/services/`. `ManageServices.jsx` shrunk 1256 → 570 (-686 lines, -54.6%). Build clean. |
 | 3.6 | `UserAccount.jsx` (1238 → **608**) | `ProfileTab`, `OrdersTab`, `RentalsTab` | ✅ | Antigravity | 2026-09-15 | Extracted 3 modular tab components into `src/components/features/customer/account/` (`ProfileTab.jsx` 369 lines, `OrdersTab.jsx` 180 lines, `RentalsTab.jsx` 237 lines). `UserAccount.jsx` shrunk 1238 → 608 lines (-630 lines, -50.9%). Build clean. |
-| 3.7 | `UdhaarKhata.jsx` (1175) | ledger table + entry form | ⬜ | | | |
-| 3.8 | `PaymentVerification.jsx` (1111) | queue + verify dialog | ⬜ | | | |
-| 3.9 | `ServiceCard.jsx` (1088) | display card + customize sheet | ⬜ | | | |
-| 3.10 | `TomorrowsList.jsx` (1087) | shares `OrderKanban` from 3.3 | ⬜ | | | |
+| 3.7 | `UdhaarKhata.jsx` (1175 → **407**) | ledger table + entry form | ✅ | (untracked commit) | 2026-09-16/17 | Already done — file confirmed at 407 lines during the 2026-09-17 LOC audit (see below). Row was never updated when it landed. |
+| 3.8 | `PaymentVerification.jsx` (1111 → **491**) | queue + verify dialog | ✅ | (untracked commit) | 2026-09-16/17 | Same as above — already split, tracker was stale. `PaymentModals.jsx` (487 lines) is the extracted piece. |
+| 3.9 | `ServiceCard.jsx` (1088 → **890**) | display card + customize sheet | ⬜ | | | Shrunk somewhat but still the single largest never-fully-split file after Checkout/LiveTrackingMap/TodaysWork. Real target — see LOC audit below. |
+| 3.10 | `TomorrowsList.jsx` (1087 → **491**) | shares `OrderKanban`/`CancelOrderModal` from 3.3 | ✅ | (untracked commit) | 2026-09-16/17 | Confirmed reusing `CancelOrderModal` from `components/features/admin/todaysWork/`. Tracker was stale. |
+
+---
+
+## Frontend LOC audit (2026-09-17)
+
+Full scan of all 190 `.js`/`.jsx` files under `Atta Chakki Frontend/src`. Purpose: find remaining split candidates and cross-check this tracker against actual file state (several rows above were stale — corrected in the Phase 3 table).
+
+### Files > 600 lines — already split once in Phase 3 (further cuts are high-risk/low-yield, not first-pass candidates)
+
+| File | Lines | Notes |
+|---|---:|---|
+| `Checkout.jsx` | 2204 | Option 1 done. Options 2/3 (address picker, payment step) deliberately deferred — real payment flow. |
+| `LiveTrackingMap.jsx` | 1747 | 5 components already extracted. |
+| `TodaysWork.jsx` | 1103 | 5 components extracted (−722 lines already). |
+| `DeliveryPanel.jsx` | 995 | 3 components extracted (−357 lines already). |
+| `ManageServices.jsx` | 727 | Was 570 after 3.5b; grew back from the category-tabs feature (legit new code, not bloat). |
+| `ManageCustomers.jsx` | 629 | Already split 889→627. |
+| `UserAccount.jsx` | 612 | Already split 1238→608. |
+
+### Files > 600 lines — never touched, best candidates for a first extraction pass
+
+All are state/dialog-dense, same shape as files already successfully split:
+
+| File | Lines | Signal |
+|---|---:|---|
+| `Homepage.jsx` | 987 | 30 `useState`, 10 `.map()` list renders, 1 dialog |
+| `ServiceCard.jsx` | 890 | Tracker's own 3.9 target: display card + customize sheet |
+| `OrdersRecord.jsx` | 869 | 10 `.map()`, 1 dialog |
+| `LiveTrackingPage.jsx` | 770 | Customer-facing counterpart to admin's `LiveTrackingMap.jsx` — never got the same treatment |
+| `PickupRequests.jsx` | 681 | 46 `useState`, 9 `.map()`, 1 dialog |
+| `AddManualOrder.jsx` | 665 | Order-builder form |
+| `ActiveRentals.jsx` | 664 | 50 `useState` — very stateful for its size |
+| `NewOrders.jsx` | 660 | 62 `useState`, 2 dialogs — same shape as `TodaysWork.jsx`/`TomorrowsList.jsx` |
+| `ManageDelivery.jsx` | 656 | 42 `useState` |
+| `DigitalKhata.jsx` | 656 | Ledger-style, same shape as already-done `UdhaarKhata.jsx` |
+| `TrackOrder.jsx` | 650 | Customer order-tracking; also has its own inline Cancel Order + status-color logic (see duplication list below) |
+| `Dashboard.jsx` | 631 | 34 `useState`, 5 `.map()` |
+| `PrintSlip.jsx` | 604 | Print template, same shape as already-done `PrintOrderDetails.jsx` |
+
+**500–600 lines (also never touched):** `CustomMixRequests.jsx` (586), `InventoryManagement.jsx` (540).
+
+**Not real split candidates — different category, not bloat:**
+- `translations.js` (1285) — pure i18n data dictionary, already ESLint-exempted from the line-count rule.
+- `sidebar.jsx` (650) — this *is* the shared shadcn-style primitive itself, not a page.
+- `MapboxPicker.jsx` (569) — single complex map-integration component; splitting risks real GPS/geocoding regressions for modest LOC gain.
+- `billPdfUtils.js` (510) — already a pure-function utils file, not a component.
+
+### Duplication highlights — shared component/helper candidates (not fixed yet)
+
+1. **WhatsApp notify button** — `wa.me` URL + `window.open` copy-pasted in **12 files** (`ActiveRentals.jsx`, `CustomMixRequests.jsx`, `ManageCustomers.jsx`, `NewOrders.jsx`, `PaymentVerification.jsx`, `PickupRequests.jsx`, `PrintOrderDetails.jsx`, `PrintSlip.jsx`, `ReadyOrders.jsx`, `TodaysWork.jsx`, `TomorrowsList.jsx`, `DeliveryPanel.jsx`), only the message text differs each time. A `sendWhatsAppMessage(phone, message)` helper in `utils/` removes all 12.
+2. **"Cancel Order"** — fetch logic duplicated in **6 files**. `NewOrders.jsx` and `PickupRequests.jsx` hand-roll their own inline `<AlertDialog>` + `fetch(cancel_order.php)`. `TodaysWork.jsx`/`TomorrowsList.jsx` already share the `CancelOrderModal` **UI** but each still redeclares its own identical `handleCancelOrder` function. `TrackOrder.jsx`/`UserAccount.jsx` (customer-side) have their own versions too. A `useCancelOrder()` hook would collapse all 6.
+3. **Print button/logic** — **8 files** (`ActiveRentals.jsx`, `InventoryManagement.jsx`, `PrintExpenseReport.jsx`, `PrintOrderDetails.jsx`, `PrintRestockList.jsx`, `PrintSlip.jsx`, `PrintTaskList.jsx`, `TodaysWork.jsx`) each wire up their own iframe/`window.print()` pattern.
+4. **Status color badges** — `components/shared/OrderStatusBadge.jsx` already exists (Phase 1) but is used in **0 real call sites**. 11 files still hand-roll their own status→color map instead: `OrderProcessCard.jsx`, `OrdersTab.jsx`, `AddManualOrder.jsx`, `CustomMixRequests.jsx`, `OrdersRecord.jsx`, `PickupRequests.jsx`, `PrintOrderDetails.jsx`, `ReadyOrders.jsx`, `CustomerLogin.jsx`, `TrackOrder.jsx`, `UserAccount.jsx`. **Highest-leverage fix on this list** — the component already exists, it just needs adopting.
+5. **Currency formatting** — `formatPKR()` exists (Phase 1) but is adopted in only **2 files**; 39 files still do manual `.toLocaleString()` inline. Already flagged in Phase 2.2 as deliberately deferred (per-file, not a mechanical sweep) — still true, just noting it's still open.
+
+**Suggested order of attack:** adopt `OrderStatusBadge` first (zero risk, component already built, 11 swap-ins), then extract from the never-touched large files above (`Homepage.jsx` or `ServiceCard.jsx` first), then the WhatsApp/Cancel-Order/Print helpers.
+
+---
 
 ### Backend
 
@@ -289,6 +349,7 @@ The **same pattern (cached list + mutation that doesn't clear cache)** almost ce
 
 Append short entries at the top when you finish a session — one line each.
 
+- _2026-09-17_ — **Frontend LOC audit + tracker correction.** Scanned all 190 src files. Found Phase 3 rows 3.7/3.8/3.10 (`UdhaarKhata.jsx`, `PaymentVerification.jsx`, `TomorrowsList.jsx`) were stale — already split in an untracked commit, now corrected to ✅. Identified 13 never-touched files >600 lines as next split candidates (`Homepage.jsx`, `ServiceCard.jsx`, `OrdersRecord.jsx`, `LiveTrackingPage.jsx`, etc — see new "Frontend LOC audit" section above). Also found 5 duplication patterns worth centralizing: WhatsApp-button logic (12 files), Cancel-Order logic (6 files), print logic (8 files), and two *already-built-but-unused* helpers — `OrderStatusBadge.jsx` (0 adoptions across 11 files that reimplement it) and `formatPKR()` (2 adoptions vs 39 files doing it manually). No code changed — analysis only. — _Claude_
 - _2026-09-16_ — **Phase 3.8 done on ManageCustomers.jsx.** Extracted 3 components into `components/features/admin/customers/`: `CustomerStatsCards.jsx` (~80 lines), `VipConfigDialog.jsx` (~135 lines), `ManagePrivilegesDialog.jsx` (~195 lines). File shrunk **889 → 627** (−29%). Removed 8 unused icon/import references. Build clean, precache unchanged. — _Claude_
 - _2026-09-16_ — **Rental modal UX fix (customer).** Rewrote `RentalModal.jsx` layout to match spec (3-column input row, static totals card, always-visible Add to Cart footer). Also fixed pre-existing bug: `{user && ...}` guard was hiding Add to Cart for logged-out users; removed guard since `handlePlaceRental` already surfaces "Please login" toast. — _Claude_
 - _2026-09-16_ — **Phase 3.7 done on PrintOrderDetails.jsx.** Extracted 3 pure-function utilities (`utils/printOrderHelpers.js` 160 lines, `utils/printOrderHtmlBuilder.js` ~230 lines, `utils/printOrderWhatsApp.js` ~130 lines) from the print modal. File shrunk **1027 → 535** (−48%). Zero risk — extractions are all pure functions (translation dict, HTML string builder, WhatsApp URL builder). Build clean, precache unchanged. — _Claude_
