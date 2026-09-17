@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../../components/common/card';
 import { Button } from '../../components/common/button';
 import { PrintTaskList } from './PrintTaskList';
@@ -7,7 +7,9 @@ import { FileText, Loader2, Sunrise } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { TooltipProvider } from '../../components/common/tooltip';
+import { sendWhatsAppMessage } from '../../utils/whatsappHelper';
 
+import { useCancelOrder } from '../../hooks/useCancelOrder';
 import { TomorrowPreparedCard } from '../../components/features/admin/tomorrowsList/TomorrowPreparedCard';
 import { TomorrowProcessingCard } from '../../components/features/admin/tomorrowsList/TomorrowProcessingCard';
 import { TomorrowsHeaderStats } from '../../components/features/admin/tomorrowsList/TomorrowsHeaderStats';
@@ -22,9 +24,15 @@ export function TomorrowsList() {
   const [overriding, setOverriding] = useState(null);
   const [capacity, setCapacity] = useState(null);
   const [activePersonnel, setActivePersonnel] = useState([]);
-  const [cancelOrder, setCancelOrder] = useState(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [isCancelling, setIsCancelling] = useState(false);
+
+  const {
+    cancelOrder,
+    setCancelOrder,
+    cancelReason,
+    setCancelReason,
+    isCancelling,
+    handleCancelOrder,
+  } = useCancelOrder({ onSuccess: () => loadOrders(), cancelledBy: 'Admin' });
 
   // Split Order states
   const [splitOrder, setSplitOrder] = useState(null);
@@ -159,8 +167,7 @@ export function TomorrowsList() {
               `Please check your Delivery Portal for live directions tomorrow. Thank you!`
             );
 
-            const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`;
-            window.open(whatsappUrl, '_blank');
+            sendWhatsAppMessage(formattedPhone, message);
           }
         }
       } else {
@@ -170,38 +177,6 @@ export function TomorrowsList() {
     } catch (error) {
       toast.error('Network error while assigning driver');
       loadOrders();
-    }
-  };
-
-  const handleCancelOrder = async () => {
-    if (!cancelOrder) return;
-
-    setIsCancelling(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: cancelOrder.id,
-          reason: cancelReason || 'No reason provided',
-          cancelled_by: 'Admin'
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Order cancelled successfully');
-        loadOrders();
-      } else {
-        toast.error(result.message || 'Failed to cancel order');
-      }
-    } catch (error) {
-      toast.error('Network error while cancelling order');
-    } finally {
-      setIsCancelling(false);
-      setCancelOrder(null);
-      setCancelReason('');
     }
   };
 
@@ -282,9 +257,13 @@ export function TomorrowsList() {
 
     setIsSplitting(true);
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
       const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           order_id: splitOrder.id,
           batches: validBatches

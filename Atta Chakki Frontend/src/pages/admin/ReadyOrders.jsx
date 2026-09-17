@@ -4,6 +4,7 @@ import { OrdersTable } from './OrdersTable';
 import { Button } from '../../components/common/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
+import { sendWhatsAppMessage } from '../../utils/whatsappHelper';
 import { CheckCircle2, Loader2, PackageCheck, Truck, User, Phone, MapPin, MessageCircle, AlertCircle } from 'lucide-react';
 import { Pagination } from '../../components/common/Pagination';
 import {
@@ -162,15 +163,8 @@ export function ReadyOrders() {
 
         // Optional: Open WhatsApp message to rider
         if (sendWhatsApp && driverPhone) {
-          let cleanPhone = String(driverPhone).replace(/\D/g, '');
-          if (cleanPhone.startsWith('0')) {
-            cleanPhone = '92' + cleanPhone.slice(1);
-          } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
-            cleanPhone = '92' + cleanPhone;
-          }
           const message = `Assalam-o-Alaikum *${selectedDriverName}*! 👋\n\nApko Suchi Chakki ki taraf se Ready Delivery Order assign hua hai:\n📦 *Order #${assignModalOrder.id}*\n👤 Customer: ${assignModalOrder.customerName || 'Customer'}\n📞 Phone: ${assignModalOrder.phone || 'N/A'}\n📍 Address: ${assignModalOrder.deliveryAddress || 'N/A'}\n💰 Total Amount: Rs. ${assignModalOrder.total}\n\nDelivery Panel me check karein aur delivery complete karein.\nShukriya!`;
-          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-          window.open(whatsappUrl, '_blank');
+          sendWhatsAppMessage(driverPhone, message);
         }
 
         setAssignModalOrder(null);

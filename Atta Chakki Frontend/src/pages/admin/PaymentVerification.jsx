@@ -13,6 +13,7 @@ import { API_BASE_URL } from "../../config";
 import { useAuth } from "../../store/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { sendWhatsAppMessage } from "../../utils/whatsappHelper";
 
 import { PaymentStatsCards } from "../../components/features/admin/paymentVerification/PaymentStatsCards";
 import { PendingTransfersTab } from "../../components/features/admin/paymentVerification/PendingTransfersTab";
@@ -233,7 +234,7 @@ export function PaymentVerification() {
         // Open WhatsApp link in new tab (as automatic attempt)
         if (formattedPhone) {
           setTimeout(() => {
-            window.open(`https://wa.me/${formattedPhone}?text=${whatsappMsg}`, "_blank");
+            sendWhatsAppMessage(formattedPhone, whatsappMsg);
           }, 1000);
         }
       } else {

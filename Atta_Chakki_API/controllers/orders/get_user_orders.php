@@ -17,13 +17,14 @@ try {
         exit;
     }
 
-    // 1. Fetch user orders with single JOIN for user details
+    // 1. Fetch user orders with single JOIN for user details (Exclude child split batches)
     $sql = "SELECT o.*, 
                    COALESCE(u.full_name, 'Unknown Customer') as customer_name, 
                    COALESCE(u.phone, 'No Phone') as customer_phone 
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
             WHERE o.user_id = ? 
+              AND (o.parent_order_id IS NULL OR o.parent_order_id = 0)
             ORDER BY o.created_at DESC";
             
     $stmt = $conn->prepare($sql);
@@ -40,6 +41,8 @@ try {
         $row['total'] = $row['total_amount'];
         $row['payment_reject_reason'] = null;
         $row['payment_reject_date'] = null;
+        $row['is_split'] = false;
+        $row['batches'] = [];
         $ordersMap[$id] = $row;
         $orderIds[] = $id;
     }
@@ -81,6 +84,47 @@ try {
             }
         } catch (Throwable $t) {
             // Ignore if table initializing
+        }
+
+        // 4. Batch fetch child split batches for parent orders
+        try {
+            $batchSql = "SELECT id, parent_order_id, status, batch_index, total_batches, assigned_date, total_weight_kg, total_amount 
+                         FROM orders 
+                         WHERE parent_order_id IN ($idList) 
+                         ORDER BY batch_index ASC";
+            $batchRes = $conn->query($batchSql);
+            if ($batchRes) {
+                $batchesByParent = [];
+                while ($b = $batchRes->fetch_assoc()) {
+                    $pId = (int)$b['parent_order_id'];
+                    $batchesByParent[$pId][] = $b;
+                }
+
+                foreach ($ordersMap as $id => &$oRef) {
+                    if (isset($batchesByParent[$id])) {
+                        $orderBatches = $batchesByParent[$id];
+                        $oRef['is_split'] = true;
+                        $oRef['batches'] = $orderBatches;
+
+                        // Reconcile status if original status is 'split_parent'
+                        if (strtolower(trim($oRef['status'])) === 'split_parent') {
+                            $statuses = array_map(fn($b) => strtolower(trim($b['status'])), $orderBatches);
+                            $allCompleted = count(array_filter($statuses, fn($s) => in_array($s, ['completed', 'delivered']))) === count($statuses);
+                            $allReady = count(array_filter($statuses, fn($s) => in_array($s, ['ready', 'batch_ready', 'completed', 'delivered']))) === count($statuses);
+
+                            if ($allCompleted) {
+                                $oRef['status'] = 'completed';
+                            } else if ($allReady) {
+                                $oRef['status'] = 'ready';
+                            } else {
+                                $oRef['status'] = 'processing';
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $t) {
+            // Ignore if column missing
         }
     }
 

@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../config';
 import { downloadBillPDF } from '../../utils/billPdfUtils';
 import { deductFromInventory } from '../../utils/inventoryUtils';
 import { PrintSlip } from './PrintSlip';
+import { sendWhatsAppMessage } from '../../utils/whatsappHelper';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ import { CancelOrderModal } from "../../components/features/admin/todaysWork/Can
 import { SplitOrderModal } from "../../components/features/admin/todaysWork/SplitOrderModal";
 import { PreparedOrderCard } from "../../components/features/admin/todaysWork/PreparedOrderCard";
 import { OrderProcessCard } from "../../components/features/admin/todaysWork/OrderProcessCard";
+import { useCancelOrder } from "../../hooks/useCancelOrder";
 
 export function TodaysWork() {
   const { t } = useTranslation();
@@ -50,14 +52,20 @@ export function TodaysWork() {
   const [overriding, setOverriding] = useState(null);
   const [capacity, setCapacity] = useState(null);
   const [activePersonnel, setActivePersonnel] = useState([]);
-  const [cancelOrder, setCancelOrder] = useState(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [isCancelling, setIsCancelling] = useState(false);
+
+  const {
+    cancelOrder,
+    setCancelOrder,
+    cancelReason,
+    setCancelReason,
+    isCancelling,
+    handleCancelOrder,
+  } = useCancelOrder({ onSuccess: () => fetchOrders(), cancelledBy: 'Admin' });
 
   const [splitOrder, setSplitOrder] = useState(null);
   const [splitBatches, setSplitBatches] = useState([]);
   const [isSplitting, setIsSplitting] = useState(false);
-  const [heavyThreshold, setHeavyThreshold] = useState(100);
+  const [heavyThreshold, setHeavyThreshold] = useState(15);
   const [storeName, setStoreName] = useState('Suchi Chakki');
   const [whatsappReadyModal, setWhatsappReadyModal] = useState(null);
 
@@ -100,7 +108,7 @@ export function TodaysWork() {
       const data = await res.json();
       if (data.success) {
         if (data.settings?.heavyOrderThreshold) {
-          setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 100);
+          setHeavyThreshold(parseFloat(data.settings.heavyOrderThreshold) || 15);
         }
         if (data.settings?.organizationName || data.settings?.storeName) {
           setStoreName(data.settings.organizationName || data.settings.storeName);
@@ -182,15 +190,8 @@ export function TodaysWork() {
               if (found && found.phone) targetPhone = found.phone;
             }
             if (targetPhone) {
-              let cleanPhone = String(targetPhone).replace(/\D/g, '');
-              if (cleanPhone.startsWith('0')) {
-                cleanPhone = '92' + cleanPhone.slice(1);
-              } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('92')) {
-                cleanPhone = '92' + cleanPhone;
-              }
               const message = `Assalam-o-Alaikum *${personnelName}*! 👋\n\nApko Suchi Chakki ki taraf se nayi Pickup Request assign hui hai:\n📦 *Pickup Request #${orderId}*\n\nBara-e-meherbani Delivery Portal check karein aur waqt par mukammal karein.\nShukriya!`;
-              const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-              window.open(whatsappUrl, '_blank');
+              sendWhatsAppMessage(targetPhone, message);
             }
           } else {
             toast.success(`Driver ${personnelName} pre-assigned! Will be dispatched to portal once Ready.`);
@@ -203,38 +204,6 @@ export function TodaysWork() {
     } catch (error) {
       toast.error('Network error while assigning driver');
       fetchOrders();
-    }
-  };
-
-  const handleCancelOrder = async () => {
-    if (!cancelOrder) return;
-
-    setIsCancelling(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/cancel_order.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: cancelOrder.id,
-          reason: cancelReason || 'No reason provided',
-          cancelled_by: 'Admin'
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Order cancelled successfully');
-        fetchOrders();
-      } else {
-        toast.error(result.message || 'Failed to cancel order');
-      }
-    } catch (error) {
-      toast.error('Network error while cancelling order');
-    } finally {
-      setIsCancelling(false);
-      setCancelOrder(null);
-      setCancelReason('');
     }
   };
 
@@ -380,9 +349,13 @@ export function TodaysWork() {
 
     setIsSplitting(true);
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
       const response = await fetch(`${API_BASE_URL}/split_order_batch.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           order_id: splitOrder.id,
           batches: validBatches
@@ -567,27 +540,29 @@ Suchi Chakki — Pure & Fresh Processing
           }
         }
 
-        // 3. Prepare PDF Object
-        const totalAmount = parseFloat(order.total_amount || order.total) || 0;
-        const amountPaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
+        // 3. Prepare PDF Object (Use full parent order if this was a split batch)
+        const billSource = (order.is_split_batch && order.parent_order) ? order.parent_order : order;
+        const totalAmount = parseFloat(billSource.total_amount || billSource.total) || 0;
+        const amountPaid = parseFloat(billSource.amount_paid || billSource.advancePayment) || 0;
         const pdfOrder = {
-          id: String(order.id),
-          customerName: order.customer_name || order.customerName || order.full_name || 'Walk-in Customer',
-          phone: order.customer_phone || order.phone || '',
+          id: String(billSource.id),
+          customerName: billSource.customer_name || billSource.customerName || billSource.full_name || 'Walk-in Customer',
+          phone: billSource.customer_phone || billSource.phone || '',
           total: totalAmount,
+          status: 'ready',
           advancePayment: amountPaid,
-          type: order.type === 'pickup' ? 'pickup' : 'delivery',
-          deliveryAddress: order.shipping_address || order.deliveryAddress || '',
-          paymentMethod: order.payment_method || order.paymentMethod || 'cash',
+          type: (billSource.type === 'pickup' || billSource.order_type === 'pickup') ? 'pickup' : 'delivery',
+          deliveryAddress: billSource.shipping_address || billSource.deliveryAddress || '',
+          paymentMethod: billSource.payment_method || billSource.paymentMethod || 'cash',
           paymentStatus: (amountPaid >= totalAmount && totalAmount > 0) ? 'paid' : (amountPaid > 0 ? 'partial' : 'pending'),
-          couponCode: order.coupon_code || '',
-          couponDiscount: parseFloat(order.coupon_discount || 0),
-          createdAt: order.created_at || order.createdAt || new Date().toISOString(),
-          items: (order.items || []).map(item => ({
+          couponCode: billSource.coupon_code || '',
+          couponDiscount: parseFloat(billSource.coupon_discount || 0),
+          createdAt: billSource.created_at || billSource.createdAt || new Date().toISOString(),
+          items: (billSource.items || []).map(item => ({
             quantity: item.quantity || 1,
             isWeightPending: false,
             service: {
-              name: item.name || item.service?.name || 'Product',
+              name: item.name || item.service?.name || item.prod_name || 'Product',
               price: parseFloat(item.price_at_purchase || item.price || item.service?.price) || 0,
               unit: item.unit || item.service?.unit || 'kg'
             }
@@ -606,9 +581,9 @@ Suchi Chakki — Pure & Fresh Processing
         setOrders(prev => prev.filter(o => o.id !== order.id));
         toast.success(`Order #${order.id} is marked as Ready!`);
 
-        // 6. Generate WhatsApp message & prompt
+        // 6. Generate WhatsApp message & prompt (using full billSource)
         try {
-          const waDetails = generateWhatsAppDetails(order);
+          const waDetails = generateWhatsAppDetails(billSource);
           if (waDetails && waDetails.url) {
             // direct whatsapp kholna
             openWhatsAppSafely(waDetails.url);
@@ -638,10 +613,11 @@ Suchi Chakki — Pure & Fresh Processing
   };
 
   const handlePrint = (order) => {
-    const totalAmount = parseFloat(order.total_amount) || 0;
-    const amountPaid = parseFloat(order.amount_paid) || 0;
+    const printSource = (order.is_split_batch && order.parent_order) ? order.parent_order : order;
+    const totalAmount = parseFloat(printSource.total_amount || printSource.total) || 0;
+    const amountPaid = parseFloat(printSource.amount_paid || printSource.advancePayment) || 0;
     
-    let paymentStatus = order.payment_status || 'pending';
+    let paymentStatus = printSource.payment_status || 'pending';
     if (paymentStatus === 'paid' || amountPaid >= totalAmount) {
       paymentStatus = 'paid';
     } else if (amountPaid > 0) {
@@ -649,30 +625,30 @@ Suchi Chakki — Pure & Fresh Processing
     }
 
     const transformedOrder = {
-      id: order.id.toString(),
-      customerName: order.customer_name || order.full_name || 'Walk-in Customer',
-      phone: order.customer_phone || order.phone || '',
+      id: printSource.id.toString(),
+      customerName: printSource.customer_name || printSource.full_name || 'Walk-in Customer',
+      phone: printSource.customer_phone || printSource.phone || '',
       total: totalAmount,
-      status: order.status,
-      createdAt: order.created_at,
-      paymentMethod: order.payment_method || 'cod',
+      status: printSource.status || 'ready',
+      createdAt: printSource.created_at,
+      paymentMethod: printSource.payment_method || 'cod',
       paymentStatus: paymentStatus,
       advancePayment: amountPaid,
-      type: order.type === 'pickup' ? 'pickup' : 'delivery',
-      source: (order.user_id === '1' || !order.user_id) ? 'manual' : 'online',
-      deliveryPersonnel: order.driver_name || null,
-      deliveryAddress: order.shipping_address,
-      deliveryFee: parseFloat(order.delivery_fee || order.deliveryFee || order.shipping_cost || 0),
+      type: (printSource.type === 'pickup' || printSource.order_type === 'pickup') ? 'pickup' : 'delivery',
+      source: (printSource.user_id === '1' || !printSource.user_id) ? 'manual' : 'online',
+      deliveryPersonnel: printSource.driver_name || null,
+      deliveryAddress: printSource.shipping_address,
+      deliveryFee: parseFloat(printSource.delivery_fee || printSource.deliveryFee || printSource.shipping_cost || 0),
       cancellationReason: null,
       cancelledBy: null,
-      couponCode: order.coupon_code || '',
-      couponDiscount: parseFloat(order.coupon_discount || 0),
-      items: order.items ? order.items.map(item => ({
+      couponCode: printSource.coupon_code || '',
+      couponDiscount: parseFloat(printSource.coupon_discount || 0),
+      items: printSource.items ? printSource.items.map(item => ({
         quantity: item.quantity,
         isWeightPending: false,
         price_at_purchase: item.price_at_purchase || 0,
-        name: item.name,
-        service: { name: item.name, price: item.price_at_purchase || 0 }
+        name: item.name || item.service?.name || item.prod_name,
+        service: { name: item.name || item.service?.name || item.prod_name, price: item.price_at_purchase || 0 }
       })) : []
     };
     setPrintOrder(transformedOrder);

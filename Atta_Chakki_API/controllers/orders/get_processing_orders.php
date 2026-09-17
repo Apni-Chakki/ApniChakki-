@@ -118,23 +118,65 @@ try {
             }
         }
 
-        // 4. Batch fetch split order siblings
+        // 4. Batch fetch split order siblings and parent orders
         if (!empty($parentIds)) {
             $parentList = implode(',', array_unique(array_map('intval', $parentIds)));
             try {
-                $sibRes = $conn->query("SELECT id, parent_order_id, status, batch_index, assigned_date, total_weight_kg FROM orders WHERE parent_order_id IN ($parentList) ORDER BY batch_index ASC");
+                // Fetch sibling batches
+                $sibRes = $conn->query("SELECT id, parent_order_id, status, batch_index, total_batches, assigned_date, total_weight_kg FROM orders WHERE parent_order_id IN ($parentList) ORDER BY batch_index ASC");
+                $sibsByParent = [];
                 if ($sibRes) {
-                    $sibsByParent = [];
                     while ($sib = $sibRes->fetch_assoc()) {
                         $sibsByParent[(int)$sib['parent_order_id']][] = $sib;
                     }
-                    foreach ($ordersMap as $id => &$oRef) {
-                        $pId = intval($oRef['parent_order_id'] ?? 0);
-                        if ($pId > 0 && isset($sibsByParent[$pId])) {
+                }
+
+                // Fetch parent orders details
+                $parentsRes = $conn->query("SELECT o.*, 
+                                                   COALESCE(u.full_name, 'Unknown Customer') as customer_name, 
+                                                   COALESCE(u.phone, 'No Phone') as customer_phone 
+                                            FROM orders o 
+                                            LEFT JOIN users u ON o.user_id = u.id 
+                                            WHERE o.id IN ($parentList)");
+                $parentsMap = [];
+                if ($parentsRes) {
+                    while ($pRow = $parentsRes->fetch_assoc()) {
+                        $pRow['items'] = [];
+                        $pRow['total'] = $pRow['total_amount'];
+                        $parentsMap[(int)$pRow['id']] = $pRow;
+                    }
+                }
+
+                // Fetch parent order items
+                if (!empty($parentsMap)) {
+                    $pItemRes = $conn->query("SELECT oi.id, oi.order_id, oi.quantity, oi.product_id, oi.price_at_purchase, 
+                                                     oi.is_cleaning, oi.is_grinding, p.name as prod_name, p.unit as prod_unit
+                                              FROM order_items oi
+                                              LEFT JOIN products p ON oi.product_id = p.id
+                                              WHERE oi.order_id IN ($parentList)");
+                    if ($pItemRes) {
+                        while ($pi = $pItemRes->fetch_assoc()) {
+                            $pOrderId = (int)$pi['order_id'];
+                            $pi['name'] = $pi['prod_name'] ?? "Item #{$pi['product_id']}";
+                            $pi['unit'] = $pi['prod_unit'] ?? 'kg';
+                            if (isset($parentsMap[$pOrderId])) {
+                                $parentsMap[$pOrderId]['items'][] = $pi;
+                            }
+                        }
+                    }
+                }
+
+                foreach ($ordersMap as $id => &$oRef) {
+                    $pId = intval($oRef['parent_order_id'] ?? 0);
+                    if ($pId > 0) {
+                        if (isset($sibsByParent[$pId])) {
                             $sibs = $sibsByParent[$pId];
                             $oRef['siblings'] = $sibs;
-                            $notReady = array_filter($sibs, fn($s) => $s['id'] != $id && !in_array($s['status'], ['ready', 'batch_ready']));
+                            $notReady = array_filter($sibs, fn($s) => $s['id'] != $id && !in_array(strtolower(trim($s['status'])), ['ready', 'batch_ready', 'completed', 'delivered']));
                             $oRef['all_siblings_ready'] = (count($sibs) > 0 && count($notReady) === 0);
+                        }
+                        if (isset($parentsMap[$pId])) {
+                            $oRef['parent_order'] = $parentsMap[$pId];
                         }
                     }
                 }

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../common/dialog';
 import { Button } from '../../../common/button';
 import { Input } from '../../../common/input';
@@ -24,7 +24,7 @@ export function SplitOrderModal({
               Heavy Order Split — #{splitOrder?.id}
             </DialogTitle>
             <DialogDescription>
-              Order weight: <strong>{parseFloat(splitOrder?.total_weight_kg || 0).toFixed(1)} kg</strong>.
+              Order weight: <strong>{parseFloat(splitOrder?.total_weight_kg || splitOrder?.weightKg || 0).toFixed(1)} kg</strong>.
               Split into multiple processing batches.
             </DialogDescription>
           </DialogHeader>
@@ -127,7 +127,7 @@ export function SplitOrderModal({
         <div className="p-6 pt-4 bg-slate-50/50 border-t">
           {/* Live total check */}
           {splitOrder && (() => {
-            const total = parseFloat(splitOrder.total_weight_kg || 0);
+            const total = parseFloat(splitOrder.total_weight_kg || splitOrder.weightKg || 0);
             const sum = splitBatches.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
             const diff = Math.abs(sum - total);
             const ok = diff <= 0.5;

@@ -34,50 +34,79 @@ if ($productStmt) {
 }
 
 // checking if product is in any orders
-$check = $conn->prepare("SELECT COUNT(*) as cnt FROM order_items WHERE product_id = ?");
-if ($check) {
-    $check->bind_param("i", $id);
-    $check->execute();
-    $check_res = $check->get_result()->fetch_assoc();
-    $check->close();
-    
-    if ($check_res['cnt'] > 0) {
-        echo json_encode(["success" => false, "message" => "Cannot delete: This product is linked to {$check_res['cnt']} order(s). Consider disabling it instead."]);
-        exit;
+try {
+    $check = $conn->prepare("SELECT COUNT(*) as cnt FROM order_items WHERE product_id = ?");
+    if ($check) {
+        $check->bind_param("i", $id);
+        $check->execute();
+        $check_res = $check->get_result()->fetch_assoc();
+        $check->close();
+        
+        if ($check_res && $check_res['cnt'] > 0) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Cannot delete: This product is linked to {$check_res['cnt']} order(s). You can disable or mark it inactive instead."
+            ]);
+            exit;
+        }
     }
+} catch (Throwable $e) {
+    error_log("Order items check error: " . $e->getMessage());
 }
 
-// removing from carts if exists
-$check2 = $conn->prepare("SELECT COUNT(*) as cnt FROM cart_items WHERE product_id = ?");
-if ($check2) {
-    $check2->bind_param("i", $id);
-    $check2->execute();
-    $check_res2 = $check2->get_result()->fetch_assoc();
-    $check2->close();
-    
-    if ($check_res2['cnt'] > 0) {
+// checking if product is linked to rentals
+try {
+    $checkRentals = $conn->prepare("SELECT COUNT(*) as cnt FROM rentals WHERE product_id = ?");
+    if ($checkRentals) {
+        $checkRentals->bind_param("i", $id);
+        $checkRentals->execute();
+        $rentals_res = $checkRentals->get_result()->fetch_assoc();
+        $checkRentals->close();
+
+        if ($rentals_res && $rentals_res['cnt'] > 0) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Cannot delete: This product is linked to {$rentals_res['cnt']} rental record(s)."
+            ]);
+            exit;
+        }
+    }
+} catch (Throwable $e) {
+    error_log("Rentals check error: " . $e->getMessage());
+}
+
+// removing from cart_items if the table exists
+try {
+    $tblCheck = $conn->query("SHOW TABLES LIKE 'cart_items'");
+    if ($tblCheck && $tblCheck->num_rows > 0) {
         $remove = $conn->prepare("DELETE FROM cart_items WHERE product_id = ?");
-        $remove->bind_param("i", $id);
-        $remove->execute();
-        $remove->close();
+        if ($remove) {
+            $remove->bind_param("i", $id);
+            $remove->execute();
+            $remove->close();
+        }
     }
+} catch (Throwable $e) {
+    error_log("Cart item cleanup error: " . $e->getMessage());
 }
 
-// deleting image from cloudinary
-$cloudinaryDeleteResult = deleteCloudinaryImageByUrl($imageUrl ?? null);
-if (!$cloudinaryDeleteResult['success']) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Product image could not be deleted from Cloudinary: " . $cloudinaryDeleteResult['message']
-    ]);
-    exit;
+// deleting image from cloudinary (best-effort, non-blocking)
+if (!empty($imageUrl)) {
+    try {
+        $cloudinaryDeleteResult = deleteCloudinaryImageByUrl($imageUrl);
+        if (!$cloudinaryDeleteResult['success']) {
+            error_log("Cloudinary image deletion note: " . ($cloudinaryDeleteResult['message'] ?? 'Unknown'));
+        }
+    } catch (Throwable $e) {
+        error_log("Cloudinary image deletion error: " . $e->getMessage());
+    }
 }
 
 // deleting product from db
-$stmt = $conn->prepare("DELETE FROM products WHERE id=?");
-$stmt->bind_param("i", $id);
-
 try {
+    $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
+    $stmt->bind_param("i", $id);
+
     if ($stmt->execute()) {
         if ($stmt->affected_rows === 0) {
             echo json_encode(["success" => false, "message" => "Product not found"]);
@@ -86,9 +115,10 @@ try {
             echo json_encode(["success" => true, "status" => "success", "message" => "Product deleted successfully"]);
         }
     } else {
-        echo json_encode(["success" => false, "message" => "Error: " . $stmt->error]);
+        echo json_encode(["success" => false, "message" => "Error deleting product: " . $stmt->error]);
     }
-} catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "Cannot delete product: it is linked to existing order history."]);
+    $stmt->close();
+} catch (Throwable $e) {
+    error_log("Product delete error: " . $e->getMessage());
+    echo json_encode(["success" => false, "message" => "Cannot delete product: it is linked to existing order history or records."]);
 }
-$stmt->close();

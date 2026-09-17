@@ -1,6 +1,7 @@
 <?php
 // manual stock update api
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
@@ -20,7 +21,7 @@ try {
     $notes = isset($data['notes']) ? $data['notes'] : null;
     
     // getting current stock
-    $product_stmt = $conn->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+    $product_stmt = $conn->prepare("SELECT stock_quantity, is_rental, rental_available_qty FROM products WHERE id = ?");
     if (!$product_stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
@@ -35,7 +36,8 @@ try {
     }
     
     $prod = $result->fetch_assoc();
-    $current_stock = floatval($prod['stock_quantity']);
+    $is_rental = intval($prod['is_rental'] ?? 0);
+    $current_stock = ($is_rental === 1) ? floatval($prod['rental_available_qty']) : floatval($prod['stock_quantity']);
     $new_stock = null;
     $quantity_change = 0;
     
@@ -71,12 +73,20 @@ try {
     
     $quantity_change = $new_stock - $current_stock;
     
-    // updating stock in db
-    $update = $conn->prepare("UPDATE products SET stock_quantity = ?, updated_at = NOW() WHERE id = ?");
-    if (!$update) {
-        throw new Exception("Update prepare failed: " . $conn->error);
+    // updating stock in db (sync both rental_available_qty and stock_quantity if rental)
+    if ($is_rental === 1) {
+        $update = $conn->prepare("UPDATE products SET rental_available_qty = ?, stock_quantity = ?, updated_at = NOW() WHERE id = ?");
+        if (!$update) {
+            throw new Exception("Update prepare failed: " . $conn->error);
+        }
+        $update->bind_param("ddi", $new_stock, $new_stock, $product_id);
+    } else {
+        $update = $conn->prepare("UPDATE products SET stock_quantity = ?, updated_at = NOW() WHERE id = ?");
+        if (!$update) {
+            throw new Exception("Update prepare failed: " . $conn->error);
+        }
+        $update->bind_param("di", $new_stock, $product_id);
     }
-    $update->bind_param("di", $new_stock, $product_id);
     
     if (!$update->execute()) {
         throw new Exception("Failed to update stock: " . $update->error);
@@ -92,6 +102,7 @@ try {
         $log->execute();
     }
     
+    clear_api_cache();
     http_response_code(200);
     echo json_encode([
         'success' => true,

@@ -5,6 +5,7 @@ import { Input } from "../../../common/input";
 import { Label } from "../../../common/label";
 import { ShieldCheck, ShieldX, CheckCircle2, Eye, Building2, Loader2 } from "lucide-react";
 import { getMethodIcon, getMethodLabel, getStatusBadge, formatDate } from "./paymentHelpers";
+import { sendWhatsAppMessage } from "../../../../utils/whatsappHelper";
 
 export const VerifyPaymentDialog = ({
   showVerifyDialog,
@@ -269,12 +270,7 @@ export const RejectionSuccessDialog = ({
           {rejectionSuccessData?.phone && (
             <Button
               className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto flex items-center justify-center gap-1.5 font-bold"
-              onClick={() => {
-                window.open(
-                  `https://wa.me/${rejectionSuccessData.phone}?text=${rejectionSuccessData.whatsappMsg}`,
-                  "_blank"
-                );
-              }}
+              onClick={() => sendWhatsAppMessage(rejectionSuccessData.phone, rejectionSuccessData.whatsappMsg)}
             >
               <span>💬</span>
               {t("Send WhatsApp Alert")}

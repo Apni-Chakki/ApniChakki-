@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'dev-dist', 'node_modules']),
+  globalIgnores(['dist/**', 'dev-dist/**', 'node_modules/**', 'public/**', 'coverage/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -34,6 +34,11 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'warn',
       'react-hooks/refs': 'warn',
       'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/static-components': 'warn',
+      'no-useless-assignment': 'warn',
     },
   },
   {

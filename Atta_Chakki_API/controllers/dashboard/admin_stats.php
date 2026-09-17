@@ -10,20 +10,20 @@ try {
     $pending = $conn->query("SELECT COUNT(*) as count FROM orders WHERE LOWER(TRIM(status)) = 'pending'")->fetch_assoc()['count'];
     $processing = $conn->query("SELECT COUNT(*) as count FROM orders WHERE LOWER(TRIM(status)) IN ('processing', 'ready', 'out-for-delivery')")->fetch_assoc()['count'];
 
-    $completedTotal = $conn->query("SELECT COUNT(*) as count FROM orders WHERE LOWER(TRIM(status)) = 'completed'")->fetch_assoc()['count'];
-    $completedToday = $conn->query("SELECT COUNT(*) as count FROM orders WHERE LOWER(TRIM(status)) = 'completed' AND DATE(updated_at) = CURDATE()")->fetch_assoc()['count'];
+    $completedTotal = $conn->query("SELECT COUNT(*) as count FROM orders WHERE LOWER(TRIM(status)) IN ('completed', 'rental_returned')")->fetch_assoc()['count'];
+    $completedToday = $conn->query("SELECT COUNT(*) as count FROM orders WHERE LOWER(TRIM(status)) IN ('completed', 'rental_returned') AND DATE(updated_at) = CURDATE()")->fetch_assoc()['count'];
 
-    $revenue_result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE LOWER(TRIM(status)) = 'completed'");
+    $revenue_result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE LOWER(TRIM(status)) IN ('completed', 'rental_returned')");
     $revenueTotal = $revenue_result->fetch_assoc()['total'];
 
-    $refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as total_refunded FROM rentals WHERE status = 'returned'");
+    $refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as total_refunded FROM rentals WHERE deposit_refund_amount > 0");
     $totalRefunded = $refund_res->fetch_assoc()['total_refunded'];
     $revenueTotal = max(0, floatval($revenueTotal) - floatval($totalRefunded));
 
-    $today_revenue_result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE LOWER(TRIM(status)) = 'completed' AND DATE(updated_at) = CURDATE()");
+    $today_revenue_result = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE LOWER(TRIM(status)) IN ('completed', 'rental_returned') AND DATE(updated_at) = CURDATE()");
     $todayRevenue = $today_revenue_result->fetch_assoc()['total'];
     
-    $today_refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as today_refunded FROM rentals WHERE status = 'returned' AND DATE(actual_return_date) = CURDATE()");
+    $today_refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as today_refunded FROM rentals WHERE DATE(actual_return_date) = CURDATE() AND deposit_refund_amount > 0");
     $todayRefunded = $today_refund_res->fetch_assoc()['today_refunded'];
     $todayRevenue = max(0, floatval($todayRevenue) - floatval($todayRefunded));
     

@@ -57,10 +57,10 @@ export const TomorrowProcessingCard = ({
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="min-w-0">
               <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 flex-wrap text-slate-800">
-                <span>Order #{order.id}</span>
+                <span>Order #{order.parent_order_id || order.id}</span>
                 {isSplitBatch && (
                   <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] px-1.5 py-0.5 font-bold uppercase flex items-center gap-1">
-                    <Layers className="h-3 w-3" /> Batch {order.batch_index || 1}
+                    <Layers className="h-3 w-3" /> Batch {order.batch_index || 1} of {order.total_batches || order.siblings?.length || 2}
                   </Badge>
                 )}
                 {isPickup ? (

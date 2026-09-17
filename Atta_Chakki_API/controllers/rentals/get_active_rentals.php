@@ -52,7 +52,7 @@ try {
     $summary_sql = "SELECT 
                         COUNT(CASE WHEN status = 'active' THEN 1 END) AS total_active,
                         COUNT(CASE WHEN status = 'overdue' THEN 1 END) AS total_overdue,
-                        COALESCE(SUM(security_deposit), 0) AS total_deposits_held
+                        COALESCE(SUM((quantity - returned_quantity) * security_deposit), 0) AS total_deposits_held
                     FROM rentals 
                     WHERE status IN ('active', 'overdue')";
 

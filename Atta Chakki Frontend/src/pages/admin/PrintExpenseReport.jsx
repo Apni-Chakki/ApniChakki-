@@ -4,6 +4,7 @@ import { Button } from '../../components/common/button';
 import { Printer, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { API_BASE_URL } from '../../config';
+import { printWindowHtml } from '../../utils/printHelpers';
 
 const LogoSVG = ({ size = 48 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -52,19 +53,7 @@ export function PrintExpenseReport({ expenses, dateRangeLabel, open, onClose }) 
   }, {});
 
   const handlePrint = () => {
-    const printWin = window.open('', '_blank', 'width=800,height=900');
-    if (!printWin) {
-      alert("Please allow popups to print the report.");
-      return;
-    }
-    printWin.document.open();
-    printWin.document.write(buildPrintHTML());
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => {
-      printWin.print();
-      printWin.close();
-    }, 500);
+    printWindowHtml(buildPrintHTML(), { autoClose: true, delayMs: 500 });
   };
 
   const buildPrintHTML = () => {

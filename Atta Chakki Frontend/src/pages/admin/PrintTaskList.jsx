@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Button } from '../../components/common/button';
 import { Printer, X } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
+import { printWindowHtml } from '../../utils/printHelpers';
 
 const formatDate = (date) =>
   new Date(date).toLocaleDateString('en-GB') + ' ' + new Date(date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -53,15 +54,7 @@ export function PrintTaskList({ orders = [], title = "TOMORROW'S TASK LIST", ope
   }, [open]);
 
   const handlePrint = () => {
-    const printWin = window.open('', '_blank', 'width=800,height=900');
-    printWin.document.open();
-    printWin.document.write(buildPrintHTML());
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => {
-      printWin.print();
-      printWin.close();
-    }, 400);
+    printWindowHtml(buildPrintHTML(), { autoClose: true });
   };
   
   const confirmedTotalRevenue = orders

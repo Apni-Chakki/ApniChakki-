@@ -1,663 +1,129 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/card';
-import { Input } from '../../components/common/input';
-import { Label } from '../../components/common/label';
 import { Button } from '../../components/common/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/common/select';
-import { Plus, Trash2, Save, ShoppingCart, User, Settings2, Store, Truck } from 'lucide-react';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../config';
-import { useTranslation } from 'react-i18next';
-import { Checkbox } from '../../components/common/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/card';
+import { ShoppingCart } from 'lucide-react';
+import { useManualOrder } from '../../components/features/admin/manualOrder/useManualOrder';
+import { CustomerDetailsSection } from '../../components/features/admin/manualOrder/CustomerDetailsSection';
+import { OrderSettingsSection } from '../../components/features/admin/manualOrder/OrderSettingsSection';
+import { ProductPickerSection } from '../../components/features/admin/manualOrder/ProductPickerSection';
+import { ManualOrderCart } from '../../components/features/admin/manualOrder/ManualOrderCart';
 
 export function AddManualOrder() {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  
-  const [products, setProducts] = useState([]); 
-  
-  const [orderType, setOrderType] = useState('pickup'); // 'pickup' | 'delivery'
-  const [customer, setCustomer] = useState({
-    name: '',
-    phone: '',
-    address: 'Shop Pickup'
-  });
+  const {
+    products,
+    loading,
+    orderType,
+    setOrderType,
+    customer,
+    setCustomer,
+    cart,
+    selectedProduct,
+    setSelectedProduct,
+    qty,
+    setQty,
+    paymentStatus,
+    setPaymentStatus,
+    paymentMethod,
+    setPaymentMethod,
+    amountPaid,
+    setAmountPaid,
+    selectedOptions,
+    setSelectedOptions,
+    rentalDays,
+    setRentalDays,
+    rentalStartDate,
+    setRentalStartDate,
+    currentProduct,
+    currentCustomizations,
+    computeProductPrice,
+    addToCart,
+    removeFromCart,
+    handlePhoneChange,
+    calculateTotal,
+    handleSubmit,
+    navigate,
+    t,
+  } = useManualOrder();
 
-  const [cart, setCart] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [qty, setQty] = useState(1);
-  const [paymentStatus, setPaymentStatus] = useState('pending');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [amountPaid, setAmountPaid] = useState('');
-  const [orderStatus, setOrderStatus] = useState('pending');
-
-  // selected item ke add-ons / options
-  const [selectedOptions, setSelectedOptions] = useState({});
-
-  useEffect(() => {
-    if (selectedProduct) {
-       const product = products.find(p => p.id.toString() === selectedProduct.toString());
-       if (product) {
-          const custs = getEffectiveCustomizations(product);
-          // shuru me sab options tick honge
-          const defaults = {};
-          custs.forEach((_, i) => { defaults[i] = true; });
-          setSelectedOptions(defaults);
-       }
-    }
-  }, [selectedProduct, products]);
-
-  const getEffectiveCustomizations = (product) => {
-    if (product.customizations && product.customizations.length > 0) {
-      return product.customizations;
-    }
-    if (product.is_grinding_service == 1 || product.is_grinding_service === true) {
-      return [
-        { option_name: 'Cleaning', option_price: product.cleaning_price || 0 },
-        { option_name: 'Grinding', option_price: product.grinding_price || 0 }
-      ];
-    }
-    return [];
-  };
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/get_products.php`);
-        const data = await response.json();
-
-        if (data.success && Array.isArray(data.products)) {
-          setProducts(data.products);
-        } else {
-          toast.error(t("Failed to load products list."));
-        }
-      } catch (error) {
-        console.error("Fetch Error:", error);
-        toast.error(t("Network Error: Could not connect to database."));
-      }
-    };
-
-    loadProducts();
-  }, []);
-
-  const computeProductPrice = (product, selOptions) => {
-    if (!product) return { originalPrice: 0, finalPrice: 0 };
-    const custs = getEffectiveCustomizations(product);
-    const hasCustomizations = custs.length > 0;
-    let basePrice = parseFloat(product.price) || 0;
-
-    if (hasCustomizations) {
-      const pricingMode = product.customization_pricing_mode || (product.is_grinding_service == 1 ? "additive" : "average");
-      const selectedIndices = Object.keys(selOptions).filter(i => selOptions[i]);
-
-      if (pricingMode === "average") {
-        if (selectedIndices.length > 0) {
-          const sum = selectedIndices.reduce(
-            (acc, i) => acc + (parseFloat(custs[i]?.option_price) || 0),
-            0
-          );
-          basePrice = Math.round(sum / selectedIndices.length);
-        } else {
-          basePrice = 0;
-        }
-      } else {
-        // additive mode
-        basePrice = custs.reduce(
-          (sum, c, i) => sum + (selOptions[i] ? (parseFloat(c.option_price) || 0) : 0),
-          0
-        );
-        if (basePrice === 0 && selectedIndices.length === 0) {
-          basePrice = parseFloat(product.price) || 0;
-        }
-      }
-    }
-
-    let finalPrice = basePrice;
-    const discountType = product.discount_type || 'none';
-    const discountValue = parseFloat(product.discount_value) || 0;
-    if (discountType === 'percentage' && discountValue > 0) {
-      finalPrice = Math.max(0, basePrice - (basePrice * Math.min(discountValue, 100)) / 100);
-    } else if (discountType === 'fixed' && discountValue > 0) {
-      finalPrice = Math.max(0, basePrice - discountValue);
-    }
-
-    return { originalPrice: basePrice, finalPrice };
-  };
-
-  const addToCart = () => {
-    if (!selectedProduct) return;
-    
-    const product = products.find(p => p.id.toString() === selectedProduct.toString());
-    if (!product) return;
-
-    const custs = getEffectiveCustomizations(product);
-    const hasCustomizations = custs.length > 0;
-
-    // Stock validation
-    const isService = product.unit?.toLowerCase() === 'trip';
-    const requestedQty = parseInt(qty);
-    const existingQty = cart
-      .filter(item => item.id === product.id)
-      .reduce((sum, item) => sum + item.quantity, 0);
-
-    if (!isService && !hasCustomizations && product.stock_quantity < (requestedQty + existingQty)) {
-      toast.error(`${t('Insufficient stock')}. ${t('Available')}: ${product.stock_quantity}. ${t('Already in cart')}: ${existingQty}`);
-      return;
-    }
-
-    const { originalPrice, finalPrice } = computeProductPrice(product, selectedOptions);
-
-    const selected = [];
-    if (hasCustomizations) {
-      custs.forEach((c, i) => {
-        if (selectedOptions[i]) {
-          selected.push({ option_name: c.option_name, option_price: parseFloat(c.option_price || 0) });
-        }
-      });
-    }
-
-    // cleaning pisai check
-    const isCleaning = selected.some(s => s.option_name.toLowerCase().includes('clean')) ? 1 : 0;
-    const isGrinding = selected.some(s => s.option_name.toLowerCase().includes('grind')) ? 1 : 0;
-
-    const newItem = {
-      id: product.id,
-      name: product.name,
-      price: finalPrice,
-      original_price: originalPrice,
-      quantity: parseInt(qty),
-      is_cleaning: hasCustomizations ? isCleaning : 0,
-      is_grinding: hasCustomizations ? isGrinding : 0,
-      has_customizations: hasCustomizations,
-      selected_customizations: selected
-    };
-
-    setCart([...cart, newItem]);
-    setSelectedProduct('');
-    setQty(1);
-  };
-
-  const removeFromCart = (index) => {
-    const newCart = [...cart];
-    newCart.splice(index, 1);
-    setCart(newCart);
-  };
-
-  const handlePhoneChange = (e) => {
-    let val = e.target.value.replace(/\D/g, ''); // only numeric characters
-    if (val.length > 11) {
-      val = val.slice(0, 11);
-    }
-    setCustomer(prev => ({ ...prev, phone: val }));
-  };
-
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  };
-
-  const handleSubmit = async () => {
-    const cleanPhone = (customer.phone || '').trim();
-    if (!cleanPhone) {
-      toast.error(t("Please enter customer phone number."));
-      return;
-    }
-
-    if (!cleanPhone.startsWith('0')) {
-      toast.error(t("Phone number must start with 0 (e.g. 03001234567)."));
-      return;
-    }
-
-    if (cleanPhone.length !== 11) {
-      toast.error(t("Phone number must be exactly 11 digits (e.g. 03001234567)."));
-      return;
-    }
-
-    if (cart.length === 0) {
-      toast.error(t("Please add at least one item to the cart."));
-      return;
-    }
-
-    if (orderType === 'delivery') {
-      const addr = (customer.address || '').trim();
-      if (!addr || addr.toLowerCase() === 'shop pickup') {
-        toast.error(t("Please enter a valid delivery address for Home Delivery."));
-        return;
-      }
-    }
-
-    setLoading(true);
-    try {
-      const orderTotal = calculateTotal();
-      let paidAmount = 0;
-      if (paymentStatus === 'paid') {
-        paidAmount = orderTotal;
-      } else if (paymentStatus === 'partial') {
-        paidAmount = parseFloat(amountPaid) || 0;
-        if (paidAmount <= 0 || paidAmount >= orderTotal) {
-          toast.error(t('Partial amount must be between 1 and ') + (orderTotal - 1));
-          setLoading(false);
-          return;
-        }
-      }
-
-      const finalAddress = orderType === 'pickup'
-        ? (customer.address?.trim() || 'Shop Pickup')
-        : customer.address.trim();
-
-      const payload = {
-        name: customer.name,
-        phone: cleanPhone,
-        order_type: orderType,
-        address: finalAddress,
-        items: cart,
-        total: orderTotal,
-        status: orderStatus,
-        payment_status: paymentStatus,
-        payment_method: paymentMethod,
-        amount_paid: paidAmount
-      };
-
-      const response = await fetch(`${API_BASE_URL}/admin_create_order.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success(t("Order Created Successfully!"));
-        navigate('/admin');
-      } else {
-        toast.error(data.message || t("Failed to create order"));
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(t("Network Error"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get effective customizations for currently selected product
-  const currentProduct = products.find(p => p.id.toString() === selectedProduct.toString());
-  const currentCustomizations = currentProduct ? getEffectiveCustomizations(currentProduct) : [];
+  const total = calculateTotal();
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 pb-8">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold">{t('Add Manual Order')}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('Create order for walk-in or phone customers')}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            {t('Create order for walk-in or phone customers')}
+          </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/admin')} className="w-full sm:w-auto">{t('Cancel')}</Button>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/admin')}
+          className="w-full sm:w-auto"
+        >
+          {t('Cancel')}
+        </Button>
       </div>
 
+      {/* Two-Column Form Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        
         {/* Customer Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex flex-col items-center justify-center gap-2 text-center">
-              <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary">
-                <User className="h-5 w-5" />
-              </span>
-              <span className="font-bold text-base sm:text-lg">{t('Customer Details')}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>{t('Phone Number')} ({t('Required')})</Label>
-                <span className={`text-[11px] font-mono ${customer.phone.length === 11 && customer.phone.startsWith('0') ? 'text-emerald-600 font-bold' : 'text-muted-foreground'}`}>
-                  {customer.phone.length}/11
-                </span>
-              </div>
-              <Input 
-                type="tel"
-                placeholder="03001234567" 
-                maxLength={11}
-                value={customer.phone} 
-                onChange={handlePhoneChange} 
-              />
-              {customer.phone && !customer.phone.startsWith('0') && (
-                <p className="text-xs text-red-500 mt-1">{t('Phone number must start with 0 (e.g. 03001234567)')}</p>
-              )}
-              {customer.phone && customer.phone.startsWith('0') && customer.phone.length > 0 && customer.phone.length < 11 && (
-                <p className="text-xs text-amber-600 mt-1">{t('Enter 11 digits')} ({11 - customer.phone.length} {t('remaining')})</p>
-              )}
-            </div>
-            <div>
-              <Label>{t('Full Name')}</Label>
-              <Input placeholder={t('Guest Customer')} value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>
-                  {orderType === 'delivery' ? (
-                    <span className="flex items-center gap-1.5 text-blue-700 font-semibold">
-                      <Truck className="h-3.5 w-3.5" />
-                      {t('Delivery Address')} ({t('Required')})
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 text-purple-700 font-semibold">
-                      <Store className="h-3.5 w-3.5" />
-                      {t('Pickup Notes')} ({t('Optional')})
-                    </span>
-                  )}
-                </Label>
-              </div>
-              <Input 
-                placeholder={orderType === 'delivery' ? t('e.g. House #14, Street 5, Sector B...') : t('Shop Pickup')} 
-                value={customer.address} 
-                onChange={e => setCustomer({...customer, address: e.target.value})} 
-                className={orderType === 'delivery' && !customer.address ? 'border-blue-300 focus:border-blue-500' : ''}
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                {orderType === 'delivery' 
-                  ? t('Order will require delivery driver dispatch.')
-                  : t('Customer will self-collect from the store. No driver dispatch needed.')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <CustomerDetailsSection
+          customer={customer}
+          setCustomer={setCustomer}
+          orderType={orderType}
+          onPhoneChange={handlePhoneChange}
+        />
 
         {/* Order Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex flex-col items-center justify-center gap-2 text-center">
-              <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary">
-                <Settings2 className="h-5 w-5" />
-              </span>
-              <span className="font-bold text-base sm:text-lg">{t('Order Settings')}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="mb-1.5 block font-semibold text-xs sm:text-sm">{t('Fulfillment Type')}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOrderType('pickup');
-                    if (!customer.address || customer.address === '') {
-                      setCustomer(prev => ({ ...prev, address: 'Shop Pickup' }));
-                    }
-                  }}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-xs sm:text-sm font-semibold transition-all ${
-                    orderType === 'pickup'
-                      ? 'border-purple-600 bg-purple-50 text-purple-800 shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Store className="h-4 w-4 shrink-0" />
-                  <span>{t('Self Pickup')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOrderType('delivery');
-                    if (customer.address === 'Shop Pickup') {
-                      setCustomer(prev => ({ ...prev, address: '' }));
-                    }
-                  }}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-xs sm:text-sm font-semibold transition-all ${
-                    orderType === 'delivery'
-                      ? 'border-blue-600 bg-blue-50 text-blue-800 shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Truck className="h-4 w-4 shrink-0" />
-                  <span>{t('Home Delivery')}</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label>{t('Payment Status')}</Label>
-                <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">{t('Unpaid')}</SelectItem>
-                    <SelectItem value="paid">{t('Paid')}</SelectItem>
-                    <SelectItem value="partial">{t('Partial')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {paymentStatus === 'partial' && (
-                  <div className="mt-2">
-                    <Label className="text-sm">{t('Amount Paid')}</Label>
-                    <Input type="number" min="1" placeholder={t('Enter partial amount...')} value={amountPaid} onChange={e => setAmountPaid(e.target.value)} className="mt-1" />
-                    {amountPaid && parseFloat(amountPaid) > 0 && (
-                      <p className="text-xs text-orange-600 mt-1">
-                        {t('Udhaar')}: Rs. {Math.max(0, calculateTotal() - parseFloat(amountPaid)).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label>{t('Payment Method')}</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{t('Cash Payment')}</SelectItem>
-                  <SelectItem value="jazzcash">JazzCash</SelectItem>
-                  <SelectItem value="bank">{t('Bank Transfer')}</SelectItem>
-                  <SelectItem value="udhaar">{t('Udhaar Khata')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        <OrderSettingsSection
+          orderType={orderType}
+          setOrderType={setOrderType}
+          customer={customer}
+          setCustomer={setCustomer}
+          paymentStatus={paymentStatus}
+          setPaymentStatus={setPaymentStatus}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+          amountPaid={amountPaid}
+          setAmountPaid={setAmountPaid}
+          orderTotal={total}
+        />
       </div>
 
-      {/* Product Selection */}
+      {/* Product Selection & Cart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" /> {t('Add Products')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end mb-4 sm:mb-6">
-            <div className="flex-1 min-w-0">
-              <Label>{t('Select Product')}</Label>
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('Choose an item...')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.length > 0 ? (
-                    products.map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()}>
-                        {p.name} (Rs. {p.price})
-                        {p.unit?.toLowerCase() !== 'trip' && parseInt(p.is_grinding_service) !== 1 && (!p.customizations || p.customizations.length === 0) && ` - ${t('Stock')}: ${p.stock_quantity}`}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>{t('Loading Products...')}</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-full sm:w-24">
-              <Label>{t('Quantity')}</Label>
-              <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} />
-            </div>
-          </div>
+        <CardContent className="space-y-6">
+          <ProductPickerSection
+            products={products}
+            selectedProduct={selectedProduct}
+            setSelectedProduct={setSelectedProduct}
+            qty={qty}
+            setQty={setQty}
+            rentalDays={rentalDays}
+            setRentalDays={setRentalDays}
+            rentalStartDate={rentalStartDate}
+            setRentalStartDate={setRentalStartDate}
+            currentProduct={currentProduct}
+            currentCustomizations={currentCustomizations}
+            selectedOptions={selectedOptions}
+            setSelectedOptions={setSelectedOptions}
+            computeProductPrice={computeProductPrice}
+            onAddToCart={addToCart}
+          />
 
-          {/* Dynamic Customizations for selected product */}
-          {selectedProduct && currentCustomizations.length > 0 && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 bg-muted rounded-lg border border-border">
-              {currentCustomizations.map((cust, idx) => (
-                <div key={idx} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`admin-cust-${idx}`}
-                    checked={!!selectedOptions[idx]}
-                    onCheckedChange={(checked) => setSelectedOptions(prev => ({ ...prev, [idx]: !!checked }))}
-                  />
-                  <Label htmlFor={`admin-cust-${idx}`} className="text-sm font-medium cursor-pointer">
-                    {t(cust.option_name)} (Rs. {cust.option_price}{currentProduct?.customization_pricing_mode === 'average' ? `/${currentProduct?.unit || 'kg'}` : ''})
-                  </Label>
-                </div>
-              ))}
-              {(() => {
-                const { originalPrice, finalPrice } = computeProductPrice(currentProduct, selectedOptions);
-                const isAvg = currentProduct?.customization_pricing_mode === 'average';
-                return (
-                  <div className="text-xs sm:ml-auto flex items-center gap-2 flex-wrap">
-                    {isAvg && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                        {t('Mix Proportion Rate')}
-                      </span>
-                    )}
-                    <span className="text-muted-foreground font-medium">
-                      {t('Current Price')}:
-                    </span>
-                    {originalPrice > finalPrice ? (
-                      <span>
-                        <span className="line-through text-muted-foreground mr-1">Rs. {originalPrice}</span>
-                        <span className="text-green-600 font-bold">Rs. {finalPrice}</span>
-                      </span>
-                    ) : (
-                      <span className="font-bold text-slate-800">Rs. {finalPrice}</span>
-                    )}
-                    {currentProduct?.unit && (
-                      <span className="text-muted-foreground">/{currentProduct.unit}</span>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          <div className="flex justify-end mb-4 sm:mb-6">
-            <Button onClick={addToCart} disabled={!selectedProduct || selectedProduct === "none"} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" /> {t('Add to Cart')}
-            </Button>
-          </div>
-
-          {/* Cart — table on desktop, card stack on mobile */}
-          {/* Mobile: card list */}
-          <div className="sm:hidden space-y-2">
-            {cart.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground border rounded-lg">{t('Cart is empty')}</div>
-            ) : (
-              cart.map((item, idx) => (
-                <div key={idx} className="border rounded-lg p-3 bg-card">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm break-words">{item.name}</p>
-                      {item.selected_customizations && item.selected_customizations.length > 0 && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          ({item.selected_customizations.map(c => t(c.option_name)).join(' + ')})
-                        </p>
-                      )}
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => removeFromCart(idx)} className="text-red-500 shrink-0 h-8 w-8 p-0">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">{t('Price')}</p>
-                      {item.original_price && item.original_price > item.price ? (
-                        <div>
-                          <span className="line-through text-muted-foreground block">Rs. {item.original_price.toLocaleString()}</span>
-                          <span className="text-green-600 font-bold">Rs. {item.price.toLocaleString()}</span>
-                        </div>
-                      ) : (
-                        <span className="font-semibold">Rs. {item.price.toLocaleString()}</span>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t('Qty')}</p>
-                      <p className="font-semibold">{item.quantity}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t('Total')}</p>
-                      <p className="font-bold">Rs. {(item.price * item.quantity).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-            {cart.length > 0 && (
-              <div className="border-t-2 border-primary/20 pt-3 flex justify-between items-center px-1">
-                <span className="font-bold text-sm">{t('Grand Total')}:</span>
-                <span className="font-bold text-lg">Rs. {calculateTotal().toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop: cart table */}
-          <div className="hidden sm:block border rounded-lg overflow-hidden">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="p-3">{t('Product')}</th>
-                  <th className="p-3">{t('Price')}</th>
-                  <th className="p-3">{t('Quantity')}</th>
-                  <th className="p-3">{t('Total')}</th>
-                  <th className="p-3">{t('Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cart.length === 0 ? (
-                  <tr><td colSpan="5" className="p-4 text-center text-muted-foreground">{t('Cart is empty')}</td></tr>
-                ) : (
-                  cart.map((item, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="p-3">
-                        <div>{item.name}</div>
-                        {item.selected_customizations && item.selected_customizations.length > 0 && (
-                          <div className="text-[10px] text-muted-foreground">
-                            ({item.selected_customizations.map(c => t(c.option_name)).join(' + ')})
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {item.original_price && item.original_price > item.price ? (
-                          <div className="flex flex-col">
-                            <span className="line-through text-xs text-muted-foreground">Rs. {item.original_price.toLocaleString()}</span>
-                            <span className="text-green-600 font-bold">Rs. {item.price.toLocaleString()}</span>
-                            <span className="text-[9px] text-green-700 bg-green-50 px-1 py-0.5 rounded border border-green-200 w-max font-bold mt-0.5">🏷 DISC</span>
-                          </div>
-                        ) : (
-                          <span>Rs. {item.price.toLocaleString()}</span>
-                        )}
-                      </td>
-                      <td className="p-3">{item.quantity}</td>
-                      <td className="p-3">Rs. {(item.price * item.quantity).toLocaleString()}</td>
-                      <td className="p-3">
-                        <Button variant="ghost" size="sm" onClick={() => removeFromCart(idx)} className="text-red-500">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot className="bg-muted font-bold">
-                <tr>
-                  <td colSpan="3" className="p-3 text-right">{t('Grand Total')}:</td>
-                  <td className="p-3">Rs. {calculateTotal().toLocaleString()}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          <div className="mt-4 sm:mt-6 flex justify-end">
-            <Button size="lg" onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? t('Creating Order...') : t('Create Order')}
-            </Button>
-          </div>
+          <ManualOrderCart
+            cart={cart}
+            onRemoveFromCart={removeFromCart}
+            total={total}
+            onSubmit={handleSubmit}
+            loading={loading}
+          />
         </CardContent>
       </Card>
     </div>

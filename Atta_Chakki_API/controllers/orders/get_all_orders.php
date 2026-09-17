@@ -92,9 +92,9 @@ try {
                     SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) AS processing,
                     SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) AS ready,
                     SUM(CASE WHEN status = 'out-for-delivery' THEN 1 ELSE 0 END) AS out_for_delivery,
-                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+                    SUM(CASE WHEN status IN ('completed', 'rental_returned') THEN 1 ELSE 0 END) AS completed,
                     SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
-                    SUM(CASE WHEN status = 'completed' THEN COALESCE(total_amount,0) ELSE 0 END) AS total_revenue,
+                    SUM(CASE WHEN status IN ('completed', 'rental_returned') THEN COALESCE(total_amount,0) ELSE 0 END) AS total_revenue,
                     SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) AS paid_orders,
                     SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) AS unpaid_orders,
                     SUM(CASE WHEN payment_status = 'partial' THEN 1 ELSE 0 END) AS partial_orders
@@ -177,7 +177,7 @@ try {
 
     $orders = array_values($ordersMap);
 
-    $refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as total_refunded FROM rentals WHERE status = 'returned'");
+    $refund_res = $conn->query("SELECT COALESCE(SUM(deposit_refund_amount), 0) as total_refunded FROM rentals WHERE deposit_refund_amount > 0");
     $totalRefunded = $refund_res ? (float)$refund_res->fetch_assoc()['total_refunded'] : 0.0;
     $adjusted_revenue = max(0, (float)($statsRow['total_revenue'] ?? 0) - $totalRefunded);
 

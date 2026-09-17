@@ -59,17 +59,10 @@ try {
     $upd->execute();
     $upd->close();
 
-    // Create child orders
     $today    = date('Y-m-d');
     $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $new_ids  = [];
-
-    // Ensure parent_order_id and batch_index columns exist (graceful fallback)
-    $colCheck = $conn->query("SHOW COLUMNS FROM orders LIKE 'parent_order_id'");
-    $hasParentCol = ($colCheck && $colCheck->num_rows > 0);
-
-    $colCheck2 = $conn->query("SHOW COLUMNS FROM orders LIKE 'batch_index'");
-    $hasBatchCol = ($colCheck2 && $colCheck2->num_rows > 0);
+    $total_batches = count($batches);
 
     foreach ($batches as $index => $batch) {
         $batch_weight = floatval($batch['weight'] ?? 0);
@@ -92,59 +85,36 @@ try {
         if ($orig_weight > 0) {
             $batch_amount = ($batch_weight / $orig_weight) * floatval($origOrder['total_amount']);
         } else {
-            $batch_amount = floatval($origOrder['total_amount']) / count($batches);
+            $batch_amount = floatval($origOrder['total_amount']) / $total_batches;
         }
         $batch_amount = round($batch_amount, 2);
 
-        // Build INSERT depending on available columns
-        if ($hasParentCol && $hasBatchCol) {
-            $insSql = "INSERT INTO orders (
-                user_id, total_amount, amount_paid, status, shipping_address,
-                payment_method, payment_status, created_at, assigned_date,
-                total_weight_kg, processing_time_minutes, parent_order_id, batch_index,
-                special_instructions, driver_name, driver_phone, source
-            ) VALUES (?, ?, 0, 'processing', ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $insSql = "INSERT INTO orders (
+            user_id, total_amount, amount_paid, status, order_type, shipping_address,
+            payment_method, payment_status, created_at, assigned_date,
+            total_weight_kg, processing_time_minutes, parent_order_id, batch_index, total_batches,
+            driver_name, driver_phone, source
+        ) VALUES (?, ?, 0, 'processing', ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            $insStmt = $conn->prepare($insSql);
-            $insStmt->bind_param(
-                "idssssdiiissss",
-                $origOrder['user_id'],
-                $batch_amount,
-                $origOrder['shipping_address'],
-                $origOrder['payment_method'],
-                $origOrder['payment_status'],
-                $batch_date,
-                $batch_weight,
-                $batch_mins,
-                $order_id,
-                $batch_number,
-                $origOrder['special_instructions'],
-                $origOrder['driver_name'],
-                $origOrder['driver_phone'],
-                $origOrder['source']
-            );
-        } else {
-            // Fallback without parent columns
-            $insSql = "INSERT INTO orders (
-                user_id, total_amount, amount_paid, status, shipping_address,
-                payment_method, payment_status, created_at, assigned_date,
-                total_weight_kg, processing_time_minutes, source
-            ) VALUES (?, ?, 0, 'processing', ?, ?, ?, NOW(), ?, ?, ?, ?)";
-
-            $insStmt = $conn->prepare($insSql);
-            $insStmt->bind_param(
-                "idssssdis",
-                $origOrder['user_id'],
-                $batch_amount,
-                $origOrder['shipping_address'],
-                $origOrder['payment_method'],
-                $origOrder['payment_status'],
-                $batch_date,
-                $batch_weight,
-                $batch_mins,
-                $origOrder['source']
-            );
-        }
+        $insStmt = $conn->prepare($insSql);
+        $insStmt->bind_param(
+            "idsssssdiiiisss",
+            $origOrder['user_id'],
+            $batch_amount,
+            $origOrder['order_type'],
+            $origOrder['shipping_address'],
+            $origOrder['payment_method'],
+            $origOrder['payment_status'],
+            $batch_date,
+            $batch_weight,
+            $batch_mins,
+            $order_id,
+            $batch_number,
+            $total_batches,
+            $origOrder['driver_name'],
+            $origOrder['driver_phone'],
+            $origOrder['source']
+        );
 
         if (!$insStmt->execute()) {
             throw new Exception("Failed to create batch #$batch_number: " . $insStmt->error);
@@ -169,7 +139,7 @@ try {
                 if ($orig_weight > 0) {
                     $batch_qty = round(($batch_weight / $orig_weight) * $orig_qty, 3);
                 } else {
-                    $batch_qty = $orig_qty / count($batches);
+                    $batch_qty = $orig_qty / $total_batches;
                 }
                 $itemInsStmt->bind_param("iidd", $new_order_id, $item['product_id'], $batch_qty, $item['price_at_purchase']);
                 $itemInsStmt->execute();
@@ -182,6 +152,14 @@ try {
     }
 
     $conn->commit();
+
+    // Clear API cache so processing and order lists are updated immediately
+    if (file_exists(__DIR__ . '/../../utils/cache_helper.php')) {
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        if (function_exists('clear_api_cache')) {
+            clear_api_cache();
+        }
+    }
 
     echo json_encode([
         "success"         => true,

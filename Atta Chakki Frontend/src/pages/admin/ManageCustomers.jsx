@@ -8,6 +8,7 @@ import { Card } from '../../components/common/card';
 import { Input } from '../../components/common/input';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
+import { getWhatsAppUrl } from '../../utils/whatsappHelper';
 import { useTranslation } from 'react-i18next';
 import { Pagination } from '../../components/common/Pagination';
 
@@ -270,14 +271,7 @@ export function ManageCustomers() {
   };
 
   const getWhatsAppLink = (phone) => {
-    if (!phone) return '#';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('03') && cleaned.length === 11) {
-      cleaned = '92' + cleaned.substring(1);
-    } else if (cleaned.startsWith('3') && cleaned.length === 10) {
-      cleaned = '92' + cleaned;
-    }
-    return `https://wa.me/${cleaned}`;
+    return getWhatsAppUrl(phone) || '#';
   };
 
   // Server owns filtering + paging; `customers` is the current page

@@ -7,6 +7,8 @@ import {
   TableRow,
 } from "../../components/common/table";
 import { Badge } from "../../components/common/badge";
+import { OrderStatusBadge } from "../../components/shared/OrderStatusBadge";
+import { formatPKR } from "../../lib/formatters";
 import { format } from "date-fns";
 import { Phone, MapPin, User } from "lucide-react";
 
@@ -28,7 +30,14 @@ export function OrdersTable({ orders, actions }) {
           >
             {/* Order ID + Date */}
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-border">
-              <span className="font-bold text-foreground">#{order.id}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-foreground">#{order.parent_order_id ? `${order.parent_order_id}` : order.id}</span>
+                {order.parent_order_id && (
+                  <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">
+                    Batch {order.batch_index || 1}
+                  </span>
+                )}
+              </div>
               <span className="text-xs text-muted-foreground">
                 {order.createdAt ? format(new Date(order.createdAt), "MMM d, h:mm a") : "Date N/A"}
               </span>
@@ -68,23 +77,14 @@ export function OrdersTable({ orders, actions }) {
             <div className="border-t border-border pt-2 flex items-center justify-between gap-2 flex-wrap">
               <div>
                 <div className="font-bold text-primary text-base">
-                  Rs. {parseFloat(order.total || 0).toLocaleString()}
+                  {formatPKR(order.total)}
                 </div>
                 <div className="text-[11px] text-muted-foreground capitalize">
                   {order.paymentMethod || "COD"}
                 </div>
               </div>
               <div className="flex flex-col gap-1 items-end">
-                <Badge
-                  variant={
-                    order.status === "completed" ? "success" :
-                    order.status === "cancelled" ? "destructive" :
-                    order.status === "processing" ? "default" : "secondary"
-                  }
-                  className="capitalize"
-                >
-                  {order.status}
-                </Badge>
+                <OrderStatusBadge status={order.status} />
                 {order.deliveryPersonnel && (
                   <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex items-center gap-1">
                     🚚 {order.deliveryPersonnel}
@@ -120,7 +120,14 @@ export function OrdersTable({ orders, actions }) {
             {orders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="px-3 sm:px-4 md:px-5 py-3.5 whitespace-nowrap">
-                  <div className="font-medium">#{order.id}</div>
+                  <div className="font-medium flex items-center gap-1.5">
+                    <span>#{order.parent_order_id || order.id}</span>
+                    {order.parent_order_id && (
+                      <span className="text-[10px] bg-purple-100 text-purple-800 px-1 rounded font-bold">
+                        B{order.batch_index || 1}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {order.createdAt ? format(new Date(order.createdAt), "MMM d, h:mm a") : "Date N/A"}
                   </div>
@@ -162,7 +169,7 @@ export function OrdersTable({ orders, actions }) {
 
                 <TableCell className="px-2 sm:px-3 md:px-4 py-3 whitespace-nowrap">
                   <div className="font-bold text-primary text-xs sm:text-sm">
-                    Rs. {parseFloat(order.total || 0).toLocaleString()}
+                    {formatPKR(order.total)}
                   </div>
                   <div className="text-[11px] sm:text-xs text-muted-foreground capitalize">
                     {order.paymentMethod || "COD"}
@@ -171,16 +178,7 @@ export function OrdersTable({ orders, actions }) {
 
                 <TableCell className="px-2 sm:px-3 md:px-4 py-3">
                   <div className="flex flex-col gap-1 items-start">
-                    <Badge
-                      variant={
-                        order.status === "completed" ? "success" :
-                        order.status === "cancelled" ? "destructive" :
-                        order.status === "processing" ? "default" : "secondary"
-                      }
-                      className="capitalize text-[10px] sm:text-xs px-2 py-0.5"
-                    >
-                      {order.status}
-                    </Badge>
+                    <OrderStatusBadge status={order.status} />
                     {order.deliveryPersonnel && (
                       <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex items-center gap-1 truncate max-w-[120px]" title={order.deliveryPersonnel}>
                         <span className="shrink-0">🚚</span>

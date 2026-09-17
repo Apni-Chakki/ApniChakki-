@@ -2,7 +2,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Button } from '../../components/common/button';
 import { Printer, X, ClipboardList, Languages, Wheat, MessageCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { OrderStatusBadge } from '../../components/shared/OrderStatusBadge';
 import { API_BASE_URL } from '../../config';
+import { sendWhatsAppMessage } from '../../utils/whatsappHelper';
+import { printIframeHtml } from '../../utils/printHelpers';
 import {
   translateText,
   getStatusLabel,
@@ -128,59 +131,11 @@ export function PrintOrderDetails({ order, open, onClose }) {
       itemDiscountsTotal,
       couponDiscount,
     });
-    let phone = order.phone.replace(/\D/g, '');
-    if (phone.startsWith('0')) phone = '92' + phone.slice(1);
-    else if (!phone.startsWith('92')) phone = '92' + phone;
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    sendWhatsAppMessage(order.phone, message);
   };
 
   const handlePrint = () => {
-    try {
-      let iframe = document.getElementById('print-details-frame');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'print-details-frame';
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        iframe.style.visibility = 'hidden';
-        document.body.appendChild(iframe);
-      }
-      const doc = iframe.contentWindow.document;
-      doc.open();
-      doc.write(buildPrintHTML());
-      doc.close();
-      setTimeout(() => {
-        try {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        } catch (err) {
-          fallbackPrint();
-        }
-      }, 300);
-    } catch (e) {
-      fallbackPrint();
-    }
-  };
-
-  const fallbackPrint = () => {
-    try {
-      const printWin = window.open('', '_blank');
-      if (printWin) {
-        printWin.document.open();
-        printWin.document.write(buildPrintHTML());
-        printWin.document.close();
-        printWin.focus();
-        setTimeout(() => {
-          printWin.print();
-        }, 500);
-      }
-    } catch (e) {
-      console.warn("Print error:", e);
-    }
+    printIframeHtml(buildPrintHTML(), { frameId: 'print-details-frame' });
   };
 
   return (
@@ -272,9 +227,11 @@ export function PrintOrderDetails({ order, open, onClose }) {
                   <p className={`text-[9px] uppercase text-muted-foreground font-bold ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                     {lang === 'ur' ? 'حیثیت' : 'Status'}
                   </p>
-                  <span className={`inline-block mt-0.5 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${getStatusColorClass(order.status)}`}>
-                    {getStatusLabel(order.status, lang)}
-                  </span>
+                  <OrderStatusBadge
+                    status={order.status}
+                    label={getStatusLabel(order.status, lang)}
+                    className="mt-0.5 text-[9px] uppercase px-2 py-0.5"
+                  />
                 </div>
                 {order.status === 'cancelled' && order.cancellationReason && (
                   <div className="col-span-2 bg-red-50 border border-red-300 rounded-lg p-2.5 mt-1" style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>

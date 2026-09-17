@@ -19,7 +19,7 @@ const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 // Lazy loading all pages for better performance
 // Customer side pages
 const Homepage = lazy(() => import('./pages/customer/Homepage').then(module => ({ default: module.Homepage })));
-const Checkout = lazy(() => import('./pages/customer/Checkout').then(module => ({ default: module.Checkout })));
+const Checkout = lazy(() => import('./pages/customer/Checkout').then(module => ({ default: module.Checkout || module.default })));
 const OrderConfirmation = lazy(() => import('./pages/customer/OrderConfirmation').then(module => ({ default: module.OrderConfirmation })));
 const TrackOrder = lazy(() => import('./pages/customer/TrackOrder').then(module => ({ default: module.TrackOrder })));
 const Contact = lazy(() => import('./pages/customer/Contact').then(module => ({ default: module.Contact })));
@@ -38,14 +38,14 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then(mod
 const DeliveryPanel = lazy(() => import('./pages/delivery/DeliveryPanel').then(module => ({ default: module.DeliveryPanel })));
 
 // Admin dashboard pages
-const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(module => ({ default: module.Dashboard })));
+const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(module => ({ default: module.Dashboard || module.default })));
 const TodaysWork = lazy(() => import('./pages/admin/TodaysWork').then(module => ({ default: module.TodaysWork })));
 const TomorrowsList = lazy(() => import('./pages/admin/TomorrowsList').then(module => ({ default: module.TomorrowsList })));
 const ReadyOrders = lazy(() => import('./pages/admin/ReadyOrders').then(module => ({ default: module.ReadyOrders })));
 const PickupRequests = lazy(() => import('./pages/admin/PickupRequests').then(module => ({ default: module.PickupRequests })));
 const CompletedOrders = lazy(() => import('./pages/admin/CompletedOrders').then(module => ({ default: module.CompletedOrders })));
 const OrdersRecord = lazy(() => import('./pages/admin/OrdersRecord').then(module => ({ default: module.OrdersRecord })));
-const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement })));
+const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement').then(module => ({ default: module.InventoryManagement || module.default })));
 const ManageCategories = lazy(() => import('./pages/admin/ManageCategories').then(module => ({ default: module.ManageCategories })));
 const ManageServices = lazy(() => import('./pages/admin/ManageServices').then(module => ({ default: module.ManageServices })));
 const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons').then(module => ({ default: module.ManageCoupons })));

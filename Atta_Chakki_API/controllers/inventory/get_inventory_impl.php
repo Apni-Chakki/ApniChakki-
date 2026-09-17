@@ -20,7 +20,7 @@ try {
     $types  = '';
 
     if ($lowStock) {
-        $where[] = "p.stock_quantity < p.min_stock_level";
+        $where[] = "(CASE WHEN p.is_rental = 1 THEN p.rental_available_qty ELSE p.stock_quantity END) < p.min_stock_level";
     }
     if ($category !== '') {
         $where[] = "c.name = ?";
@@ -38,8 +38,8 @@ try {
     // Aggregate stats across ALL non-trip products (unaffected by filters)
     $statsSql = "SELECT
                     COUNT(*) AS total_products,
-                    SUM(CASE WHEN p.stock_quantity <= p.min_stock_level THEN 1 ELSE 0 END) AS low_stock_count,
-                    SUM(CASE WHEN p.stock_quantity >  p.min_stock_level THEN 1 ELSE 0 END) AS well_stocked_count
+                    SUM(CASE WHEN (CASE WHEN p.is_rental = 1 THEN p.rental_available_qty ELSE p.stock_quantity END) <= p.min_stock_level THEN 1 ELSE 0 END) AS low_stock_count,
+                    SUM(CASE WHEN (CASE WHEN p.is_rental = 1 THEN p.rental_available_qty ELSE p.stock_quantity END) >  p.min_stock_level THEN 1 ELSE 0 END) AS well_stocked_count
                  FROM products p
                  WHERE LOWER(TRIM(p.unit)) != 'trip'";
     $statsRow = $conn->query($statsSql)->fetch_assoc();
@@ -60,11 +60,12 @@ try {
     // Paginated fetch (or full for print/export)
     $sql = "SELECT
                 p.id, p.name, p.category_id, c.name AS category_name,
-                p.price, p.unit, p.stock_quantity, p.min_stock_level, p.max_stock_level, p.updated_at
+                p.price, p.unit, p.stock_quantity, p.min_stock_level, p.max_stock_level,
+                p.is_rental, p.rental_available_qty, p.updated_at
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
             {$whereSql}
-            ORDER BY p.stock_quantity ASC";
+            ORDER BY (CASE WHEN p.is_rental = 1 THEN p.rental_available_qty ELSE p.stock_quantity END) ASC";
 
     $pageParams = $params;
     $pageTypes  = $types;
@@ -84,25 +85,28 @@ try {
 
     $inventory = [];
     while ($row = $result->fetch_assoc()) {
-        $stock_qty = floatval($row['stock_quantity']);
+        $is_rental = intval($row['is_rental'] ?? 0);
+        $stock_qty = ($is_rental === 1) ? floatval($row['rental_available_qty']) : floatval($row['stock_quantity']);
         $inventory[] = [
-            'id'               => (int)$row['id'],
-            'productName'      => $row['name'],
-            'name'             => $row['name'],
-            'category_id'      => (int)$row['category_id'],
-            'category'         => $row['category_name'],
-            'category_name'    => $row['category_name'],
-            'price'            => floatval($row['price']),
-            'unit'             => $row['unit'],
-            'currentStock'     => $stock_qty,
-            'stock_quantity'   => $stock_qty,
-            'minStockLevel'    => floatval($row['min_stock_level']),
-            'min_stock_level'  => floatval($row['min_stock_level']),
-            'maxStockLevel'    => floatval($row['max_stock_level']),
-            'max_stock_level'  => floatval($row['max_stock_level']),
-            'status'           => ($stock_qty < floatval($row['min_stock_level'])) ? 'low' : 'normal',
-            'lastUpdated'      => $row['updated_at'],
-            'updated_at'       => $row['updated_at'],
+            'id'                   => (int)$row['id'],
+            'productName'          => $row['name'],
+            'name'                 => $row['name'],
+            'category_id'          => (int)$row['category_id'],
+            'category'             => $row['category_name'],
+            'category_name'        => $row['category_name'],
+            'price'                => floatval($row['price']),
+            'unit'                 => $row['unit'],
+            'currentStock'         => $stock_qty,
+            'stock_quantity'       => $stock_qty,
+            'is_rental'            => $is_rental,
+            'rental_available_qty' => floatval($row['rental_available_qty'] ?? 0),
+            'minStockLevel'        => floatval($row['min_stock_level']),
+            'min_stock_level'      => floatval($row['min_stock_level']),
+            'maxStockLevel'        => floatval($row['max_stock_level']),
+            'max_stock_level'      => floatval($row['max_stock_level']),
+            'status'               => ($stock_qty < floatval($row['min_stock_level'])) ? 'low' : 'normal',
+            'lastUpdated'          => $row['updated_at'],
+            'updated_at'           => $row['updated_at'],
         ];
     }
     $stmt->close();

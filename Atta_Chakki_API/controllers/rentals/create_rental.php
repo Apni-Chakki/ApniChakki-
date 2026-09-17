@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
@@ -121,6 +122,7 @@ try {
     }
 
     $conn->commit();
+    clear_api_cache();
 
     echo json_encode([
         "success" => true,

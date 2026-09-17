@@ -1,6 +1,7 @@
 <?php
 // admin side se manual order create karna
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 require_once __DIR__ . '/order_scheduler.php';
 
 header('Content-Type: application/json');
@@ -101,8 +102,36 @@ try {
         $original_price = floatval($item['original_price'] ?? $price);
         $is_weight_pending = 0;
 
-        $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $item_stmt->bind_param("iiddiiii", $order_id, $product_id, $quantity, $price, $original_price, $is_cleaning, $is_grinding, $is_weight_pending);
+        $is_rental = intval($item['is_rental'] ?? 0);
+        $rental_days = $is_rental ? intval($item['rental_days'] ?? 1) : null;
+        if ($rental_days !== null && $rental_days <= 0) $rental_days = 1;
+        $rental_start_date = $is_rental ? (!empty($item['rental_start_date']) ? $item['rental_start_date'] : date('Y-m-d')) : null;
+        $rental_price_per_day = $is_rental ? floatval($item['rental_price_per_day'] ?? 0) : null;
+        $security_deposit = $is_rental ? floatval($item['security_deposit'] ?? 0) : null;
+        $late_penalty_per_day = $is_rental ? floatval($item['late_penalty_per_day'] ?? 0) : null;
+
+        $item_stmt = $conn->prepare("INSERT INTO order_items (
+            order_id, product_id, quantity, price_at_purchase, original_price, 
+            is_cleaning, is_grinding, is_weight_pending, 
+            is_rental, rental_days, rental_start_date, rental_price_per_day, security_deposit, late_penalty_per_day
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $item_stmt->bind_param(
+            "iidddiiiiisddd",
+            $order_id,
+            $product_id,
+            $quantity,
+            $price,
+            $original_price,
+            $is_cleaning,
+            $is_grinding,
+            $is_weight_pending,
+            $is_rental,
+            $rental_days,
+            $rental_start_date,
+            $rental_price_per_day,
+            $security_deposit,
+            $late_penalty_per_day
+        );
         $item_stmt->execute();
         $order_item_id = $conn->insert_id;
         $item_stmt->close();
@@ -119,27 +148,72 @@ try {
             $cust_stmt->close();
         }
 
-        // stock update kar rahe
-        $prod_check = $conn->prepare("SELECT unit, stock_quantity FROM products WHERE id = ?");
-        $prod_check->bind_param("i", $product_id);
-        $prod_check->execute();
-        $prod_res = $prod_check->get_result();
-        if ($prod_res && $prod_row = $prod_res->fetch_assoc()) {
-            $unit = strtolower(trim($prod_row['unit'] ?? ''));
-            if ($unit !== 'trip') {
-                $new_stock = max(0, floatval($prod_row['stock_quantity']) - $quantity);
-                $update_stock = $conn->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
-                $update_stock->bind_param("di", $new_stock, $product_id);
-                $update_stock->execute();
-                $update_stock->close();
+        // stock & rental record update
+        if ($is_rental === 1) {
+            // 1. Decrement rental_available_qty
+            $rent_inv_stmt = $conn->prepare("UPDATE products SET rental_available_qty = GREATEST(0, rental_available_qty - ?) WHERE id = ?");
+            $rent_inv_stmt->bind_param("di", $quantity, $product_id);
+            $rent_inv_stmt->execute();
+            $rent_inv_stmt->close();
+
+            // 2. Create rental record in rentals table
+            $rental_end_date = date('Y-m-d', strtotime($rental_start_date . " + {$rental_days} days"));
+            $total_rental_amount = $rental_days * $rental_price_per_day * $quantity;
+            $total_cost = $total_rental_amount + ($security_deposit * $quantity);
+            $rental_amount_paid = ($payment_status === 'paid') ? $total_cost : ($payment_status === 'partial' ? min($total_cost, $amount_paid) : 0.0);
+
+            $insert_rent_stmt = $conn->prepare("INSERT INTO rentals (
+                order_id, product_id, user_id, customer_name, customer_phone, customer_address, 
+                quantity, rental_start_date, rental_end_date, rental_days, rental_price_per_day, 
+                total_rental_amount, security_deposit, deposit_status, late_penalty_per_day, 
+                payment_method, amount_paid, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'held', ?, ?, ?, 'active', NOW(), NOW())");
+
+            $insert_rent_stmt->bind_param(
+                "iiisssissidddssd",
+                $order_id,
+                $product_id,
+                $user_id,
+                $name,
+                $phone,
+                $address,
+                $quantity,
+                $rental_start_date,
+                $rental_end_date,
+                $rental_days,
+                $rental_price_per_day,
+                $total_rental_amount,
+                $security_deposit,
+                $late_penalty_per_day,
+                $payment_method,
+                $rental_amount_paid
+            );
+            $insert_rent_stmt->execute();
+            $insert_rent_stmt->close();
+        } else {
+            // regular stock update
+            $prod_check = $conn->prepare("SELECT unit, stock_quantity FROM products WHERE id = ?");
+            $prod_check->bind_param("i", $product_id);
+            $prod_check->execute();
+            $prod_res = $prod_check->get_result();
+            if ($prod_res && $prod_row = $prod_res->fetch_assoc()) {
+                $unit = strtolower(trim($prod_row['unit'] ?? ''));
+                if ($unit !== 'trip') {
+                    $new_stock = max(0, floatval($prod_row['stock_quantity']) - $quantity);
+                    $update_stock = $conn->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                    $update_stock->bind_param("di", $new_stock, $product_id);
+                    $update_stock->execute();
+                    $update_stock->close();
+                }
             }
+            $prod_check->close();
         }
-        $prod_check->close();
     }
 
     // Run scheduler algorithm to calculate weight, processing time, and assign date/ETA
     $schedule_result = scheduleOrder($conn, $order_id);
 
+    clear_api_cache();
     echo json_encode([
         "success" => true,
         "message" => "Order created successfully",

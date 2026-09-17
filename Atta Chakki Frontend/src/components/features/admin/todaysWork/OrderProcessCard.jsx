@@ -65,7 +65,16 @@ export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTim
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="min-w-0">
             <CardTitle className="text-lg sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
-              Order #{order.id}
+              {order.parent_order_id ? (
+                <>
+                  Order #{order.parent_order_id}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (Batch {order.batch_index || 1} of {order.total_batches || order.siblings?.length || 2} • #{order.id})
+                  </span>
+                </>
+              ) : (
+                `Order #${order.id}`
+              )}
               {isPickup ? (
                 <Badge variant="outline" className="text-purple-700 bg-purple-50 border-purple-200 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
                   <Store className="h-3 w-3" /> Self Pickup
@@ -78,7 +87,7 @@ export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTim
               {isSplitBatch && (
                 <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] px-2 py-0.5 font-bold">
                   <SplitSquareHorizontal className="h-3 w-3 mr-1" />
-                  BATCH {order.batch_index} OF {order.siblings?.length || '?'}
+                  BATCH {order.batch_index || 1} OF {order.total_batches || order.siblings?.length || '?'}
                 </Badge>
               )}
               {order.is_carried_forward && (
@@ -170,25 +179,31 @@ export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTim
               <span className="text-xs font-semibold text-purple-800 uppercase">Split Batches Status</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {order.siblings.map((sib) => (
-                <div
-                  key={sib.id}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${
-                    sib.status === 'ready'
-                      ? 'bg-green-100 text-green-800 border-green-300'
-                      : 'bg-slate-100 text-slate-600 border-slate-300'
-                  }`}
-                >
-                  {sib.status === 'ready'
-                    ? <CheckCircle className="h-3 w-3" />
-                    : <Clock className="h-3 w-3" />}
-                  Batch {sib.batch_index} #{sib.id}
-                  <span className="text-[10px] opacity-70">
-                    ({parseFloat(sib.total_weight_kg || 0).toFixed(1)}kg)
-                  </span>
-                  — {sib.assigned_date === new Date().toISOString().slice(0, 10) ? 'Today' : 'Tomorrow'}
-                </div>
-              ))}
+              {order.siblings.map((sib) => {
+                const isSibReady = ['ready', 'batch_ready', 'completed', 'delivered'].includes(String(sib.status || '').toLowerCase().trim());
+                const isCurrent = sib.id === order.id;
+                return (
+                  <div
+                    key={sib.id}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${
+                      isCurrent
+                        ? 'bg-purple-600 text-white border-purple-700 font-bold shadow-sm'
+                        : isSibReady
+                          ? 'bg-green-100 text-green-800 border-green-300'
+                          : 'bg-slate-100 text-slate-600 border-slate-300'
+                    }`}
+                  >
+                    {isSibReady
+                      ? <CheckCircle className="h-3 w-3" />
+                      : <Clock className="h-3 w-3" />}
+                    Batch {sib.batch_index || 1} #{sib.id} {isCurrent ? '(Current)' : ''}
+                    <span className="text-[10px] opacity-80">
+                      ({parseFloat(sib.total_weight_kg || 0).toFixed(1)}kg)
+                    </span>
+                    — {sib.assigned_date === new Date().toISOString().slice(0, 10) ? 'Today' : 'Tomorrow'}
+                  </div>
+                );
+              })}
             </div>
             {!allSiblingsReady && (
               <p className="mt-2 text-xs text-purple-700 flex items-center gap-1">
@@ -314,7 +329,7 @@ export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTim
             </Tooltip>
           )}
 
-          {isHeavy && !isSplitBatch && (
+          {(isHeavy || parseFloat(order.total_weight_kg || 0) >= 15) && !isSplitBatch && order.status !== 'split_parent' && (
             <Button
               variant="outline"
               className="w-full border-2 border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 shadow-sm font-medium text-sm animate-pulse"

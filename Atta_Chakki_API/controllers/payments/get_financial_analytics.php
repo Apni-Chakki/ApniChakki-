@@ -45,7 +45,7 @@ if ($rev_res) {
 
 $refunds_sql = "SELECT DATE(actual_return_date) as refund_date, SUM(deposit_refund_amount) as daily_refunds
                 FROM rentals
-                WHERE status = 'returned' AND actual_return_date >= DATE(NOW()) - INTERVAL 6 DAY
+                WHERE deposit_refund_amount > 0 AND actual_return_date >= DATE(NOW()) - INTERVAL 6 DAY
                 GROUP BY DATE(actual_return_date)";
 $ref_res = $conn->query($refunds_sql);
 if ($ref_res) {

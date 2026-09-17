@@ -22,7 +22,7 @@ export const RentalModal = ({
   rentalQty,
   setRentalQty,
   handlePlaceRental,
-  user,
+  _user,
   t = (s) => s,
   tDynamic = (s) => s,
 }) => {
@@ -30,8 +30,11 @@ export const RentalModal = ({
   const securityDeposit = parseFloat(service?.security_deposit) || 0;
   const availableQty = parseFloat(service?.rental_available_qty || 0);
 
-  const rentalSubtotal = Math.round(rentalPricePerDay * rentalDays * rentalQty);
-  const depositTotal = Math.round(securityDeposit * rentalQty);
+  const safeDays = Math.max(1, parseInt(rentalDays || 1, 10));
+  const safeQty = Math.max(1, parseInt(rentalQty || 1, 10));
+
+  const rentalSubtotal = Math.round(rentalPricePerDay * safeDays * safeQty);
+  const depositTotal = Math.round(securityDeposit * safeQty);
   const grandTotal = rentalSubtotal + depositTotal;
 
   return (
@@ -85,9 +88,22 @@ export const RentalModal = ({
                   min="1"
                   max="90"
                   value={rentalDays}
-                  onChange={(e) =>
-                    setRentalDays && setRentalDays(Math.max(1, parseInt(e.target.value) || 1))
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setRentalDays && setRentalDays("");
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      if (!isNaN(parsed)) {
+                        setRentalDays && setRentalDays(Math.min(90, Math.max(0, parsed)));
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!rentalDays || rentalDays < 1) {
+                      setRentalDays && setRentalDays(1);
+                    }
+                  }}
                   className="w-full text-xs font-bold p-2 rounded-lg border border-slate-200 bg-white text-center focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                 />
               </div>
@@ -102,9 +118,22 @@ export const RentalModal = ({
                   min="1"
                   max={availableQty || 99}
                   value={rentalQty}
-                  onChange={(e) =>
-                    setRentalQty && setRentalQty(Math.max(1, parseInt(e.target.value) || 1))
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setRentalQty && setRentalQty("");
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      if (!isNaN(parsed)) {
+                        setRentalQty && setRentalQty(Math.min(availableQty || 99, Math.max(0, parsed)));
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!rentalQty || rentalQty < 1) {
+                      setRentalQty && setRentalQty(1);
+                    }
+                  }}
                   className="w-full text-xs font-bold p-2 rounded-lg border border-slate-200 bg-white text-center focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                 />
                 {availableQty > 0 && (
@@ -126,7 +155,7 @@ export const RentalModal = ({
               </div>
               <div className="flex justify-between items-center gap-2">
                 <span className="text-slate-500 font-semibold">
-                  {t("Rental Subtotal")} ({rentalDays} {t("days")} × {rentalQty} {t("qty")})
+                  {t("Rental Subtotal")} ({safeDays} {t("days")} × {safeQty} {t("qty")})
                 </span>
                 <span className="font-bold text-slate-800 whitespace-nowrap">
                   Rs. {rentalSubtotal}
@@ -137,7 +166,7 @@ export const RentalModal = ({
                   <ShieldCheck className="h-3.5 w-3.5 text-rose-500" />
                   {t("Refundable Deposit")}{" "}
                   <span className="text-[9px] bg-slate-200/80 text-slate-600 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                    (Rs. {Math.round(securityDeposit)} × {rentalQty})
+                    (Rs. {Math.round(securityDeposit)} × {safeQty})
                   </span>
                 </span>
                 <span className="font-bold text-slate-800 whitespace-nowrap">

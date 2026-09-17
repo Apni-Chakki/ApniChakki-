@@ -350,17 +350,59 @@ export async function generateBillPDF(order) {
   doc.line(margin, y, pageW - margin, y);
   y += 7;
 
-  const hasPendingItems = order.items.some(i => i.isWeightPending);
+  const hasPendingItems = (order.items || []).some(i => i.isWeightPending);
   const total = Number(order.total || 0);
   const advance = Number(order.advancePayment || 0);
   const remainingDue = total - advance;
-  const couponDiscount = Number(order.couponDiscount || 0);
+  const couponDiscount = Number(order.couponDiscount || order.coupon_discount || 0);
+
+  // Calculate items subtotal and item discounts
+  let itemsSubtotal = 0;
+  let itemDiscountsTotal = 0;
+
+  (order.items || []).forEach(item => {
+    if (!item.isWeightPending) {
+      const isRental = item.isRental || item.is_rental === 1 || item.is_rental === '1';
+      if (isRental) {
+        const rate = Number(item.rental_price_per_day || item.price_at_purchase || 0);
+        const days = Number(item.rental_days || 0);
+        itemsSubtotal += rate * days;
+      } else {
+        const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
+        const origPrice = parseFloat(item.original_price) || null;
+        const qty = parseFloat(item.quantity) || 0;
+        const hasItemDiscount = origPrice && origPrice > itemPrice;
+
+        itemsSubtotal += itemPrice * qty;
+        if (hasItemDiscount) {
+          itemDiscountsTotal += (origPrice - itemPrice) * qty;
+        }
+      }
+    }
+  });
+
+  let deliveryFee = parseFloat(order.deliveryFee ?? order.delivery_fee ?? order.shipping_cost ?? order.delivery_cost ?? order.deliveryCharges ?? order.delivery_charges ?? 0) || 0;
+  const isDeliveryOrder = order.type === 'delivery' || order.order_type === 'delivery' || !!(order.deliveryAddress && !isPickup);
+  if (!deliveryFee && isDeliveryOrder && total > (itemsSubtotal - couponDiscount)) {
+    deliveryFee = Math.max(0, Math.round(total - (itemsSubtotal - couponDiscount)));
+  }
+
+  const effectiveSubtotal = itemsSubtotal > 0 ? itemsSubtotal : (total - deliveryFee + couponDiscount);
 
   doc.setFont('courier', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
   doc.text('SUBTOTAL', margin, y);
-  doc.text(`Rs.${(total + couponDiscount).toLocaleString()}${hasPendingItems ? ' + TBD' : ''}`, pageW - margin, y, { align: 'right' });
+  doc.text(`Rs.${effectiveSubtotal.toLocaleString()}${hasPendingItems ? ' + TBD' : ''}`, pageW - margin, y, { align: 'right' });
+
+  if (itemDiscountsTotal > 0) {
+    y += 6;
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(21, 128, 61);
+    doc.text('PRODUCT DISCOUNT', margin, y);
+    doc.text(`- Rs.${itemDiscountsTotal.toLocaleString()}`, pageW - margin, y, { align: 'right' });
+  }
 
   if (couponDiscount > 0) {
     y += 6;
@@ -369,18 +411,29 @@ export async function generateBillPDF(order) {
     doc.setTextColor(21, 128, 61);
     doc.text(`DISCOUNT (${order.couponCode || 'PROMO'})`, margin, y);
     doc.text(`- Rs.${couponDiscount.toLocaleString()}`, pageW - margin, y, { align: 'right' });
-
-    y += 5;
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.2);
-    doc.line(margin, y, pageW - margin, y);
-    
-    y += 6;
-    doc.setFontSize(13);
-    doc.setTextColor(40, 40, 40);
-    doc.text('GRAND TOTAL', margin, y);
-    doc.text(`Rs.${total.toLocaleString()}`, pageW - margin, y, { align: 'right' });
   }
+
+  if (isDeliveryOrder || deliveryFee > 0) {
+    y += 6;
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(80, 80, 80);
+    doc.text('DELIVERY CHARGES', margin, y);
+    const feeText = deliveryFee > 0 ? `+ Rs.${deliveryFee.toLocaleString()}` : (isDeliveryOrder ? 'Rs. 0 (FREE)' : 'Rs. 0');
+    doc.text(feeText, pageW - margin, y, { align: 'right' });
+  }
+
+  y += 5;
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y, pageW - margin, y);
+
+  y += 6;
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(40, 40, 40);
+  doc.text('GRAND TOTAL', margin, y);
+  doc.text(`Rs.${total.toLocaleString()}`, pageW - margin, y, { align: 'right' });
 
   if (advance > 0) {
     y += 7;

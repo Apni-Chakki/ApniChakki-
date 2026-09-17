@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────
+/* 
    Custom dark variant — applies whenever .dark
    ancestor is present (used by theme toggle)
-   ───────────────────────────────────────────── */
+*/
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ─────────────────────────────────────────────
+/* 
    Theme tokens — exposed to Tailwind utilities
    so classes like bg-primary / border-border /
    text-success / bg-sidebar all resolve.
-   ───────────────────────────────────────────── */
+  */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -57,11 +57,11 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ─────────────────────────────────────────────
+/* 
    Base CSS variables — light theme (root) +
    dark theme. Preserved from the original
    pre-compiled bundle.
-   ───────────────────────────────────────────── */
+*/
 :root {
   --font-size: 16px;
   --background: #faf8f5;
@@ -144,9 +144,7 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
-/* ─────────────────────────────────────────────
-   Base element defaults
-   ───────────────────────────────────────────── */
+/* Base element defaults */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -161,11 +159,11 @@
   }
 }
 
-/* ─────────────────────────────────────────────
-   Heading / paragraph baseline typography —
-   only applies when no Tailwind text utility
-   has been set on the element.
-   ───────────────────────────────────────────── */
+/* 
+  Heading / paragraph baseline typography —
+  only applies when no Tailwind text utility
+  has been set on the element.
+ */
 @layer base {
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) h1 {
     font-size: var(--text-2xl);
@@ -211,10 +209,10 @@
   }
 }
 
-/* ─────────────────────────────────────────────
-   Print preserves colour and disables global
-   @page margins (component prints set their own)
-   ───────────────────────────────────────────── */
+/* 
+  Print preserves colour and disables global
+  @page margins (component prints set their own)
+*/
 @media print {
   body {
     background: #fff;
@@ -226,7 +224,7 @@
   }
 }
 
-/* ─── Google Maps Autocomplete Dropdown Fix ─── */
+/*  Google Maps Autocomplete Dropdown Fix */
 .pac-container {
   z-index: 10000 !important;
   border-radius: 8px !important;
@@ -408,9 +406,9 @@ img {
   background: #ecdcc9 !important;
 }
 
-/* ─────────────────────────────────────────────
+/* 
    Mapbox GL Full Width & Height Responsiveness
-   ───────────────────────────────────────────── */
+*/
 .mapboxgl-map {
   width: 100% !important;
   height: 100% !important;
@@ -567,3 +565,33 @@ img {
 .animate-grain-float {
   animation: grain-float 2.5s ease-in-out infinite;
 }
+
+/* Sleek, modern custom scrollbar for dialogs & containers */
+.custom-scrollbar,
+.custom-modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.custom-modal-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+.custom-modal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.custom-modal-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.custom-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}

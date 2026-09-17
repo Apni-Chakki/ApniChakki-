@@ -84,8 +84,8 @@ try {
     $tomorrowPaid = $origOrder['amount_paid'] * $ratioTomorrow;
     $tomorrow_date = date('Y-m-d', strtotime('+1 day'));
 
-    $insOrder = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, order_type, shipping_address, payment_method, payment_status, assigned_date, special_instructions, created_at, driver_name, driver_phone) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $insOrder->bind_param("iddsssssssss", 
+    $insOrder = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, order_type, shipping_address, payment_method, payment_status, assigned_date, created_at, driver_name, driver_phone) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)");
+    $insOrder->bind_param("iddssssssss", 
         $origOrder['user_id'], 
         $tomorrowAmount, 
         $tomorrowPaid,
@@ -94,7 +94,6 @@ try {
         $origOrder['payment_method'],
         $origOrder['payment_status'],
         $tomorrow_date,
-        $origOrder['special_instructions'],
         $origOrder['created_at'],
         $origOrder['driver_name'],
         $origOrder['driver_phone']
