@@ -174,8 +174,10 @@ export function OrdersRecordList({ orders, totalItems, onPrintOrder, onPayOrder 
 
                 return (
                   <TableRow key={order.id} className={isOverdue ? "bg-red-50 hover:bg-red-100" : ""}>
+                    <TableCell className="font-mono text-xs font-bold">
+                      #{order.id}
+                    </TableCell>
                     <TableCell>
-                      <div className="font-mono text-xs font-bold mb-1.5">{order.id}</div>
                       <Badge 
                         variant="outline" 
                         className={`text-[9px] uppercase font-bold flex items-center gap-1 py-0 px-1.5 h-[18px] w-fit ${

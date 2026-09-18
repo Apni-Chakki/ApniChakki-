@@ -69,22 +69,31 @@ export function TodaysWork() {
   const [storeName, setStoreName] = useState('Suchi Chakki');
   const [whatsappReadyModal, setWhatsappReadyModal] = useState(null);
 
-  const processingOrders = orders.filter(order =>
+  const sortByFIFO = (list) => {
+    return [...list].sort((a, b) => {
+      const timeA = new Date(a.created_at || a.createdAt || 0).getTime();
+      const timeB = new Date(b.created_at || b.createdAt || 0).getTime();
+      if (timeA !== timeB) return timeA - timeB; // Earliest created first
+      return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0); // Earliest ID first
+    });
+  };
+
+  const processingOrders = sortByFIFO(orders.filter(order =>
     (order.items || []).some(item => {
       const unit = (item.unit || '').toLowerCase().trim();
       return unit === 'kg' || unit === 'g' || unit === 'trip';
     })
-  );
+  ));
 
-  const preparedOrders = orders.filter(order =>
+  const preparedOrders = sortByFIFO(orders.filter(order =>
     !(order.items || []).some(item => {
       const unit = (item.unit || '').toLowerCase().trim();
       return unit === 'kg' || unit === 'g' || unit === 'trip';
     })
-  );
+  ));
 
-  const carriedForwardOrders = processingOrders.filter(o => o.is_carried_forward);
-  const todayNewOrders = processingOrders.filter(o => !o.is_carried_forward);
+  const carriedForwardOrders = sortByFIFO(processingOrders.filter(o => o.is_carried_forward));
+  const todayNewOrders = sortByFIFO(processingOrders.filter(o => !o.is_carried_forward));
 
   const totalWeight = processingOrders.reduce((sum, order) => sum + parseFloat(order.total_weight_kg || 0), 0);
   const totalProcessingMinutes = processingOrders.reduce((sum, order) => sum + parseInt(order.processing_time_minutes || 0), 0);
@@ -126,7 +135,7 @@ export function TodaysWork() {
       const data = await response.json();
       
       if (data.success) {
-        setOrders((data.orders || []).map(order => ({
+        const mappedOrders = (data.orders || []).map(order => ({
           ...order,
           // Use DB order_type or shipping_address keywords — 'pickup' = store pickup, 'delivery' = home delivery
           type: (order.order_type === 'pickup' || (order.shipping_address && (
@@ -137,7 +146,8 @@ export function TodaysWork() {
             order.shipping_address.toLowerCase().includes('shop')
           ))) ? 'pickup' : 'delivery',
           deliveryPersonnel: order.deliveryPersonnel || order.driver_name || null,
-        })));
+        }));
+        setOrders(sortByFIFO(mappedOrders));
         if (data.capacity) setCapacity(data.capacity);
       } else {
         console.error("Failed to load orders");
@@ -376,25 +386,37 @@ export function TodaysWork() {
     }
   };
 
-  // Safe external URL opener (dispatches real click to bypass browser popup blockers)
-  const openWhatsAppSafely = (url) => {
-    if (!url) return;
+  // Safe external URL opener (returns true if opened, false if blocked by browser)
+  const openWhatsAppSafely = (url, forceAnchor = false) => {
+    if (!url) return false;
     try {
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        if (document.body.contains(a)) {
-          document.body.removeChild(a);
-        }
-      }, 300);
+      const newWin = window.open(url, '_blank');
+      if (newWin && !newWin.closed && typeof newWin.closed !== 'undefined') {
+        return true;
+      }
     } catch (err) {
-      console.warn("Failed to trigger anchor click, fallback to window.open", err);
-      window.open(url, '_blank');
+      console.warn("window.open blocked or failed:", err);
     }
+
+    if (forceAnchor) {
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          if (document.body.contains(a)) {
+            document.body.removeChild(a);
+          }
+        }, 300);
+        return true;
+      } catch (err) {
+        console.warn("Failed to trigger anchor click", err);
+      }
+    }
+    return false;
   };
 
   // whatsapp message and details generator
@@ -585,18 +607,22 @@ Suchi Chakki — Pure & Fresh Processing
         try {
           const waDetails = generateWhatsAppDetails(billSource);
           if (waDetails && waDetails.url) {
-            // direct whatsapp kholna
-            openWhatsAppSafely(waDetails.url);
+            // Check if browser automatically opens WhatsApp
+            const autoOpened = openWhatsAppSafely(waDetails.url);
 
-            // whatsapp ka modal show karna
-            setWhatsappReadyModal(waDetails);
-
-            toast.info(`📱 WhatsApp message ready for ${waDetails.customerName}`, {
-              action: {
-                label: 'Open WhatsApp',
-                onClick: () => openWhatsAppSafely(waDetails.url)
-              }
-            });
+            if (!autoOpened) {
+              // Sirf tab dialog box khulega jab browser me WhatsApp auto na khula ho
+              setWhatsappReadyModal(waDetails);
+            } else {
+              // Agar browser me auto khul gaya to dialog box nahi khulega (dono aik sath nahi chalenge)
+              setWhatsappReadyModal(null);
+              toast.info(`📱 WhatsApp opened for ${waDetails.customerName}`, {
+                action: {
+                  label: 'Re-open',
+                  onClick: () => openWhatsAppSafely(waDetails.url, true)
+                }
+              });
+            }
           }
         } catch (waErr) {
           console.warn("WhatsApp link warning:", waErr);
@@ -746,7 +772,7 @@ Suchi Chakki — Pure & Fresh Processing
     printContainer.id = 'print-all-work-container';
 
     const todayStr = new Date().toLocaleString();
-    const sortedOrders = [...orders].sort((a, b) => (parseInt(a.queue_position) || 999) - (parseInt(b.queue_position) || 999));
+    const sortedOrders = sortByFIFO(orders);
 
     const grindJobsCount = processingOrders.length;
     const preparedJobsCount = preparedOrders.length;
@@ -868,7 +894,7 @@ Suchi Chakki — Pure & Fresh Processing
     <TooltipProvider>
     <div className="space-y-4 sm:space-y-6">
       {/* header with quick stats */}
-      <div className="rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+      <div className="rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm bg-white">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 sm:gap-4">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">
@@ -895,15 +921,15 @@ Suchi Chakki — Pure & Fresh Processing
         </div>
 
         <div className="grid grid-cols-3 md:grid-cols-3 mt-4 sm:mt-6 gap-2 sm:gap-5">
-          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm bg-white">
             <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-1 sm:mb-3">Total Weight</p>
             <p className="text-base sm:text-2xl font-black text-gray-900">{totalWeight.toFixed(1)} kg</p>
           </div>
-          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm bg-white">
             <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-1 sm:mb-3">Workload</p>
             <p className="text-base sm:text-2xl font-black text-gray-900">{totalProcessingMinutes} mins</p>
           </div>
-          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+          <div className="rounded-xl border border-gray-200/70 p-3 sm:p-5 shadow-sm bg-white">
             <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.08em] text-gray-500 font-bold mb-1 sm:mb-3">Drivers</p>
             <p className="text-base sm:text-2xl font-black text-gray-900">{activeDrivers}</p>
           </div>
@@ -912,7 +938,7 @@ Suchi Chakki — Pure & Fresh Processing
 
       {/* capacity utilization bar */}
       {capacity && (
-        <Card className="border-blue-200 rounded-xl" style={{ background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)' }}>
+        <Card className="border-blue-200 rounded-xl bg-stat-blue">
           <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
@@ -999,8 +1025,8 @@ Suchi Chakki — Pure & Fresh Processing
                       </span>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {carriedForwardOrders.map((order) => (
-                        <OrderProcessCard key={order.id} order={order} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
+                      {carriedForwardOrders.map((order, idx) => (
+                        <OrderProcessCard key={order.id} order={order} queueIndex={idx + 1} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
                       ))}
                     </div>
                   </>
@@ -1020,8 +1046,8 @@ Suchi Chakki — Pure & Fresh Processing
                       </span>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {todayNewOrders.map((order) => (
-                        <OrderProcessCard key={order.id} order={order} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
+                      {todayNewOrders.map((order, idx) => (
+                        <OrderProcessCard key={order.id} order={order} queueIndex={carriedForwardOrders.length + idx + 1} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
                       ))}
                     </div>
                   </>

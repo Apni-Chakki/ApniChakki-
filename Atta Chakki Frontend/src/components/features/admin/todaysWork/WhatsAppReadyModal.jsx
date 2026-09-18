@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../common/dialog';
 import { Button } from '../../../common/button';
 import { toast } from 'sonner';
@@ -48,7 +48,8 @@ export function WhatsAppReadyModal({
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 shadow-md shadow-emerald-600/20 text-sm flex items-center justify-center gap-2"
               onClick={() => {
                 if (whatsappReadyModal?.url) {
-                  openWhatsAppSafely(whatsappReadyModal.url);
+                  openWhatsAppSafely(whatsappReadyModal.url, true);
+                  setWhatsappReadyModal(null);
                 }
               }}
             >

@@ -4,6 +4,7 @@ import { Button } from '../../../common/button';
 import { ArrowLeft } from 'lucide-react';
 import { LazyAnimatedSection } from '../../../common/LazyAnimatedSection';
 import { ServiceCard } from '../../../../pages/customer/ServiceCard';
+import './CategoriesSection.css';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 30 },

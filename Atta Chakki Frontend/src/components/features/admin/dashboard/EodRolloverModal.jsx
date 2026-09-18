@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from '@/components/common/dialog';
 import { Checkbox } from '@/components/common/checkbox';
+import './EodRolloverModal.css';
 
 export default function EodRolloverModal({
   showEodModal,
@@ -85,7 +86,7 @@ export default function EodRolloverModal({
             </div>
 
             {/* Orders list */}
-            <div className="px-3 py-2 space-y-1.5" style={{ maxHeight: 'calc(85vh - 190px)', overflowY: 'auto' }}>
+            <div className="pl-3 pr-2 py-2 space-y-1.5 eod-items-scroll custom-modal-scrollbar">
               {yesterdayOrders.map((order) => {
                 const isChecked = selectedCompleted.has(order.id);
                 return (

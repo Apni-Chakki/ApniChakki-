@@ -1,0 +1,38 @@
+/* Remove focus ring from Dialog X close button  */
+[data-slot="dialog-content"]>button:focus,
+[data-slot="dialog-content"]>button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Attractive sleek scrollbar for dialogs */
+[data-slot="dialog-content"] {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-thumb:hover {
+  background: #8b6f47;
+}

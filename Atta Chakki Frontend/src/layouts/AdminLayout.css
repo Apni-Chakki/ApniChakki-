@@ -1,0 +1,70 @@
+/*  Admin main content: account for no sidebar on mobile  */
+.admin-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: #FBF6F0;
+}
+
+.admin-main-inner {
+  flex: 1;
+  padding: 2rem;
+  overflow: auto;
+  background-color: #f1eeee;
+}
+
+@media (max-width: 767px) {
+  .admin-main-inner {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .admin-main-inner {
+    padding: 1.5rem;
+  }
+}
+
+/* ---- Admin top header bar ---- */
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.75rem;
+  padding: 0 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #f1ece5;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.admin-topbar-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #1a1a1a;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-topbar-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #8b6f47, #a0845c);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f5efe6;
+}

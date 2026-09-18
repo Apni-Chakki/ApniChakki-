@@ -1,0 +1,354 @@
+/* ─── Bottom Sheet ─── */
+.tracking-bottom-sheet {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 28px 28px 0 0;
+  margin-top: -24px;
+  position: relative;
+  z-index: 20;
+  padding: 0 20px 32px;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── ETA Header ─── */
+.eta-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px 0 16px;
+}
+
+.eta-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 10px 24px;
+  border-radius: 40px;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.eta-pill .eta-clock-icon {
+  width: 18px;
+  height: 18px;
+  color: white;
+}
+
+.eta-pill .eta-clock-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.eta-pill .eta-time {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.distance-text {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ─── ETA Card ─── */
+.eta-card {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.eta-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eta-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.eta-main .eta-nav-icon {
+  width: 24px;
+  height: 24px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.eta-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.eta-value {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.eta-speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px 14px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.eta-speed .speed-icon {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+}
+
+.eta-speed span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.last-update {
+  font-size: 0.7rem;
+  color: #475569;
+  margin-top: 8px;
+  text-align: right;
+}
+
+/* ─── Driver Card ─── */
+.driver-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.driver-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.driver-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.driver-avatar .avatar-icon {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+
+.driver-details {
+  flex: 1;
+}
+
+.driver-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 2px;
+}
+
+.driver-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.driver-subtitle .verified-icon {
+  width: 12px;
+  height: 12px;
+  color: #22c55e;
+}
+
+.driver-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+.driver-rating .star-icon {
+  width: 14px;
+  height: 14px;
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+
+.driver-rating span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+/* ─── Driver Action Buttons ─── */
+.driver-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.call-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.call-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+.maps-btn {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.maps-btn:hover {
+  background: rgba(59, 130, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+.action-btn .action-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ─── Delivery Details Card ─── */
+.delivery-details-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.detail-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.destination-icon {
+  color: #ef4444;
+}
+
+.package-icon {
+  color: #8b5cf6;
+}
+
+.detail-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.detail-value.amount {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #a78bfa;
+}
+
+.detail-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 12px 0;
+}
+
+/* ─── Footer ─── */
+.tracking-footer {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.tracking-footer p {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.tracking-footer strong {
+  color: #64748b;
+}
+
+/* ─── Responsive: Desktop ─── */
+@media (min-width: 768px) {
+  .tracking-bottom-sheet {
+    width: 420px;
+    min-width: 420px;
+    height: 100vh;
+    overflow-y: auto;
+    border-radius: 0;
+    margin-top: 0;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .eta-header {
+    padding-top: 28px;
+  }
+}
+
+/* ─── Responsive: Large screens ─── */
+@media (min-width: 1200px) {
+  .tracking-bottom-sheet {
+    width: 460px;
+    min-width: 460px;
+  }
+}

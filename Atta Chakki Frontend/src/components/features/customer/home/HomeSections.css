@@ -1,0 +1,65 @@
+/* Custom Mix Banner Card Padding & Spacing */
+.custom-mix-card {
+  padding-top: 2.5rem !important;
+  padding-bottom: 3.5rem !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+@media (max-width: 640px) {
+  .custom-mix-card {
+    padding-top: 2rem !important;
+    padding-bottom: 2.5rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+}
+
+/* Premium Reusable Section Headings */
+.premium-section-heading {
+  font-size: 2.6rem !important;
+  font-weight: 800 !important;
+  color: #27272a !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+@media (max-width: 640px) {
+  .premium-section-heading {
+    font-size: 2rem !important;
+  }
+}
+
+.premium-section-sub {
+  font-size: 1.125rem !important;
+  color: #71717a !important;
+  max-width: 36rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  line-height: 1.5 !important;
+}
+
+/* Trending Section Spacing */
+.trending-section {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+/* Discounted Section Spacing */
+.discounted-section {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+@media (min-width: 768px) {
+  .trending-section {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+
+  .discounted-section {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+}

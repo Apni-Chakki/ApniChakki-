@@ -24,12 +24,17 @@ function Carousel({
   plugins,
   className,
   children,
+  dir,
   ...props
 }) {
+  const isDocRtl = typeof document !== 'undefined' && document.documentElement.dir === 'rtl';
+  const effectiveDirection = dir || opts?.direction || (isDocRtl ? 'rtl' : 'ltr');
+
   const [carouselRef, api] = useEmblaCarousel(
     {
       ...opts,
       axis: orientation === "horizontal" ? "x" : "y",
+      direction: orientation === "horizontal" ? effectiveDirection : undefined,
     },
     plugins
   );
@@ -87,6 +92,7 @@ function Carousel({
         opts,
         orientation:
           orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+        direction: effectiveDirection,
         scrollPrev,
         scrollNext,
         canScrollPrev,
@@ -99,6 +105,7 @@ function Carousel({
         role="region"
         aria-roledescription="carousel"
         data-slot="carousel"
+        dir={effectiveDirection}
         {...props}
       >
         {children}
@@ -119,7 +126,7 @@ function CarouselContent({ className, ...props }) {
       <div
         className={cn(
           "flex",
-          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
+          orientation === "horizontal" ? "-ml-4 rtl:-mr-4 rtl:ml-0" : "-mt-4 flex-col",
           className
         )}
         {...props}
@@ -138,7 +145,7 @@ function CarouselItem({ className, ...props }) {
       data-slot="carousel-item"
       className={cn(
         "min-w-0 shrink-0 grow-0 basis-full",
-        orientation === "horizontal" ? "pl-4" : "pt-4",
+        orientation === "horizontal" ? "pl-4 rtl:pr-4 rtl:pl-0" : "pt-4",
         className
       )}
       {...props}
@@ -170,7 +177,7 @@ function CarouselPrevious({
       onClick={scrollPrev}
       {...props}
     >
-      <ArrowLeft />
+      <ArrowLeft className="rtl:rotate-180" />
       <span className="sr-only">Previous slide</span>
     </Button>
   );
@@ -200,7 +207,7 @@ function CarouselNext({
       onClick={scrollNext}
       {...props}
     >
-      <ArrowRight />
+      <ArrowRight className="rtl:rotate-180" />
       <span className="sr-only">Next slide</span>
     </Button>
   );

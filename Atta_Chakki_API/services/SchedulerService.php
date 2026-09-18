@@ -418,7 +418,7 @@ class SchedulerService {
                 WHERE assigned_date = ? 
                 AND status NOT IN ('cancelled', 'completed', 'ready', 'out-for-delivery')
                 AND total_weight_kg > 0
-                ORDER BY queue_position ASC";
+                ORDER BY created_at ASC, id ASC";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $date);
         $stmt->execute();

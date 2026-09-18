@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { Radio, AlertTriangle } from 'lucide-react';
-import '../../styles/LiveTrackingPage.css';
+import './LiveTrackingPage.css';
 
 import { useTrackingData } from '../../components/features/customer/liveTracking/useTrackingData';
 import { useTrackingMap } from '../../components/features/customer/liveTracking/useTrackingMap';

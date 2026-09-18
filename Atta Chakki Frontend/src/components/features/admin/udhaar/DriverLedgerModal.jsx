@@ -28,7 +28,7 @@ export const DriverLedgerModal = ({
           setSelectedOrderForSettle(null);
         }
       }}>
-        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl w-full flex flex-col p-4 sm:p-6" style={{ maxHeight: '92vh', overflow: 'hidden' }}>
+        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl w-full p-4 sm:p-6 modal-sheet-dialog">
           <DialogHeader className="flex-shrink-0 border-b pb-3 text-left">
             <div className="flex items-start justify-between gap-2 pr-10 sm:pr-12">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -206,7 +206,7 @@ export const DriverLedgerModal = ({
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden sm:block border border-border rounded-lg overflow-x-auto overflow-y-auto bg-card" style={{ maxHeight: 'min(420px, calc(80vh - 260px))' }}>
+              <div className="hidden sm:block border border-border rounded-lg bg-card table-scroll-viewport">
                 <Table className="min-w-[650px] w-full">
                   <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b">
                     <TableRow>

@@ -39,6 +39,16 @@ export function CustomerLogin() {
 
   const from = location.state?.from?.pathname || '/';
 
+  const getRedirectTarget = (loggedUser) => {
+    if (from && from !== '/' && !from.startsWith('/login')) {
+      return from;
+    }
+    const role = String(loggedUser?.role || '').toLowerCase();
+    if (role === 'admin') return '/admin/dashboard';
+    if (role === 'delivery' || role === 'delivery_boy') return '/delivery';
+    return from || '/';
+  };
+
   const handleGoogleSuccess = async (credentialResponse) => {
     setIsLoading(true);
     console.log('[Google Login] credentialResponse:', credentialResponse);
@@ -53,7 +63,7 @@ export function CustomerLogin() {
         if (isPlaceholder) {
           setShowPhoneUpdateModal(true);
         } else {
-          navigate(from, { replace: true });
+          navigate(getRedirectTarget(loggedUser), { replace: true });
         }
       } else {
         toast.error(t('Google login failed. Please try again.'));
@@ -115,10 +125,10 @@ export function CustomerLogin() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      const success = await login(phone, password, 'customer');
-      if (success) {
+      const loggedUser = await login(phone, password, 'customer');
+      if (loggedUser) {
         toast.success(t('Welcome back!'));
-        navigate(from, { replace: true });
+        navigate(getRedirectTarget(loggedUser), { replace: true });
       } else {
         toast.error(t('Invalid credentials. Please try again.'));
       }
@@ -222,7 +232,7 @@ export function CustomerLogin() {
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('Phone Number')}</Label>
                   <div className="relative">
-                    <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Phone className="h-4 w-4 text-muted-foreground input-icon-left" />
                     <Input
                       id="phone"
                       name="username"
@@ -233,8 +243,7 @@ export function CustomerLogin() {
                       onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                       maxLength={11}
                       inputMode="numeric"
-                      className="ps-12"
-                      style={{ paddingInlineStart: '3rem' }}
+                      className="input-with-icon-left"
                       required
                     />
                   </div>
@@ -244,7 +253,7 @@ export function CustomerLogin() {
                 <div className="space-y-2">
                   <Label htmlFor="password">{t('Password')}</Label>
                   <div className="relative">
-                    <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Lock className="h-4 w-4 text-muted-foreground input-icon-left" />
                     <Input
                       id="password"
                       name="password"
@@ -254,8 +263,7 @@ export function CustomerLogin() {
                       value={password}
                       onChange={e => setPassword(e.target.value.replace(/\s/g, ''))}
                       maxLength={50}
-                      className="ps-12 pe-10"
-                      style={{ paddingInlineStart: '3rem', paddingInlineEnd: '2.5rem' }}
+                      className="input-with-icon-both"
                       required
                     />
                     <button

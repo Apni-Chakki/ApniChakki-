@@ -1,0 +1,143 @@
+/* Loading State */
+.live-tracking-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.loading-spinner {
+  text-align: center;
+  color: white;
+}
+
+.loading-spinner .loading-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+}
+
+.loading-spinner h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.loading-spinner p {
+  font-size: 0.875rem;
+  opacity: 0.7;
+}
+
+/* ─── Error State ─── */
+.live-tracking-error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e1b2e 0%, #2d1b3d 100%);
+  padding: 24px;
+}
+
+.error-card {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.error-card .error-icon {
+  width: 56px;
+  height: 56px;
+  color: #f59e0b;
+  margin: 0 auto 20px;
+}
+
+.error-card h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.error-card p {
+  font-size: 0.95rem;
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+/* ─── Delivered State ─── */
+.live-tracking-delivered {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+  padding: 24px;
+}
+
+.delivered-card {
+  text-align: center;
+  color: white;
+  max-width: 420px;
+}
+
+.delivered-checkmark {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  animation: deliveredPulse 2s ease-in-out infinite;
+}
+
+.delivered-icon {
+  width: 56px;
+  height: 56px;
+  color: #a7f3d0;
+}
+
+.delivered-card h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.delivered-card p {
+  font-size: 1rem;
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.delivered-driver {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.delivered-thanks {
+  margin-top: 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+@keyframes deliveredPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(167, 243, 208, 0.4);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(167, 243, 208, 0);
+  }
+}

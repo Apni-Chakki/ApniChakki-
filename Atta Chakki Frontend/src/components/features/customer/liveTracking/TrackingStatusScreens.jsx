@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import './TrackingStatusScreens.css';
 
 export function TrackingLoading() {
   return (

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../../../common/accordion';
 import { LazyAnimatedSection } from '../../../common/LazyAnimatedSection';
+import './FaqSection.css';
 
 const faqContainerVariants = {
   hidden: {},

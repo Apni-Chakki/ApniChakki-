@@ -485,8 +485,7 @@ export function UserAccount() {
                   <button
                     type="button"
                     onClick={handleEdit}
-                    className="inline-flex items-center justify-center h-10 px-5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all duration-200"
-                    style={{ background: 'linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)' }}
+                    className="inline-flex items-center justify-center h-10 px-5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all duration-200 bg-brand-gradient"
                   >
                     <Edit className="h-4 w-4 mr-2 text-white" />
                     {t('Edit Details')}
@@ -616,7 +615,7 @@ export function UserAccount() {
             </Card>
 
             {/* Security & Password Card */}
-            <Card className="p-6 mt-6 border-l-4" style={{ borderLeftColor: '#8b6f47' }}>
+            <Card className="p-6 mt-6 border-l-4 border-l-brand">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400">
                   <ShieldCheck className="h-6 w-6" />
@@ -673,8 +672,7 @@ export function UserAccount() {
                         type="button"
                         onClick={handleVerifyCurrentPassword}
                         disabled={isVerifyingPassword || !currentPassword.trim()}
-                        style={{ background: 'linear-gradient(135deg, #8b6f47 0%, #a0845c 100%)' }}
-                        className="text-white shrink-0 shadow-sm hover:shadow-md transition-all duration-200"
+                        className="bg-brand-gradient text-white shrink-0 shadow-sm hover:shadow-md transition-all duration-200"
                       >
                         {isVerifyingPassword ? (
                           <>

@@ -1,5 +1,5 @@
 import { useState, Suspense, useEffect, useRef } from 'react';
-import { AdminSidebar } from '../pages/admin/AdminSidebar';
+import { AdminSidebar } from '@/components/layout/AdminSidebar/AdminSidebar';
 import { LanguageToggle } from '../components/common/LanguageToggle';
 import { Menu, Loader2, Bell, X } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { PageLoader } from '../components/common/PageLoader';
+import './AdminLayout.css';
 
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);

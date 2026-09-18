@@ -23,26 +23,19 @@ export function TrackOrderCard({
       {/* Order header — clickable */}
       <div
         onClick={onToggleExpand}
-        style={{
-          padding: '1.125rem 1.375rem',
-          cursor: 'pointer',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
-          borderBottom: isExpanded ? '1px solid #f1f5f9' : 'none',
-        }}
+        className={`p-4 sm:p-5 cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
+          isExpanded ? 'border-b border-slate-100' : ''
+        }`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+        <div className="flex items-center gap-3.5">
           <div className={`p-2.5 rounded-xl ${statusColors.bg}`}>
             <Package className={`h-5 w-5 ${statusColors.color}`} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.2rem' }}>
+            <div className="text-xs font-semibold text-slate-400 mb-0.5">
               {t('Order')} #{order.id}
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>
+            <div className="text-sm font-bold text-slate-800">
               {new Date(order.createdAt).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'short',
@@ -52,17 +45,9 @@ export function TrackOrderCard({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+        <div className="flex items-center gap-3 ml-auto">
           <OrderStatusBadge status={order.status} t={t} />
-          <div
-            style={{
-              padding: '0.375rem',
-              border: '1px solid #e2e8f0',
-              borderRadius: '50%',
-              color: '#94a3b8',
-              display: 'flex',
-            }}
-          >
+          <div className="p-1.5 border border-slate-200 rounded-full text-slate-400 flex items-center justify-center">
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>

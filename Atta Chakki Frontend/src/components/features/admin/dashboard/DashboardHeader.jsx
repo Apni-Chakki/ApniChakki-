@@ -18,8 +18,7 @@ export default function DashboardHeader({ isLoading, onRefresh }) {
         onClick={onRefresh}
         variant="outline"
         size="sm"
-        className="hidden sm:flex"
-        style={{ borderColor: '#8b6f47', color: '#8b6f47' }}
+        className="hidden sm:flex admin-brand-outline-btn"
         disabled={isLoading}
       >
         <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />

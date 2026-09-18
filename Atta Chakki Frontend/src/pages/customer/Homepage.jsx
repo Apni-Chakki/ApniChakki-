@@ -17,8 +17,9 @@ import { CustomMixModal } from '../../components/features/customer/home/CustomMi
 import { StorySection } from '../../components/features/customer/home/StorySection';
 import { WhyChooseUsSection } from '../../components/features/customer/home/WhyChooseUsSection';
 import { FaqSection } from '../../components/features/customer/home/FaqSection';
+import '../../components/features/customer/home/HomeSections.css';
 
-const UserReviews = lazy(() => import('./UserReviews').then(module => ({ default: module.UserReviews })));
+const UserReviews = lazy(() => import('@/components/features/customer/reviews/UserReviews').then(module => ({ default: module.UserReviews })));
 
 const DEFAULT_HERO_SLIDES = [
   {

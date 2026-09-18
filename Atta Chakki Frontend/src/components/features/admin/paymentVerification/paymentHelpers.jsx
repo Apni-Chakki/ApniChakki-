@@ -14,9 +14,9 @@ import {
 export const getMethodIcon = (method) => {
   switch (method) {
     case "jazzcash":
-      return <Smartphone className="h-4 w-4" style={{ color: "#e1272c" }} />;
+      return <Smartphone className="h-4 w-4 text-jazzcash" />;
     case "card":
-      return <CreditCard className="h-4 w-4" style={{ color: "#1a1f71" }} />;
+      return <CreditCard className="h-4 w-4 text-easypaisa" />;
     case "bank":
       return <Building2 className="h-4 w-4 text-blue-600" />;
     default:

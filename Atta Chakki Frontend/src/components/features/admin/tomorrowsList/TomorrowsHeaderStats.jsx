@@ -45,7 +45,7 @@ export const TomorrowsHeaderStats = ({
       )}
 
       {capacity && (
-        <Card className="border-orange-200" style={{ background: '#ffffff' }}>
+        <Card className="border-orange-200 bg-white">
           <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">

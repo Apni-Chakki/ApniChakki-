@@ -21,7 +21,7 @@ try {
                 (o.assigned_date IS NOT NULL AND o.assigned_date < ?)
                 OR (o.assigned_date IS NULL AND DATE(o.created_at) < ?)
             )
-            ORDER BY o.assigned_date ASC, o.queue_position ASC";
+            ORDER BY o.assigned_date ASC, o.created_at ASC, o.id ASC";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ss", $today, $today);

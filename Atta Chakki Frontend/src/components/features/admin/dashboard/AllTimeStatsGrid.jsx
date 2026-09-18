@@ -9,7 +9,7 @@ export default function AllTimeStatsGrid({ isLoading, allTimeCards }) {
   return (
     <div className="pt-2">
       <div className="flex items-center gap-3 mb-7">
-        <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
+        <div className="admin-accent-bar" />
         <h2 className="text-xl font-bold text-gray-900 mt-3 mb-3 tracking-tight">
           {t('All-Time Statistics')}
         </h2>
@@ -21,13 +21,8 @@ export default function AllTimeStatsGrid({ isLoading, allTimeCards }) {
             <Card
               key={index}
               className={`relative overflow-hidden transition-all duration-200 rounded-xl ${
-                isFeatured ? 'border-0 text-white' : 'border border-gray-100 bg-white hover:shadow-md'
+                isFeatured ? 'border-0 text-white bg-featured-brand' : 'border border-gray-100 bg-white hover:shadow-md'
               }`}
-              style={
-                isFeatured
-                  ? { background: 'linear-gradient(135deg, #6f5535, #8b6f47)' }
-                  : { backgroundColor: '#ffffff' }
-              }
             >
               {isLoading ? (
                 <div className="p-6">

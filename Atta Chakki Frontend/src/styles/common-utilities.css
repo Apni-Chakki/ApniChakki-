@@ -1,0 +1,96 @@
+/* ============================================================
+   COMMON REUSABLE UTILITY CLASSES
+   Extracted from repetitive inline styles (style={{ ... }})
+   ============================================================ */
+
+/* ─── Form Input Leading & Trailing Icons (Auth Forms) ─── */
+.input-icon-left {
+  position: absolute;
+  inset-inline-start: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input-with-icon-left {
+  padding-inline-start: 3rem !important;
+}
+
+.input-with-icon-both {
+  padding-inline-start: 3rem !important;
+  padding-inline-end: 2.5rem !important;
+}
+
+/* ─── Brand Gradient & Border Accents ─── */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #8b6f47 0%, #a0845c 100%) !important;
+  color: #ffffff !important;
+}
+
+.border-l-brand {
+  border-left-color: #8b6f47 !important;
+}
+
+.border-brand {
+  border-color: #8b6f47 !important;
+}
+
+/* ─── Avatar Circles ─── */
+.avatar-circle-sm {
+  height: 1.5rem;
+  width: 1.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-circle-placeholder {
+  height: 1.5rem;
+  width: 1.5rem;
+  border-radius: 50%;
+  background: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Standard Modal & List Scroll Areas ─── */
+.scroll-modal-body {
+  overflow-y: auto;
+  max-height: calc(85vh - 190px);
+}
+
+.scroll-modal-compact {
+  overflow-y: auto;
+  max-height: 45vh;
+}
+
+.scroll-modal-preview {
+  overflow-y: auto;
+  max-height: 65vh;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.scroll-modal-preview::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scroll-modal-preview::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.scroll-modal-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-modal-preview::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.scroll-modal-preview::-webkit-scrollbar-thumb:hover {
+  background-color: #8b6f47;
+}

@@ -25,7 +25,7 @@ try {
                 AND TRIM(LOWER(o.status)) != 'split_parent'
                 AND o.total_weight_kg > 0
             )
-            ORDER BY o.queue_position ASC, o.created_at ASC";
+            ORDER BY o.created_at ASC, o.id ASC";
             
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $tomorrow);

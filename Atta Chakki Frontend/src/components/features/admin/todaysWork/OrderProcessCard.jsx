@@ -32,7 +32,7 @@ import {
   Store,
 } from 'lucide-react';
 
-export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTimeRemaining, markAsReady, markBatchProcessed, sendingBill, openSplitModal, moveToTomorrow, overriding, activePersonnel = [], handleAssignPersonnel, handlePrint, setCancelOrder }) => {
+export const OrderProcessCard = ({ order, queueIndex, heavyThreshold = 40, formatETA, getTimeRemaining, markAsReady, markBatchProcessed, sendingBill, openSplitModal, moveToTomorrow, overriding, activePersonnel = [], handleAssignPersonnel, handlePrint, setCancelOrder }) => {
   const isOverdue = order.estimated_completion_time ? new Date(order.estimated_completion_time) < new Date() : false;
   const isSplitBatch = order.is_split_batch === true;
   const allSiblingsReady = order.all_siblings_ready === true;
@@ -164,7 +164,7 @@ export const OrderProcessCard = ({ order, heavyThreshold = 40, formatETA, getTim
                 <span className="text-xs font-semibold uppercase">Queue</span>
               </div>
               <div className="text-right sm:text-center">
-                <p className={`text-base sm:text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>#{order.queue_position || '-'}</p>
+                <p className={`text-base sm:text-lg font-bold ${isOverdue ? 'text-red-700' : 'text-emerald-800'}`}>#{queueIndex || order.queue_position || '-'}</p>
                 <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>Position</p>
               </div>
             </div>

@@ -23,19 +23,19 @@ export function PersonnelFormDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-base sm:text-lg">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[390px] max-h-[88vh] flex flex-col p-4 sm:p-5 gap-0 overflow-hidden rounded-2xl shadow-2xl">
+        <DialogHeader className="pb-3 border-b border-border/40 shrink-0 text-left pr-6">
+          <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
             {isEdit ? t('Edit Delivery Personnel') : t('Add Delivery Personnel')}
           </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
+          <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
             {isEdit
               ? t('Update personnel information. Leave password blank to keep current password.')
               : t("Add a new member to your delivery team. They'll receive login credentials to access the delivery panel.")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+        <form onSubmit={onSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="space-y-3 sm:space-y-3.5 py-3 sm:py-4 px-0.5 overflow-y-auto flex-1 custom-modal-scrollbar pr-2">
             <div className="space-y-1.5">
               <Label htmlFor={`${mode}-name`} className="text-sm">Full Name</Label>
               <Input
@@ -120,7 +120,7 @@ export function PersonnelFormDialog({
               </p>
             </div>
           </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+          <DialogFooter className="pt-3 mt-1 border-t border-border/40 shrink-0 flex-col-reverse sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"

@@ -1,0 +1,179 @@
+/* ==========================================================================
+   Admin Panel Common Utility Classes
+   Centralizes recurring styles for admin stats, ledgers, modals, and print.
+   ========================================================================== */
+
+/* --- Stat Cards Gradient Backgrounds --- */
+.bg-stat-green {
+  background: linear-gradient(135deg, #dcfce7, #d1fae5);
+}
+
+.bg-stat-blue {
+  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+}
+
+.bg-stat-purple {
+  background: linear-gradient(135deg, #f3e8ff, #ede9fe);
+}
+
+.bg-stat-amber {
+  background: linear-gradient(135deg, #fef3c7, #ffedd5);
+}
+
+.bg-stat-yellow {
+  background: linear-gradient(135deg, #fef9c3, #fed7aa);
+}
+
+.bg-stat-gray {
+  background: linear-gradient(135deg, #f3f4f6, #f1f5f9);
+}
+
+.bg-featured-brand {
+  background: linear-gradient(135deg, #6f5535, #8b6f47);
+}
+
+.badge-urgent {
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 9px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.4);
+  line-height: 1;
+}
+
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* --- Brand Accent Elements --- */
+.admin-accent-bar {
+  background-color: #8b6f47;
+  width: 0.375rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.admin-brand-outline-btn {
+  border-color: #8b6f47 !important;
+  color: #8b6f47 !important;
+}
+
+.admin-brand-outline-btn:hover {
+  background-color: rgba(139, 111, 71, 0.08) !important;
+}
+
+/* --- Payment Channel Brand Colors --- */
+.text-jazzcash {
+  color: #e1272c;
+}
+
+.text-easypaisa {
+  color: #1a1f71;
+}
+
+/* --- Dialog Sheets & Ledger Scroll Viewports --- */
+.modal-sheet-dialog {
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-scroll-viewport {
+  max-height: min(420px, calc(80vh - 260px));
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.table-scroll-tall {
+  max-height: calc(85vh - 300px);
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.eod-items-scroll {
+  max-height: calc(85vh - 190px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.eod-items-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.eod-items-scroll::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.eod-items-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+.eod-items-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.eod-items-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #ea580c;
+}
+
+.scroll-modal-tall {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* --- Store Logos & Dimensions --- */
+.store-logo-header {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.store-logo-tasklist {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.store-logo-slip {
+  width: 52px;
+  height: 52px;
+  border-radius: 9999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.store-logo-tasklist-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* --- Print & Logical Alignment --- */
+.print-bidi-align {
+  text-align: start;
+}

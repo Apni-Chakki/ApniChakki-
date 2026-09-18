@@ -214,15 +214,14 @@ export function ForgotPassword() {
                   <div className="space-y-2">
                     <Label htmlFor="email">{t('Email Address')}</Label>
                     <div className="relative">
-                      <Mail className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                      <Mail className="h-4 w-4 text-muted-foreground input-icon-left" />
                       <Input
                         id="email"
                         type="email"
                         placeholder="example@gmail.com"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        className="ps-12"
-                        style={{ paddingInlineStart: '3rem' }}
+                        className="input-with-icon-left"
                         required
                       />
                     </div>
@@ -260,7 +259,7 @@ export function ForgotPassword() {
                   <div className="space-y-2">
                     <Label htmlFor="otp">{t('Verification Code')}</Label>
                     <div className="relative">
-                      <ShieldCheck className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                      <ShieldCheck className="h-4 w-4 text-muted-foreground input-icon-left" />
                       <Input
                         id="otp"
                         type="text"
@@ -269,8 +268,8 @@ export function ForgotPassword() {
                         onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
                         maxLength={6}
                         inputMode="numeric"
-                        className="ps-12"
-                        style={{ paddingInlineStart: '3rem', letterSpacing: '0.3rem', fontWeight: 600, fontSize: '1.1rem' }}
+                        className="input-with-icon-left"
+                        style={{ letterSpacing: '0.3rem', fontWeight: 600, fontSize: '1.1rem' }}
                         required
                       />
                     </div>
@@ -280,7 +279,7 @@ export function ForgotPassword() {
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">{t('New Password')}</Label>
                     <div className="relative">
-                      <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                      <Lock className="h-4 w-4 text-muted-foreground input-icon-left" />
                       <Input
                         id="newPassword"
                         type={showPassword ? 'text' : 'password'}
@@ -288,8 +287,7 @@ export function ForgotPassword() {
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value.replace(/\s/g, ''))}
                         maxLength={50}
-                        className="ps-12 pe-10"
-                        style={{ paddingInlineStart: '3rem', paddingInlineEnd: '2.5rem' }}
+                        className="input-with-icon-both"
                         required
                       />
                       <button

@@ -39,7 +39,7 @@ export function SplitOrderModal({
         </div>
 
         {/* Scrollable Batches Area */}
-        <div className="px-6 py-2 overflow-y-auto" style={{ maxHeight: '45vh' }}>
+        <div className="px-6 py-2 scroll-modal-compact">
           <div className="space-y-3">
             {splitBatches.map((batch, idx) => (
               <div key={batch.id} className="relative bg-slate-50 p-4 rounded-xl border border-slate-200 transition-all hover:border-blue-300">

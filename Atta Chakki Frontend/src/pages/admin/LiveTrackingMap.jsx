@@ -1298,8 +1298,22 @@ export function LiveTrackingMap() {
           const filtered = (data.orders || []).filter(o => {
             if (!o.shipping_address) return false;
             const addr = String(o.shipping_address).toLowerCase().trim();
-            if (addr === 'pickup from store' || addr.includes('pickup from store') || addr === 'store pickup' || addr === 'pickup') return false;
-            if (String(o.order_type).toLowerCase().includes('pickup') || String(o.delivery_type).toLowerCase().includes('pickup')) return false;
+            if (
+              addr.includes('pickup') ||
+              addr.includes('store') ||
+              addr.includes('shop') ||
+              addr.includes('collect') ||
+              addr.includes('self')
+            ) {
+              return false;
+            }
+            if (
+              String(o.order_type || '').toLowerCase().includes('pickup') ||
+              String(o.delivery_type || '').toLowerCase().includes('pickup') ||
+              String(o.shipping_method || '').toLowerCase().includes('pickup')
+            ) {
+              return false;
+            }
             return ['ready', 'out-for-delivery', 'processing', 'shipped'].includes(o.status);
           });
           setPlannerOrders(filtered);
@@ -1651,8 +1665,7 @@ export function LiveTrackingMap() {
               </div>
               <div
                 ref={mapContainerRef}
-                className="relative w-full z-0 overflow-hidden"
-                style={{ height: 'min(560px, 60vh)', minHeight: '340px', width: '100%', background: '#f8fafc' }}
+                className="relative z-0 overflow-hidden tracking-map-canvas"
               />
               {mapReady && drivers.length === 0 && !loading && (
                 <div className="bg-amber-50 border-t border-amber-100 px-4 py-2 flex items-center gap-2 text-sm text-amber-800">

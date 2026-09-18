@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin, Phone, Navigation, Clock, Truck, Loader2, Shield, Star, Package } from 'lucide-react';
+import './TrackingBottomSheet.css';
 
 // Time ago helper
 function timeAgo(timestamp) {

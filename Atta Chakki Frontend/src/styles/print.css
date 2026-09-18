@@ -1,0 +1,14 @@
+/* 
+  Print preserves colour and disables global
+  @page margins (component prints set their own)
+*/
+@media print {
+  body {
+    background: #fff;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -23,14 +23,7 @@ export function TrackOrderHero({
   const { t } = useTranslation();
 
   return (
-    <section
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <section className="track-hero-section">
       {/* Absolute background carousel */}
       {CAROUSEL_SLIDES.map((slide, i) => (
         <div
@@ -46,22 +39,12 @@ export function TrackOrderHero({
           }}
         />
       ))}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(135deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.42) 100%)',
-        }}
-      />
+      <div className="track-hero-gradient" />
 
       {/* Back button */}
-      <div style={{ position: 'relative', zIndex: 1, flexShrink: 0, padding: '0.875rem 1rem' }}>
+      <div className="track-hero-nav">
         <Link to="/" style={{ textDecoration: 'none' }}>
-          <button
-            style={backBtnBase}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-          >
+          <button className="track-back-btn">
             <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
             {t('Back to Home')}
           </button>
@@ -69,20 +52,8 @@ export function TrackOrderHero({
       </div>
 
       {/* Centered: avatar + title + search */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '3rem 1rem 4rem',
-          textAlign: 'center',
-        }}
-      >
-        <div style={avatarCircle}>
+      <div className="track-hero-content" style={{ padding: '3rem 1rem 4rem' }}>
+        <div className="track-icon-badge mx-auto">
           <Search style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
         </div>
         <h1
@@ -110,22 +81,11 @@ export function TrackOrderHero({
 
         {/* Search card */}
         <div style={{ width: '100%', maxWidth: '560px' }}>
-          <Card style={glassCard}>
+          <Card className="track-card-glass">
             <div style={{ padding: '0.625rem' }}>
               <div className="flex md:flex-row flex-col gap-3">
                 <div className="relative flex-1">
-                  <Search
-                    style={{
-                      position: 'absolute',
-                      left: '0.875rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--muted-foreground)',
-                      width: '1rem',
-                      height: '1rem',
-                      pointerEvents: 'none',
-                    }}
-                  />
+                  <Search className="h-4 w-4 text-muted-foreground input-icon-left" />
                   <Input
                     placeholder={t('Order ID (e.g. 1042) or Phone Number')}
                     value={orderId}

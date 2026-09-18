@@ -1,0 +1,183 @@
+/* PREMIUM FAQ ACCORDION STYLES & ANIMATIONS */
+
+/* Slide down animation for Radix Accordion Content */
+@keyframes faq-slide-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+
+  to {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+}
+
+/* Slide up animation for Radix Accordion Content */
+@keyframes faq-slide-up {
+  from {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* Radix Accordion Content Animations hook */
+[data-slot="accordion-content"][data-state="open"] {
+  animation: faq-slide-down 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+[data-slot="accordion-content"][data-state="closed"] {
+  animation: faq-slide-up 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Accordion Item Card Container */
+.faq-accordion-item {
+  border: 1px solid rgba(139, 111, 71, 0.15) !important;
+  border-radius: 1.25rem !important;
+  background-color: #ffffff !important;
+  padding: 0.25rem 1.5rem !important;
+  margin-bottom: 1rem !important;
+  box-shadow: 0 4px 10px -2px rgba(139, 111, 71, 0.05), 0 2px 4px -1px rgba(139, 111, 71, 0.03) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.faq-accordion-item:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(139, 111, 71, 0.4) !important;
+  box-shadow: 0 12px 20px -3px rgba(139, 111, 71, 0.1), 0 4px 6px -2px rgba(139, 111, 71, 0.05) !important;
+}
+
+/* Opened Card state */
+.faq-accordion-item[data-state="open"] {
+  border-color: #8b6f47 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #FAF6F0 100%) !important;
+  box-shadow: 0 20px 25px -5px rgba(139, 111, 71, 0.15), 0 10px 10px -5px rgba(139, 111, 71, 0.1) !important;
+  transform: translateY(0) !important;
+}
+
+/* Custom Number Badges */
+.faq-badge-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background-color: #F5EDE3;
+  color: #8b6f47;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.faq-accordion-item[data-state="open"] .faq-badge-num {
+  background-color: #8b6f47;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* Accordion Trigger overrides */
+.faq-accordion-trigger {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1.25rem !important;
+  text-decoration: none !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  color: #27272a !important;
+  text-align: left !important;
+  padding: 1.25rem 0 !important;
+  cursor: pointer !important;
+  transition: color 0.2s ease !important;
+}
+
+.faq-accordion-trigger:hover {
+  text-decoration: none !important;
+  color: #8b6f47 !important;
+}
+
+.faq-accordion-item[data-state="open"] .faq-accordion-trigger {
+  color: #8b6f47 !important;
+}
+
+/* Accordion Chevron rotates on open */
+.faq-accordion-item [data-slot="accordion-trigger"] svg {
+  color: #a1a1aa !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease !important;
+  flex-shrink: 0;
+}
+
+.faq-accordion-item[data-state="open"] [data-slot="accordion-trigger"] svg {
+  transform: rotate(180deg) !important;
+  color: #8b6f47 !important;
+}
+
+/* Content paragraph text wrapper */
+.faq-accordion-content {
+  overflow: hidden;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+  color: #4b5563 !important;
+}
+
+.faq-accordion-inner {
+  padding-bottom: 1.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed rgba(139, 111, 71, 0.15);
+  margin-top: 0.25rem;
+}
+
+/* FAQ Section Custom Layout Spacing */
+.faq-section {
+  padding-top: 5rem !important;
+  padding-bottom: 7.5rem !important;
+}
+
+/* FAQ Title and Badge Prominence */
+.faq-title-badge {
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  background-color: rgba(139, 111, 71, 0.1) !important;
+  color: #8b6f47 !important;
+  padding: 0.45rem 1.25rem !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(139, 111, 71, 0.2) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.faq-title-heading {
+  font-size: 2.6rem !important;
+  font-weight: 900 !important;
+  color: #27272a !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+@media (max-width: 640px) {
+  .faq-title-heading {
+    font-size: 2rem !important;
+  }
+}
+
+.faq-title-sub {
+  font-size: 1.125rem !important;
+  color: #71717a !important;
+  max-width: 32rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  line-height: 1.5 !important;
+}

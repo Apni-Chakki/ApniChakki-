@@ -15,7 +15,7 @@ export function TrackOrderLoginPrompt({ currentSlide }) {
   const { t } = useTranslation();
 
   return (
-    <section style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <section className="track-hero-section">
       {CAROUSEL_SLIDES.map((slide, i) => (
         <div
           key={i}
@@ -30,20 +30,10 @@ export function TrackOrderLoginPrompt({ currentSlide }) {
           }}
         />
       ))}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(135deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.42) 100%)',
-        }}
-      />
-      <div style={{ position: 'relative', zIndex: 1, flexShrink: 0, padding: '0.875rem 1rem' }}>
+      <div className="track-hero-gradient" />
+      <div className="track-hero-nav">
         <Link to="/" style={{ textDecoration: 'none' }}>
-          <button
-            style={backBtnBase}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-          >
+          <button className="track-back-btn">
             <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
             {t('Back to Home')}
           </button>
@@ -61,9 +51,9 @@ export function TrackOrderLoginPrompt({ currentSlide }) {
         }}
       >
         <div style={{ width: '100%', maxWidth: '420px' }}>
-          <Card style={glassCard}>
+          <Card className="track-card-glass">
             <CardHeader className="space-y-1 text-center" style={{ paddingBottom: '0.75rem' }}>
-              <div style={avatarCircle}>
+              <div className="track-icon-badge mx-auto">
                 <User style={{ width: '1.6rem', height: '1.6rem', color: 'white' }} />
               </div>
               <CardTitle className="text-2xl">{t('Login Required')}</CardTitle>

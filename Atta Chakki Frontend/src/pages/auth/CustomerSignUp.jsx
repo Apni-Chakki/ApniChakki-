@@ -221,7 +221,7 @@ export function CustomerSignUp() {
                 <div className="space-y-2">
                   <Label htmlFor="name">{t('Full Name')}</Label>
                   <div className="relative">
-                    <User className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <User className="h-4 w-4 text-muted-foreground input-icon-left" />
                     <Input
                       id="name"
                       type="text"
@@ -229,8 +229,7 @@ export function CustomerSignUp() {
                       value={name}
                       onChange={e => setName(e.target.value.replace(/^ /, '').replace(/  +/g, ' '))}
                       maxLength={50}
-                      className="ps-12"
-                      style={{ paddingInlineStart: '3rem' }}
+                      className="input-with-icon-left"
                       required
                     />
                   </div>
@@ -240,7 +239,7 @@ export function CustomerSignUp() {
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('Phone Number')}</Label>
                   <div className="relative">
-                    <Phone className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Phone className="h-4 w-4 text-muted-foreground input-icon-left" />
                     <Input
                       id="phone"
                       name="username"
@@ -251,8 +250,7 @@ export function CustomerSignUp() {
                       onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                       maxLength={11}
                       inputMode="numeric"
-                      className="ps-12"
-                      style={{ paddingInlineStart: '3rem' }}
+                      className="input-with-icon-left"
                       required
                     />
                   </div>
@@ -262,7 +260,7 @@ export function CustomerSignUp() {
                 <div className="space-y-2">
                   <Label htmlFor="address">{t('Delivery Address')} <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>{t('(Optional)')}</span></Label>
                   <div className="relative">
-                    <MapPin className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <MapPin className="h-4 w-4 text-muted-foreground input-icon-left" />
                     <Input
                       id="address"
                       type="text"
@@ -270,8 +268,7 @@ export function CustomerSignUp() {
                       value={address}
                       onChange={e => setAddress(e.target.value.replace(/^ /, '').replace(/  +/g, ' '))}
                       maxLength={150}
-                      className="ps-12"
-                      style={{ paddingInlineStart: '3rem' }}
+                      className="input-with-icon-left"
                     />
                   </div>
                 </div>
@@ -280,7 +277,7 @@ export function CustomerSignUp() {
                 <div className="space-y-2">
                   <Label htmlFor="password">{t('Password')}</Label>
                   <div className="relative">
-                    <Lock className="h-4 w-4 text-muted-foreground" style={{ position: 'absolute', insetInlineStart: '0.875rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Lock className="h-4 w-4 text-muted-foreground input-icon-left" />
                     <Input
                       id="password"
                       name="password"
@@ -290,8 +287,7 @@ export function CustomerSignUp() {
                       value={password}
                       onChange={e => setPassword(e.target.value.replace(/\s/g, ''))}
                       maxLength={50}
-                      className="ps-12 pe-10"
-                      style={{ paddingInlineStart: '3rem', paddingInlineEnd: '2.5rem' }}
+                      className="input-with-icon-both"
                       required
                     />
                     <button

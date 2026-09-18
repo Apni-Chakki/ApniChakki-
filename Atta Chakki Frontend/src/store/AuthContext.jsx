@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
         // Immediately write to localStorage so navigate() ke baad ka page null user na dekhe
         localStorage.setItem('user', JSON.stringify(finalUser));
         setUser(finalUser); 
-        return true;
+        return finalUser;
       }
       return false;
     } catch (error) {

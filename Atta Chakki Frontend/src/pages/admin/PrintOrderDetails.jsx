@@ -202,19 +202,19 @@ export function PrintOrderDetails({ order, open, onClose }) {
             {/* Order Info Card */}
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <div style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                <div className="print-bidi-align">
                   <p className={`text-[9px] uppercase text-muted-foreground font-bold ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                     {lang === 'ur' ? 'آرڈر آئی ڈی' : 'Order ID'}
                   </p>
                   <p className="text-[10px] font-mono font-bold mt-0.5 break-all">{order.id}</p>
                 </div>
-                <div style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                <div className="print-bidi-align">
                   <p className={`text-[9px] uppercase text-muted-foreground font-bold ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                     {lang === 'ur' ? 'قسم' : 'Type'}
                   </p>
                   <p className="text-[11px] font-bold uppercase mt-0.5">{getOrderTypeLabel(order.type, lang)}</p>
                 </div>
-                <div style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                <div className="print-bidi-align">
                   <p className={`text-[9px] uppercase text-muted-foreground font-bold ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                     {lang === 'ur' ? 'تاریخ اور وقت' : 'Date & Time'}
                   </p>
@@ -223,7 +223,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
                     {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <div style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                <div className="print-bidi-align">
                   <p className={`text-[9px] uppercase text-muted-foreground font-bold ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                     {lang === 'ur' ? 'حیثیت' : 'Status'}
                   </p>
@@ -234,7 +234,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
                   />
                 </div>
                 {order.status === 'cancelled' && order.cancellationReason && (
-                  <div className="col-span-2 bg-red-50 border border-red-300 rounded-lg p-2.5 mt-1" style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                  <div className="col-span-2 bg-red-50 border border-red-300 rounded-lg p-2.5 mt-1 print-bidi-align">
                     <p className={`text-[9px] uppercase text-red-500 font-bold mb-0.5 ${lang === 'ur' ? 'tracking-normal' : 'tracking-wider'}`}>
                       {lang === 'ur' ? 'منسوخی کی وجہ' : 'Cancellation Reason'}
                     </p>
@@ -259,7 +259,7 @@ export function PrintOrderDetails({ order, open, onClose }) {
                   <span className="font-mono font-semibold">{order.phone}</span>
                 </div>
                 {order.deliveryAddress && (
-                  <div style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                  <div className="print-bidi-align">
                     <p className="text-muted-foreground text-[9px] mb-1">{lang === 'ur' ? 'ڈیلیوری کا پتہ' : 'Delivery Address'}</p>
                     <p className="text-[11px] bg-blue-50 border border-blue-200 p-2 rounded-lg whitespace-normal break-words">
                       {translateText(order.deliveryAddress, lang)}
@@ -289,12 +289,12 @@ export function PrintOrderDetails({ order, open, onClose }) {
                   const isRental = item.is_rental === 1 || item.is_rental === '1' || item.isRental;
                   return (
                     <div key={idx} className="flex justify-between items-start border-b border-dashed border-border/50 pb-2 last:border-0">
-                      <div className={`flex-1 ${lang === 'ur' ? 'pl-4' : 'pr-4'}`} style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                      <div className={`flex-1 print-bidi-align ${lang === 'ur' ? 'pl-4' : 'pr-4'}`}>
                         <p className="text-[12px] font-semibold whitespace-normal break-words">
                           {translateText(item.name || item.service?.name, lang)} {isRental && `(${lang === 'ur' ? 'کرایہ' : 'Rental'})`}
                         </p>
                         {isRental ? (
-                          <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5" style={{ textAlign: lang === 'ur' ? 'right' : 'left' }}>
+                          <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5 print-bidi-align">
                             <p>🗓️ {lang === 'ur' ? 'مدت کرایہ:' : 'Rental Period:'} {item.rental_days} {lang === 'ur' ? 'دن' : 'days'} ({item.rental_start_date} {lang === 'ur' ? 'سے' : 'to'} {item.rental_end_date})</p>
                             <p>💰 {lang === 'ur' ? 'شرح کرایہ:' : 'Rate:'} Rs. {Number(item.rental_price_per_day || item.price_at_purchase).toLocaleString()}/{lang === 'ur' ? 'دن' : 'day'}</p>
                             <p>🛡️ {lang === 'ur' ? 'سیکیورٹی ڈپازٹ:' : 'Security Deposit:'} Rs. {Number(item.security_deposit).toLocaleString()}</p>

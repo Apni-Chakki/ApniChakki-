@@ -330,8 +330,7 @@ export function ManageCoupons() {
               <div className="flex gap-2 shrink-0">
                 <button
                   type="button"
-                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0"
-                  style={{ backgroundColor: '#8b6f47' }}
+                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0 bg-[#8b6f47] hover:bg-[#6f5535] transition-colors"
                   onClick={() => handleEdit(coupon)}
                   disabled={isAdding || editingId !== null}
                 >
@@ -339,8 +338,7 @@ export function ManageCoupons() {
                 </button>
                 <button
                   type="button"
-                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0"
-                  style={{ backgroundColor: '#dc2626' }}
+                  className="h-8 w-8 flex items-center justify-center rounded shadow-sm disabled:opacity-50 text-white px-0 py-0 bg-red-600 hover:bg-red-700 transition-colors"
                   onClick={() => handleDelete(coupon.id)}
                   disabled={isAdding || editingId !== null}
                 >

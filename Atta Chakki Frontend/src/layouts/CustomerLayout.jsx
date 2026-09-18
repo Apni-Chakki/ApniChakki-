@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
-import { Header } from '../pages/customer/Header';
-import { Footer } from '../pages/customer/Footer';
-import { PageLoader } from '../components/common/PageLoader';
+import { Header } from '@/components/layout/Header/Header';
+import { Footer } from '@/components/layout/Footer/Footer';
+import { PageLoader } from '@/components/common/PageLoader';
 
 export default function CustomerLayout({ children }) {
   return (

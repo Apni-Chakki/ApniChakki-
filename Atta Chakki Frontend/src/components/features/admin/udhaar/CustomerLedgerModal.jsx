@@ -26,7 +26,7 @@ export const CustomerLedgerModal = ({
           setCustomerPayAmount('');
         }
       }}>
-        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg md:max-w-xl w-full flex flex-col p-4 sm:p-6" style={{ maxHeight: '90vh', overflow: 'hidden' }}>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg md:max-w-xl w-full p-4 sm:p-6 modal-sheet-dialog">
           <DialogHeader className="flex-shrink-0 border-b pb-3 text-left">
             <div className="flex items-start justify-between gap-2 pr-10 sm:pr-12">
               <div className="min-w-0">
@@ -138,7 +138,7 @@ export const CustomerLedgerModal = ({
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden sm:block border rounded-md overflow-x-auto" style={{ maxHeight: 'calc(85vh - 300px)', overflowY: 'auto' }}>
+              <div className="hidden sm:block border rounded-md table-scroll-tall">
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-background border-b">
                     <TableRow className="bg-muted/50 hover:bg-muted/50">

@@ -7,10 +7,7 @@ export const PaymentStatsCards = ({ walletBalance, t = (s) => s }) => {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      <Card
-        className="p-4 sm:p-5 border-green-200"
-        style={{ background: "linear-gradient(135deg, #dcfce7, #d1fae5)" }}
-      >
+      <Card className="p-4 sm:p-5 border-green-200 bg-stat-green">
         <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-2 sm:gap-3">
           <div className="p-2.5 sm:p-3 bg-green-200 rounded-full shrink-0">
             <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-green-700" />
@@ -26,10 +23,7 @@ export const PaymentStatsCards = ({ walletBalance, t = (s) => s }) => {
         </div>
       </Card>
 
-      <Card
-        className="p-4 sm:p-5 border-blue-200"
-        style={{ background: "linear-gradient(135deg, #dbeafe, #e0e7ff)" }}
-      >
+      <Card className="p-4 sm:p-5 border-blue-200 bg-stat-blue">
         <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-2 sm:gap-3">
           <div className="p-2.5 sm:p-3 bg-blue-200 rounded-full shrink-0">
             <ArrowDownRight className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
@@ -45,10 +39,7 @@ export const PaymentStatsCards = ({ walletBalance, t = (s) => s }) => {
         </div>
       </Card>
 
-      <Card
-        className="p-4 sm:p-5 border-purple-200"
-        style={{ background: "linear-gradient(135deg, #f3e8ff, #ede9fe)" }}
-      >
+      <Card className="p-4 sm:p-5 border-purple-200 bg-stat-purple">
         <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-2 sm:gap-3">
           <div className="p-2.5 sm:p-3 bg-purple-200 rounded-full shrink-0">
             <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-purple-700" />
@@ -66,14 +57,8 @@ export const PaymentStatsCards = ({ walletBalance, t = (s) => s }) => {
 
       <Card
         className={`p-4 sm:p-5 ${
-          pendingCount > 0 ? "border-yellow-200 animate-pulse" : "border-gray-200"
+          pendingCount > 0 ? "border-yellow-200 animate-pulse bg-stat-yellow" : "border-gray-200 bg-stat-gray"
         }`}
-        style={{
-          background:
-            pendingCount > 0
-              ? "linear-gradient(135deg, #fef9c3, #fed7aa)"
-              : "linear-gradient(135deg, #f3f4f6, #f1f5f9)",
-        }}
       >
         <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-2 sm:gap-3">
           <div

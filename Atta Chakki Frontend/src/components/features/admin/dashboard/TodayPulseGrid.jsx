@@ -9,7 +9,7 @@ export default function TodayPulseGrid({ isLoading, statCards, stats }) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-7">
-        <div className="h-7 w-1.5 rounded-full" style={{ backgroundColor: '#8b6f47' }} />
+        <div className="admin-accent-bar" />
         <h2 className="text-xl mt-3 mb-3 font-bold text-gray-900 tracking-tight">
           {t("Today's Pulse")}
         </h2>
@@ -24,14 +24,9 @@ export default function TodayPulseGrid({ isLoading, statCards, stats }) {
               key={index}
               className={`relative overflow-hidden border transition-all duration-200 rounded-xl ${
                 showUrgent
-                  ? 'border-rose-200 shadow-sm'
-                  : 'border-gray-200/70 bg-white shadow-sm hover:shadow-md'
+                  ? 'border-rose-300 bg-rose-50/50 shadow-sm ring-1 ring-rose-300/60'
+                  : 'border-gray-100 bg-white hover:shadow-md'
               }`}
-              style={
-                showUrgent
-                  ? { backgroundColor: '#FBE8E2', boxShadow: '0 1px 3px rgba(190, 18, 60, 0.08)' }
-                  : { backgroundColor: '#ffffff' }
-              }
             >
               {isLoading ? (
                 <div className="p-6">
@@ -48,39 +43,17 @@ export default function TodayPulseGrid({ isLoading, statCards, stats }) {
                   </p>
                   <div className="flex items-center gap-4">
                     <div
-                      className="shrink-0 flex items-center justify-center"
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        backgroundColor: stat.iconBg,
-                        borderRadius: '12px',
-                        border: '1px solid rgba(0, 0, 0, 0.06)',
-                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)'
-                      }}
+                      className="shrink-0 flex items-center justify-center stat-icon-wrapper"
+                      style={{ backgroundColor: stat.iconBg }}
                     >
-                      <Icon style={{ height: '22px', width: '22px', color: stat.iconColor }} strokeWidth={2.25} />
+                      <Icon className="h-[22px] w-[22px]" style={{ color: stat.iconColor }} strokeWidth={2.25} />
                     </div>
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-none">
                         {stat.value}
                       </h2>
                       {showUrgent && (
-                        <span
-                          style={{
-                            backgroundColor: '#dc2626',
-                            color: '#ffffff',
-                            fontSize: '10px',
-                            fontWeight: 800,
-                            letterSpacing: '0.08em',
-                            padding: '4px 9px',
-                            borderRadius: '9999px',
-                            textTransform: 'uppercase',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            boxShadow: '0 1px 3px rgba(220, 38, 38, 0.4)',
-                            lineHeight: 1
-                          }}
-                        >
+                        <span className="badge-urgent">
                           {t('Urgent')}
                         </span>
                       )}

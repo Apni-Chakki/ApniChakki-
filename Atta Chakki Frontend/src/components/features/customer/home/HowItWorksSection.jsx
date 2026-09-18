@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Leaf, Settings, Truck } from 'lucide-react';
 import { LazyAnimatedSection } from '../../../common/LazyAnimatedSection';
+import './HowItWorksSection.css';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 30 },
