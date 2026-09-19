@@ -13,7 +13,7 @@ if (file_exists($envFile)) {
 }
 
 // Detect execution environment (Localhost vs Production)
-$appMode = strtolower($envVars['APP_ENV'] ?? getenv('APP_ENV') ?: '');
+$appMode = strtolower(getenv('APP_ENV') ?: ($envVars['APP_ENV'] ?? ''));
 $is_localhost = true;
 
 if ($appMode === 'production' || $appMode === 'live' || $appMode === 'prod') {
@@ -68,8 +68,14 @@ try {
     if ($use_ssl) {
         $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
         $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+        // Use persistent connection p: if enabled or on production
         $clean_host = preg_replace('/^p:/', '', $servername);
-        $connected = @$conn->real_connect($clean_host, $username, $password, $dbname, $port, NULL, MYSQLI_CLIENT_SSL);
+        $conn_host = "p:" . $clean_host;
+        $connected = @$conn->real_connect($conn_host, $username, $password, $dbname, $port, NULL, MYSQLI_CLIENT_SSL);
+        if (!$connected) {
+            // Fallback to non-persistent if persistent connection fails
+            $connected = @$conn->real_connect($clean_host, $username, $password, $dbname, $port, NULL, MYSQLI_CLIENT_SSL);
+        }
     } else {
         $connected = @$conn->real_connect($servername, $username, $password, $dbname, $port);
     }
