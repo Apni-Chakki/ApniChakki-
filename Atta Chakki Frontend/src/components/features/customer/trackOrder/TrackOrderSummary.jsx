@@ -5,6 +5,12 @@ import { CreditCard } from 'lucide-react';
 export function TrackOrderSummary({ order }) {
   const { t } = useTranslation();
 
+  // fee isn't stored on the order, so work it out like the print slip does: total - (items - coupon)
+  const itemsSubtotal = order.items.reduce((sum, item) => sum + (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0), 0);
+  const couponDiscount = parseFloat(order.couponDiscount) || 0;
+  const total = parseFloat(order.total) || 0;
+  const deliveryFee = total > 0 ? Math.max(0, Math.round(total - (itemsSubtotal - couponDiscount))) : 0;
+
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
       <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -25,6 +31,26 @@ export function TrackOrderSummary({ order }) {
         ))}
       </div>
       <div className="pt-3 border-t border-dashed border-gray-200">
+        {(deliveryFee > 0 || couponDiscount > 0) && (
+          <>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-slate-500">{t('Subtotal')}</span>
+              <span className="text-xs font-semibold text-slate-800">Rs. {itemsSubtotal.toLocaleString('en-PK')}</span>
+            </div>
+            {couponDiscount > 0 && (
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-slate-500">{t('Coupon Discount')}</span>
+                <span className="text-xs font-semibold text-emerald-600">- Rs. {couponDiscount.toLocaleString('en-PK')}</span>
+              </div>
+            )}
+            {deliveryFee > 0 && (
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-slate-500">{t('Delivery Fee')}</span>
+                <span className="text-xs font-semibold text-slate-800">+ Rs. {deliveryFee.toLocaleString('en-PK')}</span>
+              </div>
+            )}
+          </>
+        )}
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-slate-500">{t('Payment Method')}</span>
           <span className="text-xs font-semibold capitalize text-slate-800">

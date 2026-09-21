@@ -41,6 +41,8 @@ import { CancelOrderModal } from "../../components/features/admin/todaysWork/Can
 import { SplitOrderModal } from "../../components/features/admin/todaysWork/SplitOrderModal";
 import { PreparedOrderCard } from "../../components/features/admin/todaysWork/PreparedOrderCard";
 import { OrderProcessCard } from "../../components/features/admin/todaysWork/OrderProcessCard";
+import { OrderSearchBar } from "../../components/features/admin/todaysWork/OrderSearchBar";
+import { matchesOrderSearch } from "../../components/features/admin/todaysWork/orderSearch";
 import { useCancelOrder } from "../../hooks/useCancelOrder";
 
 export function TodaysWork() {
@@ -68,6 +70,7 @@ export function TodaysWork() {
   const [heavyThreshold, setHeavyThreshold] = useState(15);
   const [storeName, setStoreName] = useState('Suchi Chakki');
   const [whatsappReadyModal, setWhatsappReadyModal] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const sortByFIFO = (list) => {
     return [...list].sort((a, b) => {
@@ -94,6 +97,14 @@ export function TodaysWork() {
 
   const carriedForwardOrders = sortByFIFO(processingOrders.filter(o => o.is_carried_forward));
   const todayNewOrders = sortByFIFO(processingOrders.filter(o => !o.is_carried_forward));
+
+  // search only changes what is shown, stats and print list still use all orders
+  const isSearching = searchQuery.trim() !== '';
+  const visibleCarriedForward = carriedForwardOrders.filter(o => matchesOrderSearch(o, searchQuery));
+  const visibleTodayNew = todayNewOrders.filter(o => matchesOrderSearch(o, searchQuery));
+  const visiblePrepared = preparedOrders.filter(o => matchesOrderSearch(o, searchQuery));
+  const visibleGrindCount = visibleCarriedForward.length + visibleTodayNew.length;
+  const visibleTotalCount = visibleGrindCount + visiblePrepared.length;
 
   const totalWeight = processingOrders.reduce((sum, order) => sum + parseFloat(order.total_weight_kg || 0), 0);
   const totalProcessingMinutes = processingOrders.reduce((sum, order) => sum + parseInt(order.processing_time_minutes || 0), 0);
@@ -986,7 +997,26 @@ Suchi Chakki — Pure & Fresh Processing
         </Card>
       ) : (
         <div className="space-y-8">
+          <OrderSearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            matchCount={visibleTotalCount}
+            totalCount={orders.length}
+            t={t}
+          />
+
+          {isSearching && visibleTotalCount === 0 && (
+            <Card className="bg-slate-50/50 border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <p className="text-slate-500 text-sm font-semibold">
+                  {t('No orders match')} "{searchQuery.trim()}"
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* 1. Grinding & Processing Section (Today's Scheduler) */}
+          {(!isSearching || visibleGrindCount > 0) && (
           <div className="space-y-4 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
               <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm border border-blue-200 self-start">
@@ -996,7 +1026,7 @@ Suchi Chakki — Pure & Fresh Processing
               </div>
               <div className="hidden sm:block flex-1 h-px bg-slate-200" />
               <span className="text-[11px] sm:text-xs text-slate-500 font-semibold">
-                {processingOrders.length} grind job(s)
+                {visibleGrindCount} grind job(s)
               </span>
             </div>
 
@@ -1012,7 +1042,7 @@ Suchi Chakki — Pure & Fresh Processing
             ) : (
               <>
                 {/* Carried Forward Section */}
-                {carriedForwardOrders.length > 0 && (
+                {visibleCarriedForward.length > 0 && (
                   <>
                     <div className="flex items-center gap-3 px-1 mt-4">
                       <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold">
@@ -1021,19 +1051,19 @@ Suchi Chakki — Pure & Fresh Processing
                       </div>
                       <div className="flex-1 h-px bg-orange-100" />
                       <span className="text-xs text-orange-600 font-medium">
-                        {carriedForwardOrders.length} order(s)
+                        {visibleCarriedForward.length} order(s)
                       </span>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {carriedForwardOrders.map((order, idx) => (
-                        <OrderProcessCard key={order.id} order={order} queueIndex={idx + 1} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
+                      {visibleCarriedForward.map((order) => (
+                        <OrderProcessCard key={order.id} order={order} queueIndex={carriedForwardOrders.indexOf(order) + 1} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
                       ))}
                     </div>
                   </>
                 )}
 
                 {/* Today's New Orders Section */}
-                {todayNewOrders.length > 0 && (
+                {visibleTodayNew.length > 0 && (
                   <>
                     <div className="flex items-center gap-3 px-1 mt-4">
                       <div className="flex items-center gap-2 bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">
@@ -1042,12 +1072,12 @@ Suchi Chakki — Pure & Fresh Processing
                       </div>
                       <div className="flex-1 h-px bg-blue-100" />
                       <span className="text-xs text-blue-600 font-medium">
-                        {todayNewOrders.length} order(s)
+                        {visibleTodayNew.length} order(s)
                       </span>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {todayNewOrders.map((order, idx) => (
-                        <OrderProcessCard key={order.id} order={order} queueIndex={carriedForwardOrders.length + idx + 1} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
+                      {visibleTodayNew.map((order) => (
+                        <OrderProcessCard key={order.id} order={order} queueIndex={carriedForwardOrders.length + todayNewOrders.indexOf(order) + 1} heavyThreshold={heavyThreshold} formatETA={formatETA} getTimeRemaining={getTimeRemaining} markAsReady={markAsReady} markBatchProcessed={markBatchProcessed} sendingBill={sendingBill} openSplitModal={openSplitModal} moveToTomorrow={moveToTomorrow} overriding={overriding} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
                       ))}
                     </div>
                   </>
@@ -1055,8 +1085,10 @@ Suchi Chakki — Pure & Fresh Processing
               </>
             )}
           </div>
+          )}
 
           {/* 2. Prepared & Ready to Deliver Section */}
+          {(!isSearching || visiblePrepared.length > 0) && (
           <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6 border-t border-slate-200">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-1">
               <div className="flex items-center gap-2 bg-emerald-100 text-emerald-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-sm border border-emerald-200 self-start">
@@ -1066,7 +1098,7 @@ Suchi Chakki — Pure & Fresh Processing
               </div>
               <div className="hidden sm:block flex-1 h-px bg-slate-200" />
               <span className="text-[11px] sm:text-xs text-emerald-600 font-semibold">
-                {preparedOrders.length} order(s)
+                {visiblePrepared.length} order(s)
               </span>
             </div>
 
@@ -1078,12 +1110,13 @@ Suchi Chakki — Pure & Fresh Processing
               </Card>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {preparedOrders.map((order) => (
+                {visiblePrepared.map((order) => (
                   <PreparedOrderCard key={order.id} order={order} sendingBill={sendingBill} markAsReady={markAsReady} activePersonnel={activePersonnel} handleAssignPersonnel={handleAssignPersonnel} handlePrint={handlePrint} setCancelOrder={setCancelOrder} />
                 ))}
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 

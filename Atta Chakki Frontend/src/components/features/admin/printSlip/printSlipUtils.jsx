@@ -1,13 +1,4 @@
-/**
- * Print Slip Utilities - Modular Barrel Export
- *
- * Decomposed into focused single-responsibility modules:
- * - LogoSVG: Shared SVG Logo
- * - slipFinancials: Financial computations & balance breakdowns
- * - slipUrduHelpers: Urdu corrections, units, & customization translations
- * - thermalPrintHtmlBuilder: 80mm thermal receipt HTML generator
- * - slipWhatsAppBuilder: WhatsApp digital invoice generator
- */
+// barrel export for print slip: logo, financials, urdu helpers, thermal html, whatsapp message
 
 export { LogoSVG } from './LogoSVG';
 export { computeSlipFinancials, default as defaultComputeSlipFinancials } from './utils/slipFinancials';

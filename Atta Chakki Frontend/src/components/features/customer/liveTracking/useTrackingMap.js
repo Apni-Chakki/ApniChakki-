@@ -4,15 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../../../config';
 import { createCarIcon, DEST_ICON_SVG } from './trackingMapIcons';
 
-/**
- * Custom hook that manages all Mapbox GL map logic:
- * - Map initialization (Mapbox token validation + OSM fallback)
- * - Driver marker creation/update with rotated car icon
- * - Destination marker creation/update
- * - Route drawing (Mapbox Directions → OSRM → straight line fallback)
- * - Route refresh interval (25s)
- * - ResizeObserver + window resize handling
- */
+// all mapbox map logic: init, driver/destination markers, route drawing (mapbox -> osrm -> straight line), 25s refresh, resize
 export function useTrackingMap({
   orderInfo,
   driverLocation,

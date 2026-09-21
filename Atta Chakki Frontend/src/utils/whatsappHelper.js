@@ -1,11 +1,6 @@
-/**
- * Utility for formatting Pakistani WhatsApp phone numbers and opening WhatsApp chat URLs.
- */
+// whatsapp helpers: phone format + chat url + open chat
 
-/**
- * Normalizes phone numbers to standard WhatsApp format (e.g., 923001234567).
- * Handles: 03001234567 -> 923001234567, +923001234567 -> 923001234567, 3001234567 -> 923001234567
- */
+// normalizes phone to 92xxxxxxxxxx (handles 03xx, +923xx, 3xx)
 export function formatWhatsAppPhone(phone) {
   if (!phone) return '';
   let cleaned = String(phone).replace(/\D/g, '');
@@ -19,9 +14,7 @@ export function formatWhatsAppPhone(phone) {
   return cleaned;
 }
 
-/**
- * Builds a direct wa.me chat URL with encoded message text.
- */
+// builds wa.me url, message gets encoded here
 export function getWhatsAppUrl(phone, message = '') {
   const cleanPhone = formatWhatsAppPhone(phone);
   if (!cleanPhone) return '';
@@ -29,10 +22,7 @@ export function getWhatsAppUrl(phone, message = '') {
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
-/**
- * Opens WhatsApp chat in a new tab/window.
- * Returns true if URL was opened, false if phone was invalid.
- */
+// opens chat in new tab, returns false if phone is invalid
 export function sendWhatsAppMessage(phone, message = '') {
   const url = getWhatsAppUrl(phone, message);
   if (!url) return false;

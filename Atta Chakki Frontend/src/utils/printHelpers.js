@@ -1,18 +1,6 @@
-/**
- * Centralized Print Helpers for Atta Chakki Frontend.
- * Replaces duplicate iframe and popup window printing across admin pages.
- */
+// shared print helpers, used by all admin pages instead of own iframe/popup code
 
-/**
- * Prints HTML content via a hidden iframe to prevent popup blockers and blank new tabs.
- * Falls back to popup window if iframe printing is blocked by the browser.
- *
- * @param {string} htmlContent - Full HTML string to print
- * @param {Object} options - Custom options
- * @param {string} options.frameId - DOM id for reusable hidden iframe
- * @param {number} options.delayMs - Delay before invoking window.print()
- * @param {boolean} options.fallbackToWindow - Whether to fall back to window.open if iframe fails
- */
+// prints html via hidden iframe (no popup blocker), falls back to popup window
 export function printIframeHtml(htmlContent, {
   frameId = 'print-helper-frame',
   delayMs = 300,
@@ -64,16 +52,7 @@ export function printIframeHtml(htmlContent, {
   }
 }
 
-/**
- * Prints HTML content inside a dedicated popup window.
- *
- * @param {string} htmlContent - Full HTML string to print
- * @param {Object} options - Window options
- * @param {number} options.width - Window width (default 800)
- * @param {number} options.height - Window height (default 900)
- * @param {number} options.delayMs - Delay before print call (default 400)
- * @param {boolean} options.autoClose - Whether to close window after print (default false)
- */
+// prints html in a popup window
 export function printWindowHtml(htmlContent, {
   width = 800,
   height = 900,
@@ -107,12 +86,7 @@ export function printWindowHtml(htmlContent, {
   }
 }
 
-/**
- * Prints a DOM element by id by extracting its HTML and printing via iframe or popup.
- *
- * @param {string} elementId - ID of element to print
- * @param {Object} options - Print options
- */
+// prints a dom element by id, via iframe or popup
 export function printElement(elementId, {
   title = document.title,
   extraStyles = '',

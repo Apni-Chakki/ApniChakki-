@@ -65,6 +65,7 @@ export function useTrackOrder() {
           phone: o.customer_phone,
           deliveryAddress: o.shipping_address,
           total: o.total_amount,
+          couponDiscount: o.coupon_discount,
           paymentMethod: o.payment_method,
           paymentStatus: o.payment_status,
           deliveryDate: o.delivery_date,
