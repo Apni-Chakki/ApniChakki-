@@ -4,7 +4,72 @@ Single to-do list for the project. It replaces `REFACTOR_PROGRESS.md`, `CODE_QUA
 
 **Ground rules (same as the rest of the refactor):** every fix is a copy/move with no behavior change, `npm run build` must pass after each one, and each fix ends with a manual smoke test on the affected screen.
 
-**Current state:** build passes. Files over 500 lines dropped from 27 to 11. Two files regressed and a few shared pieces are unused (below).
+**Current state:** build passes. Files over 500 lines dropped from 27 to 11. Two files regressed and a few shared pieces are unused (below). A full FE + BE scan on 2026-09-21 also surfaced the security items now listed under Priority 0. The repo copy of `Atta_Chakki_API/` and the live XAMPP copy at `C:\xampp\htdocs\Atta_Chakki_API` were byte-for-byte identical at the time of the scan (no drift).
+
+---
+
+## Priority 0 — Critical security (do these before anything else)
+
+Found on 2026-09-21 while scanning `Atta_Chakki_API/controllers/`. These are real bugs, not code-quality nits — anyone who knows the URL can call them from a browser or Postman with no login.
+
+### 0a. Twenty write endpoints have no auth guard
+
+None of the files below include `utils/auth_middleware.php` or call `require_auth()` / `require_admin()`. They accept a JSON body and mutate the database.
+
+| File | What any anonymous caller can do |
+|---|---|
+| `controllers/products/add_product.php` | Insert products |
+| `controllers/products/delete_product.php` | Delete any product |
+| `controllers/products/update_product_status.php` | Enable/disable products |
+| `controllers/products/update_category_status.php` | Enable/disable categories |
+| `controllers/coupons/create_coupon.php` | Create discount coupons |
+| `controllers/expenses/add_expense.php` | Insert expenses (trusts `user_id` from body) |
+| `controllers/expenses/delete_expense.php` | Delete expenses |
+| `controllers/orders/admin_create_order.php` | Create manual admin orders |
+| `controllers/orders/assign_driver.php` | Reassign drivers |
+| `controllers/orders/cancel_order.php` | Cancel any order (no ownership check) |
+| `controllers/orders/update_driver_location.php` | Spoof driver GPS |
+| `controllers/orders/update_delivery_settings.php` | Change delivery config |
+| `controllers/rentals/create_rental.php` | Create rentals |
+| `controllers/rentals/return_rental.php` | Close out rentals |
+| `controllers/reviews/edit_comment.php` | Edit any review (no owner check) |
+| `controllers/cart/add_to_cart_impl.php` | Modify any cart by supplying a `user_id` |
+| `controllers/cart/update_cart_item_impl.php` | Same |
+| `controllers/cart/remove_cart_item_impl.php` | Same |
+| `controllers/cart/clear_cart_impl.php` | Same |
+| `controllers/delivery/driver_notify.php` | Trigger driver notifications |
+| `controllers/delivery/generate_tracking_link.php` | Mint tracking links |
+| `controllers/payments/process_online_payment.php` | Hits `PaymentService` with only body input |
+
+**Recommended fix (one line per file):** at the top of each controller, right after the `include`/`require_once __DIR__ . '/../../config/connect.php';` line, add:
+
+```php
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+$user = require_admin();          // for admin-only endpoints
+// or
+$user = require_auth();           // for user-scoped endpoints
+```
+
+Then use `$user['id']` (or `$user['sub']`) instead of trusting `user_id` from the JSON body. Split the list into three buckets and do them in this order:
+
+1. **Admin-only** (do these first): `add_product`, `delete_product`, `update_product_status`, `update_category_status`, `create_coupon`, `add_expense`, `delete_expense`, `admin_create_order`, `assign_driver`, `update_delivery_settings`, `driver_notify`, `generate_tracking_link`.
+2. **User-scoped** (must verify the row belongs to the caller): `cancel_order`, `edit_comment`, all four `cart/*_impl` files.
+3. **Special cases**: `update_driver_location` needs a driver check (require_auth then verify role = driver); `create_rental` / `return_rental` are admin-only in practice; `process_online_payment` intentionally allows guest checkout, but must at least validate the amount and order_id against the DB before hitting the gateway.
+
+**Smoke test after each:** open the corresponding admin/customer screen while logged in, do the action, confirm it still works. Then log out and hit the URL directly with `curl` — it should return 401/403.
+
+### 0b. Hardcoded SMTP credential in `socket-server/server.js`
+
+`socket-server/server.js:25` still has:
+
+```js
+user: process.env.SMTP_USER || 'apnichakki897@gmail.com',
+pass: process.env.SMTP_PASS || 'otlg jyzi fvxi ucbi'
+```
+
+This is a **third** credential leak, in addition to the two already listed in Backlog C (`utils/email_helper.php` and `utils/onesignal_helper.php`). It is in git history.
+
+**Recommended fix:** remove the `||` fallback so the values come only from `process.env`, and rotate the Gmail app password (removing the string from the file does not un-leak it). Update Heroku/Vercel env vars in the same session so the socket server keeps working.
 
 ---
 
@@ -140,12 +205,14 @@ Track it as two numbers going forward: *lines per file* (should fall) and *dupli
 
 ## Suggested order
 
+0. **Priority 0 first, before any refactor:** add auth on the 20 unauthenticated write endpoints (admin bucket first), then remove and rotate the SMTP credential in `socket-server/server.js`.
 1. Fix `UserAccount.jsx` (biggest gain, about −600 lines)
 2. Fix `DeliveryPanel.jsx` components (about −350 lines)
 3. Switch `DeliveryPanel.jsx` WhatsApp to the helper
 4. Decide on the four shared components (adopt or delete)
 5. Trim the 3 new comment blocks
 6. Hook extraction for the remaining large files
+7. Fill the `clear_api_cache()` gaps listed in Backlog E
 
 ---
 
@@ -173,7 +240,8 @@ Everything below was still open in `REFACTOR_PROGRESS.md` / `audit.md` / `PROJEC
 
 | Item | Fix |
 |---|---|
-| **Hardcoded fallback secrets** in `Atta_Chakki_API/utils/email_helper.php` (an SMTP app password) and `utils/onesignal_helper.php` (a OneSignal REST API key). They are in git history. | Remove the hardcoded fallbacks so the values come only from environment variables, then **rotate both credentials** (removing them from the file does not un-leak them). |
+| **Unauthenticated write endpoints (20 files).** See Priority 0a. | Add `require_admin()` / `require_auth()` + owner check per file. Do the admin bucket first. |
+| **Hardcoded fallback secrets** in `Atta_Chakki_API/utils/email_helper.php` (an SMTP app password), `utils/onesignal_helper.php` (a OneSignal REST API key), and `socket-server/server.js:25` (the same SMTP app password, added on 2026-09-21 — see Priority 0b). All three are in git history. | Remove the hardcoded fallbacks so the values come only from environment variables, then **rotate all three credentials** (removing them from the files does not un-leak them). |
 | **JWT still in `localStorage`.** The HttpOnly-cookie migration only exists as a written blueprint; nothing in the backend sets or reads an auth cookie. | Implement the dual-auth plan (accept `auth_token` cookie and `Authorization: Bearer`), then drop the localStorage token. Needs product sign-off and a login/logout smoke test. |
 
 ### D. Leftover backend files to remove (after checking)
@@ -189,7 +257,15 @@ The old audit flagged these as dead. They still exist:
 
 - **Run `npm install`** in `Atta Chakki Frontend/`: on 2026-09-17 `eslint` failed because `@eslint/js` was missing from `node_modules` (later the build and lint worked, so this may already be fixed on your machine — confirm `npm run lint` and `npm test` both run).
 - **Cache invalidation is done, keep the rule:** every write endpoint must call `clear_api_cache()`. `clear_api_cache()` wipes the whole cache folder; a narrower `delete_api_cache($key)` helper is an optional improvement.
-- **`C:\xampp\htdocs\Atta_Chakki_API` is not a git repository** (no `.git`). Any change made there is not tracked or pushed. Either work only in the repo copy and copy files to XAMPP, or `git init` / re-clone there.
+- **Cache invalidation gaps found on 2026-09-21.** Only 20 write controllers currently call `clear_api_cache()`. The following write endpoints mutate data but do **not** clear the cache, so admin/customer lists can show stale data until the TTL expires — add the call to each:
+  - `orders/update_order_status.php`, `orders/update_pickup_weight.php`, `orders/update_order_items.php`, `orders/override_order_schedule.php`, `orders/cancel_order.php`, `orders/assign_driver.php`, `orders/process_eod_selection.php`, `orders/process_rollover.php`, `orders/reschedule_pending.php`
+  - `payments/record_payment.php`, `payments/record_udhaar_payment.php`, `payments/record_driver_settlement.php`
+  - `users/promote_to_vip.php`, `users/toggle_customer_status.php`, `users/manage_vip_privilege.php`, `users/update_user_profile.php`, `users/change_password.php`
+  - `expenses/add_expense.php`, `expenses/delete_expense.php`
+  - `reviews/add_comment.php`, `reviews/edit_comment.php`, `reviews/delete_comment.php`, `admin/reply_contact_message.php`
+  - `delivery/toggle_driver_status.php`, `delivery/generate_tracking_link.php`, `delivery/driver_notify.php`
+  - `admin/delete_contact_message.php`, `admin/update_custom_mix_request.php`
+- **`C:\xampp\htdocs\Atta_Chakki_API` is not a git repository** (no `.git`). Any change made there is not tracked or pushed. Either work only in the repo copy and copy files to XAMPP, or `git init` / re-clone there. Verified on 2026-09-21: the repo copy and the XAMPP copy were byte-for-byte identical at scan time — keep it that way.
 - The two backend `*.php` files edited during the comment cleanup exist in both folders — keep them identical.
 - `CLAUDE.md` inside `.claude/` still says to check `REFACTOR_PROGRESS.md` and `CODE_QUALITY_AUDIT.md` before starting work; point it at this file instead.
 - Deferred idea: replace `apiCache.js` with React Query — the earlier review judged the current setup fine, so this is optional.
