@@ -197,23 +197,41 @@ export function LiveTrackingMap() {
   // 
   const handleDriverMoved = useCallback((data) => {
     const orderId = String(data.order_id);
+    const pos = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
+    const h = parseFloat(data.heading || 0);
+    const spd = parseFloat(data.speed || 0);
+
     setDrivers(prev => {
       const exists = prev.find(d => String(d.order_id) === orderId);
       if (exists) return prev.map(d => String(d.order_id) === orderId ? { ...d, latitude: data.latitude, longitude: data.longitude, heading: data.heading, speed: data.speed, created_at: new Date().toISOString() } : d);
       return [...prev, { order_id: data.order_id, latitude: data.latitude, longitude: data.longitude, heading: data.heading, speed: data.speed, driver_name: data.driver_name, created_at: new Date().toISOString() }];
     });
-    if (markersRef.current[orderId] && mapRef.current) {
-      const pos = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
-      markersRef.current[orderId].setLngLat([pos.lng, pos.lat]);
-      const h = parseFloat(data.heading || 0);
-      if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
-        const color = getDriverColor(orderId).main;
-        const img = markersRef.current[orderId].getElement().querySelector('img');
-        if (img) img.src = createCarIcon(h, parseFloat(data.speed || 0), color);
+
+    if (mapRef.current) {
+      const color = getDriverColor(orderId).main;
+
+      if (markersRef.current[orderId]) {
+        markersRef.current[orderId].setLngLat([pos.lng, pos.lat]);
+        if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
+          const img = markersRef.current[orderId].getElement().querySelector('img');
+          if (img) img.src = createCarIcon(h, spd, color);
+          previousHeadingsRef.current[orderId] = h;
+        }
+      } else {
+        const el = document.createElement('div');
+        el.className = 'cursor-pointer';
+        el.innerHTML = `<img src="${createCarIcon(h, spd, color)}" style="width: 52px; height: 52px;" />`;
+
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([pos.lng, pos.lat])
+          .addTo(mapRef.current);
+
+        markersRef.current[orderId] = marker;
         previousHeadingsRef.current[orderId] = h;
       }
+
       const now = Date.now();
-      if (now - (routeLastDrawRef.current[orderId] || 0) > 12000 && routePathRef.current[orderId]) {
+      if (now - (routeLastDrawRef.current[orderId] || 0) > 8000 && routePathRef.current[orderId]) {
         routeLastDrawRef.current[orderId] = now;
         updateRemainingRoute(orderId, pos);
       }

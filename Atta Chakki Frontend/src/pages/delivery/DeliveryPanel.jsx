@@ -243,20 +243,26 @@ export function DeliveryPanel() {
   const sendLocationToServer = useCallback(async (orderId, position) => {
     try {
       const { latitude, longitude, accuracy, speed, heading } = position.coords;
+      const token = localStorage.getItem('token') || '';
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       // api pe location update
       await fetch(`${API_BASE_URL}/update_driver_location.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           order_id: orderId,
+          token: token || undefined,
           driver_name: user?.name || 'Unknown',
           driver_phone: user?.phone || user?.username || null,
           latitude,
           longitude,
           accuracy: accuracy || 0,
-          speed: speed || null,
-          heading: heading || null,
+          speed: speed != null ? speed : null,
+          heading: heading != null ? heading : null,
           status: 'in_transit'
         })
       });
@@ -285,7 +291,7 @@ export function DeliveryPanel() {
       return;
     }
 
-    // live position watch
+    // live position watch with optimized parameters
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         sendLocationToServer(orderId, position);
@@ -297,22 +303,20 @@ export function DeliveryPanel() {
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
+        timeout: 10000,
+        maximumAge: 2000
       }
     );
 
     setActiveTracking(prev => ({ ...prev, [orderId]: watchId }));
 
-    // interval backup (only runs when tab is visible to prevent battery drain)
+    // interval backup (runs every 8 seconds to ensure consistent real-time movement)
     const intervalId = setInterval(() => {
-      if (!document.hidden) {
-        getCurrentPositionSafe({ timeout: 8000, maximumAge: 3000 })
-          .then((position) => {
-            if (position) sendLocationToServer(orderId, position);
-          });
-      }
-    }, 15000);
+      getCurrentPositionSafe({ timeout: 6000, maximumAge: 2000 })
+        .then((position) => {
+          if (position) sendLocationToServer(orderId, position);
+        });
+    }, 8000);
 
     trackingIntervals.current[orderId] = intervalId;
   }, [sendLocationToServer, t, getCurrentPositionSafe]);
@@ -515,11 +519,15 @@ export function DeliveryPanel() {
         // Send initial GPS location asynchronously in background if available
         getCurrentPositionSafe({ timeout: 3000, maximumAge: 5000 }).then(position => {
           if (position) {
+            const token = localStorage.getItem('token') || '';
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             fetch(`${API_BASE_URL}/update_driver_location.php`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify({
                 order_id: order.id,
+                token: token || undefined,
                 driver_name: user?.name || 'Unknown',
                 driver_phone: user?.phone || user?.username || null,
                 latitude: position.coords.latitude,
@@ -572,11 +580,15 @@ export function DeliveryPanel() {
         // Fire final GPS ping in background without blocking status update
         getCurrentPositionSafe({ timeout: 2000, maximumAge: 5000 }).then(position => {
           if (position) {
+            const token = localStorage.getItem('token') || '';
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             fetch(`${API_BASE_URL}/update_driver_location.php`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify({
                 order_id: order.id,
+                token: token || undefined,
                 driver_name: user?.name || 'Unknown',
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
