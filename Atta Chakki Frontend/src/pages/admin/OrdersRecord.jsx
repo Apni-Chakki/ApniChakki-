@@ -20,7 +20,9 @@ const mapOrderRow = (order) => {
   const amountPaid = parseFloat(order.amount_paid) || 0;
 
   let paymentStatus = order.payment_status || 'pending';
-  if (paymentStatus === 'paid' || amountPaid >= totalAmount) {
+  const isCompletedCod = ['completed', 'delivered'].includes(String(order.status).toLowerCase()) &&
+                         ['cod', 'cash'].includes(String(order.payment_method || 'cod').toLowerCase());
+  if (paymentStatus === 'paid' || amountPaid >= totalAmount || isCompletedCod) {
     paymentStatus = 'paid';
   } else if (amountPaid > 0) {
     paymentStatus = 'partial';

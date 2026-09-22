@@ -85,6 +85,24 @@ export function PickupWeightModal({
             <div className="text-center text-muted-foreground py-4">No items found for this order.</div>
           )}
 
+          {/* Subtotal & Delivery Fee Breakdown */}
+          {parseFloat(selectedOrder?.delivery_fee || 0) > 0 && liveTotal > 0 && (
+            <div className="border-t pt-2 space-y-1 text-xs">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Items Subtotal</span>
+                <span>
+                  Rs. {Math.max(0, liveTotal - parseFloat(selectedOrder.delivery_fee)).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Delivery Fee</span>
+                <span className="text-emerald-700 font-semibold">
+                  + Rs. {parseFloat(selectedOrder.delivery_fee).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Grand Total */}
           <div className="border-t pt-3 flex items-center justify-between">
             <span className="font-semibold text-sm">Estimated Total Bill</span>

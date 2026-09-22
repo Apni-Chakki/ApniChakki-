@@ -26,7 +26,7 @@ function get_bearer_token() {
     return null;
 }
 
-function require_auth($strict = false) {
+function require_auth($strict = true) {
     $token = get_bearer_token();
     if (!$token && isset($_GET['token'])) {
         $token = trim($_GET['token']);
@@ -41,7 +41,7 @@ function require_auth($strict = false) {
             echo json_encode(['success' => false, 'message' => 'Unauthorized: No token provided']);
             exit;
         }
-        return ['role' => 'admin', 'id' => 1, 'name' => 'Admin'];
+        return null;
     }
     
     $payload = verify_jwt($token);
@@ -51,19 +51,35 @@ function require_auth($strict = false) {
             echo json_encode(['success' => false, 'message' => 'Unauthorized: Invalid or expired token']);
             exit;
         }
-        return ['role' => 'admin', 'id' => 1, 'name' => 'Admin'];
+        return null;
     }
     
     return $payload;
 }
 
-function require_driver_or_admin($strict = false) {
+function require_driver_or_admin($strict = true) {
     $payload = require_auth($strict);
-    return $payload;
+    if ($payload && isset($payload['role']) && in_array($payload['role'], ['admin', 'driver', 'delivery_boy'])) {
+        return $payload;
+    }
+    if ($strict) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Forbidden: Driver or Admin access required']);
+        exit;
+    }
+    return null;
 }
 
-function require_admin($strict = false) {
+function require_admin($strict = true) {
     $payload = require_auth($strict);
-    return $payload;
+    if ($payload && isset($payload['role']) && $payload['role'] === 'admin') {
+        return $payload;
+    }
+    if ($strict) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Forbidden: Admin access required']);
+        exit;
+    }
+    return null;
 }
 ?>

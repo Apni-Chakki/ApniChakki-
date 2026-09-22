@@ -21,6 +21,9 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        require_once __DIR__ . '/../../utils/auth_middleware.php';
+        $user = require_driver_or_admin();
+
         // generating new token
         $data = json_decode(file_get_contents("php://input"), true);
 
@@ -144,6 +147,9 @@ try {
         }
 
         $whatsapp_url = "https://wa.me/{$formatted_phone}?text=" . rawurlencode($whatsapp_message);
+
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
 
         echo json_encode([
             "success" => true,

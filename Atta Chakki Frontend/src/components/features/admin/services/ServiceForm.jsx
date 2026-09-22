@@ -242,6 +242,20 @@ export function ServiceForm({
           </div>
 
           <div>
+            <Label htmlFor="description_ur">Description (Urdu) — اردو تفصیل</Label>
+            <Textarea
+              id="description_ur"
+              placeholder="سروس کی مختصر تفصیل اردو میں لکھیں"
+              value={formData.description_ur || ''}
+              onChange={(e) => setFormData({ ...formData, description_ur: e.target.value })}
+              rows={3}
+              disabled={isSaving}
+              dir="rtl"
+              className="font-sans"
+            />
+          </div>
+
+          <div>
             <Label>Product Image</Label>
             <div className="flex flex-col sm:flex-row gap-4 items-start mt-2">
               <div className="relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center w-full max-w-sm hover:bg-muted/50 transition-colors">

@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
         if (data.token) localStorage.setItem('token', data.token);
         // If login was meant for admin, verify the backend returned role=admin
         if (role === 'admin' && data.user.role !== 'admin') {
-            return false;
+            return { success: false, message: 'Unauthorized role' };
         }
         
         let finalUser = data.user;
@@ -55,12 +55,12 @@ export function AuthProvider({ children }) {
         // Immediately write to localStorage so navigate() ke baad ka page null user na dekhe
         localStorage.setItem('user', JSON.stringify(finalUser));
         setUser(finalUser); 
-        return finalUser;
+        return { success: true, user: finalUser };
       }
-      return false;
+      return { success: false, message: data.message || 'Invalid credentials' };
     } catch (error) {
       console.error("Login API Error:", error);
-      return false;
+      return { success: false, message: error.message || 'Network connection failed' };
     }
   };
 

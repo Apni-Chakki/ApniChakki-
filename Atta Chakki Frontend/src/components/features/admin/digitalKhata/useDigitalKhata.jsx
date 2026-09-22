@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
-import { Button } from '../../../common/button';
 import { useAuth } from '../../../../store/AuthContext';
 import { API_BASE_URL } from '../../../../config';
 
@@ -11,6 +10,8 @@ export function useDigitalKhata() {
   const [backendTotals, setBackendTotals] = useState({ today: 0, month: 0 });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -169,52 +170,33 @@ export function useDigitalKhata() {
   };
 
   const handleDelete = (id) => {
-    const deleteEntry = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/delete_expense.php`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
-        });
+    setDeletingId(id);
+  };
 
-        const result = await response.json();
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/delete_expense.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deletingId })
+      });
 
-        if (result.success) {
-          toast.success('Entry deleted');
-          fetchExpenses();
-        } else {
-          toast.error('Failed to delete');
-        }
-      } catch (error) {
-        toast.error('Network error while deleting');
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success('Entry deleted');
+        fetchExpenses();
+      } else {
+        toast.error(result.message || 'Failed to delete');
       }
-    };
-
-    toast.custom((toastId) => (
-      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
-        <p className="text-primary-foreground font-medium">Are you sure you want to delete this entry?</p>
-        <div className="flex gap-2 justify-end">
-          <Button
-            onClick={() => toast.dismiss(toastId)}
-            variant="outline"
-            size="sm"
-            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              toast.dismiss(toastId);
-              deleteEntry();
-            }}
-            size="sm"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
-    ));
+    } catch (error) {
+      toast.error('Network error while deleting');
+    } finally {
+      setIsDeleting(false);
+      setDeletingId(null);
+    }
   };
 
   const handlePrintReport = async () => {
@@ -242,6 +224,9 @@ export function useDigitalKhata() {
     backendTotals,
     loading,
     isSaving,
+    deletingId,
+    setDeletingId,
+    isDeleting,
     page,
     setPage,
     pageSize,
@@ -269,6 +254,7 @@ export function useDigitalKhata() {
     setDateRange,
     handleAddExpense,
     handleDelete,
+    confirmDelete,
     handlePrintReport,
     getPeriodLabel,
   };

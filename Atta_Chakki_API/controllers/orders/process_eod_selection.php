@@ -51,7 +51,12 @@ try {
     if (!empty($completed_ids)) {
         foreach ($completed_ids as $order_id) {
             $order_id = intval($order_id);
-            $upd = $conn->prepare("UPDATE orders SET status = 'completed', updated_at = NOW() WHERE id = ?");
+            $upd = $conn->prepare("UPDATE orders SET 
+                status = 'completed',
+                payment_status = CASE WHEN (payment_method IN ('cod', 'cash') OR payment_method IS NULL OR payment_method = '') THEN 'paid' ELSE payment_status END,
+                amount_paid = CASE WHEN (payment_method IN ('cod', 'cash') OR payment_method IS NULL OR payment_method = '') THEN total_amount ELSE amount_paid END,
+                updated_at = NOW() 
+                WHERE id = ?");
             $upd->bind_param("i", $order_id);
             $upd->execute();
             $upd->close();
@@ -85,6 +90,9 @@ try {
     // Step 6: Get updated capacity info
     $today_capacity = getCapacityInfo($conn, $today);
     
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
+
     echo json_encode([
         "success" => true,
         "message" => "EOD selection processed successfully",

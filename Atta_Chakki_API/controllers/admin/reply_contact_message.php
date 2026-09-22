@@ -62,6 +62,9 @@ try {
             send_email_async('/send-contact-reply', $emailData);
         }
 
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
+
         echo json_encode(["success" => true, "message" => "Reply saved and emailed successfully"]);
     } else {
         echo json_encode(["success" => false, "message" => "Message not found or no changes made"]);

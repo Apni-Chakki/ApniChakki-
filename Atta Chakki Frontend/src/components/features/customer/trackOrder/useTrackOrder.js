@@ -53,8 +53,14 @@ export function useTrackOrder() {
 
     try {
       const isPhone = term.startsWith('+') || term.startsWith('0') || term.length > 7;
-      const param = isPhone ? `phone=${encodeURIComponent(term)}` : `order_id=${term}`;
-      const response = await fetch(`${API_BASE_URL}/track_order.php?${param}&user_id=${user.id}`);
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/track_order.php?${param}&user_id=${user.id}`, {
+        headers
+      });
       const data = await response.json();
 
       if (data.success && data.orders && data.orders.length > 0) {
@@ -67,7 +73,7 @@ export function useTrackOrder() {
           total: o.total_amount,
           couponDiscount: o.coupon_discount,
           paymentMethod: o.payment_method,
-          paymentStatus: o.payment_status,
+          paymentStatus: (o.payment_status === 'paid' || (['completed', 'delivered'].includes(String(o.status).toLowerCase()) && ['cod', 'cash'].includes(String(o.payment_method || 'cod').toLowerCase()))) ? 'paid' : (o.payment_status || 'pending'),
           deliveryDate: o.delivery_date,
           driverName: o.driver_name,
           createdAt: o.created_at,

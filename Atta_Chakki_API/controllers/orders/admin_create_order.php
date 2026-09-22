@@ -2,7 +2,10 @@
 // admin side se manual order create karna
 require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/../../utils/cache_helper.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
 require_once __DIR__ . '/order_scheduler.php';
+
+$user = require_admin();
 
 header('Content-Type: application/json');
 

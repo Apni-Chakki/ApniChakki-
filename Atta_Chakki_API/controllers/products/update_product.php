@@ -22,6 +22,7 @@ try {
     $price = floatval($data['price']);
     $unit = (isset($data['unit']) && $data['unit'] !== null) ? $data['unit'] : 'kg';
     $description = (isset($data['description']) && $data['description'] !== null) ? $data['description'] : '';
+    $description_ur = (isset($data['description_ur']) && trim($data['description_ur']) !== '') ? trim($data['description_ur']) : null;
     $image = (isset($data['image']) && $data['image'] !== null) ? $data['image'] : (isset($data['image_url']) ? $data['image_url'] : '');
     $category_id = null;
 
@@ -112,9 +113,10 @@ try {
     $discount_value = isset($data['discount_value']) ? floatval($data['discount_value']) : 0.00;
     $badge_text = isset($data['badge_text']) ? $data['badge_text'] : null;
     $customization_pricing_mode = isset($data['customization_pricing_mode']) && in_array($data['customization_pricing_mode'], ['additive', 'average']) ? $data['customization_pricing_mode'] : 'additive';
+    $customization_note = isset($data['customization_note']) && trim($data['customization_note']) !== '' ? trim($data['customization_note']) : null;
 
     // updating product
-    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, image_url=?, stock_quantity=?, min_stock_level=?, is_grinding_service=?, customization_pricing_mode=?, cleaning_price=?, grinding_price=?, is_rental=?, rental_price_per_day=?, security_deposit=?, late_penalty_per_day=?, rental_available_qty=?, dual_unit=?, weight_options=?, is_custom_mix=?, track_inventory=?, discount_type=?, discount_value=?, badge_text=?, priority=? WHERE id=?";
+    $sql = "UPDATE products SET name=?, price=?, unit=?, category_id=?, description=?, description_ur=?, image_url=?, stock_quantity=?, min_stock_level=?, is_grinding_service=?, customization_pricing_mode=?, customization_note=?, cleaning_price=?, grinding_price=?, is_rental=?, rental_price_per_day=?, security_deposit=?, late_penalty_per_day=?, rental_available_qty=?, dual_unit=?, weight_options=?, is_custom_mix=?, track_inventory=?, discount_type=?, discount_value=?, badge_text=?, priority=? WHERE id=?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
@@ -123,9 +125,10 @@ try {
 
     // Types in order of parameters below:
 
-    $stmt->bind_param("sdsissddisddidddiisiisdsii",
-        $name, $price, $unit, $category_id, $description, $image,
+    $stmt->bind_param("sdsisssddissddidddiisiisdsii",
+        $name, $price, $unit, $category_id, $description, $description_ur, $image,
         $stock_quantity, $min_stock_level, $is_grinding_service, $customization_pricing_mode,
+        $customization_note,
         $cleaning_price, $grinding_price, $is_rental,
         $rental_price_per_day, $security_deposit, $late_penalty_per_day,
         $rental_available_qty, $dual_unit, $weight_options,

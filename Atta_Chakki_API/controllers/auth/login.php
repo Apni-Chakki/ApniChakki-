@@ -1,6 +1,7 @@
 <?php
 // login controller logic
 include __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../config/cors.php';
 
 header('Content-Type: application/json');
 
@@ -17,11 +18,28 @@ try {
     $password = $input['password'] ?? '';
     $login_type = $input['login_type'] ?? 'customer';
 
-    if (empty($phone) || empty($password)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Phone/username and password are required']);
-        exit;
-    }
+require_once __DIR__ . '/../../utils/rate_limiter.php';
+
+if (empty($phone) || empty($password)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Phone/username and password are required']);
+    exit;
+}
+
+// Rate Limiting: 5 attempts per 15 minutes (900 seconds)
+$client_ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rate_key = 'login_' . md5($phone . '_' . $client_ip);
+
+$rate_status = check_rate_limit($rate_key, 5, 900);
+if (!$rate_status['allowed']) {
+    http_response_code(429);
+    $minutes = ceil($rate_status['retry_after'] / 60);
+    echo json_encode([
+        'success' => false,
+        'message' => "Too many failed login attempts. Please try again in $minutes minute(s)."
+    ]);
+    exit;
+}
 
     if ($login_type === 'delivery') {
         // delivery boy login
@@ -37,6 +55,7 @@ try {
 
         if ($result->num_rows === 0) {
             $stmt->close();
+            hit_rate_limit($rate_key, 900);
             echo json_encode(['success' => false, 'message' => 'Invalid phone number, password, or not a delivery account']);
             exit;
         }
@@ -45,6 +64,7 @@ try {
         $stmt->close();
 
         if (!password_verify($password, $user['password_hash'])) {
+            hit_rate_limit($rate_key, 900);
             echo json_encode(['success' => false, 'message' => 'Invalid phone number or password']);
             exit;
         }
@@ -53,6 +73,8 @@ try {
             echo json_encode(['success' => false, 'message' => 'Account is deactivated']);
             exit;
         }
+
+        clear_rate_limit($rate_key);
 
         require_once __DIR__ . '/../../utils/jwt_helper.php';
         $payload = [
@@ -83,8 +105,9 @@ try {
         $result = $stmt->get_result();
 
         if ($result->num_rows === 0) {
-            echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
             $stmt->close();
+            hit_rate_limit($rate_key, 900);
+            echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
             exit;
         }
 
@@ -92,6 +115,7 @@ try {
         $stmt->close();
 
         if (!password_verify($password, $user['password_hash'])) {
+            hit_rate_limit($rate_key, 900);
             echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
             exit;
         }
@@ -100,6 +124,8 @@ try {
             echo json_encode(['success' => false, 'message' => 'Account is deactivated']);
             exit;
         }
+
+        clear_rate_limit($rate_key);
 
         // Generate JWT Token
         require_once __DIR__ . '/../../utils/jwt_helper.php';

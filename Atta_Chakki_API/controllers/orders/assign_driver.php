@@ -1,6 +1,10 @@
 <?php
 // assign driver to order
-include __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
+
+$user = require_admin();
 
 header('Content-Type: application/json');
 
@@ -68,6 +72,7 @@ $stmt = $conn->prepare("UPDATE orders SET driver_name = ?, driver_phone = ?, sta
 $stmt->bind_param("sssi", $driver_name, $driver_phone, $new_status, $order_id);
 
 if ($stmt->execute()) {
+    clear_api_cache();
     echo json_encode([
         "success" => true,
         "message" => "Driver '$driver_name' assigned to order #$order_id",

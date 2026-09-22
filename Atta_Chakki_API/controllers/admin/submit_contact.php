@@ -56,6 +56,9 @@ try {
             'message' => $message
         ]);
 
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
+
         echo json_encode(["success" => true, "message" => "Message sent successfully! We will get back to you soon."]);
     } else {
         echo json_encode(["success" => false, "message" => "Error: " . $stmt->error]);

@@ -107,61 +107,109 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $orders = [];
+$order_ids = [];
 while ($row = $result->fetch_assoc()) {
-    $order_id = $row['id'];
-    $items = [];
-    $item_res = $conn->query("SELECT id, quantity, product_id, price_at_purchase, original_price, is_cleaning, is_grinding FROM order_items WHERE order_id = '$order_id'");
-    while($i = $item_res->fetch_assoc()) {
-         $order_item_id = $i['id'];
-         $customizations = [];
-         try {
-             $cust_res = $conn->query("SELECT option_name, option_price FROM order_item_customizations WHERE order_item_id = '$order_item_id'");
-             if ($cust_res) {
-                 while ($cust_row = $cust_res->fetch_assoc()) {
-                     $customizations[] = $cust_row;
-                 }
-             }
-         } catch (Throwable $t) {
-             // Table might be initializing
-         }
-         $i['customizations'] = $customizations;
+    $row['items'] = [];
+    $row['delivery_fee'] = (float)($row['delivery_fee'] ?? 0);
+    $orders[$row['id']] = $row;
+    $order_ids[] = (int)$row['id'];
+}
+$stmt->close();
 
-         $pid = $i['product_id'];
-         $prod_res = $conn->query("SELECT name, unit FROM products WHERE id = '$pid'");
-         if ($p = $prod_res->fetch_assoc()) {
-             $i['name'] = $p['name'];
-             $i['unit'] = $p['unit'];
-         } else {
-             $i['name'] = "Item #$pid";
-             $i['unit'] = 'kg';
-         }
+if (!empty($order_ids)) {
+    $id_list = implode(',', $order_ids);
 
-         // Fetch rental details if any
-         $rent_stmt = $conn->prepare("SELECT rental_start_date, rental_end_date, rental_days, rental_price_per_day, security_deposit, late_penalty_per_day, status as rental_status FROM rentals WHERE order_id = ? AND product_id = ? LIMIT 1");
-         $rent_stmt->bind_param("ii", $order_id, $pid);
-         $rent_stmt->execute();
-         $rent_res = $rent_stmt->get_result();
-         if ($rent_row = $rent_res->fetch_assoc()) {
-             $i['is_rental'] = 1;
-             $i['rental_start_date'] = $rent_row['rental_start_date'];
-             $i['rental_end_date'] = $rent_row['rental_end_date'];
-             $i['rental_days'] = $rent_row['rental_days'];
-             $i['rental_price_per_day'] = $rent_row['rental_price_per_day'];
-             $i['security_deposit'] = $rent_row['security_deposit'];
-             $i['late_penalty_per_day'] = $rent_row['late_penalty_per_day'];
-             $i['rental_status'] = $rent_row['rental_status'];
-         } else {
-             $i['is_rental'] = 0;
-         }
-         $rent_stmt->close();
+    // 1. Batch fetch all order items with product name and unit in a single query
+    $item_sql = "SELECT oi.id, oi.order_id, oi.quantity, oi.product_id, oi.price_at_purchase, 
+                        oi.original_price, oi.is_cleaning, oi.is_grinding,
+                        COALESCE(p.name, CONCAT('Item #', oi.product_id)) as name,
+                        COALESCE(p.unit, 'kg') as unit
+                 FROM order_items oi
+                 LEFT JOIN products p ON oi.product_id = p.id
+                 WHERE oi.order_id IN ($id_list)
+                 ORDER BY oi.id ASC";
+    $item_res = $conn->query($item_sql);
 
-         $items[] = $i;
+    $items_by_id = [];
+    $order_items_map = []; // order_id => [item, item, ...]
+
+    if ($item_res) {
+        while ($i = $item_res->fetch_assoc()) {
+            $i['customizations'] = [];
+            $i['is_rental'] = 0;
+            $items_by_id[$i['id']] = $i;
+            $order_items_map[$i['order_id']][] = $i['id'];
+        }
     }
-    $row['items'] = $items;
-    $orders[] = $row;
+
+    // 2. Batch fetch customizations if any items exist
+    if (!empty($items_by_id)) {
+        $item_ids_list = implode(',', array_keys($items_by_id));
+        try {
+            $cust_res = $conn->query("SELECT order_item_id, option_name, option_price 
+                                      FROM order_item_customizations 
+                                      WHERE order_item_id IN ($item_ids_list)");
+            if ($cust_res) {
+                while ($cust_row = $cust_res->fetch_assoc()) {
+                    $oid = $cust_row['order_item_id'];
+                    if (isset($items_by_id[$oid])) {
+                        $items_by_id[$oid]['customizations'][] = [
+                            'option_name' => $cust_row['option_name'],
+                            'option_price' => $cust_row['option_price']
+                        ];
+                    }
+                }
+            }
+        } catch (Throwable $t) {
+            // Table might not exist or error
+        }
+
+        // 3. Batch fetch rentals if any
+        try {
+            $rent_res = $conn->query("SELECT order_id, product_id, rental_start_date, rental_end_date, 
+                                             rental_days, rental_price_per_day, security_deposit, 
+                                             late_penalty_per_day, status as rental_status 
+                                      FROM rentals 
+                                      WHERE order_id IN ($id_list)");
+            if ($rent_res) {
+                while ($rent_row = $rent_res->fetch_assoc()) {
+                    $roid = $rent_row['order_id'];
+                    $rpid = $rent_row['product_id'];
+                    // attach to the item with this order_id and product_id
+                    if (isset($order_items_map[$roid])) {
+                        foreach ($order_items_map[$roid] as $item_id) {
+                            if ($items_by_id[$item_id]['product_id'] == $rpid) {
+                                $items_by_id[$item_id]['is_rental'] = 1;
+                                $items_by_id[$item_id]['rental_start_date'] = $rent_row['rental_start_date'];
+                                $items_by_id[$item_id]['rental_end_date'] = $rent_row['rental_end_date'];
+                                $items_by_id[$item_id]['rental_days'] = $rent_row['rental_days'];
+                                $items_by_id[$item_id]['rental_price_per_day'] = $rent_row['rental_price_per_day'];
+                                $items_by_id[$item_id]['security_deposit'] = $rent_row['security_deposit'];
+                                $items_by_id[$item_id]['late_penalty_per_day'] = $rent_row['late_penalty_per_day'];
+                                $items_by_id[$item_id]['rental_status'] = $rent_row['rental_status'];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $t) {
+            // Rentals table error ignored
+        }
+    }
+
+    // 4. Assemble items back into orders
+    foreach ($orders as $oid => &$ord) {
+        if (isset($order_items_map[$oid])) {
+            foreach ($order_items_map[$oid] as $itemId) {
+                $ord['items'][] = $items_by_id[$itemId];
+            }
+        }
+    }
+    unset($ord);
 }
 
-$stmt->close();
+$orders = array_values($orders);
 
 echo json_encode([
     "success" => true,

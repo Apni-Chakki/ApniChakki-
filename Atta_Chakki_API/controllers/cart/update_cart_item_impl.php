@@ -1,8 +1,11 @@
 <?php
 // update cart item quantity
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
 
 header('Content-Type: application/json');
+
+$user = require_auth();
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
@@ -22,10 +25,11 @@ try {
         exit;
     }
     
-    // getting item and checking stock
+    // getting item and checking stock + ownership
     $item_query = $conn->prepare("
-        SELECT ci.product_id, p.stock_quantity
+        SELECT ci.product_id, p.stock_quantity, c.user_id
         FROM cart_items ci
+        JOIN carts c ON ci.cart_id = c.id
         JOIN products p ON ci.product_id = p.id
         WHERE ci.id = ?
     ");
@@ -40,6 +44,12 @@ try {
     }
     
     $item = $item_result->fetch_assoc();
+    $isAdmin = isset($user['role']) && $user['role'] === 'admin';
+    if (!$isAdmin && intval($item['user_id']) !== intval($user['id'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Forbidden: You cannot modify another user\'s cart']);
+        exit;
+    }
     
     if ($quantity > $item['stock_quantity']) {
         http_response_code(400);

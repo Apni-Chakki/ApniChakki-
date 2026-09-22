@@ -4,15 +4,28 @@ include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
-require_auth();
+$auth_payload = require_auth();
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    // checking auth
-    $logged_in_user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
-    if ($logged_in_user_id <= 0) {
-        echo json_encode(["success" => false, "message" => "Unauthorized access. Please log in.", "orders" => []]);
+    // IDOR Protection: Extract user identity from verified JWT token
+    $token_user_id = (int)($auth_payload['id'] ?? 0);
+    $token_role = $auth_payload['role'] ?? 'customer';
+
+    // If client supplied user_id, ensure non-admins cannot query on behalf of others
+    $param_user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
+    if ($param_user_id > 0 && $token_role !== 'admin' && $param_user_id !== $token_user_id) {
+        http_response_code(403);
+        echo json_encode(["success" => false, "message" => "Forbidden: You cannot access orders for another account.", "orders" => []]);
+        exit;
+    }
+
+    $logged_in_user_id = ($token_role === 'admin' && $param_user_id > 0) ? $param_user_id : $token_user_id;
+
+    if ($logged_in_user_id <= 0 && $token_role !== 'admin') {
+        http_response_code(401);
+        echo json_encode(["success" => false, "message" => "Unauthorized access. Invalid token.", "orders" => []]);
         exit;
     }
 
@@ -49,26 +62,24 @@ try {
                     $row['customer_phone'] = $phone ?: "No Phone";
                 }
 
-                // getting items
-                $order_id_fetched = $row['id'];
-                $items = [];
-                $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
+                // getting items with product name joined
+                $order_id_fetched = (int)$row['id'];
+                $item_stmt = $conn->prepare("
+                    SELECT oi.quantity, oi.product_id, oi.price_at_purchase, oi.is_cleaning, oi.is_grinding,
+                           COALESCE(p.name, CONCAT('Item #', oi.product_id)) as name,
+                           COALESCE(p.unit, 'kg') as unit
+                    FROM order_items oi
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id = ?
+                ");
                 $item_stmt->bind_param("i", $order_id_fetched);
                 $item_stmt->execute();
                 $item_res = $item_stmt->get_result();
+                $items = [];
                 while($i = $item_res->fetch_assoc()) {
-                     $pid = $i['product_id'];
-                     $prod_stmt = $conn->prepare("SELECT name FROM products WHERE id = ?");
-                     $prod_stmt->bind_param("i", $pid);
-                     $prod_stmt->execute();
-                     $prod_res = $prod_stmt->get_result();
-                     if ($p = $prod_res->fetch_assoc()) {
-                         $i['name'] = $p['name'];
-                     } else {
-                         $i['name'] = "Item #$pid";
-                     }
-                     $items[] = $i;
+                    $items[] = $i;
                 }
+                $item_stmt->close();
                 $row['items'] = $items;
                 $row['total'] = $row['total_amount'];
                 $orders[] = $row;
@@ -106,22 +117,19 @@ try {
                             $row['customer_phone'] = $phone;
                         }
 
-                        // getting items
+                        // getting items with JOIN
                         $order_id_fetched = $row['id'];
                         $items = [];
-                        $item_stmt = $conn->prepare("SELECT quantity, product_id, price_at_purchase, is_cleaning, is_grinding FROM order_items WHERE order_id = ?");
+                        $item_stmt = $conn->prepare("SELECT oi.quantity, oi.product_id, oi.price_at_purchase, oi.is_cleaning, oi.is_grinding, p.name 
+                                                      FROM order_items oi 
+                                                      LEFT JOIN products p ON oi.product_id = p.id 
+                                                      WHERE oi.order_id = ?");
                         $item_stmt->bind_param("i", $order_id_fetched);
                         $item_stmt->execute();
                         $item_res = $item_stmt->get_result();
                         while($i = $item_res->fetch_assoc()) {
-                             $pid = $i['product_id'];
-                             $prod_stmt = $conn->prepare("SELECT name FROM products WHERE id = ?");
-                             $prod_stmt->bind_param("i", $pid);
-                             $prod_stmt->execute();
-                             $prod_res = $prod_stmt->get_result();
-                             if ($p = $prod_res->fetch_assoc()) {
-                                 $i['name'] = $p['name'];
-                             } else {
+                             if (empty($i['name'])) {
+                                 $pid = $i['product_id'];
                                  $i['name'] = "Item #$pid";
                              }
                              $items[] = $i;

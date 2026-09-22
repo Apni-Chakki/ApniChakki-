@@ -8,6 +8,10 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { compressImage } from '../../utils/imageCompressor';
 import { useTranslation } from 'react-i18next';
+import { PageHeader } from '../../components/shared/PageHeader';
+import { Loading } from '../../components/shared/Loading';
+import { EmptyState } from '../../components/shared/EmptyState';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 export function ManageCategories() {
   const { t } = useTranslation();
@@ -17,6 +21,8 @@ export function ManageCategories() {
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -200,59 +206,40 @@ export function ManageCategories() {
     }
   };
 
-  const handleDelete = async (id) => {
-    const deleteCategory = async () => {
-      try {
-        const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
-        const response = await fetch(`${API_BASE_URL}/delete_category.php`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({ id: id })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          toast.success('Category deleted successfully!');
-          fetchCategories();
-          // Emit event to notify Homepage to refresh categories
-          window.dispatchEvent(new Event('categoriesUpdated'));
-        } else {
-          toast.error(result.message || 'Failed to delete category');
-        }
-      } catch (error) {
-        toast.error('Network error while deleting');
-      }
-    };
+  const handleDelete = (id) => {
+    setDeleteConfirmId(id);
+  };
 
-    toast.custom((toastId) => (
-      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
-        <p className="text-primary-foreground font-medium">{t('Delete this category?')}</p>
-        <div className="flex gap-2 justify-end">
-          <Button
-            onClick={() => toast.dismiss(toastId)}
-            variant="outline"
-            size="sm"
-            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
-          >
-            {t('Cancel')}
-          </Button>
-          <Button
-            onClick={() => {
-              toast.dismiss(toastId);
-              deleteCategory();
-            }}
-            size="sm"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
-          >
-            {t('Delete')}
-          </Button>
-        </div>
-      </div>
-    ));
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
+      const response = await fetch(`${API_BASE_URL}/delete_category.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ id: deleteConfirmId })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(t('Category deleted successfully!'));
+        fetchCategories();
+        // Emit event to notify Homepage to refresh categories
+        window.dispatchEvent(new Event('categoriesUpdated'));
+      } else {
+        toast.error(result.message || t('Failed to delete category'));
+      }
+    } catch (error) {
+      toast.error(t('Network error while deleting'));
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
+    }
   };
 
   const resetForm = () => {
@@ -269,28 +256,21 @@ export function ManageCategories() {
   };
 
   if (loading && categories.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">{t('Loading Categories...')}</p>
-      </div>
-    );
+    return <Loading label={t('Loading Categories...')} className="h-64" />;
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold">{t('Manage Categories')}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('Add, edit, or remove categories')}</p>
-        </div>
-        {!isAdding && !editingId && (
-          <Button onClick={() => setIsAdding(true)} className="w-full sm:w-auto">
+      <PageHeader
+        title={t('Manage Categories')}
+        subtitle={t('Add, edit, or remove categories')}
+        actions={
+          <Button onClick={() => setIsAdding(true)} disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2 shrink-0" />
-            {t('Add New Category')}
+            {t('Add Category')}
           </Button>
-        )}
-      </div>
+        }
+      />
 
       {(isAdding || editingId) && (
         <div ref={formRef}>
@@ -397,9 +377,16 @@ export function ManageCategories() {
 
       <div className="space-y-4">
         {categories.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground">{t('No categories yet')}</p>
-          </Card>
+          <EmptyState
+            title={t('No categories yet')}
+            description={t('Add your first product category to organize your services.')}
+            action={
+              <Button onClick={() => setIsAdding(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('Add Category')}
+              </Button>
+            }
+          />
         ) : (
           categories.map((cat) => (
             <Card key={cat.id} className="p-3 sm:p-6">
@@ -442,6 +429,18 @@ export function ManageCategories() {
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}
+        title={t('Delete Category?')}
+        description={t('Are you sure you want to delete this category? This action cannot be undone.')}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
+        destructive
+        loading={isDeleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

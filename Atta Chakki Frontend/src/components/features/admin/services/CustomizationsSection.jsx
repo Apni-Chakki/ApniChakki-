@@ -1,9 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import { Button } from '../../../common/button';
 import { Input } from '../../../common/input';
 import { Label } from '../../../common/label';
 import { Checkbox } from '../../../common/checkbox';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle } from 'lucide-react';
+import { Textarea } from '../../../common/textarea';
 
 export function CustomizationsSection({
   formData,
@@ -67,6 +68,31 @@ export function CustomizationsSection({
             <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" onClick={addCustomization} disabled={isSaving}>
               <Plus className="h-3 w-3 mr-1" /> Add Option
             </Button>
+          </div>
+
+          {/* Customer Warning / Pre-Info Note */}
+          <div className="p-3.5 bg-amber-50/90 rounded-lg border border-amber-300 space-y-2 shadow-xs">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="customization_note" className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>Customer Pre-Info Note / Warning (صارف کے لیے پیشگی اطلاع یا تنبیہ)</span>
+              </Label>
+              <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                Shown to Customer
+              </span>
+            </div>
+            <Textarea
+              id="customization_note"
+              rows={2}
+              placeholder="e.g. Note: Grinding process takes 2-3 hours. Minimum 5kg required for special sieve fine flour. (کسٹمر کو دکھانے کے لیے تنبیہ یا ہدایات لکھیں)"
+              value={formData.customization_note || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, customization_note: e.target.value }))}
+              disabled={isSaving}
+              className="text-xs bg-white border-amber-300 text-amber-950 placeholder:text-amber-700/50 focus-visible:ring-amber-500"
+            />
+            <p className="text-[11px] text-amber-800 leading-tight">
+              💡 Yeh note customer ko customization popup me as an important warning/pre-info box nazar aayega.
+            </p>
           </div>
 
           <div className="p-3 bg-blue-50/70 rounded-lg border border-blue-200 space-y-2">

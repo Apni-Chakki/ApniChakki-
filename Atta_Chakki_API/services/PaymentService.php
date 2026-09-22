@@ -396,6 +396,11 @@ class PaymentService {
                 throw new Exception("Order already paid");
             }
 
+            $orderTotal = floatval($order['total_amount']);
+            if ($orderTotal > 0 && ($amount > $orderTotal || $amount <= 0)) {
+                throw new Exception("Payment amount exceeds order total");
+            }
+
             // 2. make transaction id
             $transaction_id = strtoupper($payment_method) . '-' . date('YmdHis') . '-' . rand(1000, 9999);
 

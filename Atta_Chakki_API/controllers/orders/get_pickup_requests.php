@@ -43,6 +43,7 @@ try {
         $id = (int)$row['id'];
         $row['items'] = [];
         $row['total'] = $row['total_amount'];
+        $row['delivery_fee'] = (float)($row['delivery_fee'] ?? 0);
         $ordersMap[$id] = $row;
         $orderIds[] = $id;
         if ((int)$row['user_id'] > 0) { $userIds[(int)$row['user_id']] = true; }

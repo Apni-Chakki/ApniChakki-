@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Button } from '../../../common/button';
 import { API_BASE_URL } from '../../../../config';
 
 export function useManageDelivery() {
@@ -203,50 +202,36 @@ export function useManageDelivery() {
     }
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDelete = (id) => {
-    const deletePersonnel = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/manage_delivery.php`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', id })
-        });
-        const result = await response.json();
+    setDeleteConfirmId(id);
+  };
 
-        if (result.success) {
-          toast.success('Delivery personnel deleted');
-          fetchPersonnel();
-        }
-      } catch (error) {
-        toast.error('Failed to delete');
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/manage_delivery.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: deleteConfirmId })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(t('Delivery personnel deleted'));
+        fetchPersonnel();
+      } else {
+        toast.error(result.message || t('Failed to delete'));
       }
-    };
-
-    toast.custom((toastId) => (
-      <div className="bg-primary border border-primary-foreground/20 rounded-lg p-4 shadow-xl flex flex-col gap-3 max-w-sm">
-        <p className="text-primary-foreground font-medium">Are you sure you want to delete this delivery personnel?</p>
-        <div className="flex gap-2 justify-end">
-          <Button
-            onClick={() => toast.dismiss(toastId)}
-            variant="outline"
-            size="sm"
-            className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-transparent"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              toast.dismiss(toastId);
-              deletePersonnel();
-            }}
-            size="sm"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent"
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
-    ));
+    } catch (error) {
+      toast.error(t('Failed to delete'));
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
+    }
   };
 
   return {
@@ -271,5 +256,9 @@ export function useManageDelivery() {
     handleUpdatePersonnel,
     handleToggleActive,
     handleDelete,
+    deleteConfirmId,
+    setDeleteConfirmId,
+    isDeleting,
+    confirmDelete,
   };
 }

@@ -302,14 +302,23 @@ export function useCheckoutOrder({
         coupon_code: appliedCoupon ? appliedCoupon.code : null
       };
 
+      const token = localStorage.getItem('token');
+      const orderHeaders = { 'Content-Type': 'application/json' };
+      if (token) orderHeaders['Authorization'] = `Bearer ${token}`;
+
       const orderResponse = await fetch(`${API_BASE_URL}/place_order.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: orderHeaders,
         body: JSON.stringify(orderData),
       });
 
       const orderResult = await orderResponse.json();
-      if (!orderResult.success) throw new Error(orderResult.message || 'Failed to create order');
+      if (!orderResult.success) {
+        if (orderResponse.status === 409 || orderResult.error_code === 'OUT_OF_STOCK_RACE') {
+          toast.error(t('Stock Conflict: Another customer just purchased this item! Please adjust your cart quantity.'));
+        }
+        throw new Error(orderResult.message || 'Failed to create order');
+      }
 
       paymentData.order_id = orderResult.order_id;
 
@@ -374,11 +383,13 @@ export function useCheckoutOrder({
     };
 
     try {
+      const token = localStorage.getItem('token');
+      const orderHeaders = { 'Content-Type': 'application/json' };
+      if (token) orderHeaders['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch(`${API_BASE_URL}/place_order.php`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: orderHeaders,
         body: JSON.stringify(orderData),
       });
 
@@ -399,7 +410,14 @@ export function useCheckoutOrder({
         clearCart(); 
         navigate(`/order-confirmation/${result.order_id}`); 
       } else {
-        toast.error(t('Failed to place order') + ': ' + result.message);
+        if (response.status === 409 || result.error_code === 'OUT_OF_STOCK_RACE') {
+          toast.error(
+            t('Stock Conflict: Another customer just purchased this item! Please adjust your cart quantity.'),
+            { duration: 7000 }
+          );
+        } else {
+          toast.error(t('Failed to place order') + ': ' + (result.message || 'Server error'));
+        }
       }
     } catch (error) {
       console.error('Order Error:', error);

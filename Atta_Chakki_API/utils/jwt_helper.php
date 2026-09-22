@@ -1,8 +1,29 @@
 <?php
 // utils/jwt_helper.php
 
+function get_jwt_secret() {
+    global $envVars;
+    if (isset($envVars['JWT_SECRET']) && !empty($envVars['JWT_SECRET'])) {
+        return $envVars['JWT_SECRET'];
+    }
+    $envSecret = getenv('JWT_SECRET');
+    if ($envSecret) {
+        return $envSecret;
+    }
+    // Try reading directly from .env file if global not populated
+    $envPath = __DIR__ . '/../.env';
+    if (file_exists($envPath)) {
+        $parsed = parse_ini_file($envPath);
+        if (!empty($parsed['JWT_SECRET'])) {
+            return $parsed['JWT_SECRET'];
+        }
+    }
+    // If still missing, throw an exception to prevent signing with an insecure key
+    throw new Exception("Security Error: JWT_SECRET environment variable is not configured.");
+}
+
 function generate_jwt($payload) {
-    $secret = getenv('JWT_SECRET') ?: 'default_jwt_secret_change_me_in_production';
+    $secret = get_jwt_secret();
     
     // Header
     $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
@@ -20,7 +41,12 @@ function generate_jwt($payload) {
 }
 
 function verify_jwt($token) {
-    $secret = getenv('JWT_SECRET') ?: 'default_jwt_secret_change_me_in_production';
+    try {
+        $secret = get_jwt_secret();
+    } catch (Exception $e) {
+        error_log("JWT Verification Error: " . $e->getMessage());
+        return false;
+    }
     
     $tokenParts = explode('.', $token);
     if (count($tokenParts) !== 3) {

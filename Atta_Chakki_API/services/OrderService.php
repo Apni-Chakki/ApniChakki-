@@ -9,17 +9,30 @@ class OrderService
 {
     /**
      * Validates cart items against DB products, checks stock, and calculates base/discounted prices.
+     * When $for_update is true, locks product rows (SELECT ... FOR UPDATE) to prevent concurrency races.
      */
-    public static function validateAndCalculateCartItems(mysqli $conn, array $cart_items): array
+    public static function validateAndCalculateCartItems(mysqli $conn, array $cart_items, bool $for_update = false): array
     {
         $valid_items = [];
         $has_trip_item = false;
         $has_pending_weight_item = false;
         $non_trip_total = 0.0;
 
+        // Sort items by product ID ASC to guarantee deterministic lock acquisition and prevent deadlocks
+        usort($cart_items, function ($a, $b) {
+            $pidA = is_object($a) ? (int)($a->id ?? 0) : (int)($a['id'] ?? 0);
+            $pidB = is_object($b) ? (int)($b->id ?? 0) : (int)($b['id'] ?? 0);
+            return $pidA <=> $pidB;
+        });
+
+        $sql = "SELECT id, name, price, discount_type, discount_value, unit, is_grinding_service, customization_pricing_mode, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty FROM products WHERE id = ?";
+        if ($for_update) {
+            $sql .= " FOR UPDATE";
+        }
+        $query = $conn->prepare($sql);
+
         foreach ($cart_items as $item) {
             $pid = is_object($item) ? (int)($item->id ?? 0) : (int)($item['id'] ?? 0);
-            $query = $conn->prepare("SELECT name, price, discount_type, discount_value, unit, is_grinding_service, customization_pricing_mode, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty FROM products WHERE id = ?");
             $query->bind_param("i", $pid);
             $query->execute();
             $res = $query->get_result();
@@ -45,6 +58,7 @@ class OrderService
                             $query->close();
                             return [
                                 "success" => false,
+                                "error_code" => "OUT_OF_STOCK_RACE",
                                 "message" => "Item '" . ($row['name'] ?? 'Product') . "' is out of rental stock."
                             ];
                         }
@@ -53,6 +67,7 @@ class OrderService
                             $query->close();
                             return [
                                 "success" => false,
+                                "error_code" => "OUT_OF_STOCK_RACE",
                                 "message" => "Item '" . ($row['name'] ?? 'Product') . "' is out of stock or requested quantity exceeds available stock (" . floatval($row['stock_quantity']) . ")."
                             ];
                         }
@@ -207,7 +222,7 @@ class OrderService
         string $final_payment_status
     ): void {
         $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, original_price, is_cleaning, is_grinding, is_weight_pending, is_rental, rental_days, rental_start_date, rental_price_per_day, security_deposit, late_penalty_per_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ?");
+        $inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?");
         $cust_stmt = $conn->prepare("INSERT INTO order_item_customizations (order_item_id, option_name, option_price) VALUES (?, ?, ?)");
 
         foreach ($valid_items as $v_item) {
@@ -244,19 +259,22 @@ class OrderService
                 }
             }
 
-            // Decrement physical stock
-            if (strtolower(trim($v_item['unit'])) !== 'trip') {
+            // Decrement physical stock atomically
+            if (strtolower(trim($v_item['unit'])) !== 'trip' && empty($v_item['is_weight_pending'])) {
                 if ($v_item['is_rental'] === 1) {
-                    $rent_inv_stmt = $conn->prepare("UPDATE products SET rental_available_qty = GREATEST(0, rental_available_qty - ?) WHERE id = ?");
-                    $rent_inv_stmt->bind_param("di", $v_item['quantity'], $v_item['product_id']);
-                    if (!$rent_inv_stmt->execute()) {
-                        throw new Exception("Failed to update product rental stock: " . $rent_inv_stmt->error);
+                    $rent_inv_stmt = $conn->prepare("UPDATE products SET rental_available_qty = rental_available_qty - ? WHERE id = ? AND rental_available_qty >= ?");
+                    $rent_inv_stmt->bind_param("did", $v_item['quantity'], $v_item['product_id'], $v_item['quantity']);
+                    $rent_inv_stmt->execute();
+                    if ($rent_inv_stmt->affected_rows === 0) {
+                        $rent_inv_stmt->close();
+                        throw new Exception("INSUFFICIENT_RENTAL_STOCK: Item #" . $v_item['product_id'] . " rental stock was just depleted by another order.");
                     }
                     $rent_inv_stmt->close();
                 } else {
-                    $inv_stmt->bind_param("di", $v_item['quantity'], $v_item['product_id']);
-                    if (!$inv_stmt->execute()) {
-                        throw new Exception("Failed to update product stock: " . $inv_stmt->error);
+                    $inv_stmt->bind_param("did", $v_item['quantity'], $v_item['product_id'], $v_item['quantity']);
+                    $inv_stmt->execute();
+                    if ($inv_stmt->affected_rows === 0) {
+                        throw new Exception("INSUFFICIENT_STOCK: Item #" . $v_item['product_id'] . " stock was just depleted by another order.");
                     }
                 }
             }

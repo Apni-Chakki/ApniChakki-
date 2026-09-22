@@ -131,13 +131,20 @@ export function usePickupRequests() {
     setWeightInputs(prev => ({ ...prev, [orderItemId]: value }));
   };
 
-  const calcLiveTotal = () => {
+  const calcItemsSubtotal = () => {
     if (!selectedOrder?.items) return 0;
     return selectedOrder.items.reduce((sum, it) => {
       const kg = parseFloat(weightInputs[it.id] || 0);
       const price = parseFloat(it.price_per_kg || 0);
       return sum + (kg * price);
     }, 0);
+  };
+
+  const calcLiveTotal = () => {
+    const itemsTotal = calcItemsSubtotal();
+    if (itemsTotal === 0) return 0;
+    const deliveryFee = parseFloat(selectedOrder?.delivery_fee || 0);
+    return itemsTotal + deliveryFee;
   };
 
   const handleSaveWeights = async () => {

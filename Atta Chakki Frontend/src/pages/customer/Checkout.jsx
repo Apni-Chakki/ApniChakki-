@@ -17,7 +17,6 @@ import {
   AddressPickerSection,
   CustomerDetailsSection,
   OrderTypeSection,
-  SchedulePreviewSection,
   PaymentMethodSection,
   PaymentDialog,
   useCheckoutOrder
@@ -181,40 +180,7 @@ export function Checkout() {
   const vipDiscountAmount = user?.vip_discount ? (total - couponDiscount) * 0.10 : 0;
   const grandTotal = Math.max(0, Math.round(total + deliveryFee - couponDiscount - vipDiscountAmount));
 
-  // Schedule preview state
-  const [schedulePreview, setSchedulePreview] = useState(null);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
 
-  useEffect(() => {
-    if (cart.length === 0 || hasTripItem) {
-      setSchedulePreview(null);
-      return;
-    }
-
-    const totalWeight = cart.reduce((sum, item) => {
-      if (item.isWeightPending) return sum;
-      const unit = item.service?.unit?.toLowerCase() || 'kg';
-      if (unit === 'kg') return sum + item.quantity;
-      if (unit === 'g') return sum + (item.quantity / 1000);
-      return sum;
-    }, 0) || 1;
-
-    const fetchSchedule = async () => {
-      setScheduleLoading(true);
-      try {
-        const res = await fetch(`${API_BASE_URL}/check_schedule.php?weight=${totalWeight}`);
-        const data = await res.json();
-        if (data.success && data.schedule) setSchedulePreview(data.schedule);
-      } catch (err) {
-        console.warn('Schedule check failed:', err);
-      } finally {
-        setScheduleLoading(false);
-      }
-    };
-
-    const timer = setTimeout(fetchSchedule, 500);
-    return () => clearTimeout(timer);
-  }, [cart, hasTripItem]);
 
   // Order submission and payment processing hook
   const orderHook = useCheckoutOrder({
@@ -359,13 +325,6 @@ export function Checkout() {
           total={total}
           hasPendingWeightItem={hasPendingWeightItem}
           isTbdOrder={isTbdOrder}
-          t={t}
-        />
-
-        <SchedulePreviewSection
-          schedulePreview={schedulePreview}
-          scheduleLoading={scheduleLoading}
-          hasTripItem={hasTripItem}
           t={t}
         />
 

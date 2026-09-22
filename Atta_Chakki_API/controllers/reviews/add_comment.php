@@ -40,6 +40,8 @@ try {
     $stmt->bind_param("iis", $user_id, $rating, $comment_text);
     
     if ($stmt->execute()) {
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
         echo json_encode(['success' => true, 'message' => 'Comment posted successfully', 'comment_id' => $stmt->insert_id]);
     } else {
         throw new Exception($stmt->error);

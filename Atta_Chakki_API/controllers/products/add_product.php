@@ -2,6 +2,9 @@
 // add product api
 require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/../../utils/cache_helper.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+
+$user = require_admin();
 
 header('Content-Type: application/json');
 
@@ -18,6 +21,7 @@ try {
     $price = floatval($data['price']);
     $unit = isset($data['unit']) ? $data['unit'] : 'kg';
     $description = isset($data['description']) ? $data['description'] : '';
+    $description_ur = (isset($data['description_ur']) && trim($data['description_ur']) !== '') ? trim($data['description_ur']) : null;
     $image = isset($data['image']) ? $data['image'] : (isset($data['image_url']) ? $data['image_url'] : '');
     $category_id = null;
 
@@ -91,18 +95,20 @@ try {
     $badge_text = isset($data['badge_text']) ? $data['badge_text'] : null;
     $priority = isset($data['priority']) ? intval($data['priority']) : 0;
     $customization_pricing_mode = isset($data['customization_pricing_mode']) && in_array($data['customization_pricing_mode'], ['additive', 'average']) ? $data['customization_pricing_mode'] : 'additive';
+    $customization_note = isset($data['customization_note']) && trim($data['customization_note']) !== '' ? trim($data['customization_note']) : null;
 
     // inserting the product
-    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, category_id, description, image_url, stock_quantity, min_stock_level, is_grinding_service, customization_pricing_mode, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, rental_available_qty, dual_unit, weight_options, is_custom_mix, track_inventory, discount_type, discount_value, badge_text, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO products (name, price, unit, category_id, description, description_ur, image_url, stock_quantity, min_stock_level, is_grinding_service, customization_pricing_mode, customization_note, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, rental_available_qty, dual_unit, weight_options, is_custom_mix, track_inventory, discount_type, discount_value, badge_text, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     if (!$stmt) {
         throw new Exception("SQL Prepare Error: " . $conn->error);
     }
 
     // Types in order of parameters below:
-    $stmt->bind_param("sdsissddisddidddiisiisdsi",
-        $name, $price, $unit, $category_id, $description, $image,
+    $stmt->bind_param("sdsisssddissddidddiisiisdsi",
+        $name, $price, $unit, $category_id, $description, $description_ur, $image,
         $stock_quantity, $min_stock_level, $is_grinding_service, $customization_pricing_mode,
+        $customization_note,
         $cleaning_price, $grinding_price, $is_rental,
         $rental_price_per_day, $security_deposit, $late_penalty_per_day,
         $rental_available_qty, $dual_unit, $weight_options,

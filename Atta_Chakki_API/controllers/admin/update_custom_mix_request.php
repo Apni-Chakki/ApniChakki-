@@ -31,6 +31,8 @@ try {
     $stmt->execute();
 
     if ($stmt->affected_rows > 0) {
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
         echo json_encode(["success" => true, "message" => "Status updated to $status"]);
     } else {
         echo json_encode(["success" => false, "message" => "Request not found or status unchanged"]);

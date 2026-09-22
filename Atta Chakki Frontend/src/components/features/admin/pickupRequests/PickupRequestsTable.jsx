@@ -48,8 +48,15 @@ export function PickupRequestsTable({
                     day: 'numeric',
                   })}
                 </div>
-                <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                  <AlertCircle className="h-2.5 w-2.5 shrink-0" /> TBD
+                <div className="mt-1 flex flex-col gap-1 items-start">
+                  <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                    <AlertCircle className="h-2.5 w-2.5 shrink-0" /> TBD
+                  </div>
+                  {parseFloat(order.delivery_fee || 0) > 0 && (
+                    <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded whitespace-nowrap">
+                      Delivery: Rs. {Number(order.delivery_fee).toLocaleString()}
+                    </div>
+                  )}
                 </div>
               </TableCell>
 

@@ -29,9 +29,16 @@ export function PickupRequestsMobileCard({
         <OrderStatusBadge status={order.status} />
       </div>
 
-      {/* TBD badge */}
-      <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
-        <AlertCircle className="h-3 w-3" /> TBD – Weight Pending
+      {/* TBD & Delivery Fee badges */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
+          <AlertCircle className="h-3 w-3" /> TBD – Weight Pending
+        </div>
+        {parseFloat(order.delivery_fee || 0) > 0 && (
+          <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md">
+            Delivery: Rs. {Number(order.delivery_fee).toLocaleString()}
+          </div>
+        )}
       </div>
 
       {/* Customer */}

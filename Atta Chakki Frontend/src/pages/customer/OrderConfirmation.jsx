@@ -19,7 +19,14 @@ export function OrderConfirmation() {
 
   const fetchOrder = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/track_order.php?order_id=${orderId}`);
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/track_order.php?order_id=${orderId}`, {
+        headers
+      });
       const data = await response.json();
 
       if (data.success && data.orders && data.orders.length > 0) {

@@ -1,8 +1,11 @@
 <?php
 // api to update driver location
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
 
 header('Content-Type: application/json');
+
+$user = require_driver_or_admin();
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

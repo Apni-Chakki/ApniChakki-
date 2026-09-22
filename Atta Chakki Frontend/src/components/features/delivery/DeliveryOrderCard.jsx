@@ -1,12 +1,13 @@
 import React from 'react';
 import { Card } from '../../common/card';
 import { Badge } from '../../common/badge';
-import { Phone, MapPin, Navigation, Radio, CheckCircle, MessageCircle, Truck, Store, Package } from 'lucide-react';
+import { Phone, MapPin, Navigation, Radio, CheckCircle, MessageCircle, Truck, Store, Package, Loader2 } from 'lucide-react';
 import { DeliveryStatusBadge } from './DeliveryStatusBadge';
 
-export const DeliveryOrderCard = ({
+export const DeliveryOrderCard = React.memo(({
   order,
   activeTracking = {},
+  actionLoading = {},
   openMaps,
   handleCompleteDelivery,
   handleComingForPickup,
@@ -88,16 +89,63 @@ export const DeliveryOrderCard = ({
                       </div>
 
                       <div className="text-right flex flex-col items-end gap-1.5">
-                        <div className="flex flex-col">
+                        <div className="flex flex-col items-end">
                           <span className="text-[10px] uppercase font-bold tracking-wider leading-none mb-1 text-slate-400">
                             {isPickupRequest ? t('Pickup Request') : t('Total Amount')}
                           </span>
-                          <p className="text-xl font-extrabold leading-none m-0 text-slate-900">
-                            {isPickupRequest ? 'TBD' : `Rs. ${order.total.toLocaleString()}`}
+                          <p className="text-xl font-extrabold leading-none m-0 text-slate-900 whitespace-nowrap">
+                            {isPickupRequest ? (
+                              parseFloat(order.delivery_fee || order.deliveryFee || 0) > 0 ? (
+                                <>
+                                  <span className="text-xs font-normal text-muted-foreground mr-1">TBD +</span>
+                                  Rs. {parseFloat(order.delivery_fee || order.deliveryFee || 0).toLocaleString()}
+                                </>
+                              ) : (
+                                'TBD'
+                              )
+                            ) : (
+                              `Rs. ${(order.total || order.total_amount || 0).toLocaleString()}`
+                            )}
                           </p>
+                          {isPickupRequest && parseFloat(order.delivery_fee || order.deliveryFee || 0) > 0 && (
+                            <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                              {t('Delivery Fee')}
+                            </span>
+                          )}
                         </div>
                         {(() => {
-                          if (isPickupRequest) return null;
+                          const deliveryFee = parseFloat(order.delivery_fee || order.deliveryFee || 0);
+                          if (isPickupRequest) {
+                            if (deliveryFee > 0) {
+                              const isPaid = (order.paymentStatus === 'paid' || order.payment_status === 'paid');
+                              if (isPaid) {
+                                return (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-emerald-50 border-emerald-200 text-emerald-700 whitespace-nowrap"
+                                  >
+                                    {t('Fee Paid Online')}
+                                  </Badge>
+                                );
+                              }
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 whitespace-nowrap"
+                                >
+                                  {t('Collect Delivery Fee')}: Rs. {deliveryFee.toLocaleString()}
+                                </Badge>
+                              );
+                            }
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-semibold px-2 py-0.5 rounded-full border bg-slate-50 border-slate-200 text-slate-600"
+                              >
+                                {t('Free Pickup / TBD')}
+                              </Badge>
+                            );
+                          }
                           const totalAmt = parseFloat(order.total || order.total_amount || 0);
                           const advPaid = parseFloat(order.advancePayment || order.amount_paid || 0);
                           const remDue = Math.max(0, totalAmt - advPaid);
@@ -202,10 +250,15 @@ export const DeliveryOrderCard = ({
                             {/* Status: pickup_assigned — I'm Coming button */}
                             {order.status === 'pickup_assigned' && (
                               <button
-                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-blue-500 to-blue-700 border-none px-6"
+                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-blue-500 to-blue-700 border-none px-6 disabled:opacity-60 disabled:cursor-not-allowed"
                                 onClick={() => handleComingForPickup(order)}
+                                disabled={Boolean(actionLoading[order.id])}
                               >
-                                <Navigation className="h-4 w-4 text-white" />
+                                {actionLoading[order.id] === 'coming' ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                                ) : (
+                                  <Navigation className="h-4 w-4 text-white" />
+                                )}
                                 {t("I'm coming")}
                               </button>
                             )}
@@ -229,10 +282,15 @@ export const DeliveryOrderCard = ({
 
                                 {/* Mark as Arrived at Shop */}
                                 <button
-                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md col-span-1 sm:col-span-1 bg-gradient-to-br from-teal-600 to-teal-700 border-none px-4"
+                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md col-span-1 sm:col-span-1 bg-gradient-to-br from-teal-600 to-teal-700 border-none px-4 disabled:opacity-60 disabled:cursor-not-allowed"
                                   onClick={() => handleArrivedAtShopForPickup(order)}
+                                  disabled={Boolean(actionLoading[order.id])}
                                 >
-                                  <CheckCircle className="h-4.5 w-4.5 text-white" />
+                                  {actionLoading[order.id] === 'arrived' ? (
+                                    <Loader2 className="h-4.5 w-4.5 animate-spin text-white" />
+                                  ) : (
+                                    <CheckCircle className="h-4.5 w-4.5 text-white" />
+                                  )}
                                   {t('Mark as Arrived')}
                                 </button>
                               </div>
@@ -250,10 +308,15 @@ export const DeliveryOrderCard = ({
                           <>
                             {order.status !== 'out-for-delivery' ? (
                               <button
-                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-blue-500 to-blue-700 border-none px-6"
+                                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-blue-500 to-blue-700 border-none px-6 disabled:opacity-60 disabled:cursor-not-allowed"
                                 onClick={() => handleStartDelivery(order)}
+                                disabled={Boolean(actionLoading[order.id])}
                               >
-                                <Truck className="h-5 w-5 text-white" />
+                                {actionLoading[order.id] === 'start' ? (
+                                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                ) : (
+                                  <Truck className="h-5 w-5 text-white" />
+                                )}
                                 {t('Start Delivery')}
                               </button>
                             ) : (
@@ -272,18 +335,28 @@ export const DeliveryOrderCard = ({
                                     </button>
                                   )}
                                   <button
-                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98] bg-slate-100 text-slate-700 border-none px-2"
+                                    className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98] bg-slate-100 text-slate-700 border-none px-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                     onClick={() => handleImComing(order)}
+                                    disabled={Boolean(actionLoading[order.id])}
                                   >
-                                    <Navigation className="h-4 w-4 text-slate-600" />
+                                    {actionLoading[order.id] === 'coming' ? (
+                                      <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                                    ) : (
+                                      <Navigation className="h-4 w-4 text-slate-600" />
+                                    )}
                                     {t("I'm coming")}
                                   </button>
                                 </div>
                                 <button
-                                  className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1 bg-gradient-to-br from-emerald-500 to-emerald-600 border-none px-6"
+                                  className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1 bg-gradient-to-br from-emerald-500 to-emerald-600 border-none px-6 disabled:opacity-60 disabled:cursor-not-allowed"
                                   onClick={() => handleCompleteDelivery(order)}
+                                  disabled={Boolean(actionLoading[order.id])}
                                 >
-                                  <CheckCircle className="h-5 w-5 animate-pulse text-white" />
+                                  {actionLoading[order.id] === 'complete' ? (
+                                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                  ) : (
+                                    <CheckCircle className="h-5 w-5 animate-pulse text-white" />
+                                  )}
                                   {t('Mark as Delivered')}
                                 </button>
                               </div>
@@ -295,7 +368,7 @@ export const DeliveryOrderCard = ({
                   </div>
                 </Card>
   );
-};
+});
 
 export default DeliveryOrderCard;
 

@@ -1,8 +1,12 @@
 <?php
 // cancel order api
-include __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
+
+$user = require_auth();
 
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -13,7 +17,8 @@ if (!isset($data['order_id'])) {
 
 $order_id = intval($data['order_id']);
 $reason = isset($data['reason']) ? trim($data['reason']) : 'No reason provided';
-$cancelled_by = isset($data['cancelled_by']) ? $data['cancelled_by'] : 'User';
+$isAdmin = isset($user['role']) && $user['role'] === 'admin';
+$cancelled_by = $isAdmin ? 'Admin' : 'User';
 
 if ($order_id <= 0) {
     echo json_encode(["success" => false, "message" => "Invalid order_id"]);
@@ -40,7 +45,11 @@ if ($result->num_rows === 0) {
 $order = $result->fetch_assoc();
 $check->close();
 
-$isAdmin = strtolower(trim($cancelled_by)) === 'admin';
+if (!$isAdmin && intval($order['user_id']) !== intval($user['id'])) {
+    http_response_code(403);
+    echo json_encode(["success" => false, "message" => "Forbidden: You cannot cancel another user's order"]);
+    exit;
+}
 
 if (!$isAdmin) {
     if (!empty($assigned_date) && $assigned_date <= $today) {
@@ -78,6 +87,7 @@ if (!$stmt) {
 $stmt->bind_param("ssi", $reason, $cancelled_by, $order_id);
 
 if ($stmt->execute()) {
+    clear_api_cache();
     echo json_encode([
         "success" => true,
         "message" => "Order #$order_id cancelled successfully",

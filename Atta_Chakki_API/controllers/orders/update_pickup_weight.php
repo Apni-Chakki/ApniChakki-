@@ -41,14 +41,27 @@ try {
     }
     $update_stmt->close();
 
-    // recalc total_amount from order_items
-    $tot_stmt = $conn->prepare("SELECT COALESCE(SUM(quantity * price_at_purchase),0) as total FROM order_items WHERE order_id = ?");
+    // recalc items subtotal from order_items
+    $tot_stmt = $conn->prepare("SELECT COALESCE(SUM(quantity * price_at_purchase),0) as items_total FROM order_items WHERE order_id = ?");
     $tot_stmt->bind_param("i", $order_id);
     $tot_stmt->execute();
     $res = $tot_stmt->get_result();
     $row = $res->fetch_assoc();
-    $new_total = floatval($row['total']);
+    $items_subtotal = floatval($row['items_total']);
     $tot_stmt->close();
+
+    // fetch order delivery_fee and coupon_discount
+    $ord_stmt = $conn->prepare("SELECT delivery_fee, coupon_discount FROM orders WHERE id = ?");
+    $ord_stmt->bind_param("i", $order_id);
+    $ord_stmt->execute();
+    $ord_res = $ord_stmt->get_result();
+    $ord_row = $ord_res->fetch_assoc();
+    $delivery_fee = floatval($ord_row['delivery_fee'] ?? 0);
+    $coupon_discount = floatval($ord_row['coupon_discount'] ?? 0);
+    $ord_stmt->close();
+
+    // calculate full new total = items_subtotal + delivery_fee - coupon_discount
+    $new_total = max(0, round($items_subtotal + $delivery_fee - $coupon_discount));
 
     // update orders total_amount
     $upd_order = $conn->prepare("UPDATE orders SET total_amount = ?, updated_at = NOW() WHERE id = ?");
@@ -64,10 +77,15 @@ try {
 
     $conn->commit();
 
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
+
     echo json_encode([
         'success' => true,
         'message' => 'Weights updated and order scheduled',
         'new_total' => $new_total,
+        'items_subtotal' => $items_subtotal,
+        'delivery_fee' => $delivery_fee,
         'schedule' => $schedule_result
     ]);
 

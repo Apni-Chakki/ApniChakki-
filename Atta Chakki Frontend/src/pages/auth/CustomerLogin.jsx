@@ -125,12 +125,13 @@ export function CustomerLogin() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      const loggedUser = await login(phone, password, 'customer');
-      if (loggedUser) {
+      const result = await login(phone, password, 'customer');
+      if (result && result.success && result.user) {
         toast.success(t('Welcome back!'));
-        navigate(getRedirectTarget(loggedUser), { replace: true });
+        navigate(getRedirectTarget(result.user), { replace: true });
       } else {
-        toast.error(t('Invalid credentials. Please try again.'));
+        const errorMsg = result?.message || t('Invalid credentials. Please try again.');
+        toast.error(errorMsg);
       }
     } catch (error) {
       toast.error(t('An error occurred. Please try again.'));

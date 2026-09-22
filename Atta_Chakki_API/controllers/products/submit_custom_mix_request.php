@@ -34,6 +34,8 @@ try {
         $inserted_id = $stmt->insert_id;
         require_once __DIR__ . '/../../utils/notification_helper.php';
         addAdminNotification($conn, "New Custom Mix Request", "A new custom mix request #$inserted_id has been submitted by $customer_name.", "custom_order", $inserted_id);
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
         http_response_code(201);
         echo json_encode(["success" => true, "message" => "Custom mix request submitted successfully!", "id" => $inserted_id]);
     } else {

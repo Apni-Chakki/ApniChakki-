@@ -78,8 +78,8 @@ export const TomorrowProcessingCard = ({
                 <span>{order.created_at ? new Date(order.created_at).toLocaleString() : "Recently"}</span>
               </p>
             </div>
-            <div className="bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 self-start sm:self-auto sm:text-right">
-              <span className="text-base sm:text-lg font-bold text-slate-800">
+            <div className="bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 self-start sm:self-auto sm:text-right shrink-0 min-w-max">
+              <span className="text-base sm:text-lg font-bold text-slate-800 whitespace-nowrap">
                 Rs. {Math.max(0, parseInt(totalAmount) || 0).toLocaleString()}
               </span>
               {couponDiscount > 0 && (

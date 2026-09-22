@@ -1,19 +1,17 @@
 <?php
 // clear cart api
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
 
 header('Content-Type: application/json');
+
+$user = require_auth();
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
     
-    if (!isset($data['user_id'])) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Missing required field: user_id']);
-        exit;
-    }
-    
-    $user_id = intval($data['user_id']);
+    $isAdmin = isset($user['role']) && $user['role'] === 'admin';
+    $user_id = ($isAdmin && isset($data['user_id'])) ? intval($data['user_id']) : intval($user['id']);
     
     // finding the cart
     $cart_query = $conn->prepare("SELECT id FROM carts WHERE user_id = ?");

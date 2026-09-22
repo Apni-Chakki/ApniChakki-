@@ -83,6 +83,9 @@ try {
     }
     $stmt->close();
     
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
+
     echo json_encode([
         "success" => true,
         "message" => "Payment of Rs. " . number_format($amount, 2) . " recorded successfully",

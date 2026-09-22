@@ -18,173 +18,24 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { API_BASE_URL, MAPBOX_TOKEN, SOCKET_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
-import { io } from 'socket.io-client';
-
-// Colors
-const ROUTE_COLORS = [
-  { main: '#2563eb', glow: '#1e40af' },
-  { main: '#16a34a', glow: '#14532d' },
-  { main: '#9333ea', glow: '#6b21a8' },
-  { main: '#ea580c', glow: '#9a3412' },
-  { main: '#0891b2', glow: '#164e63' },
-];
-const colorCache = {};
-let colorIdx = 0;
-function getDriverColor(orderId) {
-  if (!colorCache[orderId]) {
-    colorCache[orderId] = ROUTE_COLORS[colorIdx % ROUTE_COLORS.length];
-    colorIdx++;
-  }
-  return colorCache[orderId];
-}
-
-// SVG Icons
-function createCarIcon(heading = 0, speed = 0, color = '#7c3aed') {
-  const moving = speed > 0.5;
-  return 'data:image/svg+xml,' + encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
-      <defs>
-        <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/></filter>
-        <radialGradient id="g" cx="50%" cy="35%" r="60%">
-          <stop offset="0%" stop-color="${color}dd"/><stop offset="100%" stop-color="${color}"/>
-        </radialGradient>
-      </defs>
-      <circle cx="28" cy="28" r="26" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.2">
-        <animate attributeName="r" from="20" to="27" dur="1.8s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" from="0.5" to="0" dur="1.8s" repeatCount="indefinite"/>
-      </circle>
-      <g transform="rotate(${heading},28,28)" filter="url(#s)">
-        <ellipse cx="28" cy="30" rx="16" ry="5" fill="#000" opacity="0.15"/>
-        <circle cx="28" cy="28" r="18" fill="url(#g)"/>
-        <circle cx="28" cy="28" r="18" fill="none" stroke="white" stroke-width="2"/>
-        <polygon points="28,10 21,26 28,22 35,26" fill="white" opacity="0.95"/>
-        <circle cx="28" cy="28" r="3" fill="white" opacity="${moving ? 1 : 0.4}"/>
-      </g>
-    </svg>`);
-}
-
-function createDestIcon(color = '#ef4444', label = '') {
-  return 'data:image/svg+xml,' + encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 58" width="44" height="58">
-      <defs><filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.3"/></filter></defs>
-      <g filter="url(#ds)">
-        <path d="M22 2C12 2 4 10 4 20c0 13 18 34 18 34s18-21 18-34c0-10-8-18-18-18z" fill="${color}"/>
-        <circle cx="22" cy="20" r="9" fill="white"/>
-        ${label ? `<text x="22" y="24" text-anchor="middle" font-size="10" font-weight="bold" fill="${color}">${label}</text>`
-                : `<circle cx="22" cy="20" r="4" fill="${color}"/>`}
-      </g>
-    </svg>`);
-}
-
-// Distance Helper (Haversine formula in meters)
-function computeDistanceBetween(p1, p2) {
-  const R = 6371e3;
-  const lat1 = (p1.lat * Math.PI) / 180;
-  const lat2 = (p2.lat * Math.PI) / 180;
-  const deltaLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-  const deltaLng = ((p2.lng - p1.lng) * Math.PI) / 180;
-
-  const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// GeoJSON Circle Helper for Geofence
-function createGeoJSONCircle(center, radiusInMeters, points = 64) {
-  const km = radiusInMeters / 1000;
-  const ret = [];
-  const distanceX = km / (111.320 * Math.cos((center.lat * Math.PI) / 180));
-  const distanceY = km / 110.574;
-
-  for (let i = 0; i < points; i++) {
-    const theta = (i / points) * (2 * Math.PI);
-    const x = distanceX * Math.cos(theta);
-    const y = distanceY * Math.sin(theta);
-    ret.push([center.lng + x, center.lat + y]);
-  }
-  ret.push(ret[0]);
-
-  return {
-    type: 'Feature',
-    geometry: {
-      type: 'Polygon',
-      coordinates: [ret]
-    }
-  };
-}
-
-const isValidMapboxToken = Boolean(
-  MAPBOX_TOKEN &&
-  MAPBOX_TOKEN.startsWith('pk.') &&
-  !MAPBOX_TOKEN.includes('demo_token') &&
-  MAPBOX_TOKEN.length > 30
-);
-
-// Mapbox Style helper
-function getMapStyle() {
-  if (isValidMapboxToken) {
-    return 'mapbox://styles/mapbox/streets-v12';
-  }
-  return {
-    version: 8,
-    sources: {
-      'osm-tiles': {
-        type: 'raster',
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors'
-      }
-    },
-    layers: [{
-      id: 'osm-tiles-layer',
-      type: 'raster',
-      source: 'osm-tiles',
-      minzoom: 0,
-      maxzoom: 19
-    }]
-  };
-}
-
-function dedupeDrivers(list = []) {
-  const m = new Map();
-  list.forEach(d => {
-    const id = String(d.order_id);
-    const ex = m.get(id);
-    if (!ex || new Date(d.created_at || 0) >= new Date(ex.created_at || 0)) m.set(id, d);
-  });
-  return Array.from(m.values());
-}
-
-function formatArrivalTime(etaSeconds) {
-  if (!etaSeconds) return null;
-  return new Date(Date.now() + etaSeconds * 1000).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatSpeed(s) { return s > 0.5 ? `${(s * 3.6).toFixed(0)} km/h` : null; }
-
-function timeAgo(d) {
-  if (!d) return '';
-  const s = Math.floor((new Date() - d) / 1000);
-  if (s < 10) return 'just now'; if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`; return `${Math.floor(s / 3600)}h ago`;
-}
-
-function fmtCountdown(s) {
-  if (!s || s <= 0) return '0:00';
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
-// Notification types
-const NOTIF_TYPES = {
-  STOPPED:   { icon: '🛑', color: 'bg-red-100 text-red-800',    label: 'Driver Stopped'    },
-  OFF_ROUTE: { icon: '🗺️', color: 'bg-orange-100 text-orange-800', label: 'Off Route'      },
-  LATE:      { icon: '⏰', color: 'bg-yellow-100 text-yellow-800', label: 'ETA Exceeded'   },
-  SIGNAL:    { icon: '📵', color: 'bg-gray-100 text-gray-700',   label: 'Signal Lost'       },
-  GEOFENCE:  { icon: '🛡️', color: 'bg-purple-100 text-purple-800', label: 'Geofence Alert' },
-  ARRIVED:   { icon: '🎉', color: 'bg-green-100 text-green-800',  label: 'Near Destination' },
-};
+import {
+  ROUTE_COLORS,
+  getDriverColor,
+  createCarIcon,
+  createDestIcon,
+  computeDistanceBetween,
+  createGeoJSONCircle,
+  isValidMapboxToken,
+  getMapStyle,
+  dedupeDrivers,
+  formatArrivalTime,
+  formatSpeed,
+  timeAgo,
+  fmtCountdown,
+  NOTIF_TYPES
+} from '../../components/features/admin/liveTracking/liveTrackingUtils';
+import { useLiveTrackingAlerts } from '../../components/features/admin/liveTracking/useLiveTrackingAlerts';
+import { useLiveTrackingSocket } from '../../components/features/admin/liveTracking/useLiveTrackingSocket';
 
 export function LiveTrackingMap() {
   const [activeTab, setActiveTab] = useState('live');
@@ -200,34 +51,7 @@ export function LiveTrackingMap() {
   const [completedDeliveries, setCompletedDeliveries] = useState([]);
   const [driverETAs, setDriverETAs] = useState({});
   const [routeProgress, setRouteProgress] = useState({});
-  const [socketConnected, setSocketConnected] = useState(false);
   const [nearDestination, setNearDestination] = useState({});
-  const [liveCountdown, setLiveCountdown] = useState({});
-
-  // Smart Notifications
-  const [notifications, setNotifications] = useState([]);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const notifRef = useRef(null);
-  const notifTimestampsRef = useRef({});
-  const prevPositionsRef = useRef({});
-
-  // Close notifications popup when clicking outside
-  useEffect(() => {
-    if (!notifOpen) return;
-    const handleClickOutside = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setNotifOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [notifOpen]);
-
   // Geofence state
   const [geofenceRadius, setGeofenceRadius] = useState(5000);
   const [geofenceEnabled, setGeofenceEnabled] = useState(true);
@@ -236,6 +60,27 @@ export function LiveTrackingMap() {
   const geofenceMapRef = useRef(null);
   const geofenceMapContainerRef = useRef(null);
   const geofenceMarkersRef = useRef([]);
+
+  // Smart Notifications & Alerts
+  const {
+    notifications,
+    setNotifications,
+    notifOpen,
+    setNotifOpen,
+    unreadCount,
+    setUnreadCount,
+    liveCountdown,
+    setLiveCountdown,
+    notifRef,
+    addNotification,
+  } = useLiveTrackingAlerts({
+    drivers,
+    driverETAs,
+    nearDestination,
+    geofenceEnabled,
+    shopCoords,
+    geofenceRadius,
+  });
 
   // Replay state
   const [replayOrderId, setReplayOrderId] = useState('');
@@ -272,78 +117,9 @@ export function LiveTrackingMap() {
   const popupRef = useRef(null);
   const previousDriversRef = useRef({});
   const previousHeadingsRef = useRef({});
-  const socketRef = useRef(null);
   const autoFollowRef = useRef(false);
 
-  // notifications
-  const addNotification = useCallback((type, orderId, driverName, extra = '') => {
-    const key = `${type}-${orderId}`;
-    const now = Date.now();
-    if (notifTimestampsRef.current[key] && now - notifTimestampsRef.current[key] < 5 * 60 * 1000) return;
-    notifTimestampsRef.current[key] = now;
-    const notif = { id: now, type, orderId, driverName, extra, time: new Date().toLocaleTimeString(), read: false };
-    setNotifications(prev => [notif, ...prev.slice(0, 49)]);
-    setUnreadCount(c => c + 1);
-    toast(
-      `${NOTIF_TYPES[type].icon} ${NOTIF_TYPES[type].label}: ${driverName} (Order #${orderId}) ${extra}`,
-      { duration: 6000, style: { background: '#1e293b', color: 'white' } }
-    );
-  }, []);
 
-  // Monitor drivers every 15s for smart alerts
-  useEffect(() => {
-    if (drivers.length === 0) return;
-    const check = () => {
-      const now = Date.now();
-      drivers.forEach(driver => {
-        const orderId = String(driver.order_id);
-        const lastPing = new Date(driver.created_at || 0).getTime();
-        const pos = { lat: parseFloat(driver.latitude), lng: parseFloat(driver.longitude) };
-
-        // Signal lost (no ping > 3 min)
-        if (now - lastPing > 3 * 60 * 1000) {
-          addNotification('SIGNAL', orderId, driver.driver_name);
-        }
-
-        // Driver stopped (same position for 5+ min)
-        const prev = prevPositionsRef.current[orderId];
-        if (prev) {
-          const dist = Math.hypot(pos.lat - prev.lat, pos.lng - prev.lng);
-          if (dist < 0.0001 && now - prev.time > 5 * 60 * 1000) {
-            addNotification('STOPPED', orderId, driver.driver_name, '(5+ min without movement)');
-          }
-        }
-        prevPositionsRef.current[orderId] = { ...pos, time: now };
-
-        // ETA overdue
-        const countdown = liveCountdown[orderId];
-        if (countdown !== undefined && countdown <= 0 && driverETAs[orderId]) {
-          addNotification('LATE', orderId, driver.driver_name, '- ETA has passed');
-        }
-
-        // Near destination
-        if (nearDestination[orderId]) {
-          addNotification('ARRIVED', orderId, driver.driver_name, 'is < 300m away!');
-        }
-
-        // Geofence check
-        if (geofenceEnabled && shopCoords) {
-          const dist = computeDistanceBetween(shopCoords, pos);
-          if (dist > geofenceRadius) {
-            addNotification('GEOFENCE', orderId, driver.driver_name, `(${(dist / 1000).toFixed(1)}km from shop)`);
-          }
-        }
-      });
-    };
-    const interval = setInterval(check, 15000);
-    return () => clearInterval(interval);
-  }, [drivers, liveCountdown, driverETAs, nearDestination, geofenceEnabled, shopCoords, geofenceRadius, addNotification]);
-
-  // Countdown ticker
-  useEffect(() => {
-    const tick = setInterval(() => setLiveCountdown(p => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Math.max(0, v - 1)]))), 1000);
-    return () => clearInterval(tick);
-  }, []);
 
   // Fetch store settings (for geofence center)
   useEffect(() => {
@@ -384,53 +160,6 @@ export function LiveTrackingMap() {
   }, [storeAddress]);
 
   // 
-  //  SOCKET.IO
-  // 
-  useEffect(() => {
-    const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
-    socket.on('connect', () => { socket.emit('admin:subscribe'); setSocketConnected(true); });
-    socket.on('tracking:driver_moved', (data) => {
-      const orderId = String(data.order_id);
-      setDrivers(prev => {
-        const exists = prev.find(d => String(d.order_id) === orderId);
-        if (exists) return prev.map(d => String(d.order_id) === orderId ? { ...d, latitude: data.latitude, longitude: data.longitude, heading: data.heading, speed: data.speed, created_at: new Date().toISOString() } : d);
-        return [...prev, { order_id: data.order_id, latitude: data.latitude, longitude: data.longitude, heading: data.heading, speed: data.speed, driver_name: data.driver_name, created_at: new Date().toISOString() }];
-      });
-      if (markersRef.current[orderId] && mapRef.current) {
-        const pos = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
-        markersRef.current[orderId].setLngLat([pos.lng, pos.lat]);
-        const h = parseFloat(data.heading || 0);
-        if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
-          const color = getDriverColor(orderId).main;
-          const img = markersRef.current[orderId].getElement().querySelector('img');
-          if (img) img.src = createCarIcon(h, parseFloat(data.speed || 0), color);
-          previousHeadingsRef.current[orderId] = h;
-        }
-        const now = Date.now();
-        if (now - (routeLastDrawRef.current[orderId] || 0) > 12000 && routePathRef.current[orderId]) {
-          routeLastDrawRef.current[orderId] = now;
-          updateRemainingRoute(orderId, pos);
-        }
-        if (autoFollowRef.current && String(selectedOrder) === orderId) {
-          mapRef.current.panTo([pos.lng, pos.lat]);
-        }
-      }
-      setLastUpdated(new Date());
-    });
-    socket.on('admin:active_drivers', (data) => {
-      if (data?.drivers) setDrivers(prev => { const m = new Map(prev.map(d => [String(d.order_id), d])); data.drivers.forEach(d => m.set(String(d.order_id), { ...m.get(String(d.order_id)), ...d })); return Array.from(m.values()); });
-    });
-    socket.on('tracking:delivery_completed', (data) => {
-      const orderId = String(data.order_id);
-      const driver = previousDriversRef.current[orderId];
-      if (driver) { toast.success(`✅ Delivered! Order #${data.order_id} — ${data.driver_name}`, { duration: 8000 }); setCompletedDeliveries(prev => [{ ...driver, completed_at: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]); }
-    });
-    socket.on('disconnect', () => setSocketConnected(false));
-    socketRef.current = socket;
-    return () => { if (socket) socket.disconnect(); };
-  }, [selectedOrder]);
-
-  // 
   //  ROUTE LOGIC (updateRemainingRoute, drawDirectionsRoute)
   // 
   const updateRemainingRoute = useCallback((orderId, driverPos) => {
@@ -462,6 +191,63 @@ export function LiveTrackingMap() {
     const distToDest = computeDistanceBetween(driverPos, { lat: lastPt[1], lng: lastPt[0] });
     setNearDestination(prev => ({ ...prev, [orderId]: distToDest < 300 }));
   }, []);
+
+  // 
+  //  SOCKET.IO Hook
+  // 
+  const handleDriverMoved = useCallback((data) => {
+    const orderId = String(data.order_id);
+    setDrivers(prev => {
+      const exists = prev.find(d => String(d.order_id) === orderId);
+      if (exists) return prev.map(d => String(d.order_id) === orderId ? { ...d, latitude: data.latitude, longitude: data.longitude, heading: data.heading, speed: data.speed, created_at: new Date().toISOString() } : d);
+      return [...prev, { order_id: data.order_id, latitude: data.latitude, longitude: data.longitude, heading: data.heading, speed: data.speed, driver_name: data.driver_name, created_at: new Date().toISOString() }];
+    });
+    if (markersRef.current[orderId] && mapRef.current) {
+      const pos = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
+      markersRef.current[orderId].setLngLat([pos.lng, pos.lat]);
+      const h = parseFloat(data.heading || 0);
+      if (Math.abs(h - (previousHeadingsRef.current[orderId] || 0)) > 3) {
+        const color = getDriverColor(orderId).main;
+        const img = markersRef.current[orderId].getElement().querySelector('img');
+        if (img) img.src = createCarIcon(h, parseFloat(data.speed || 0), color);
+        previousHeadingsRef.current[orderId] = h;
+      }
+      const now = Date.now();
+      if (now - (routeLastDrawRef.current[orderId] || 0) > 12000 && routePathRef.current[orderId]) {
+        routeLastDrawRef.current[orderId] = now;
+        updateRemainingRoute(orderId, pos);
+      }
+      if (autoFollowRef.current && String(selectedOrder) === orderId) {
+        mapRef.current.panTo([pos.lng, pos.lat]);
+      }
+    }
+    setLastUpdated(new Date());
+  }, [selectedOrder, updateRemainingRoute]);
+
+  const handleActiveDrivers = useCallback((data) => {
+    if (data?.drivers) {
+      setDrivers(prev => {
+        const m = new Map(prev.map(d => [String(d.order_id), d]));
+        data.drivers.forEach(d => m.set(String(d.order_id), { ...m.get(String(d.order_id)), ...d }));
+        return Array.from(m.values());
+      });
+    }
+  }, []);
+
+  const handleDeliveryCompleted = useCallback((data) => {
+    const orderId = String(data.order_id);
+    const driver = previousDriversRef.current[orderId];
+    if (driver) {
+      toast.success(`✅ Delivered! Order #${data.order_id} — ${data.driver_name}`, { duration: 8000 });
+      setCompletedDeliveries(prev => [{ ...driver, completed_at: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
+    }
+  }, []);
+
+  const { socketRef, socketConnected } = useLiveTrackingSocket({
+    onDriverMoved: handleDriverMoved,
+    onActiveDrivers: handleActiveDrivers,
+    onDeliveryCompleted: handleDeliveryCompleted,
+  });
 
   const drawRouteOnMap = useCallback((orderId, routeGeoJson, color) => {
     const map = mapRef.current;

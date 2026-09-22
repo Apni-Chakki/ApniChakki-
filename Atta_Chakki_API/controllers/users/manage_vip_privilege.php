@@ -4,6 +4,7 @@ include __DIR__ . '/../../config/connect.php';
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 require_admin();
 
 
@@ -45,6 +46,7 @@ try {
         $stmt = $conn->prepare("INSERT INTO vip_privileges (name, description, type, value) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("sssi", $name, $description, $type, $value);
         if ($stmt->execute()) {
+            clear_api_cache();
             echo json_encode([
                 'success' => true,
                 'message' => 'VIP Privilege created successfully.',
@@ -76,6 +78,7 @@ try {
         $stmt = $conn->prepare("UPDATE vip_privileges SET name = ?, description = ?, type = ?, value = ? WHERE id = ?");
         $stmt->bind_param("sssii", $name, $description, $type, $value, $id);
         if ($stmt->execute()) {
+            clear_api_cache();
             echo json_encode([
                 'success' => true,
                 'message' => 'VIP Privilege updated successfully.'
@@ -99,6 +102,7 @@ try {
         $stmt = $conn->prepare("DELETE FROM vip_privileges WHERE id = ?");
         $stmt->bind_param("i", $id);
         if ($stmt->execute()) {
+            clear_api_cache();
             echo json_encode([
                 'success' => true,
                 'message' => 'VIP Privilege deleted successfully.'

@@ -6,7 +6,7 @@ import { Pagination } from '../../../common/Pagination';
 import { ExpenseFilterBar } from './ExpenseFilterBar';
 import { Trash2 } from 'lucide-react';
 
-export function ExpenseRecordsList({
+function ExpenseRecordsListComponent({
   expenses,
   totalItems,
   filteredTotalAmount,
@@ -148,3 +148,5 @@ export function ExpenseRecordsList({
     </Card>
   );
 }
+
+export const ExpenseRecordsList = React.memo(ExpenseRecordsListComponent);

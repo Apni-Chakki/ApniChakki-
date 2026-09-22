@@ -115,6 +115,9 @@ try {
         $remainingAmount -= $paymentAmount;
     }
     
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
+
     echo json_encode([
         "success" => true,
         "message" => "Udhaar payment of Rs. " . number_format($amount, 2) . " recorded successfully"

@@ -1,11 +1,14 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useManageDelivery } from '../../components/features/admin/delivery/useManageDelivery';
 import { ManageDeliveryHeader } from '../../components/features/admin/delivery/ManageDeliveryHeader';
 import { DeliveryPersonnelList } from '../../components/features/admin/delivery/DeliveryPersonnelList';
 import { PersonnelFormDialog } from '../../components/features/admin/delivery/PersonnelFormDialog';
+import { Loading } from '../../components/shared/Loading';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 export function ManageDelivery() {
+  const { t } = useTranslation();
   const {
     personnelList,
     loading,
@@ -26,14 +29,14 @@ export function ManageDelivery() {
     handleUpdatePersonnel,
     handleToggleActive,
     handleDelete,
+    deleteConfirmId,
+    setDeleteConfirmId,
+    isDeleting,
+    confirmDelete,
   } = useManageDelivery();
 
   if (loading) {
-    return (
-      <div className="p-8 text-center">
-        <Loader2 className="animate-spin h-8 w-8 mx-auto" />
-      </div>
-    );
+    return <Loading label={t('Loading delivery personnel...')} className="p-8" />;
   }
 
   return (
@@ -80,6 +83,18 @@ export function ManageDelivery() {
           setIsEditDialogOpen(false);
           resetForm();
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}
+        title={t('Delete Personnel?')}
+        description={t('Are you sure you want to delete this delivery personnel? This action cannot be undone.')}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
+        destructive
+        loading={isDeleting}
+        onConfirm={confirmDelete}
       />
     </div>
   );

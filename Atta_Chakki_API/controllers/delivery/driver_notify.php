@@ -2,7 +2,12 @@
 // controller: driver 'I'm coming' notifications + location updates
 require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
+
 header('Content-Type: application/json');
+
+$user = require_driver_or_admin();
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -89,6 +94,7 @@ try {
         $s->bind_param("si", $status, $order_id);
         $s->execute();
         $s->close();
+        clear_api_cache();
 
         echo json_encode(["success" => true, "message" => "Pickup order moved to admin for weight update"]);
         exit;
@@ -99,6 +105,7 @@ try {
         $s->bind_param("si", $status, $order_id);
         $s->execute();
         $s->close();
+        clear_api_cache();
 
         // TODO: integrate with SMS/push notification system to notify customer
         echo json_encode(["success" => true, "message" => "Driver is coming. Customer notified (placeholder)" ]);

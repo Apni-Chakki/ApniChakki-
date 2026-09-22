@@ -1,8 +1,12 @@
 <?php
 // edit comment controller logic
-include __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
 
 header('Content-Type: application/json');
+
+$user = require_auth();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
     http_response_code(405);
@@ -24,11 +28,11 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
 
     $id = $input['id'] ?? null;
-    $user_id = $input['user_id'] ?? null;
+    $user_id = intval($user['id']);
     $rating = $input['rating'] ?? null;
     $comment_text = trim($input['comment_text'] ?? '');
 
-    if (!$id || !$user_id || !$rating || empty($comment_text)) {
+    if (!$id || !$rating || empty($comment_text)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         exit;
@@ -47,7 +51,8 @@ try {
     }
 
     $comment = $result->fetch_assoc();
-    if ($comment['user_id'] != $user_id) {
+    $isAdmin = isset($user['role']) && $user['role'] === 'admin';
+    if (!$isAdmin && intval($comment['user_id']) !== $user_id) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'Unauthorized: You can only edit your own comments']);
         exit;
@@ -55,10 +60,12 @@ try {
     $verify->close();
 
     // updating the comment
+    $target_user_id = intval($comment['user_id']);
     $stmt = $conn->prepare("UPDATE comments SET rating = ?, comment_text = ? WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("isii", $rating, $comment_text, $id, $user_id);
+    $stmt->bind_param("isii", $rating, $comment_text, $id, $target_user_id);
     
     if ($stmt->execute()) {
+        clear_api_cache();
         echo json_encode(['success' => true, 'message' => 'Comment updated successfully']);
     } else {
         throw new Exception($stmt->error);

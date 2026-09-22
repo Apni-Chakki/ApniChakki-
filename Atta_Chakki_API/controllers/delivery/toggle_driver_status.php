@@ -151,6 +151,9 @@ try {
             : "Delivery rider $driver_name ($driver_phone) marked themselves Inactive (Off Duty / Emergency). They will not receive new order assignments.";
         addAdminNotification($conn, $title, $msg, 'driver_status', $driver_id);
 
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
+
         echo json_encode([
             "success" => true,
             "isActive" => $new_is_active === 1,

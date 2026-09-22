@@ -51,102 +51,84 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
     ];
     $db_payment_method = $method_map[$payment_method] ?? 'cod';
 
-    // 1. Validate cart items, stock, and calculate prices via OrderService
-    $item_result = OrderService::validateAndCalculateCartItems($conn, (array)$cart_items);
-    if (!$item_result['success']) {
-        echo json_encode(["success" => false, "message" => $item_result['message']]);
-        exit();
-    }
-
-    $valid_items = $item_result['valid_items'];
-    $has_trip_item = $item_result['has_trip_item'];
-    $has_pending_weight_item = $item_result['has_pending_weight_item'];
-    $non_trip_total = $item_result['non_trip_total'];
-
-    if (empty($valid_items)) {
-        echo json_encode(["success" => false, "message" => "No valid items found"]);
-        exit();
-    }
-
-    // 2. Determine order total
-    $passed_total = isset($data->total) ? floatval($data->total) : 0;
-    $delivery_fee_input = isset($data->delivery_fee) ? floatval($data->delivery_fee) : 0;
-
-    if ($passed_total > 0 && !$has_trip_item) {
-        $total_amount = round($passed_total);
-    } elseif ($delivery_fee_input > 0 && !$has_trip_item) {
-        $total_amount = round($non_trip_total + $delivery_fee_input);
-    } else {
-        $total_amount = $non_trip_total;
-    }
-
-    // 3. Validate coupon and calculate discount via OrderService
-    $coupon_info = OrderService::validateCoupon($conn, $coupon_code, $total_amount);
-    $coupon_id = $coupon_info['coupon_id'];
-    $coupon_discount = $coupon_info['coupon_discount'];
-
-    // Adjust pickup / kg flags
-    if ($has_trip_item || $has_pending_weight_item) {
-        $is_pickup_request = true;
-        $is_kg_order = false;
-    } elseif ($is_kg_order || !$is_pickup_request) {
-        $is_pickup_request = false;
-        $is_kg_order = true;
-    }
-
-    // 4. Determine final payment status
-    if ($total_amount <= 0 && $has_pending_weight_item) {
-        $final_payment_status = 'pending';
-        $amount_paid_input = 0;
-    } else {
-        if ($amount_paid_input >= $total_amount) {
-            $final_payment_status = $has_pending_weight_item ? 'partial' : 'paid';
-            $amount_paid_input = $total_amount;
-        } elseif ($amount_paid_input > 0 && $amount_paid_input < $total_amount) {
-            $final_payment_status = 'partial';
-        } else {
-            $final_payment_status = 'pending';
-            $amount_paid_input = 0;
-        }
-    }
-
+    // Start ACID transaction before locking stock to eliminate TOCTOU race conditions
+    $conn->query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
     $conn->begin_transaction();
 
     try {
+        // 1. Lock rows (SELECT ... FOR UPDATE) and validate stock & calculate prices
+        $item_result = OrderService::validateAndCalculateCartItems($conn, (array)$cart_items, true);
+        if (!$item_result['success']) {
+            $err_code = $item_result['error_code'] ?? 'VALIDATION_FAILED';
+            throw new Exception($item_result['message'], $err_code === 'OUT_OF_STOCK_RACE' ? 409 : 400);
+        }
+
+        $valid_items = $item_result['valid_items'];
+        $has_trip_item = $item_result['has_trip_item'];
+        $has_pending_weight_item = $item_result['has_pending_weight_item'];
+        $non_trip_total = $item_result['non_trip_total'];
+
+        if (empty($valid_items)) {
+            throw new Exception("No valid items found", 400);
+        }
+
+        // 2. Determine order total
+        $passed_total = isset($data->total) ? floatval($data->total) : 0;
+        $delivery_fee_input = isset($data->delivery_fee) ? floatval($data->delivery_fee) : 0;
+
+        if ($passed_total > 0 && !$has_trip_item) {
+            $total_amount = round($passed_total);
+        } elseif ($delivery_fee_input > 0 && !$has_trip_item) {
+            $total_amount = round($non_trip_total + $delivery_fee_input);
+        } else {
+            $total_amount = $non_trip_total;
+        }
+
+        // 3. Validate coupon and calculate discount via OrderService
+        $coupon_info = OrderService::validateCoupon($conn, $coupon_code, $total_amount);
+        $coupon_id = $coupon_info['coupon_id'];
+        $coupon_discount = $coupon_info['coupon_discount'];
+
+        // Adjust pickup / kg flags
+        if ($has_trip_item || $has_pending_weight_item) {
+            $is_pickup_request = true;
+            $is_kg_order = false;
+        } elseif ($is_kg_order || !$is_pickup_request) {
+            $is_pickup_request = false;
+            $is_kg_order = true;
+        }
+
+        // 4. Determine final payment status
+        if ($total_amount <= 0 && $has_pending_weight_item) {
+            $final_payment_status = 'pending';
+            $amount_paid_input = 0;
+        } else {
+            if ($amount_paid_input >= $total_amount) {
+                $final_payment_status = $has_pending_weight_item ? 'partial' : 'paid';
+                $amount_paid_input = $total_amount;
+            } elseif ($amount_paid_input > 0 && $amount_paid_input < $total_amount) {
+                $final_payment_status = 'partial';
+            } else {
+                $final_payment_status = 'pending';
+                $amount_paid_input = 0;
+            }
+        }
+
         $status = $is_pickup_request ? 'pickup_pending' : 'pending';
 
-        // Check columns dynamically
-        $col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'amount_paid'");
-        $has_amount_paid_col = ($col_check && $col_check->num_rows > 0);
-        $coupon_col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'coupon_code'");
-        $has_coupon_cols = ($coupon_col_check && $coupon_col_check->num_rows > 0);
-
-        $src_col_check = $conn->query("SHOW COLUMNS FROM orders LIKE 'source'");
-        if (!$src_col_check || $src_col_check->num_rows === 0) {
-            $conn->query("ALTER TABLE orders ADD COLUMN source VARCHAR(50) DEFAULT 'online'");
+        $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, delivery_fee, amount_paid, coupon_code, coupon_discount, status, order_type, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error, 500);
         }
-
-        if ($has_amount_paid_col && $has_coupon_cols) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
-            $stmt->bind_param("iddsdssddss", $user_id, $total_amount, $amount_paid_input, $coupon_code, $coupon_discount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
-        } elseif ($has_amount_paid_col) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, amount_paid, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
-            $stmt->bind_param("iddssddss", $user_id, $total_amount, $amount_paid_input, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
-        } elseif ($has_coupon_cols) {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, coupon_code, coupon_discount, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
-            $stmt->bind_param("idsdssddss", $user_id, $total_amount, $coupon_code, $coupon_discount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
-        } else {
-            $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
-            $stmt->bind_param("idssddss", $user_id, $total_amount, $status, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
-        }
+        $stmt->bind_param("idddsdsssddss", $user_id, $total_amount, $delivery_fee_input, $amount_paid_input, $coupon_code, $coupon_discount, $status, $order_type, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
         
         if (!$stmt->execute()) {
-            throw new Exception("Failed to create order: " . $stmt->error);
+            throw new Exception("Failed to create order: " . $stmt->error, 500);
         }
         $order_id = $conn->insert_id;
         $stmt->close();
 
-        // 5. Save order items, customizations, and rentals via OrderService
+        // 5. Save order items, customizations, and rentals via OrderService (with atomic decrement check)
         OrderService::saveOrderItemsAndRentals(
             $conn,
             $order_id,
@@ -268,8 +250,19 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             "assigned_date" => ($schedule_result && isset($schedule_result['assigned_date'])) ? $schedule_result['assigned_date'] : null
         ]);
     } catch (Exception $e) {
-        $conn->rollback();
-        echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        if ($conn->ping()) {
+            $conn->rollback();
+        }
+        $code = (int)$e->getCode();
+        if ($code < 400 || $code > 599) {
+            $code = (str_contains($e->getMessage(), 'INSUFFICIENT_STOCK') || str_contains($e->getMessage(), 'out of stock')) ? 409 : 500;
+        }
+        http_response_code($code);
+        echo json_encode([
+            "success" => false, 
+            "error_code" => ($code === 409) ? "OUT_OF_STOCK_RACE" : "ORDER_FAILED",
+            "message" => $e->getMessage()
+        ]);
     }
 } else {
     echo json_encode(["success" => false, "message" => "Missing user_id or items"]);

@@ -1,18 +1,24 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDigitalKhata } from '../../components/features/admin/digitalKhata/useDigitalKhata';
 import { DigitalKhataHeader } from '../../components/features/admin/digitalKhata/DigitalKhataHeader';
 import { ExpenseStatsCards } from '../../components/features/admin/digitalKhata/ExpenseStatsCards';
 import { AddExpenseForm } from '../../components/features/admin/digitalKhata/AddExpenseForm';
 import { ExpenseRecordsList } from '../../components/features/admin/digitalKhata/ExpenseRecordsList';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { PrintExpenseReport } from './PrintExpenseReport';
 
 export function DigitalKhata() {
+  const { t } = useTranslation();
   const {
     expenses,
     backendTotals,
     loading,
     isSaving,
+    deletingId,
+    setDeletingId,
+    isDeleting,
     page,
     setPage,
     pageSize,
@@ -40,6 +46,7 @@ export function DigitalKhata() {
     setDateRange,
     handleAddExpense,
     handleDelete,
+    confirmDelete,
     handlePrintReport,
     getPeriodLabel,
   } = useDigitalKhata();
@@ -48,7 +55,7 @@ export function DigitalKhata() {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading Khata Records...</p>
+        <p className="text-muted-foreground">{t('Loading Khata Records...')}</p>
       </div>
     );
   }
@@ -102,6 +109,18 @@ export function DigitalKhata() {
           setShowPrintReport(false);
           setPrintExpenses([]);
         }}
+      />
+
+      <ConfirmDialog
+        open={deletingId !== null}
+        onOpenChange={(open) => { if (!open) setDeletingId(null); }}
+        title={t('Delete Expense Entry?')}
+        description={t('Are you sure you want to delete this entry? This action cannot be undone.')}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
+        destructive
+        loading={isDeleting}
+        onConfirm={confirmDelete}
       />
     </div>
   );

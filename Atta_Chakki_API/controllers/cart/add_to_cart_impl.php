@@ -1,20 +1,24 @@
 <?php
 // add to cart api
 require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../../utils/auth_middleware.php';
 
 header('Content-Type: application/json');
+
+$user = require_auth();
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
     
     // checking required fields
-    if (!isset($data['user_id']) || !isset($data['product_id']) || !isset($data['quantity'])) {
+    if (!isset($data['product_id']) || !isset($data['quantity'])) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Missing required fields: user_id, product_id, quantity']);
+        echo json_encode(['success' => false, 'message' => 'Missing required fields: product_id, quantity']);
         exit;
     }
     
-    $user_id = intval($data['user_id']);
+    $isAdmin = isset($user['role']) && $user['role'] === 'admin';
+    $user_id = ($isAdmin && isset($data['user_id'])) ? intval($data['user_id']) : intval($user['id']);
     $product_id = intval($data['product_id']);
     $quantity = floatval($data['quantity']);
     

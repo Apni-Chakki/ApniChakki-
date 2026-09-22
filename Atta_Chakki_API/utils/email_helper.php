@@ -3,14 +3,15 @@
 require_once __DIR__ . '/../config/connect.php';
 
 // direct smtp mailer with starttls, fallback when node socket server is down
-function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEmail = null) {
+function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEmail = null)
+{
     global $envVars;
-    
+
     $host = $envVars['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com';
     $port = (int)($envVars['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587);
-    $user = $envVars['SMTP_USER'] ?? getenv('SMTP_USER') ?: 'apnichakki897@gmail.com';
-    $pass = $envVars['SMTP_PASS'] ?? getenv('SMTP_PASS') ?: 'otlg jyzi fvxi ucbi';
-    
+    $user = $envVars['SMTP_USER'] ?? getenv('SMTP_USER') ?: null;
+    $pass = $envVars['SMTP_PASS'] ?? getenv('SMTP_PASS') ?: null;
+
     $fromEmail = $fromEmail ?: ($envVars['EMAIL_FROM'] ?? getenv('EMAIL_FROM') ?: $user);
     $fromName = $fromName ?: ($envVars['EMAIL_FROM_NAME'] ?? getenv('EMAIL_FROM_NAME') ?: 'Suchi Chakki');
 
@@ -21,7 +22,7 @@ function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEm
         return false;
     }
 
-    $read = function() use ($socket) {
+    $read = function () use ($socket) {
         $res = "";
         while ($str = fgets($socket, 515)) {
             $res .= $str;
@@ -30,7 +31,7 @@ function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEm
         return $res;
     };
 
-    $write = function($cmd) use ($socket) {
+    $write = function ($cmd) use ($socket) {
         fputs($socket, $cmd . "\r\n");
     };
 
@@ -107,7 +108,8 @@ function send_smtp_direct($to, $subject, $htmlContent, $fromName = null, $fromEm
 }
 
 // renders email html templates for the direct smtp fallback path
-function render_php_email_template($endpoint, $payload) {
+function render_php_email_template($endpoint, $payload)
+{
     $storeName = $payload['storeName'] ?? 'Suchi Chakki';
     $storePhone = $payload['storePhone'] ?? '+92 322 8483029';
 
@@ -243,7 +245,8 @@ function render_php_email_template($endpoint, $payload) {
 }
 
 // tries node socket server first (local then cloud backup), falls back to direct smtp
-function send_email_async($endpoint, $payload) {
+function send_email_async($endpoint, $payload)
+{
     global $is_localhost;
 
     // urls to try, in priority order
@@ -270,8 +273,8 @@ function send_email_async($endpoint, $payload) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             $res = curl_exec($ch);
@@ -301,4 +304,3 @@ function send_email_async($endpoint, $payload) {
 
     return false;
 }
-?>

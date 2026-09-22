@@ -2,10 +2,10 @@
 // onesignal push notification helper
 class OneSignalHelper {
     private static function getKeys() {
-        // api keys from env, fallback to hardcoded for now
+        // api keys from env
         return [
-            'app_id' => getenv('ONESIGNAL_APP_ID') ?: '6a090ab3-a214-481b-99b0-917fb4a5a902',
-            'rest_api_key' => getenv('ONESIGNAL_REST_API_KEY') ?: 'os_v2_app_nieqvm5ccrebxgnqsf73jjnjaidsgxtfta5efvn6ocwzzftbotli6ehh2nscvwbtbgsiorx2s2m2q446x6yokks2xobn3bqjldkivfa'
+            'app_id' => getenv('ONESIGNAL_APP_ID') ?: '',
+            'rest_api_key' => getenv('ONESIGNAL_REST_API_KEY') ?: ''
         ];
     }
 

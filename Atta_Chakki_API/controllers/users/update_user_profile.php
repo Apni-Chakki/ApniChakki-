@@ -109,6 +109,9 @@ try {
     $updatedUser = $result->fetch_assoc();
     $stmt->close();
     
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
+
     echo json_encode([
         "success" => true,
         "message" => "Profile updated successfully",

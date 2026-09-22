@@ -5,6 +5,9 @@ require_once __DIR__ . '/../../config/connect.php';
 require_once __DIR__ . '/order_scheduler.php';
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
+require_admin();
 
 try {
     $today = date('Y-m-d');
@@ -29,6 +32,8 @@ try {
     foreach ($order_ids as $oid) {
         $results[] = scheduleOrder($conn, $oid);
     }
+
+    clear_api_cache();
 
     echo json_encode([
         'success' => true,

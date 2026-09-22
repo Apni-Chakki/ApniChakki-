@@ -83,8 +83,37 @@ try {
     }
     $stmt->close();
 
-    // If order status is updated to completed, check for rental items to activate
+    // If order status is updated to completed, check for COD payment settlement and rental items to activate
     if ($status === 'completed') {
+        // COD order completed means cash was collected by driver upon delivery
+        $is_cod = empty($order['payment_method']) || in_array(strtolower($order['payment_method']), ['cod', 'cash']);
+        if ($is_cod && strtolower($order['payment_status'] ?? '') !== 'paid') {
+            $pay_upd = $conn->prepare("UPDATE orders SET payment_status = 'paid', amount_paid = total_amount, updated_at = NOW() WHERE id = ?");
+            if ($pay_upd) {
+                $pay_upd->bind_param("i", $order_id);
+                $pay_upd->execute();
+                $pay_upd->close();
+            }
+            $order['payment_status'] = 'paid';
+
+            // Record in payments table if not already present
+            $chk_pay = $conn->prepare("SELECT id FROM payments WHERE order_id = ? LIMIT 1");
+            if ($chk_pay) {
+                $chk_pay->bind_param("i", $order_id);
+                $chk_pay->execute();
+                $chk_res = $chk_pay->get_result();
+                if ($chk_res->num_rows === 0) {
+                    $insert_pay = $conn->prepare("INSERT INTO payments (order_id, amount, payment_method, description, created_at) SELECT id, total_amount, 'cash', 'COD cash collected by driver upon delivery', NOW() FROM orders WHERE id = ?");
+                    if ($insert_pay) {
+                        $insert_pay->bind_param("i", $order_id);
+                        $insert_pay->execute();
+                        $insert_pay->close();
+                    }
+                }
+                $chk_pay->close();
+            }
+        }
+
         $rentals_stmt = $conn->prepare("SELECT oi.*, p.name AS product_name, p.rental_price_per_day, p.security_deposit, p.late_penalty_per_day 
                                         FROM order_items oi 
                                         JOIN products p ON oi.product_id = p.id 
@@ -192,6 +221,9 @@ try {
         require_once __DIR__ . '/../../utils/email_helper.php';
         send_email_async('/send-order-status-update', $emailData);
     }
+
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
 
     echo json_encode([
         "success" => true,

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 export function ServicePricingBlock({
   service,
   isRental,
@@ -10,11 +12,19 @@ export function ServicePricingBlock({
   t,
   tDynamic,
 }) {
+  const { i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
+
+  // Use pre-translated Urdu description from DB when available, otherwise fall back to tDynamic API translation
+  const displayDescription = isUrdu && service.description_ur
+    ? service.description_ur
+    : tDynamic(service.description);
+
   return (
     <div className="flex-1">
       <h3 className="text-foreground mb-1 font-bold">{tDynamic(service.name)}</h3>
       {service.description && (
-        <p className="text-muted-foreground text-sm mb-2">{tDynamic(service.description)}</p>
+        <p className="text-muted-foreground text-sm mb-2">{displayDescription}</p>
       )}
 
       {isRental ? (

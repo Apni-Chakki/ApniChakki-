@@ -61,6 +61,8 @@ try {
     $stmt->bind_param("i", $id);
     
     if ($stmt->execute()) {
+        require_once __DIR__ . '/../../utils/cache_helper.php';
+        clear_api_cache();
         echo json_encode(['success' => true, 'message' => 'Comment deleted successfully']);
     } else {
         throw new Exception($stmt->error);

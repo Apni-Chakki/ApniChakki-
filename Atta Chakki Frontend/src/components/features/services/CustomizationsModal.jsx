@@ -10,6 +10,7 @@ import {
 import { Button } from "../../../components/common/button";
 import { Checkbox } from "../../../components/common/checkbox";
 import { Label } from "../../../components/common/label";
+import { AlertTriangle } from "lucide-react";
 
 export const CustomizationsModal = ({
   showCustomizationsModal,
@@ -48,6 +49,20 @@ export const CustomizationsModal = ({
               : t("Select the services you want")}
           </DialogDescription>
         </DialogHeader>
+
+        {service?.customization_note && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2.5 text-xs text-amber-950 shrink-0">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="font-bold block text-amber-900 mb-0.5">
+                {t('Important Note')}:
+              </span>
+              <p className="leading-relaxed whitespace-pre-line text-amber-900/90 text-[11px]">
+                {service.customization_note}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2.5 overflow-y-auto min-h-0">
           {effectiveCustomizations.map((cust, idx) => (

@@ -1,6 +1,12 @@
 <?php
 // Connecting to the database
-include_once __DIR__ . '/../../config/connect.php'; 
+require_once __DIR__ . '/../../config/connect.php'; 
+require_once __DIR__ . '/../../utils/auth_middleware.php';
+require_once __DIR__ . '/../../utils/cache_helper.php';
+
+header('Content-Type: application/json');
+
+$user = require_admin();
 
 // Get the posted data
 $data = json_decode(file_get_contents("php://input"));
@@ -13,14 +19,21 @@ if (isset($data->base_fare) && isset($data->base_distance) && isset($data->per_k
     $per_km_rate = (int)$data->per_km_rate;
 
     // Update the single row in the delivery_settings table
-    $query = "UPDATE delivery_settings SET base_fare = $base_fare, base_distance = $base_distance, per_km_rate = $per_km_rate";
-    
-    if (mysqli_query($conn, $query)) {
-        echo json_encode(array("success" => true, "message" => "Delivery settings updated successfully."));
+    $stmt = $conn->prepare("UPDATE delivery_settings SET base_fare = ?, base_distance = ?, per_km_rate = ?");
+    if ($stmt) {
+        $stmt->bind_param("iii", $base_fare, $base_distance, $per_km_rate);
+        if ($stmt->execute()) {
+            clear_api_cache();
+            echo json_encode(array("success" => true, "message" => "Delivery settings updated successfully."));
+        } else {
+            echo json_encode(array("success" => false, "message" => "Failed to update database."));
+        }
+        $stmt->close();
     } else {
-        echo json_encode(array("success" => false, "message" => "Failed to update database."));
+        echo json_encode(array("success" => false, "message" => "Database prepare error."));
     }
 } else {
     echo json_encode(array("success" => false, "message" => "Incomplete data sent."));
 }
+
 ?>

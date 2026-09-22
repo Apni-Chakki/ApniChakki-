@@ -8,15 +8,25 @@ import { API_BASE_URL } from '../../config';
 import { compressImage } from '../../utils/imageCompressor';
 import { ServiceListItem } from '../../components/features/admin/services/ServiceListItem';
 import { ServiceForm } from '../../components/features/admin/services/ServiceForm';
+import { PageHeader } from '../../components/shared/PageHeader';
+import { Loading } from '../../components/shared/Loading';
+import { EmptyState } from '../../components/shared/EmptyState';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
+import { useServicesByCategory } from '../../hooks';
 
 export function ManageServices() {
   const { t } = useTranslation();
-  const [services, setServices] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [activeCategoryId, setActiveCategoryId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [tabLoading, setTabLoading] = useState(false);
-  const productsCacheRef = useRef({});
+  const {
+    services,
+    setServices,
+    categories,
+    activeCategoryId,
+    loading,
+    tabLoading,
+    handleTabChange,
+    refreshActiveCategory,
+    invalidateCache,
+  } = useServicesByCategory();
   const [isSaving, setIsSaving] = useState(false);
   
   const [isAdding, setIsAdding] = useState(false);
@@ -27,10 +37,12 @@ export function ManageServices() {
     price: '',
     unit: 'kg',
     description: '',
+    description_ur: '',
     imageUrl: '',
     category: '',
     has_customizations: false,
     customization_pricing_mode: 'average',
+    customization_note: '',
     customizations: [],
     track_inventory: true,
     stock_quantity: '100',
@@ -83,81 +95,12 @@ export function ManageServices() {
     }
   }, [formData.customizations, formData.has_customizations, formData.customization_pricing_mode]);
 
+  // Sync initial category into formData if not set
   useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    if (activeCategoryId) {
-      fetchServicesForCategory(activeCategoryId);
+    if (categories.length > 0 && !formData.category) {
+      setFormData(prev => ({ ...prev, category: categories[0].name }));
     }
-  }, [activeCategoryId]);
-
-  const fetchServicesForCategory = async (categoryId, { force = false } = {}) => {
-    if (!categoryId) return;
-
-    if (!force && productsCacheRef.current[categoryId]) {
-      setServices(productsCacheRef.current[categoryId]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setTabLoading(true);
-      const res = await fetch(`${API_BASE_URL}/get_all_products.php?category_id=${categoryId}`);
-      const data = await res.json();
-      const list = data.data || data.products || [];
-      if ((data.status === 'success' || data.success) && Array.isArray(list)) {
-        productsCacheRef.current[categoryId] = list;
-        setServices(list);
-      } else {
-        toast.error(data.message || t('Failed to load services'));
-      }
-    } catch (error) {
-      console.error('Error fetching services:', error);
-      toast.error(t('Network error while loading services'));
-    } finally {
-      setLoading(false);
-      setTabLoading(false);
-    }
-  };
-
-  // Invalidate cached tabs and reload the active tab after a mutation
-  const refreshActiveCategory = () => {
-    productsCacheRef.current = {};
-    if (activeCategoryId) {
-      fetchServicesForCategory(activeCategoryId, { force: true });
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/get_categories.php`);
-      const data = await res.json();
-      const list = data.data || data.categories || [];
-      if ((data.status === 'success' || data.success) && Array.isArray(list)) {
-        setCategories(list);
-        if (list.length > 0) {
-          if (!formData.category) {
-            setFormData(prev => ({ ...prev, category: list[0].name }));
-          }
-          setActiveCategoryId(prev => prev ?? list[0].id);
-        } else {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      setLoading(false);
-    }
-  };
-
-  const handleTabChange = (categoryId) => {
-    if (categoryId === activeCategoryId) return;
-    setActiveCategoryId(categoryId);
-  };
+  }, [categories, formData.category]);
 
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
@@ -306,9 +249,11 @@ export function ManageServices() {
         category: formData.category,
         category_id: categoryId,
         description: formData.description,
+        description_ur: formData.description_ur || '',
         image_url: formData.imageUrl,
         is_grinding_service: formData.has_customizations ? 1 : 0,
         customization_pricing_mode: formData.customization_pricing_mode || 'average',
+        customization_note: formData.has_customizations ? (formData.customization_note || '').trim() : null,
         track_inventory: formData.track_inventory ? 1 : 0,
         stock_quantity: formData.track_inventory ? (parseFloat(formData.stock_quantity) || 100) : 100,
         min_stock_level: formData.track_inventory ? (parseFloat(formData.min_stock_level) || 10) : 10,
@@ -380,10 +325,12 @@ export function ManageServices() {
       price: service.price.toString(),
       unit: service.unit,
       description: service.description || '',
+      description_ur: service.description_ur || '',
       imageUrl: service.image_url || '',
       category: initialCatName,
       has_customizations: Boolean(service.is_grinding_service),
       customization_pricing_mode: service.customization_pricing_mode || 'average',
+      customization_note: service.customization_note || '',
       customizations: service.customizations ? service.customizations.map(c => ({
         option_name: c.option_name,
         option_price: c.option_price.toString(),
@@ -443,9 +390,11 @@ export function ManageServices() {
         category: formData.category,
         category_id: categoryId,
         description: formData.description,
+        description_ur: formData.description_ur || '',
         image_url: formData.imageUrl,
         is_grinding_service: formData.has_customizations ? 1 : 0,
         customization_pricing_mode: formData.customization_pricing_mode || 'average',
+        customization_note: formData.has_customizations ? (formData.customization_note || '').trim() : null,
         track_inventory: formData.track_inventory ? 1 : 0,
         stock_quantity: formData.track_inventory ? (parseFloat(formData.stock_quantity) || 100) : 100,
         min_stock_level: formData.track_inventory ? (parseFloat(formData.min_stock_level) || 10) : 10,
@@ -494,13 +443,18 @@ export function ManageServices() {
     }
   };
 
-  const confirmDelete = async (id) => {
+  const handleDelete = (id) => {
+    setDeletingId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      setDeletingId(id);
+      setIsSaving(true);
       const res = await fetch(`${API_BASE_URL}/delete_product.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: deletingId })
       });
 
       const data = await res.json();
@@ -514,22 +468,9 @@ export function ManageServices() {
       console.error('Error deleting product:', error);
       toast.error(t('Network error while deleting product'));
     } finally {
+      setIsSaving(false);
       setDeletingId(null);
     }
-  };
-
-  const handleDelete = (id) => {
-    toast.warning(t('Are you sure you want to delete this product?'), {
-      duration: 8000,
-      action: {
-        label: t('Yes, Delete'),
-        onClick: () => confirmDelete(id),
-      },
-      cancel: {
-        label: t('Cancel'),
-        onClick: () => {},
-      },
-    });
   };
 
   const handleToggleStatus = async (id, currentStatus) => {
@@ -550,7 +491,7 @@ export function ManageServices() {
       const data = await res.json();
       if (data.status === 'success' || data.success) {
         toast.success(newStatus === 1 ? t('Service is now visible to customers') : t('Service is now hidden from customers'));
-        productsCacheRef.current = {};
+        invalidateCache();
       } else {
         setServices(previousServices);
         toast.error(data.message || t('Failed to update service status'));
@@ -568,10 +509,12 @@ export function ManageServices() {
       price: '',
       unit: 'kg',
       description: '',
+      description_ur: '',
       imageUrl: '',
       category: categories[0]?.name || '',
       has_customizations: false,
       customization_pricing_mode: 'average',
+      customization_note: '',
       customizations: [],
       track_inventory: true,
       stock_quantity: '100',
@@ -615,27 +558,23 @@ export function ManageServices() {
     .sort((a, b) => (parseInt(b.priority || 0) - parseInt(a.priority || 0)));
 
   if (loading && categories.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <Loading label={t("Loading services...")} className="min-h-[400px]" />;
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold">{t("Manage Services")}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Add, edit, or remove services from your catalog</p>
-        </div>
-        {!isAdding && !editingId && (
-          <Button onClick={() => setIsAdding(true)} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2 shrink-0" />
-            Add New Service
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("Manage Services")}
+        subtitle="Add, edit, or remove services from your catalog"
+        actions={
+          !isAdding && !editingId && (
+            <Button onClick={() => setIsAdding(true)} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2 shrink-0" />
+              Add New Service
+            </Button>
+          )
+        }
+      />
 
       {/* Add/Edit Form */}
       {(isAdding || editingId) && (
@@ -690,13 +629,18 @@ export function ManageServices() {
       {/* Services List for the Active Category */}
       <div className="space-y-4 animate-in fade-in duration-500">
         {tabLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <Loading label={t("Loading category...")} className="py-16" />
         ) : sortedServices.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No services available in this category. Add your first service!</p>
-          </Card>
+          <EmptyState
+            title="No services available"
+            description="No services available in this category. Add your first service!"
+            action={
+              <Button onClick={() => setIsAdding(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Service
+              </Button>
+            }
+          />
         ) : (
           <>
             <div className="flex items-center justify-end px-1">
@@ -723,6 +667,18 @@ export function ManageServices() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deletingId !== null}
+        onOpenChange={(open) => { if (!open) setDeletingId(null); }}
+        title={t('Delete Product?')}
+        description={t('Are you sure you want to delete this product? This action cannot be undone.')}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
+        destructive
+        loading={isSaving}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

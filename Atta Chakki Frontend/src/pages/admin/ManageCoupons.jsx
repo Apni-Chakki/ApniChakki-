@@ -7,6 +7,10 @@ import { Label } from '../../components/common/label';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../config';
 import { useTranslation } from 'react-i18next';
+import { PageHeader } from '../../components/shared/PageHeader';
+import { Loading } from '../../components/shared/Loading';
+import { EmptyState } from '../../components/shared/EmptyState';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 export function ManageCoupons() {
   const { t } = useTranslation();
@@ -14,6 +18,8 @@ export function ManageCoupons() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     code: '',
@@ -93,12 +99,18 @@ export function ManageCoupons() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const confirmDelete = async (id) => {
+  const handleDelete = (id) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/coupons/delete_coupon.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: deleteConfirmId })
       });
       const data = await res.json();
       if (data.success) {
@@ -109,21 +121,10 @@ export function ManageCoupons() {
       }
     } catch (err) {
       toast.error(t('Network error'));
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
     }
-  };
-
-  const handleDelete = (id) => {
-    toast.warning(t('Are you sure you want to delete this coupon?'), {
-      duration: 8000,
-      action: {
-        label: t('Yes, Delete'),
-        onClick: () => confirmDelete(id),
-      },
-      cancel: {
-        label: t('Cancel'),
-        onClick: () => {},
-      },
-    });
   };
 
   const handleSubmit = async (e) => {
@@ -165,22 +166,20 @@ export function ManageCoupons() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <Loading label={t('Loading coupons...')} className="h-64" />;
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold">{t('Manage Coupons')}</h1>
-        <Button onClick={handleAdd} disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2 shrink-0" />
-          {t('Add Coupon')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('Manage Coupons')}
+        actions={
+          <Button onClick={handleAdd} disabled={isAdding || editingId !== null} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2 shrink-0" />
+            {t('Add Coupon')}
+          </Button>
+        }
+      />
 
       {isAdding && (
         <Card className="p-4 sm:p-6">
@@ -399,11 +398,30 @@ export function ManageCoupons() {
       </div>
 
       {coupons.length === 0 && !isAdding && (
-        <div className="text-center py-12 text-muted-foreground">
-          <Tag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>{t('No coupons yet. Create your first coupon!')}</p>
-        </div>
+        <EmptyState
+          icon={<Tag className="h-6 w-6" />}
+          title={t('No coupons yet')}
+          description={t('Create your first coupon to offer discounts to your customers!')}
+          action={
+            <Button onClick={handleAdd} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('Add Coupon')}
+            </Button>
+          }
+        />
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}
+        title={t('Delete Coupon?')}
+        description={t('Are you sure you want to delete this coupon? This action cannot be undone.')}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
+        destructive
+        loading={isDeleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

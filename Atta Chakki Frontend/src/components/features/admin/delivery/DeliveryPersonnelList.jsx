@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../common/card';
 import { Button } from '../../../common/button';
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { DeliveryPersonnelMobileCard } from './DeliveryPersonnelMobileCard';
 import { DeliveryPersonnelTable } from './DeliveryPersonnelTable';
+import { EmptyState } from '../../../shared/EmptyState';
 
 export function DeliveryPersonnelList({
   personnelList,
@@ -22,17 +23,20 @@ export function DeliveryPersonnelList({
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
         {personnelList.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 text-muted-foreground">
-            <p className="text-sm">No delivery personnel added yet.</p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={onAddClick}
-            >
-              <Plus className="h-4 w-4 mr-2 shrink-0" />
-              Add First Personnel
-            </Button>
-          </div>
+          <EmptyState
+            icon={<Users className="h-6 w-6" />}
+            title="No delivery personnel added yet"
+            description="Add your delivery team members to start assigning orders."
+            action={
+              <Button
+                variant="outline"
+                onClick={onAddClick}
+              >
+                <Plus className="h-4 w-4 mr-2 shrink-0" />
+                Add First Personnel
+              </Button>
+            }
+          />
         ) : (
           <>
             {/* Mobile: card list (below md) */}

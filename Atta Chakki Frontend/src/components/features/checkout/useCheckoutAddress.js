@@ -2,12 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { API_BASE_URL, MAPBOX_TOKEN } from '../../../config';
 import { lookupLahoreLocation, isWithinLahoreBounds, LAHORE_BOUNDS, findNearestLahoreArea } from '../../../utils/lahoreLocations';
-import {
-  FALLBACK_CENTER,
-  SHOP_LOCATION,
-  ROAD_DISTANCE_FACTOR,
-  calculateDistance,
-} from '../../../utils/checkoutHelpers';
+import { FALLBACK_CENTER } from '../../../utils/checkoutHelpers';
+import { useDeliveryFee } from './useDeliveryFee';
 
 const NON_LAHORE_CITIES = [
   'faisalabad', 'karachi', 'islamabad', 'rawalpindi', 'multan', 'gujranwala', 'peshawar', 
@@ -24,14 +20,13 @@ export function useCheckoutAddress({ user, orderType, t }) {
   const [gpsCoords, setGpsCoords] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [mapCenter, setMapCenter] = useState(null);
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const [distanceKm, setDistanceKm] = useState(0);
   const [isOutOfLahore, setIsOutOfLahore] = useState(false);
 
-  const [deliveryConfig, setDeliveryConfig] = useState({ 
-    base_fare: 50, 
-    base_distance: 10, 
-    per_km_rate: 10 
+  const { deliveryFee, distanceKm, deliveryConfig } = useDeliveryFee({
+    orderType,
+    gpsCoords,
+    isOutOfLahore,
+    user,
   });
 
   // Pre-fill user address if available
@@ -40,81 +35,6 @@ export function useCheckoutAddress({ user, orderType, t }) {
       setHouseDetails(user.address);
     }
   }, [user]);
-
-  // Fetch dynamic delivery rates
-  useEffect(() => {
-    const fetchDeliverySettings = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/get_delivery_settings.php`);
-        const data = await res.json();
-        if (data.success && data.settings) {
-          setDeliveryConfig(data.settings);
-        }
-      } catch (err) {
-        console.warn('Failed to load dynamic rates. Using default rates.');
-      }
-    };
-    fetchDeliverySettings();
-  }, []);
-
-  // Calculate delivery fee and distance rules
-  useEffect(() => {
-    const calcDeliveryFee = async () => {
-      if (orderType !== 'delivery') {
-        setDeliveryFee(0);
-        setIsOutOfLahore(false);
-        return;
-      }
-
-      if (gpsCoords && !isOutOfLahore) {
-        const straightDist = calculateDistance(
-          SHOP_LOCATION.lat, SHOP_LOCATION.lng,
-          gpsCoords.lat, gpsCoords.lng
-        );
-        const estimatedRoadDist = straightDist * ROAD_DISTANCE_FACTOR;
-
-        const updateFee = (distVal) => {
-          setDistanceKm(distVal);
-          if (user?.vip_free_shipping) {
-            setDeliveryFee(0);
-            return;
-          }
-          let fee = deliveryConfig.base_fare;
-          if (distVal > deliveryConfig.base_distance) {
-            fee = deliveryConfig.base_fare + (Math.ceil(distVal - deliveryConfig.base_distance) * deliveryConfig.per_km_rate);
-          }
-          setDeliveryFee(fee);
-        };
-
-        if (MAPBOX_TOKEN) {
-          try {
-            const res = await fetch(
-              `https://api.mapbox.com/directions/v5/mapbox/driving/${SHOP_LOCATION.lng},${SHOP_LOCATION.lat};${gpsCoords.lng},${gpsCoords.lat}?overview=false&access_token=${MAPBOX_TOKEN}`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              if (data.routes && data.routes[0] && data.routes[0].distance) {
-                updateFee(data.routes[0].distance / 1000);
-              } else {
-                updateFee(estimatedRoadDist);
-              }
-            } else {
-              updateFee(estimatedRoadDist);
-            }
-          } catch (e) {
-            console.warn('Mapbox directions failed, using estimate:', e);
-            updateFee(estimatedRoadDist);
-          }
-        } else {
-          updateFee(estimatedRoadDist);
-        }
-      } else {
-        setDeliveryFee(user?.vip_free_shipping ? 0 : deliveryConfig.base_fare);
-        setDistanceKm(0);
-      }
-    };
-    calcDeliveryFee();
-  }, [gpsCoords, isOutOfLahore, orderType, deliveryConfig, user?.vip_free_shipping]);
 
   const checkIsLahore = useCallback((text, lat, lng, addressComponents) => {
     const lt = parseFloat(lat);
@@ -701,6 +621,7 @@ export function useCheckoutAddress({ user, orderType, t }) {
     mapCenter,
     deliveryFee,
     distanceKm,
+    deliveryConfig,
     isOutOfLahore,
     setIsOutOfLahore,
     searchTypedAddress,

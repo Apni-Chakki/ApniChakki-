@@ -1,6 +1,18 @@
 // pdf generate karne ke liye jspdf library
 import { API_BASE_URL } from '../config';
 
+// jsPDF built-in fonts (courier, helvetica, times) only support ASCII/Latin-1.
+// Strip non-ASCII characters (e.g. Urdu, Arabic) and clean up leftover artifacts.
+function sanitizeForPdf(text) {
+  if (!text) return '';
+  return text
+    .replace(/[^\x20-\x7E]/g, '') // remove non-ASCII characters
+    .replace(/\(\s*\)/g, '')       // remove empty parentheses left behind
+    .replace(/\s{2,}/g, ' ')      // collapse multiple spaces
+    .replace(/,\s*,/g, ',')       // collapse double commas
+    .trim();
+}
+
 // store ki setting lana
 async function fetchBrandSettings() {
   try {
@@ -10,7 +22,7 @@ async function fetchBrandSettings() {
       return {
         name: data.settings.storeName || 'SUCHI CHAKKI',
         tagline: 'Pure & Fresh Processing',
-        address: data.settings.address || 'Main Bazaar, Lahore',
+        address: sanitizeForPdf(data.settings.address) || 'Main Bazaar, Lahore',
         phone: data.settings.phone || '+92 322 8483029',
         logo: data.settings.logo || '',
       };
@@ -161,7 +173,14 @@ export async function generateBillPDF(order) {
   doc.text(BRAND.tagline.toUpperCase(), pageW / 2, y, { align: 'center' });
 
   y += 4;
-  doc.text(`Location: ${BRAND.address}  |  Phone: ${BRAND.phone}`, pageW / 2, y, { align: 'center' });
+  // Split address and phone on separate lines for readability
+  const addressText = `Location: ${BRAND.address}`;
+  const phoneText = `Phone: ${BRAND.phone}`;
+  // Use splitTextToSize to auto-wrap long addresses within page width
+  const addressLines = doc.splitTextToSize(addressText, contentW);
+  doc.text(addressLines, pageW / 2, y, { align: 'center' });
+  y += addressLines.length * 3.5;
+  doc.text(phoneText, pageW / 2, y, { align: 'center' });
 
   y += 8;
   doc.setLineWidth(0.5);

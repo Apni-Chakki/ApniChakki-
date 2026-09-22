@@ -97,6 +97,9 @@ try {
         throw new Exception("Failed to update order total: " . $stmt->error);
     }
     $stmt->close();
+
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
     
     echo json_encode([
         "success" => true,

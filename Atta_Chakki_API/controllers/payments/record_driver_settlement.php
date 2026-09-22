@@ -159,6 +159,9 @@ try {
 
     $actualSettled = $amount - $remainingAmount;
 
+    require_once __DIR__ . '/../../utils/cache_helper.php';
+    clear_api_cache();
+
     echo json_encode([
         "success" => true,
         "message" => "Driver settlement of Rs. " . number_format($actualSettled, 2) . " across {$settledOrdersCount} orders recorded successfully",

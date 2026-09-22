@@ -63,7 +63,7 @@ export const OrderProcessCard = ({ order, queueIndex, heavyThreshold = 40, forma
     }`}>
       <CardHeader className={`pb-2 rounded-t-xl mb-3 sm:mb-4 px-3 sm:px-6 pt-3 sm:pt-6 ${isOverdue ? 'bg-red-50/50' : order.is_carried_forward ? 'bg-orange-50/60' : 'bg-slate-50/50'}`}>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <CardTitle className="text-lg sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
               {order.parent_order_id ? (
                 <>
@@ -101,20 +101,22 @@ export const OrderProcessCard = ({ order, queueIndex, heavyThreshold = 40, forma
               <span className="break-words">Created: {new Date(order.created_at).toLocaleString()}</span>
             </p>
           </div>
-          <div className="sm:text-right bg-blue-50/80 px-3 py-2 rounded-lg self-stretch sm:self-auto">
+          <div className="sm:text-right bg-blue-50/80 px-3 py-2 rounded-lg self-stretch sm:self-auto shrink-0 min-w-max">
             <div className="flex flex-col items-start sm:items-end">
-              <span className="text-base sm:text-xl font-bold text-slate-800 break-all">
+              <span className="text-base sm:text-xl font-bold text-slate-800 whitespace-nowrap">
                 Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
                 {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
               </span>
               {parseFloat(order.coupon_discount || 0) > 0 && (
-                <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1">
+                <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1 whitespace-nowrap">
                   -Rs. {parseFloat(order.coupon_discount).toLocaleString()} (Coupon: {order.coupon_code || 'N/A'})
                 </div>
               )}
-              <div className="flex items-center gap-1.5 sm:justify-end mt-1 flex-wrap">
-                <span className="text-[11px] sm:text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+              <div className="flex items-center gap-1.5 sm:justify-end mt-1 flex-wrap whitespace-nowrap">
+                {order.paymentMethod && (
+                  <span className="text-[11px] sm:text-xs font-semibold text-blue-600 uppercase">{order.paymentMethod}</span>
+                )}
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap ${
                   order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 border border-green-300' :
                   order.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
                   order.paymentStatus === 'unpaid' ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse' :

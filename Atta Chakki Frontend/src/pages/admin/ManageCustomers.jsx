@@ -11,6 +11,10 @@ import { API_BASE_URL } from '../../config';
 import { getWhatsAppUrl } from '../../utils/whatsappHelper';
 import { useTranslation } from 'react-i18next';
 import { Pagination } from '../../components/common/Pagination';
+import { PageHeader } from '../../components/shared/PageHeader';
+import { Loading } from '../../components/shared/Loading';
+import { EmptyState } from '../../components/shared/EmptyState';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 export function ManageCustomers() {
   const { t } = useTranslation();
@@ -24,6 +28,10 @@ export function ManageCustomers() {
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [stats, setStats] = useState({ total: 0, active: 0, vip: 0, total_spent: 0 });
+  const [statusConfirmCustomer, setStatusConfirmCustomer] = useState(null);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [deletePrivilegeId, setDeletePrivilegeId] = useState(null);
+  const [isDeletingPrivilege, setIsDeletingPrivilege] = useState(false);
   
   // VIP assign Modal states
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -102,42 +110,36 @@ export function ManageCustomers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, debouncedSearch]);
 
-  const handleToggleStatus = async (customer) => {
-    const nextActive = !customer.is_active;
-    const confirmMessage = nextActive
-      ? t('Are you sure you want to enable this customer account?')
-      : t('Are you sure you want to disable this customer account?');
-    
-    toast.warning(confirmMessage, {
-      action: {
-        label: t('Yes'),
-        onClick: async () => {
-          try {
-            const res = await fetch(`${API_BASE_URL}/toggle_customer_status.php`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                user_id: customer.id,
-                is_active: nextActive ? 1 : 0
-              })
-            });
-            const data = await res.json();
-            if (data.success) {
-              toast.success(data.message || t('Customer status updated'));
-              fetchCustomers();
-            } else {
-              toast.error(data.message || t('Failed to update status'));
-            }
-          } catch (err) {
-            toast.error(t('Network error'));
-          }
-        }
-      },
-      cancel: {
-        label: t('Cancel'),
-        onClick: () => {}
+  const handleToggleStatus = (customer) => {
+    setStatusConfirmCustomer(customer);
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!statusConfirmCustomer) return;
+    const nextActive = !statusConfirmCustomer.is_active;
+    setIsTogglingStatus(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/toggle_customer_status.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: statusConfirmCustomer.id,
+          is_active: nextActive ? 1 : 0
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || t('Customer status updated'));
+        fetchCustomers();
+      } else {
+        toast.error(data.message || t('Failed to update status'));
       }
-    });
+    } catch (err) {
+      toast.error(t('Network error'));
+    } finally {
+      setIsTogglingStatus(false);
+      setStatusConfirmCustomer(null);
+    }
   };
 
   const handleOpenVipModal = (customer) => {
@@ -236,38 +238,36 @@ export function ManageCustomers() {
     setPrivilegeFormErrors({});
   };
 
-  const handleDeletePrivilege = async (id) => {
-    toast.warning(t('Are you sure you want to delete this privilege? This will remove it from all assigned VIP customers.'), {
-      action: {
-        label: t('Delete'),
-        onClick: async () => {
-          try {
-            const res = await fetch(`${API_BASE_URL}/manage_vip_privilege.php`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'delete',
-                id: id
-              })
-            });
-            const data = await res.json();
-            if (data.success) {
-              toast.success(data.message || t('Privilege deleted'));
-              fetchPrivileges();
-              fetchCustomers();
-            } else {
-              toast.error(data.message || t('Failed to delete privilege'));
-            }
-          } catch (err) {
-            toast.error(t('Network error'));
-          }
-        }
-      },
-      cancel: {
-        label: t('Cancel'),
-        onClick: () => {}
+  const handleDeletePrivilege = (id) => {
+    setDeletePrivilegeId(id);
+  };
+
+  const confirmDeletePrivilege = async () => {
+    if (!deletePrivilegeId) return;
+    setIsDeletingPrivilege(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/manage_vip_privilege.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          id: deletePrivilegeId
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || t('Privilege deleted'));
+        fetchPrivileges();
+        fetchCustomers();
+      } else {
+        toast.error(data.message || t('Failed to delete privilege'));
       }
-    });
+    } catch (err) {
+      toast.error(t('Network error'));
+    } finally {
+      setIsDeletingPrivilege(false);
+      setDeletePrivilegeId(null);
+    }
   };
 
   const getWhatsAppLink = (phone) => {
@@ -282,33 +282,28 @@ export function ManageCustomers() {
   const totalSalesAmount = stats.total_spent;
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <Loader2 className="animate-spin h-8 w-8 text-primary" />
-        <p className="text-muted-foreground">{t('Loading customer database...')}</p>
-      </div>
-    );
+    return <Loading label={t('Loading customer database...')} className="h-64" />;
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">{t('Manage Customers')}</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">{t('View customer details, configure VIP privileges, and manage account statuses.')}</p>
-        </div>
-        <Button
-          onClick={() => {
-            setPrivilegeForm({ id: null, name: '', description: '', type: 'custom', value: 0 });
-            setPrivilegeFormErrors({});
-            setIsManagePrivilegesOpen(true);
-          }}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-medium flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto sm:self-center"
-        >
-          <Award className="h-4 w-4 shrink-0" />
-          {t('Manage VIP Privileges')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('Manage Customers')}
+        subtitle={t('View customer details, configure VIP privileges, and manage account statuses.')}
+        actions={
+          <Button
+            onClick={() => {
+              setPrivilegeForm({ id: null, name: '', description: '', type: 'custom', value: 0 });
+              setPrivilegeFormErrors({});
+              setIsManagePrivilegesOpen(true);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto sm:self-center"
+          >
+            <Award className="h-4 w-4 shrink-0" />
+            {t('Manage VIP Privileges')}
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
       <CustomerStatsCards
@@ -334,9 +329,11 @@ export function ManageCustomers() {
         </div>
 
         {filteredCustomers.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <p className="text-sm text-gray-500">{t('No customers found matching your search.')}</p>
-          </div>
+          <EmptyState
+            title={t('No customers found')}
+            description={t('No customers found matching your search.')}
+            className="my-4 border-none bg-transparent"
+          />
         ) : (
           <>
           {/* Mobile: card list (below md) */}
@@ -614,6 +611,36 @@ export function ManageCustomers() {
         handleEditPrivilegeClick={handleEditPrivilegeClick}
         handleDeletePrivilege={handleDeletePrivilege}
         t={t}
+      />
+
+      {/* Account status confirm dialog */}
+      <ConfirmDialog
+        open={statusConfirmCustomer !== null}
+        onOpenChange={(open) => { if (!open) setStatusConfirmCustomer(null); }}
+        title={statusConfirmCustomer?.is_active ? t('Disable Customer Account?') : t('Enable Customer Account?')}
+        description={
+          statusConfirmCustomer?.is_active
+            ? t('Are you sure you want to disable this customer account? They will not be able to log in or place orders.')
+            : t('Are you sure you want to enable this customer account?')
+        }
+        confirmLabel={statusConfirmCustomer?.is_active ? t('Disable') : t('Enable')}
+        cancelLabel={t('Cancel')}
+        destructive={Boolean(statusConfirmCustomer?.is_active)}
+        loading={isTogglingStatus}
+        onConfirm={confirmToggleStatus}
+      />
+
+      {/* Delete privilege confirm dialog */}
+      <ConfirmDialog
+        open={deletePrivilegeId !== null}
+        onOpenChange={(open) => { if (!open) setDeletePrivilegeId(null); }}
+        title={t('Delete VIP Privilege?')}
+        description={t('Are you sure you want to delete this privilege? This will remove it from all assigned VIP customers.')}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
+        destructive
+        loading={isDeletingPrivilege}
+        onConfirm={confirmDeletePrivilege}
       />
     </div>
   );
