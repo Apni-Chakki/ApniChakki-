@@ -105,6 +105,36 @@ try {
         $original_price = floatval($item['original_price'] ?? $price);
         $is_weight_pending = 0;
 
+        // If product_id is 0 or does not exist in products table (e.g. general custom mix request)
+        if ($product_id <= 0) {
+            $checkMix = $conn->query("SELECT id FROM products WHERE is_custom_mix = 1 LIMIT 1");
+            if ($checkMix && $mixRow = $checkMix->fetch_assoc()) {
+                $product_id = (int)$mixRow['id'];
+            } else {
+                $checkAny = $conn->query("SELECT id FROM products ORDER BY id ASC LIMIT 1");
+                if ($checkAny && $anyRow = $checkAny->fetch_assoc()) {
+                    $product_id = (int)$anyRow['id'];
+                }
+            }
+        } else {
+            // Verify product_id actually exists in products table to avoid FK constraint failure
+            $chkStmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
+            $chkStmt->bind_param("i", $product_id);
+            $chkStmt->execute();
+            if ($chkStmt->get_result()->num_rows === 0) {
+                $checkMix = $conn->query("SELECT id FROM products WHERE is_custom_mix = 1 LIMIT 1");
+                if ($checkMix && $mixRow = $checkMix->fetch_assoc()) {
+                    $product_id = (int)$mixRow['id'];
+                } else {
+                    $checkAny = $conn->query("SELECT id FROM products ORDER BY id ASC LIMIT 1");
+                    if ($checkAny && $anyRow = $checkAny->fetch_assoc()) {
+                        $product_id = (int)$anyRow['id'];
+                    }
+                }
+            }
+            $chkStmt->close();
+        }
+
         $is_rental = intval($item['is_rental'] ?? 0);
         $rental_days = $is_rental ? intval($item['rental_days'] ?? 1) : null;
         if ($rental_days !== null && $rental_days <= 0) $rental_days = 1;

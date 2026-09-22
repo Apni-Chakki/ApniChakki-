@@ -61,8 +61,8 @@ class SchedulerService {
     public static function calculateOrderWeight($conn, $order_id) {
         $total_weight = 0;
 
-        $sql = "SELECT oi.quantity, oi.price_at_purchase, p.unit, p.is_rental FROM order_items oi 
-                JOIN products p ON oi.product_id = p.id 
+        $sql = "SELECT oi.quantity, oi.price_at_purchase, COALESCE(p.unit, 'kg') as unit, COALESCE(p.is_rental, oi.is_rental, 0) as is_rental FROM order_items oi 
+                LEFT JOIN products p ON oi.product_id = p.id 
                 WHERE oi.order_id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $order_id);

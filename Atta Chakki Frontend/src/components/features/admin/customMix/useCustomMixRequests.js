@@ -158,7 +158,9 @@ export function useCustomMixRequests() {
         amount_paid: paymentStatus === 'paid' ? Math.round(calculatedPrice * orderQuantity) : 0,
         items: [
           {
-            id: convertingRequest.product_id,
+            id: convertingRequest.product_id || 0,
+            name: convertingRequest.product_name || 'Custom Flour Mix',
+            unit: 'kg',
             quantity: parseFloat(orderQuantity),
             price: Math.round(calculatedPrice),
             is_cleaning: 0,
