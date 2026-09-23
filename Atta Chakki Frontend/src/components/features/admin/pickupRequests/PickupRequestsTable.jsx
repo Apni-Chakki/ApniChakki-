@@ -49,6 +49,11 @@ export function PickupRequestsTable({
                   })}
                 </div>
                 <div className="mt-1 flex flex-col gap-1 items-start">
+                  {(order.is_combined_order === 1 || order.is_combined_order === '1' || order.is_combined_order === true) && (
+                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded whitespace-nowrap">
+                      📦 Deliver + 🌾 Pickup
+                    </div>
+                  )}
                   <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                     <AlertCircle className="h-2.5 w-2.5 shrink-0" /> TBD
                   </div>
@@ -84,13 +89,18 @@ export function PickupRequestsTable({
               {/* Service Details */}
               <TableCell className="px-3.5 py-3 align-top whitespace-normal min-w-[130px]">
                 <div className="space-y-0.5">
-                  {order.items && order.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1 text-xs">
-                      <Package className="h-3 w-3 text-primary shrink-0" />
-                      <span className="font-medium text-gray-800 truncate max-w-[130px]">{item.name}</span>
-                      <span className="text-[10px] text-gray-400 shrink-0">({item.quantity} {item.unit})</span>
-                    </div>
-                  ))}
+                  {order.items && order.items.map((item, idx) => {
+                    const isPending = item.is_weight_pending === 1 || item.is_weight_pending === '1' || item.unit === 'trip';
+                    return (
+                      <div key={idx} className="flex items-center gap-1 text-xs">
+                        <Package className={`h-3 w-3 ${isPending ? 'text-amber-600' : 'text-primary'} shrink-0`} />
+                        <span className="font-medium text-gray-800 truncate max-w-[130px]">{item.name}</span>
+                        <span className="text-[10px] text-gray-500 shrink-0">
+                          {isPending ? '(Pending Wt)' : `(${item.quantity} ${item.unit})`}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </TableCell>
 

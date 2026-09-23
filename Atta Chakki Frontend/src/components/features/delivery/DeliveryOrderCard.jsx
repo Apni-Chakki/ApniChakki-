@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../../common/card';
 import { Badge } from '../../common/badge';
-import { Phone, MapPin, Navigation, Radio, CheckCircle, MessageCircle, Truck, Store, Package, Loader2 } from 'lucide-react';
+import { Phone, MapPin, Navigation, Radio, CheckCircle, MessageCircle, Truck, Store, Package, Loader2, Wheat } from 'lucide-react';
 import { DeliveryStatusBadge } from './DeliveryStatusBadge';
 
 export const DeliveryOrderCard = React.memo(({
@@ -17,49 +17,86 @@ export const DeliveryOrderCard = React.memo(({
   handleImComing,
   t = (s) => s,
 }) => {
-              const isStorePickup = order.orderType === 'pickup';
-              const isPickupRequest = ['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0;
-              const isActionable = ['ready', 'delivery_assigned', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup'].includes(order.status);
-              const isTracking = !!activeTracking[order.id];
-              
-              return (
-                <Card 
-                  key={order.id} 
-                  className={`p-6 relative overflow-hidden transition-all duration-300 border border-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-md hover:-translate-y-0.5 flex flex-col gap-4 ${
-                    !isActionable
-                      ? 'opacity-70 bg-gray-50'
-                      : 'bg-white'
-                  }`}
-                >
-                  {/* Left accent color strip */}
-                  {isActionable && (
-                    <div
-                      className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${
-                        isStorePickup
-                          ? 'from-green-500 to-green-600'   // green = store pickup
-                          : isPickupRequest
-                            ? 'from-amber-400 to-orange-500' // orange = driver pickup
-                            : 'from-blue-500 to-indigo-600'  // blue = delivery
-                      }`}
-                    />
-                  )}
+  const isCombined = order.is_combined_order === 1 || order.is_combined_order === '1' || order.is_combined_order === true;
+  const hybridStage = order.hybrid_stage;
+  const isStorePickup = order.orderType === 'pickup';
+  const isPickupRequest = !isCombined && (['pickup_assigned', 'coming_for_pickup', 'arrived_at_shop'].includes(order.status) || order.total === 0);
+  const isActionable = isCombined
+    ? (hybridStage === 'prep_and_collect' || hybridStage === 'final_delivery') && ['ready', 'delivery_assigned', 'out-for-delivery'].includes(order.status)
+    : ['ready', 'delivery_assigned', 'out-for-delivery', 'pickup_assigned', 'coming_for_pickup'].includes(order.status);
+  const isTracking = !!activeTracking[order.id];
 
-                  <div className="flex flex-col gap-4">
-                    {/* Order Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm font-bold px-2.5 py-0.5 rounded-md border bg-slate-100 text-slate-600 border-slate-200">
-                            #{order.id}
-                          </span>
-                          <DeliveryStatusBadge status={order.status} t={t} />
-                          {isTracking && (
-                            <Badge className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[10px] font-bold tracking-wider animate-pulse border-none bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
-                              <Radio className="h-3 w-3 text-white" />
-                              LIVE
-                            </Badge>
-                          )}
-                        </div>
+  const readyItems = (order.items || []).filter(
+    it => it.is_weight_pending !== 1 && it.is_weight_pending !== '1' && it.unit !== 'trip'
+  );
+  const pickupItems = (order.items || []).filter(
+    it => it.is_weight_pending === 1 || it.is_weight_pending === '1' || it.unit === 'trip'
+  );
+              
+  return (
+    <Card 
+      key={order.id} 
+      className={`p-6 relative overflow-hidden transition-all duration-300 border border-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-md hover:-translate-y-0.5 flex flex-col gap-4 ${
+        !isActionable
+          ? 'opacity-70 bg-gray-50'
+          : 'bg-white'
+      }`}
+    >
+      {/* Left accent color strip */}
+      {isActionable && (
+        <div
+          className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${
+            isStorePickup
+              ? 'from-green-500 to-green-600'
+              : isCombined
+                ? 'from-amber-500 via-indigo-600 to-purple-600'
+                : isPickupRequest
+                  ? 'from-amber-400 to-orange-500'
+                  : 'from-blue-500 to-indigo-600'
+          }`}
+        />
+      )}
+
+      <div className="flex flex-col gap-4">
+        {/* Order Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-sm font-bold px-2.5 py-0.5 rounded-md border bg-slate-100 text-slate-600 border-slate-200">
+                #{order.id}
+              </span>
+              <DeliveryStatusBadge status={order.status} t={t} />
+              {isCombined && (
+                <>
+                  {hybridStage === 'prep_and_collect' && (
+                    <Badge className="bg-amber-100 text-amber-900 border-amber-300 font-bold text-[10px] px-2 py-0.5 whitespace-nowrap">
+                      📦 Deliver + 🌾 Collect Grain
+                    </Badge>
+                  )}
+                  {hybridStage === 'grain_received' && (
+                    <Badge className="bg-teal-100 text-teal-900 border-teal-300 font-bold text-[10px] px-2 py-0.5 whitespace-nowrap">
+                      🌾 Grain at Shop (Weighing)
+                    </Badge>
+                  )}
+                  {hybridStage === 'grinding' && (
+                    <Badge className="bg-indigo-100 text-indigo-900 border-indigo-300 font-bold text-[10px] px-2 py-0.5 whitespace-nowrap">
+                      ⚙️ Grinding in Progress
+                    </Badge>
+                  )}
+                  {hybridStage === 'final_delivery' && (
+                    <Badge className="bg-purple-100 text-purple-900 border-purple-300 font-bold text-[10px] px-2 py-0.5 whitespace-nowrap">
+                      🌾 Final: Deliver Fresh Flour
+                    </Badge>
+                  )}
+                </>
+              )}
+              {isTracking && (
+                <Badge className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[10px] font-bold tracking-wider animate-pulse border-none bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                  <Radio className="h-3 w-3 text-white" />
+                  LIVE
+                </Badge>
+              )}
+            </div>
 
                         {/* Customer Avatar, Name & Mobile Number */}
                         <div className="flex items-center gap-3 mt-1.5">
@@ -223,6 +260,84 @@ export const DeliveryOrderCard = React.memo(({
                       )}
                     </div>
 
+                    {/* Order Items Breakdown */}
+                    {isCombined ? (
+                      hybridStage === 'prep_and_collect' ? (
+                        <div className="flex flex-col gap-2 p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl">
+                          {readyItems.length > 0 && (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
+                                <Package className="h-3.5 w-3.5 text-emerald-600" />
+                                {t('Deliver to Customer (Ready Goods)')}:
+                              </span>
+                              <div className="space-y-1 pl-5">
+                                {readyItems.map((item, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-xs text-slate-800 font-medium">
+                                    <span>• {item.name || item.service?.name}</span>
+                                    <span className="font-semibold text-slate-600">{item.quantity} {item.unit || 'unit'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {readyItems.length > 0 && pickupItems.length > 0 && (
+                            <div className="border-t border-amber-200/60 my-0.5" />
+                          )}
+
+                          {pickupItems.length > 0 && (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                                <Wheat className="h-3.5 w-3.5 text-amber-600" />
+                                {t('Collect from Customer (Raw Grain)')}:
+                              </span>
+                              <div className="space-y-1 pl-5">
+                                {pickupItems.map((item, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-xs text-slate-800 font-medium">
+                                    <span>• {item.name || item.service?.name}</span>
+                                    <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
+                                      Weigh at shop
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1 p-3 bg-purple-50/60 border border-purple-200 rounded-xl">
+                          <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wide flex items-center gap-1.5">
+                            <Wheat className="h-3.5 w-3.5 text-purple-600" />
+                            {t('Fresh Ground Flour Delivery')}:
+                          </span>
+                          <div className="space-y-1 pl-5">
+                            {pickupItems.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs text-slate-800 font-medium">
+                                <span>• {item.name || item.service?.name}</span>
+                                <span className="font-semibold text-purple-700">{item.quantity} {item.unit || 'kg'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      order.items && order.items.length > 0 && (
+                        <div className="flex flex-col gap-1 p-3 bg-slate-50 border border-slate-200/70 rounded-xl">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            {isPickupRequest ? t('Items to Pick Up') : t('Order Items')}
+                          </span>
+                          <div className="space-y-1">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs text-slate-800 font-medium">
+                                <span className="truncate max-w-[200px]">• {item.name || item.service?.name}</span>
+                                <span className="font-semibold text-slate-600">{item.quantity} {item.unit || 'unit'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    )}
+
                     {/* Action Buttons */}
                     {isActionable && (
                       <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
@@ -242,6 +357,143 @@ export const DeliveryOrderCard = React.memo(({
                                 <CheckCircle className="h-5 w-5 animate-pulse text-white" />
                                 {t('Mark as Collected')}
                               </button>
+                            )}
+                          </>
+
+                        ) : isCombined ? (
+                          <>
+                            {/* COMBINED HYBRID ORDER: Stage 1 = prep_and_collect */}
+                            {hybridStage === 'prep_and_collect' && (
+                              order.status !== 'out-for-delivery' ? (
+                                <button
+                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-indigo-600 to-indigo-800 border-none px-6 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  onClick={() => handleStartDelivery(order)}
+                                  disabled={Boolean(actionLoading[order.id])}
+                                >
+                                  {actionLoading[order.id] === 'start' ? (
+                                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                  ) : (
+                                    <Truck className="h-5 w-5 text-white" />
+                                  )}
+                                  {t('Start Delivery & Grain Collection')}
+                                </button>
+                              ) : (
+                                <div className="flex flex-col gap-2">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {order.phone && (
+                                      <button
+                                        className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98] border-emerald-500 text-emerald-700 bg-emerald-50 px-2"
+                                        onClick={() => {
+                                          const url = generateWhatsAppLink(order);
+                                          window.open(url, '_blank');
+                                        }}
+                                      >
+                                        <MessageCircle className="h-4 w-4 text-emerald-700" />
+                                        {t('WhatsApp Update')}
+                                      </button>
+                                    )}
+                                    <button
+                                      className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98] bg-slate-100 text-slate-700 border-none px-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                      onClick={() => handleImComing(order)}
+                                      disabled={Boolean(actionLoading[order.id])}
+                                    >
+                                      {actionLoading[order.id] === 'coming' ? (
+                                        <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                                      ) : (
+                                        <Navigation className="h-4 w-4 text-slate-600" />
+                                      )}
+                                      {t("I'm coming")}
+                                    </button>
+                                  </div>
+                                  <button
+                                    className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1 bg-gradient-to-br from-teal-600 to-teal-700 border-none px-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    onClick={() => handleArrivedAtShopForPickup(order)}
+                                    disabled={Boolean(actionLoading[order.id])}
+                                  >
+                                    {actionLoading[order.id] === 'arrived' ? (
+                                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                    ) : (
+                                      <CheckCircle className="h-5 w-5 animate-pulse text-white" />
+                                    )}
+                                    {t('Delivered Goods & Grain Arrived at Shop')}
+                                  </button>
+                                </div>
+                              )
+                            )}
+
+                            {/* COMBINED HYBRID ORDER: Stage 2 = grain_received */}
+                            {hybridStage === 'grain_received' && (
+                              <div className="w-full text-center text-sm font-semibold rounded-xl py-3 border shadow-2xs flex items-center justify-center gap-2 bg-teal-50 border-teal-100 text-teal-700">
+                                <CheckCircle className="h-4.5 w-4.5 text-teal-700" />
+                                {t('Grain at Shop — Awaiting Admin Weighing')}
+                              </div>
+                            )}
+
+                            {/* COMBINED HYBRID ORDER: Stage 3 = grinding */}
+                            {hybridStage === 'grinding' && (
+                              <div className="w-full text-center text-sm font-semibold rounded-xl py-3 border shadow-2xs flex items-center justify-center gap-2 bg-indigo-50 border-indigo-100 text-indigo-700">
+                                <Loader2 className="h-4.5 w-4.5 animate-spin text-indigo-700" />
+                                {t('Grain Weighed — Grinding in Progress')}
+                              </div>
+                            )}
+
+                            {/* COMBINED HYBRID ORDER: Stage 4 = final_delivery */}
+                            {hybridStage === 'final_delivery' && (
+                              order.status !== 'out-for-delivery' ? (
+                                <button
+                                  className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md bg-gradient-to-br from-purple-600 to-purple-800 border-none px-6 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  onClick={() => handleStartDelivery(order)}
+                                  disabled={Boolean(actionLoading[order.id])}
+                                >
+                                  {actionLoading[order.id] === 'start' ? (
+                                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                  ) : (
+                                    <Truck className="h-5 w-5 text-white" />
+                                  )}
+                                  {t('Start Final Flour Delivery')}
+                                </button>
+                              ) : (
+                                <div className="flex flex-col gap-2">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {order.phone && (
+                                      <button
+                                        className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border transition-all duration-200 cursor-pointer active:scale-[0.98] border-emerald-500 text-emerald-700 bg-emerald-50 px-2"
+                                        onClick={() => {
+                                          const url = generateWhatsAppLink(order);
+                                          window.open(url, '_blank');
+                                        }}
+                                      >
+                                        <MessageCircle className="h-4 w-4 text-emerald-700" />
+                                        {t('WhatsApp Update')}
+                                      </button>
+                                    )}
+                                    <button
+                                      className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.98] bg-slate-100 text-slate-700 border-none px-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                      onClick={() => handleImComing(order)}
+                                      disabled={Boolean(actionLoading[order.id])}
+                                    >
+                                      {actionLoading[order.id] === 'coming' ? (
+                                        <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                                      ) : (
+                                        <Navigation className="h-4 w-4 text-slate-600" />
+                                      )}
+                                      {t("I'm coming")}
+                                    </button>
+                                  </div>
+                                  <button
+                                    className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-base font-bold text-white transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md mt-1 bg-gradient-to-br from-emerald-500 to-emerald-600 border-none px-6 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    onClick={() => handleCompleteDelivery(order)}
+                                    disabled={Boolean(actionLoading[order.id])}
+                                  >
+                                    {actionLoading[order.id] === 'complete' ? (
+                                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                    ) : (
+                                      <CheckCircle className="h-5 w-5 animate-pulse text-white" />
+                                    )}
+                                    {t('Mark Flour as Delivered')}
+                                  </button>
+                                </div>
+                              )
                             )}
                           </>
 

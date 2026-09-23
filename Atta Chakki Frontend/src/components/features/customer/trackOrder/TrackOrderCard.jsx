@@ -23,9 +23,8 @@ export function TrackOrderCard({
       {/* Order header — clickable */}
       <div
         onClick={onToggleExpand}
-        className={`p-4 sm:p-5 cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
-          isExpanded ? 'border-b border-slate-100' : ''
-        }`}
+        className={`p-4 sm:p-5 cursor-pointer flex flex-wrap items-center justify-between gap-3 ${isExpanded ? 'border-b border-slate-100' : ''
+          }`}
       >
         <div className="flex items-center gap-3.5">
           <div className={`p-2.5 rounded-xl ${statusColors.bg}`}>
@@ -46,6 +45,11 @@ export function TrackOrderCard({
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
+          {order.is_combined_order && (
+            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+              Deliver +  Pickup
+            </span>
+          )}
           <OrderStatusBadge status={order.status} t={t} />
           <div className="p-1.5 border border-slate-200 rounded-full text-slate-400 flex items-center justify-center">
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -59,7 +63,7 @@ export function TrackOrderCard({
           {/* Timeline */}
           <div className="mb-8 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hidden sm:block">
             <h3 className="text-base font-bold text-slate-800 mb-5">{t('Status Timeline')}</h3>
-            <OrderStatusTimeline currentStatus={order.status} />
+            <OrderStatusTimeline currentStatus={order.status} order={order} />
           </div>
 
           {/* Info Grid */}

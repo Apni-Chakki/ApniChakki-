@@ -226,7 +226,7 @@ function render_php_email_template($endpoint, $payload)
             ];
 
         case '/send-contact-email':
-            $adminEmail = $payload['adminEmail'] ?? 'apnichakki897@gmail.com';
+            $adminEmail = $payload['adminEmail'] ?? ($envVars['EMAIL_FROM'] ?? getenv('EMAIL_FROM') ?: 'suchichakki9@gmail.com');
             $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:20px;}.container{max-width:600px;margin:0 auto;padding:20px;background:#f9f9f9;border-radius:8px;}</style></head><body>';
             $html .= '<div class="container"><h2>New Contact Message from ' . htmlspecialchars($payload['name'] ?? '') . '</h2>';
             $html .= '<p><strong>Email:</strong> ' . htmlspecialchars($payload['email'] ?? '') . '</p>';

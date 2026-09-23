@@ -185,10 +185,16 @@ export function useServicePricing(service, quantity) {
   const isOutOfStock = !isOnlyPickup && !isRental && stock <= 0;
   const isQuantityExceeded = !isOnlyPickup && !isRental && stock !== Infinity && quantity > stock;
 
-  const quickOptions =
-    Array.isArray(service.weight_options) && service.weight_options.length > 0
-      ? service.weight_options
-      : [];
+  let quickOptions = [];
+  if (Array.isArray(service.weight_options)) {
+    quickOptions = service.weight_options;
+  } else if (typeof service.weight_options === 'string') {
+    try {
+      const parsed = JSON.parse(service.weight_options);
+      if (Array.isArray(parsed)) quickOptions = parsed;
+    } catch (e) {}
+  }
+  quickOptions = quickOptions.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
   const hasQuickOptions = quickOptions.length > 0;
 
   const getSelectedCustomizations = () => {
@@ -204,6 +210,8 @@ export function useServicePricing(service, quantity) {
     if (!isCustomMix) return null;
     return mixItems
       .map((item, idx) => ({
+        id: item.id,
+        product_ingredient_id: item.product_ingredient_id || null,
         item_name: item.item_name,
         price_per_kg: item.price_per_kg,
         ratio: mixRatios[idx] || 0,

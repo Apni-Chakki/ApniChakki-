@@ -121,7 +121,10 @@ export function usePickupRequests() {
     setSelectedOrder(order);
     const inputs = {};
     (order.items || []).forEach((it) => {
-      inputs[it.id] = parseFloat(it.quantity) || 0;
+      const isWeightPending = it.is_weight_pending === 1 || it.is_weight_pending === '1' || it.unit === 'trip';
+      // Grain items: leave empty so admin must enter actual weight
+      // Fixed products: pre-fill with known quantity
+      inputs[it.id] = isWeightPending ? '' : parseFloat(it.quantity) || 0;
     });
     setWeightInputs(inputs);
     setShowWeightModal(true);
@@ -134,6 +137,12 @@ export function usePickupRequests() {
   const calcItemsSubtotal = () => {
     if (!selectedOrder?.items) return 0;
     return selectedOrder.items.reduce((sum, it) => {
+      const isWeightPending = it.is_weight_pending === 1 || it.is_weight_pending === '1' || it.unit === 'trip';
+      if (!isWeightPending) {
+        const qty = parseFloat(it.quantity || 1);
+        const price = parseFloat(it.price_at_purchase || it.price_per_kg || 0);
+        return sum + (qty * price);
+      }
       const kg = parseFloat(weightInputs[it.id] || 0);
       const price = parseFloat(it.price_per_kg || 0);
       return sum + (kg * price);
@@ -150,14 +159,20 @@ export function usePickupRequests() {
   const handleSaveWeights = async () => {
     if (!selectedOrder) return;
 
-    const itemsPayload = Object.keys(weightInputs).map(key => ({
-      order_item_id: parseInt(key),
-      actual_weight_kg: parseFloat(weightInputs[key])
+    // Filter only items that are weight-pending, or all items if none specifically tagged
+    const pendingItems = (selectedOrder.items || []).filter(
+      it => it.is_weight_pending === 1 || it.is_weight_pending === '1' || it.unit === 'trip'
+    );
+    const targetItems = pendingItems.length > 0 ? pendingItems : selectedOrder.items;
+
+    const itemsPayload = targetItems.map(it => ({
+      order_item_id: parseInt(it.id),
+      actual_weight_kg: parseFloat(weightInputs[it.id])
     }));
 
     for (const it of itemsPayload) {
       if (!it.order_item_id || !it.actual_weight_kg || it.actual_weight_kg <= 0) {
-        toast.error('Please enter valid weight (kg) for all items.');
+        toast.error('Please enter valid weight (kg) for all grain pickup items.');
         return;
       }
     }

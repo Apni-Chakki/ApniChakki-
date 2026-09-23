@@ -3,3 +3,4 @@ error_log.txt
 cache/
 *.sql
 *.php.bak
+*.ps1

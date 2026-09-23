@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShoppingBag, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ShoppingBag, Trash2, Search, Package, ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,90 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/common/select';
+
+/**
+ * Inline searchable inventory dropdown for the Convert modal.
+ */
+function InventoryDropdown({ allProducts, existingNames, onSelect }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = allProducts.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) &&
+    !existingNames.includes(p.name.toLowerCase())
+  );
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full h-9 rounded-xl border border-primary/20 bg-white px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/5 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+      >
+        <span className="flex items-center gap-1.5">
+          <Package className="h-3.5 w-3.5 shrink-0" />
+          Select from Inventory
+        </span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 bg-white rounded-xl border border-primary/20 shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center gap-2 p-2 border-b bg-slate-50/80">
+            <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="w-full text-xs bg-transparent outline-none placeholder:text-slate-400"
+            />
+          </div>
+          <div className="max-h-40 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-center">
+                <p className="text-[10px] text-slate-400 font-medium">No products found</p>
+              </div>
+            ) : (
+              filtered.map(product => (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(product);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-primary/5 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="block font-bold text-slate-800 truncate">{product.name}</span>
+                    <span className="text-[10px] text-slate-500">
+                      Rs. {product.price}/{product.unit || 'kg'} • Stock: {product.stock_quantity ?? 'N/A'}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ConvertToOrderModal({
   modalOpen,
@@ -43,9 +127,12 @@ export default function ConvertToOrderModal({
   paymentMethod,
   setPaymentMethod,
   handleConvertSubmit,
-  isSubmittingOrder
+  isSubmittingOrder,
+  allProducts = [],
+  handleAddInventoryIngredient = () => {}
 }) {
   const calculatedPrice = getCalculatedPrice();
+  const existingNames = ratios.map(r => r.item_name.toLowerCase());
 
   return (
     <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -84,8 +171,13 @@ export default function ConvertToOrderModal({
                   className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-primary/10 shadow-sm gap-2"
                 >
                   <div className="flex flex-col min-w-0 text-left items-start flex-1">
-                    <span className="text-xs font-bold text-slate-900 truncate leading-tight">
+                    <span className="text-xs font-bold text-slate-900 truncate leading-tight flex items-center gap-1.5">
                       {item.item_name}
+                      {item.product_ingredient_id && (
+                        <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                          Inventory
+                        </span>
+                      )}
                     </span>
                     <span className="text-[10px] text-slate-500 mt-1 leading-none font-medium">
                       Rs. {item.price_per_kg}/kg
@@ -131,10 +223,20 @@ export default function ConvertToOrderModal({
                 </div>
               ))}
 
+              {/* Inventory product dropdown */}
+              {allProducts.length > 0 && (
+                <InventoryDropdown
+                  allProducts={allProducts}
+                  existingNames={existingNames}
+                  onSelect={handleAddInventoryIngredient}
+                />
+              )}
+
+              {/* Custom text ingredient form (for non-inventory items) */}
               {showAddForm ? (
                 <div className="p-3.5 rounded-xl bg-[#fcfaf7] border border-primary/20 space-y-3 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <span className="text-[10px] font-bold text-primary uppercase block tracking-wider">
-                    Add Custom Ingredient
+                    Add Custom Ingredient (Not in Inventory)
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
@@ -187,7 +289,7 @@ export default function ConvertToOrderModal({
                   className="w-full text-xs border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 h-8.5 mt-1.5 rounded-xl font-extrabold flex items-center justify-center gap-1.5 transition-all"
                   onClick={() => setShowAddForm(true)}
                 >
-                  + Add Custom Ingredient
+                  + Add Custom Ingredient (Manual)
                 </Button>
               )}
             </div>

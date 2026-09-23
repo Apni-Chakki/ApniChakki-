@@ -36,7 +36,7 @@ try {
     }
     
     // checking if order exists
-    $orderSql = "SELECT o.id, o.status, o.assigned_date, o.user_id, o.payment_method, o.payment_status, o.shipping_address, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email 
+    $orderSql = "SELECT o.id, o.status, o.assigned_date, o.user_id, o.payment_method, o.payment_status, o.shipping_address, o.is_combined_order, o.hybrid_stage, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email 
                  FROM orders o 
                  LEFT JOIN users u ON o.user_id = u.id 
                  WHERE o.id = ?";
@@ -53,6 +53,8 @@ try {
     
     $order = $orderResult->fetch_assoc();
     $old_date = $order['assigned_date'];
+    $is_comb = intval($order['is_combined_order'] ?? 0);
+    $curr_stage = $order['hybrid_stage'] ?? null;
     $stmt->close();
 
     // updating status
@@ -72,6 +74,18 @@ try {
         $updateSql = "UPDATE orders SET status = ?, assigned_date = ?, updated_at = NOW() WHERE id = ?";
         $stmt = $conn->prepare($updateSql);
         $stmt->bind_param("ssi", $status, $today, $order_id);
+    } elseif ($status === 'arrived_at_shop' && $is_comb === 1) {
+        $updateSql = "UPDATE orders SET status = ?, hybrid_stage = 'grain_received', updated_at = NOW() WHERE id = ?";
+        $stmt = $conn->prepare($updateSql);
+        $stmt->bind_param("si", $status, $order_id);
+    } elseif ($status === 'ready' && $is_comb === 1 && $curr_stage === 'grinding') {
+        $updateSql = "UPDATE orders SET status = ?, hybrid_stage = 'final_delivery', updated_at = NOW() WHERE id = ?";
+        $stmt = $conn->prepare($updateSql);
+        $stmt->bind_param("si", $status, $order_id);
+    } elseif ($status === 'completed' && $is_comb === 1) {
+        $updateSql = "UPDATE orders SET status = ?, hybrid_stage = 'completed', updated_at = NOW() WHERE id = ?";
+        $stmt = $conn->prepare($updateSql);
+        $stmt->bind_param("si", $status, $order_id);
     } else {
         $updateSql = "UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?";
         $stmt = $conn->prepare($updateSql);

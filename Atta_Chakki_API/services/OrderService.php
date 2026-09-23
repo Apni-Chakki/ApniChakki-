@@ -25,7 +25,7 @@ class OrderService
             return $pidA <=> $pidB;
         });
 
-        $sql = "SELECT id, name, price, discount_type, discount_value, unit, is_grinding_service, customization_pricing_mode, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty FROM products WHERE id = ?";
+        $sql = "SELECT id, name, price, discount_type, discount_value, unit, is_grinding_service, customization_pricing_mode, cleaning_price, grinding_price, is_rental, rental_price_per_day, security_deposit, late_penalty_per_day, stock_quantity, rental_available_qty, is_custom_mix, track_inventory FROM products WHERE id = ?";
         if ($for_update) {
             $sql .= " FOR UPDATE";
         }
@@ -44,12 +44,15 @@ class OrderService
                 $is_cleaning = is_object($item) ? (int)($item->is_cleaning ?? 0) : (int)($item['is_cleaning'] ?? 0);
                 $is_grinding = is_object($item) ? (int)($item->is_grinding ?? 0) : (int)($item['is_grinding'] ?? 0);
                 $item_is_pending = is_object($item) ? (int)($item->is_weight_pending ?? 0) : (int)($item['is_weight_pending'] ?? 0);
+                $is_custom_mix = (int)($row['is_custom_mix'] ?? (is_object($item) ? ($item->is_custom_mix ?? 0) : ($item['is_custom_mix'] ?? 0)));
 
                 $selected_customizations = is_object($item) ? ($item->selected_customizations ?? []) : ($item['selected_customizations'] ?? []);
+                $selected_mix_items = is_object($item) ? ($item->selected_mix_items ?? []) : ($item['selected_mix_items'] ?? []);
 
                 if ($item_is_pending) $has_pending_weight_item = true;
 
                 $is_rental_val = isset($row['is_rental']) ? (int)$row['is_rental'] : 0;
+                $track_inv = isset($row['track_inventory']) ? (int)$row['track_inventory'] : 1;
 
                 // Check stock
                 if ($unit !== 'trip' && !$item_is_pending) {
@@ -62,8 +65,63 @@ class OrderService
                                 "message" => "Item '" . ($row['name'] ?? 'Product') . "' is out of rental stock."
                             ];
                         }
+                    } elseif ($is_custom_mix === 1 && !empty($selected_mix_items)) {
+                        // Validate and check constituent ingredient stocks in inventory
+                        $totalRatio = 0.0;
+                        foreach ($selected_mix_items as $m) {
+                            $r = is_object($m) ? floatval($m->ratio ?? 0) : floatval($m['ratio'] ?? 0);
+                            $totalRatio += $r;
+                        }
+                        if ($totalRatio <= 0) $totalRatio = 1.0;
+
+                        foreach ($selected_mix_items as $m) {
+                            $m_name = is_object($m) ? ($m->item_name ?? '') : ($m['item_name'] ?? '');
+                            $m_ratio = is_object($m) ? floatval($m->ratio ?? 0) : floatval($m['ratio'] ?? 0);
+                            $m_ing_id = is_object($m) ? (int)($m->product_ingredient_id ?? 0) : (int)($m['product_ingredient_id'] ?? 0);
+
+                            if ($m_ratio <= 0) continue;
+
+                            $needed_qty = $qty * ($m_ratio / $totalRatio);
+
+                            // Find the product in inventory either by product_ingredient_id or by name
+                            $ing_row = null;
+                            if ($m_ing_id > 0) {
+                                $ing_sql = "SELECT id, name, stock_quantity, track_inventory FROM products WHERE id = ?";
+                                if ($for_update) $ing_sql .= " FOR UPDATE";
+                                $ing_stmt = $conn->prepare($ing_sql);
+                                $ing_stmt->bind_param("i", $m_ing_id);
+                                $ing_stmt->execute();
+                                $ing_row = $ing_stmt->get_result()->fetch_assoc();
+                                $ing_stmt->close();
+                            }
+
+                            if (!$ing_row && !empty($m_name)) {
+                                $trimmed_name = trim($m_name);
+                                $ing_sql = "SELECT id, name, stock_quantity, track_inventory FROM products WHERE LOWER(TRIM(name)) = LOWER(?) OR LOWER(name) LIKE CONCAT('%', LOWER(?), '%') LIMIT 1";
+                                if ($for_update) $ing_sql .= " FOR UPDATE";
+                                $ing_stmt = $conn->prepare($ing_sql);
+                                $ing_stmt->bind_param("ss", $trimmed_name, $trimmed_name);
+                                $ing_stmt->execute();
+                                $ing_row = $ing_stmt->get_result()->fetch_assoc();
+                                $ing_stmt->close();
+                            }
+
+                            if ($ing_row) {
+                                $ing_track = isset($ing_row['track_inventory']) ? (int)$ing_row['track_inventory'] : 1;
+                                if ($ing_track === 1 && isset($ing_row['stock_quantity']) && $ing_row['stock_quantity'] !== null) {
+                                    if (floatval($ing_row['stock_quantity']) < $needed_qty) {
+                                        $query->close();
+                                        return [
+                                            "success" => false,
+                                            "error_code" => "OUT_OF_STOCK_RACE",
+                                            "message" => "Ingredient '" . ($ing_row['name'] ?? $m_name) . "' has insufficient stock (" . floatval($ing_row['stock_quantity']) . " kg available, " . round($needed_qty, 2) . " kg needed for this mix)."
+                                        ];
+                                    }
+                                }
+                            }
+                        }
                     } else {
-                        if (isset($row['stock_quantity']) && $row['stock_quantity'] !== null && floatval($row['stock_quantity']) < $qty) {
+                        if ($track_inv === 1 && isset($row['stock_quantity']) && $row['stock_quantity'] !== null && floatval($row['stock_quantity']) < $qty) {
                             $query->close();
                             return [
                                 "success" => false,
@@ -122,7 +180,9 @@ class OrderService
                     "is_cleaning" => $is_cleaning,
                     "is_grinding" => $is_grinding,
                     "is_weight_pending" => $item_is_pending,
+                    "is_custom_mix" => $is_custom_mix,
                     "selected_customizations" => $selected_customizations,
+                    "selected_mix_items" => $selected_mix_items,
                     "is_rental" => $is_rental_val,
                     "rental_days" => $rental_days_val,
                     "rental_start_date" => $rental_start_date_val,
@@ -143,8 +203,8 @@ class OrderService
 
                 $valid_items[] = $formatted_item;
             }
-            $query->close();
         }
+        $query->close();
 
         return [
             "success" => true,
@@ -270,11 +330,65 @@ class OrderService
                         throw new Exception("INSUFFICIENT_RENTAL_STOCK: Item #" . $v_item['product_id'] . " rental stock was just depleted by another order.");
                     }
                     $rent_inv_stmt->close();
+                } elseif (!empty($v_item['is_custom_mix']) && !empty($v_item['selected_mix_items'])) {
+                    // Proportional deduction for each ingredient in the custom mix
+                    $mix_items = $v_item['selected_mix_items'];
+                    $total_ratio = 0.0;
+                    foreach ($mix_items as $m) {
+                        $total_ratio += is_object($m) ? floatval($m->ratio ?? 0) : floatval($m['ratio'] ?? 0);
+                    }
+                    if ($total_ratio <= 0) $total_ratio = 1.0;
+
+                    foreach ($mix_items as $m) {
+                        $m_name = is_object($m) ? ($m->item_name ?? '') : ($m['item_name'] ?? '');
+                        $m_ratio = is_object($m) ? floatval($m->ratio ?? 0) : floatval($m['ratio'] ?? 0);
+                        $m_ing_id = is_object($m) ? (int)($m->product_ingredient_id ?? 0) : (int)($m['product_ingredient_id'] ?? 0);
+
+                        if ($m_ratio <= 0) continue;
+                        $deduct_qty = floatval($v_item['quantity']) * ($m_ratio / $total_ratio);
+
+                        // Locate ingredient product ID
+                        $target_ing_id = $m_ing_id;
+                        if ($target_ing_id <= 0 && !empty($m_name)) {
+                            $find_stmt = $conn->prepare("SELECT id FROM products WHERE LOWER(TRIM(name)) = LOWER(?) OR LOWER(name) LIKE CONCAT('%', LOWER(?), '%') LIMIT 1");
+                            $trimmed_name = trim($m_name);
+                            $find_stmt->bind_param("ss", $trimmed_name, $trimmed_name);
+                            $find_stmt->execute();
+                            $find_res = $find_stmt->get_result();
+                            if ($f_row = $find_res->fetch_assoc()) {
+                                $target_ing_id = (int)$f_row['id'];
+                            }
+                            $find_stmt->close();
+                        }
+
+                        if ($target_ing_id > 0) {
+                            $ing_inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND track_inventory = 1 AND stock_quantity >= ?");
+                            $ing_inv_stmt->bind_param("did", $deduct_qty, $target_ing_id, $deduct_qty);
+                            $ing_inv_stmt->execute();
+                            // If rows affected == 0, check if track_inventory is 0
+                            if ($ing_inv_stmt->affected_rows === 0) {
+                                $chk_track = $conn->query("SELECT track_inventory, stock_quantity, name FROM products WHERE id = $target_ing_id");
+                                if ($chk_row = $chk_track->fetch_assoc()) {
+                                    if ((int)$chk_row['track_inventory'] === 1 && floatval($chk_row['stock_quantity']) < $deduct_qty) {
+                                        $ing_inv_stmt->close();
+                                        throw new Exception("INSUFFICIENT_STOCK: Ingredient '" . $chk_row['name'] . "' stock was just depleted by another order.");
+                                    }
+                                }
+                            }
+                            $ing_inv_stmt->close();
+                        }
+                    }
                 } else {
                     $inv_stmt->bind_param("did", $v_item['quantity'], $v_item['product_id'], $v_item['quantity']);
                     $inv_stmt->execute();
                     if ($inv_stmt->affected_rows === 0) {
-                        throw new Exception("INSUFFICIENT_STOCK: Item #" . $v_item['product_id'] . " stock was just depleted by another order.");
+                        // Check if item has track_inventory = 0
+                        $chk_p = $conn->query("SELECT track_inventory, stock_quantity, name FROM products WHERE id = " . $v_item['product_id']);
+                        if ($p_row = $chk_p->fetch_assoc()) {
+                            if ((int)$p_row['track_inventory'] === 1 && floatval($p_row['stock_quantity']) < $v_item['quantity']) {
+                                throw new Exception("INSUFFICIENT_STOCK: Item #" . $v_item['product_id'] . " stock was just depleted by another order.");
+                            }
+                        }
                     }
                 }
             }

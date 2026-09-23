@@ -24,8 +24,8 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 try {
     $conn->begin_transaction();
 
-    // update each order_item quantity
-    $update_stmt = $conn->prepare("UPDATE order_items SET quantity = ? WHERE id = ? AND order_id = ?");
+    // update each order_item quantity and mark weight as resolved
+    $update_stmt = $conn->prepare("UPDATE order_items SET quantity = ?, is_weight_pending = 0 WHERE id = ? AND order_id = ?");
     foreach ($items as $it) {
         $item_id = isset($it->order_item_id) ? intval($it->order_item_id) : 0;
         $actual_w = isset($it->actual_weight_kg) ? floatval($it->actual_weight_kg) : 0;
@@ -51,21 +51,53 @@ try {
     $tot_stmt->close();
 
     // fetch order delivery_fee and coupon_discount
-    $ord_stmt = $conn->prepare("SELECT delivery_fee, coupon_discount FROM orders WHERE id = ?");
+    $ord_stmt = $conn->prepare("SELECT delivery_fee, coupon_discount, is_combined_order, order_type FROM orders WHERE id = ?");
     $ord_stmt->bind_param("i", $order_id);
     $ord_stmt->execute();
     $ord_res = $ord_stmt->get_result();
     $ord_row = $ord_res->fetch_assoc();
     $delivery_fee = floatval($ord_row['delivery_fee'] ?? 0);
     $coupon_discount = floatval($ord_row['coupon_discount'] ?? 0);
+    $is_comb = intval($ord_row['is_combined_order'] ?? 0);
+    $ord_type = strtolower(trim($ord_row['order_type'] ?? 'delivery'));
     $ord_stmt->close();
+
+    if ($delivery_fee <= 0 && $ord_type !== 'pickup') {
+        try {
+            $dsRes = $conn->query("SELECT base_fare FROM delivery_settings LIMIT 1");
+            if ($dsRes && $dsRow = $dsRes->fetch_assoc()) {
+                $delivery_fee = floatval($dsRow['base_fare'] ?? 0);
+            }
+        } catch (Throwable $t) {}
+    }
 
     // calculate full new total = items_subtotal + delivery_fee - coupon_discount
     $new_total = max(0, round($items_subtotal + $delivery_fee - $coupon_discount));
 
-    // update orders total_amount
-    $upd_order = $conn->prepare("UPDATE orders SET total_amount = ?, updated_at = NOW() WHERE id = ?");
-    $upd_order->bind_param("di", $new_total, $order_id);
+    // update orders total_amount, delivery_fee and hybrid_stage if applicable
+    if ($is_comb === 1) {
+        $grind_stmt = $conn->prepare("SELECT COALESCE(SUM(oi.quantity * oi.price_at_purchase),0) as grind_total 
+                                     FROM order_items oi 
+                                     LEFT JOIN products p ON oi.product_id = p.id 
+                                     WHERE oi.order_id = ? AND (LOWER(TRIM(p.unit)) = 'trip' OR oi.is_grinding = 1 OR oi.is_cleaning = 1 OR p.is_grinding_service = 1)");
+        $grind_stmt->bind_param("i", $order_id);
+        $grind_stmt->execute();
+        $grind_res = $grind_stmt->get_result();
+        $grind_row = $grind_res->fetch_assoc();
+        $grind_subtotal = floatval($grind_row['grind_total'] ?? 0);
+        $grind_stmt->close();
+        
+        if ($grind_subtotal <= 0) {
+            $grind_subtotal = $items_subtotal;
+        }
+        $stage2_total = max(0, round($grind_subtotal + $delivery_fee - $coupon_discount));
+
+        $upd_order = $conn->prepare("UPDATE orders SET total_amount = ?, delivery_fee = ?, hybrid_stage = 'grinding', updated_at = NOW() WHERE id = ?");
+        $upd_order->bind_param("ddi", $stage2_total, $delivery_fee, $order_id);
+    } else {
+        $upd_order = $conn->prepare("UPDATE orders SET total_amount = ?, delivery_fee = ?, updated_at = NOW() WHERE id = ?");
+        $upd_order->bind_param("ddi", $new_total, $delivery_fee, $order_id);
+    }
     if (!$upd_order->execute()) {
         throw new Exception("Failed updating order total");
     }

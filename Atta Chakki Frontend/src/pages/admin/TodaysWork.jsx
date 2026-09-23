@@ -373,9 +373,9 @@ Suchi Chakki — Pure & Fresh Processing
           couponCode: billSource.coupon_code || '',
           couponDiscount: parseFloat(billSource.coupon_discount || 0),
           createdAt: billSource.created_at || billSource.createdAt || new Date().toISOString(),
-          items: (billSource.items || []).map(item => ({
+          items: (billSource.all_items || billSource.items || []).map(item => ({
             quantity: item.quantity || 1,
-            isWeightPending: false,
+            isWeightPending: item.is_weight_pending == 1 || item.is_weight_pending === '1',
             service: {
               name: item.name || item.service?.name || item.prod_name || 'Product',
               price: parseFloat(item.price_at_purchase || item.price || item.service?.price) || 0,
@@ -462,13 +462,13 @@ Suchi Chakki — Pure & Fresh Processing
       cancelledBy: null,
       couponCode: printSource.coupon_code || '',
       couponDiscount: parseFloat(printSource.coupon_discount || 0),
-      items: printSource.items ? printSource.items.map(item => ({
+      items: (printSource.all_items || printSource.items || []).map(item => ({
         quantity: item.quantity,
-        isWeightPending: false,
+        isWeightPending: item.is_weight_pending == 1 || item.is_weight_pending === '1',
         price_at_purchase: item.price_at_purchase || 0,
         name: item.name || item.service?.name || item.prod_name,
-        service: { name: item.name || item.service?.name || item.prod_name, price: item.price_at_purchase || 0 }
-      })) : []
+        service: { name: item.name || item.service?.name || item.prod_name, price: item.price_at_purchase || 0, unit: item.unit || item.service?.unit || 'kg' }
+      }))
     };
     setPrintOrder(transformedOrder);
   };

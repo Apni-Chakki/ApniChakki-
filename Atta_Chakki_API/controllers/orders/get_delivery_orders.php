@@ -121,7 +121,7 @@ if (!empty($order_ids)) {
 
     // 1. Batch fetch all order items with product name and unit in a single query
     $item_sql = "SELECT oi.id, oi.order_id, oi.quantity, oi.product_id, oi.price_at_purchase, 
-                        oi.original_price, oi.is_cleaning, oi.is_grinding,
+                        oi.original_price, oi.is_cleaning, oi.is_grinding, oi.is_weight_pending,
                         COALESCE(p.name, CONCAT('Item #', oi.product_id)) as name,
                         COALESCE(p.unit, 'kg') as unit
                  FROM order_items oi

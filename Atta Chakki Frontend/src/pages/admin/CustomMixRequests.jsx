@@ -45,7 +45,9 @@ export function CustomMixRequests() {
     getCalculatedPrice,
     handleRatioChange,
     handleAddNewIngredient,
-    handleConvertSubmit
+    handleAddInventoryIngredient,
+    handleConvertSubmit,
+    allProducts
   } = useCustomMixRequests();
 
   if (loading) {
@@ -124,6 +126,8 @@ export function CustomMixRequests() {
         setPaymentMethod={setPaymentMethod}
         handleConvertSubmit={handleConvertSubmit}
         isSubmittingOrder={isSubmittingOrder}
+        allProducts={allProducts}
+        handleAddInventoryIngredient={handleAddInventoryIngredient}
       />
     </div>
   );

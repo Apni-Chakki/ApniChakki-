@@ -224,22 +224,64 @@ try {
             $insert_rent_stmt->execute();
             $insert_rent_stmt->close();
         } else {
-            // regular stock update
-            $prod_check = $conn->prepare("SELECT unit, stock_quantity FROM products WHERE id = ?");
-            $prod_check->bind_param("i", $product_id);
-            $prod_check->execute();
-            $prod_res = $prod_check->get_result();
-            if ($prod_res && $prod_row = $prod_res->fetch_assoc()) {
-                $unit = strtolower(trim($prod_row['unit'] ?? ''));
-                if ($unit !== 'trip') {
-                    $new_stock = max(0, floatval($prod_row['stock_quantity']) - $quantity);
-                    $update_stock = $conn->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
-                    $update_stock->bind_param("di", $new_stock, $product_id);
-                    $update_stock->execute();
-                    $update_stock->close();
+            $selected_mix_items = $item['selected_mix_items'] ?? [];
+            if (!empty($selected_mix_items)) {
+                // Proportional deduction for each ingredient in the custom mix
+                $total_ratio = 0.0;
+                foreach ($selected_mix_items as $m) {
+                    $total_ratio += is_object($m) ? floatval($m->ratio ?? 0) : floatval($m['ratio'] ?? 0);
                 }
+                if ($total_ratio <= 0) $total_ratio = 1.0;
+
+                foreach ($selected_mix_items as $m) {
+                    $m_name = is_object($m) ? ($m->item_name ?? '') : ($m['item_name'] ?? '');
+                    $m_ratio = is_object($m) ? floatval($m->ratio ?? 0) : floatval($m['ratio'] ?? 0);
+                    $m_ing_id = is_object($m) ? (int)($m->product_ingredient_id ?? 0) : (int)($m['product_ingredient_id'] ?? 0);
+
+                    if ($m_ratio <= 0) continue;
+                    $deduct_qty = floatval($quantity) * ($m_ratio / $total_ratio);
+
+                    // Locate ingredient product ID in inventory
+                    $target_ing_id = $m_ing_id;
+                    if ($target_ing_id <= 0 && !empty($m_name)) {
+                        $find_stmt = $conn->prepare("SELECT id FROM products WHERE LOWER(TRIM(name)) = LOWER(?) OR LOWER(name) LIKE CONCAT('%', LOWER(?), '%') LIMIT 1");
+                        $trimmed_name = trim($m_name);
+                        $find_stmt->bind_param("ss", $trimmed_name, $trimmed_name);
+                        $find_stmt->execute();
+                        $find_res = $find_stmt->get_result();
+                        if ($f_row = $find_res->fetch_assoc()) {
+                            $target_ing_id = (int)$f_row['id'];
+                        }
+                        $find_stmt->close();
+                    }
+
+                    // Deduct if linked or found in inventory; non-inventory custom items pass freely without error
+                    if ($target_ing_id > 0) {
+                        $ing_inv_stmt = $conn->prepare("UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ? AND track_inventory = 1");
+                        $ing_inv_stmt->bind_param("di", $deduct_qty, $target_ing_id);
+                        $ing_inv_stmt->execute();
+                        $ing_inv_stmt->close();
+                    }
+                }
+            } else {
+                // regular product stock update
+                $prod_check = $conn->prepare("SELECT unit, stock_quantity, track_inventory FROM products WHERE id = ?");
+                $prod_check->bind_param("i", $product_id);
+                $prod_check->execute();
+                $prod_res = $prod_check->get_result();
+                if ($prod_res && $prod_row = $prod_res->fetch_assoc()) {
+                    $unit = strtolower(trim($prod_row['unit'] ?? ''));
+                    $track_inv = isset($prod_row['track_inventory']) ? (int)$prod_row['track_inventory'] : 1;
+                    if ($unit !== 'trip' && $track_inv === 1) {
+                        $new_stock = max(0, floatval($prod_row['stock_quantity']) - $quantity);
+                        $update_stock = $conn->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                        $update_stock->bind_param("di", $new_stock, $product_id);
+                        $update_stock->execute();
+                        $update_stock->close();
+                    }
+                }
+                $prod_check->close();
             }
-            $prod_check->close();
         }
     }
 

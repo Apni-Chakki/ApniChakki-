@@ -55,12 +55,14 @@ export function Checkout() {
   // Cart totals and properties
   const total = getTotalPrice();
   const originalTotal = cart.reduce((sum, item) => {
+    if (item.isWeightPending) return sum;
     const basePrice = item.service?.price || 0;
     return sum + (basePrice * item.quantity);
   }, 0);
   const productDiscount = originalTotal - total;
 
   const couponEligibleSubtotal = cart.reduce((sum, item) => {
+    if (item.isWeightPending) return sum;
     const hasProductDiscount = item.service?.discount_type && item.service.discount_type !== 'none' && item.service.discount_value > 0;
     if (hasProductDiscount) return sum;
     const isRental = item.service?.is_rental === 1 || item.service?.is_rental === '1' || item.service?.is_rental === true || item.service?.is_rental === 'true';

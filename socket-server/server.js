@@ -48,6 +48,27 @@ app.get('/', (req, res) => {
   });
 });
 
+// real-time admin notification trigger
+app.post('/notify-admin-event', (req, res) => {
+  try {
+    const { title, message, type, order_id } = req.body;
+    
+    io.emit('admin:notification', {
+      title: title || 'New Admin Notification',
+      message: message || '',
+      type: type || 'new_order',
+      order_id: order_id || null,
+      timestamp: Date.now()
+    });
+
+    console.log(`🔔 Broadcasted admin event: [${type}] ${title} - ${message}`);
+    res.json({ success: true, message: 'Notification emitted to sockets' });
+  } catch (err) {
+    console.error('❌ Error emitting admin event:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // order confirmation email
 app.post('/send-order-confirmation', async (req, res) => {
   try {
@@ -130,8 +151,8 @@ app.post('/send-order-confirmation', async (req, res) => {
     `;
 
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Suchi Chakki'}" <${process.env.EMAIL_FROM || 'apnichakki897@gmail.com'}>`,
-      replyTo: process.env.EMAIL_FROM || 'apnichakki897@gmail.com',
+      from: `"${process.env.EMAIL_FROM_NAME || 'Suchi Chakki'}" <${process.env.EMAIL_FROM || 'suchichakki9@gmail.com'}>`,
+      replyTo: process.env.EMAIL_FROM || 'suchichakki9@gmail.com',
       to: customerEmail,
       subject: `🌾 Order Confirmation - Order #${orderId}`,
       text: `Assalam-o-Alaikum ${customerName},\n\nThank you for your order! Your Order #${orderId} for Rs. ${totalPrice} has been placed successfully.\n\nDelivery Address: ${deliveryAddress || 'Store Pickup'}\n\nThank you for choosing ${sName}!\nHelpline: ${sPhone}`,
@@ -308,8 +329,8 @@ app.post('/send-password-reset', async (req, res) => {
     `;
 
     await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME || 'Suchi Chakki'}" <${process.env.EMAIL_FROM || 'apnichakki897@gmail.com'}>`,
-      replyTo: process.env.EMAIL_FROM || 'apnichakki897@gmail.com',
+      from: `"${process.env.EMAIL_FROM_NAME || 'Suchi Chakki'}" <${process.env.EMAIL_FROM || 'suchichakki9@gmail.com'}>`,
+      replyTo: process.env.EMAIL_FROM || 'suchichakki9@gmail.com',
       to: email,
       subject: 'Suchi Chakki - Password Reset OTP Code',
       text: `Assalam-o-Alaikum ${name || 'Customer'},\n\nYour OTP Verification Code for password reset is: ${otp}\n\nThis OTP is valid for 15 minutes.\n\nSuchi Chakki Team`,

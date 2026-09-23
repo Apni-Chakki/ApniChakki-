@@ -26,6 +26,9 @@ export function useCustomMixRequests() {
   const [newIngredientPrice, setNewIngredientPrice] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // All inventory products for dropdown
+  const [allProducts, setAllProducts] = useState([]);
+
   const fetchRequests = useCallback(async () => {
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
@@ -51,6 +54,23 @@ export function useCustomMixRequests() {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  // Fetch all inventory products for ingredient selector
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/get_all_products.php`);
+        const data = await res.json();
+        const list = data.data || data.products || [];
+        if (Array.isArray(list)) {
+          setAllProducts(list);
+        }
+      } catch (err) {
+        console.error('Error fetching inventory products:', err);
+      }
+    };
+    fetchAllProducts();
+  }, []);
 
   const updateStatus = async (id, status) => {
     try {
@@ -83,7 +103,8 @@ export function useCustomMixRequests() {
       ? request.selected_items.map(item => ({
           item_name: item.item_name,
           price_per_kg: parseFloat(item.price_per_kg) || 30,
-          ratio: parseFloat(item.ratio) || 0
+          ratio: parseFloat(item.ratio) || 0,
+          product_ingredient_id: item.product_ingredient_id || null
         }))
       : [];
 
@@ -127,13 +148,32 @@ export function useCustomMixRequests() {
       {
         item_name: newIngredientName.trim(),
         price_per_kg: price,
-        ratio: 0.5
+        ratio: 0.5,
+        product_ingredient_id: null  // non-inventory item
       }
     ]);
     setNewIngredientName('');
     setNewIngredientPrice('');
     setShowAddForm(false);
     toast.success(`"${newIngredientName.trim()}" added to mix proportions!`);
+  };
+
+  // Add an inventory product as ingredient (with product_ingredient_id for stock deduction)
+  const handleAddInventoryIngredient = (product) => {
+    if (ratios.some(r => r.item_name.toLowerCase() === product.name.toLowerCase())) {
+      toast.error('This ingredient already exists in the mix');
+      return;
+    }
+    setRatios(prev => [
+      ...prev,
+      {
+        item_name: product.name,
+        price_per_kg: parseFloat(product.price) || 0,
+        ratio: 0.5,
+        product_ingredient_id: product.id  // linked to inventory for stock deduction
+      }
+    ]);
+    toast.success(`"${product.name}" added from inventory!`);
   };
 
   const handleConvertSubmit = async () => {
@@ -165,11 +205,21 @@ export function useCustomMixRequests() {
             price: Math.round(calculatedPrice),
             is_cleaning: 0,
             is_grinding: 0,
+            is_custom_mix: 1,
             selected_customizations: ratios
               .filter(r => r.ratio > 0)
               .map(r => ({
                 option_name: `Mix: ${r.item_name} (${parseFloat(r.ratio).toFixed(2)}kg)`,
                 option_price: 0
+              })),
+            // Include mix items with product_ingredient_id for proportional stock deduction
+            selected_mix_items: ratios
+              .filter(r => r.ratio > 0)
+              .map(r => ({
+                item_name: r.item_name,
+                price_per_kg: r.price_per_kg,
+                ratio: r.ratio,
+                product_ingredient_id: r.product_ingredient_id || null
               }))
           }
         ]
@@ -249,7 +299,9 @@ export function useCustomMixRequests() {
     getCalculatedPrice,
     handleRatioChange,
     handleAddNewIngredient,
-    handleConvertSubmit
+    handleAddInventoryIngredient,
+    handleConvertSubmit,
+    allProducts
   };
 }
 

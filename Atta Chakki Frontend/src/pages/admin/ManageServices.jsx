@@ -28,6 +28,7 @@ export function ManageServices() {
     invalidateCache,
   } = useServicesByCategory();
   const [isSaving, setIsSaving] = useState(false);
+  const [allProducts, setAllProducts] = useState([]);
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -102,6 +103,23 @@ export function ManageServices() {
     }
   }, [categories, formData.category]);
 
+  // Fetch ALL products from all categories for ingredient selector dropdown
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/get_all_products.php`);
+        const data = await res.json();
+        const list = data.data || data.products || [];
+        if (Array.isArray(list)) {
+          setAllProducts(list);
+        }
+      } catch (err) {
+        console.error('Error fetching all products for ingredient selector:', err);
+      }
+    };
+    fetchAllProducts();
+  }, []);
+
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -175,7 +193,7 @@ export function ManageServices() {
       ...prev,
       customizations: [
         ...prev.customizations,
-        { option_name: '', option_price: '', sort_order: prev.customizations.length + 1 }
+        { linked_product_id: null, option_name: '', option_price: '', sort_order: prev.customizations.length + 1 }
       ]
     }));
   };
@@ -200,7 +218,7 @@ export function ManageServices() {
       ...prev,
       mix_items: [
         ...prev.mix_items,
-        { item_name: '', price_per_kg: '', default_ratio: '1', sort_order: prev.mix_items.length + 1 }
+        { product_ingredient_id: null, item_name: '', price_per_kg: '', default_ratio: '1', sort_order: prev.mix_items.length + 1 }
       ]
     }));
   };
@@ -242,6 +260,12 @@ export function ManageServices() {
       const selectedCat = categories.find(c => c.name === formData.category);
       const categoryId = selectedCat ? selectedCat.id : null;
 
+      const pendingW = parseFloat(weightInput);
+      let finalWeightOpts = (formData.weight_options || []).map(Number);
+      if (pendingW > 0 && !finalWeightOpts.includes(pendingW)) {
+        finalWeightOpts = [...finalWeightOpts, pendingW].sort((a, b) => a - b);
+      }
+
       const payload = {
         name: formData.name,
         price: parseFloat(formData.price),
@@ -258,9 +282,7 @@ export function ManageServices() {
         stock_quantity: formData.track_inventory ? (parseFloat(formData.stock_quantity) || 100) : 100,
         min_stock_level: formData.track_inventory ? (parseFloat(formData.min_stock_level) || 10) : 10,
         dual_unit: formData.dual_unit ? 1 : 0,
-        weight_options: formData.weight_options && formData.weight_options.length > 0
-          ? JSON.stringify(formData.weight_options)
-          : null,
+        weight_options: finalWeightOpts,
         is_custom_mix: formData.is_custom_mix ? 1 : 0,
         customizations: formData.has_customizations
           ? formData.customizations.filter(c => c.option_name.trim() !== '')
@@ -309,9 +331,15 @@ export function ManageServices() {
     let parsedWeights = [];
     if (service.weight_options) {
       try {
-        parsedWeights = typeof service.weight_options === 'string'
+        let w = typeof service.weight_options === 'string'
           ? JSON.parse(service.weight_options)
           : service.weight_options;
+        if (typeof w === 'string') {
+          w = JSON.parse(w);
+        }
+        if (Array.isArray(w)) {
+          parsedWeights = w.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+        }
       } catch (e) {
         parsedWeights = [];
       }
@@ -332,6 +360,7 @@ export function ManageServices() {
       customization_pricing_mode: service.customization_pricing_mode || 'average',
       customization_note: service.customization_note || '',
       customizations: service.customizations ? service.customizations.map(c => ({
+        linked_product_id: c.linked_product_id || null,
         option_name: c.option_name,
         option_price: c.option_price.toString(),
         sort_order: c.sort_order
@@ -343,6 +372,7 @@ export function ManageServices() {
       weight_options: Array.isArray(parsedWeights) ? parsedWeights : [],
       is_custom_mix: Boolean(service.is_custom_mix),
       mix_items: service.mix_items ? service.mix_items.map(m => ({
+        product_ingredient_id: m.product_ingredient_id || null,
         item_name: m.item_name,
         price_per_kg: m.price_per_kg.toString(),
         default_ratio: (m.default_ratio || 1).toString(),
@@ -382,6 +412,12 @@ export function ManageServices() {
       const selectedCat = categories.find(c => c.name === formData.category);
       const categoryId = selectedCat ? selectedCat.id : null;
 
+      const pendingW = parseFloat(weightInput);
+      let finalWeightOpts = (formData.weight_options || []).map(Number);
+      if (pendingW > 0 && !finalWeightOpts.includes(pendingW)) {
+        finalWeightOpts = [...finalWeightOpts, pendingW].sort((a, b) => a - b);
+      }
+
       const payload = {
         id: editingId,
         name: formData.name,
@@ -399,9 +435,7 @@ export function ManageServices() {
         stock_quantity: formData.track_inventory ? (parseFloat(formData.stock_quantity) || 100) : 100,
         min_stock_level: formData.track_inventory ? (parseFloat(formData.min_stock_level) || 10) : 10,
         dual_unit: formData.dual_unit ? 1 : 0,
-        weight_options: formData.weight_options && formData.weight_options.length > 0
-          ? JSON.stringify(formData.weight_options)
-          : null,
+        weight_options: finalWeightOpts,
         is_custom_mix: formData.is_custom_mix ? 1 : 0,
         customizations: formData.has_customizations
           ? formData.customizations.filter(c => c.option_name.trim() !== '')
@@ -599,6 +633,7 @@ export function ManageServices() {
           removeMixItem={removeMixItem}
           updateMixItem={updateMixItem}
           computeDiscountedPrice={computeDiscountedPrice}
+          allProducts={allProducts}
         />
       )}
 

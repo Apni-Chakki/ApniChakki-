@@ -31,6 +31,11 @@ export function PickupRequestsMobileCard({
 
       {/* TBD & Delivery Fee badges */}
       <div className="flex items-center gap-2 flex-wrap">
+        {(order.is_combined_order === 1 || order.is_combined_order === '1' || order.is_combined_order === true) && (
+          <div className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md">
+            📦 Deliver + 🌾 Pickup
+          </div>
+        )}
         <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
           <AlertCircle className="h-3 w-3" /> TBD – Weight Pending
         </div>
@@ -61,13 +66,18 @@ export function PickupRequestsMobileCard({
 
       {/* Items */}
       <div className="space-y-1 pt-2 border-t border-gray-100">
-        {order.items && order.items.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 text-sm">
-            <Package className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span className="font-medium text-gray-800 break-words">{item.name}</span>
-            <span className="text-xs text-gray-400 shrink-0">({item.quantity} {item.unit})</span>
-          </div>
-        ))}
+        {order.items && order.items.map((item, idx) => {
+          const isPending = item.is_weight_pending === 1 || item.is_weight_pending === '1' || item.unit === 'trip';
+          return (
+            <div key={idx} className="flex items-center gap-2 text-sm">
+              <Package className={`h-3.5 w-3.5 ${isPending ? 'text-amber-600' : 'text-primary'} shrink-0`} />
+              <span className="font-medium text-gray-800 break-words">{item.name}</span>
+              <span className="text-xs text-gray-500 shrink-0">
+                {isPending ? '(Pending Wt)' : `(${item.quantity} ${item.unit})`}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Actions */}

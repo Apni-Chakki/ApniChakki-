@@ -16,7 +16,7 @@ try {
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
     $source = isset($_GET['source']) ? trim($_GET['source']) : 'all';
 
-    $where  = ["TRIM(LOWER(o.status)) = 'completed'"];
+    $where  = ["TRIM(LOWER(o.status)) IN ('completed', 'delivered')"];
     $params = [];
     $types  = '';
 
@@ -28,9 +28,9 @@ try {
     }
 
     if ($source === 'manual') {
-        $where[] = "(o.source = 'manual' OR o.user_id = 1 OR o.user_id IS NULL)";
+        $where[] = "(LOWER(TRIM(o.source)) = 'manual' OR (o.source IS NULL AND (o.user_id = 1 OR o.user_id IS NULL)))";
     } elseif ($source === 'online') {
-        $where[] = "(o.source IS NULL OR (o.source <> 'manual' AND o.user_id IS NOT NULL AND o.user_id <> 1))";
+        $where[] = "(LOWER(TRIM(o.source)) IN ('online', 'app', 'website', 'store') OR (LOWER(TRIM(o.source)) <> 'manual' AND o.source IS NOT NULL) OR (o.source IS NULL AND o.user_id > 1))";
     }
 
     $whereSql = 'WHERE ' . implode(' AND ', $where);

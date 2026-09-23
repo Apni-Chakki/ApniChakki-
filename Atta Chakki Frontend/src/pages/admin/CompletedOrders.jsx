@@ -91,7 +91,7 @@ export function CompletedOrders() {
           <p className="col-span-full text-center text-muted-foreground py-10">No completed orders found.</p>
         ) : (
           filteredOrders.map((order) => {
-            const isManual = (order.source && order.source === 'manual') || (order.user_id === '1' || !order.user_id);
+            const isManual = order.source ? (order.source.toLowerCase() === 'manual') : (order.user_id === '1' || order.user_id === 1 || !order.user_id);
             return (
             <Card key={order.id} className="border-t-4 border-t-green-500 hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2 bg-green-50/50">

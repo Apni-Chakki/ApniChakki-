@@ -105,7 +105,7 @@ export const OrderProcessCard = ({ order, queueIndex, heavyThreshold = 40, forma
             <div className="flex flex-col items-start sm:items-end">
               <span className="text-base sm:text-xl font-bold text-slate-800 whitespace-nowrap">
                 Rs. {parseInt((parseFloat(order.total_amount) - parseFloat(order.coupon_discount || 0))).toLocaleString()}
-                {order.items.some(i => i.is_weight_pending) && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
+                {order.items.some(i => i.is_weight_pending == 1 || i.is_weight_pending === '1') && <span className="text-primary text-xs ml-1">(+ TBD)</span>}
               </span>
               {parseFloat(order.coupon_discount || 0) > 0 && (
                 <div className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1 whitespace-nowrap">
@@ -282,15 +282,21 @@ export const OrderProcessCard = ({ order, queueIndex, heavyThreshold = 40, forma
                       )}
                     </div>
                   )}
-                  {item.is_weight_pending && (
+                  {(item.is_weight_pending == 1 || item.is_weight_pending === '1') && (
                     <p className="text-[10px] font-black text-primary mt-1 flex items-center gap-1 uppercase tracking-wider">
                       <Timer className="h-3 w-3" /> Weight Pending
                     </p>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
-                  {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
+                  {(item.is_weight_pending == 1 || item.is_weight_pending === '1') ? (
+                    <Badge variant="secondary" className="font-bold bg-amber-100 text-amber-700 border border-amber-300">TBD</Badge>
+                  ) : (
+                    <>
+                      <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                      {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
+                    </>
+                  )}
                 </div>
               </li>
             ))}

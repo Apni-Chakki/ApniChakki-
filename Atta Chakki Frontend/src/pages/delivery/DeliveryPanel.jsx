@@ -26,11 +26,11 @@ export function DeliveryPanel() {
   const trackingIntervals = useRef({}); // { [orderId]: intervalId }
   const socketRef = useRef(null);
   const socketEnabled = import.meta.env.VITE_ENABLE_SOCKET === 'true' && !!SOCKET_URL;
-  
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   // Confirmation Dialog States
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -231,7 +231,7 @@ export function DeliveryPanel() {
           const statusOrder = { 'out-for-delivery': 1, 'delivery_assigned': 2, 'coming_for_pickup': 3, 'ready': 4, 'pickup_assigned': 5, 'processing': 6, 'pending': 7 };
           return (statusOrder[a.status] || 10) - (statusOrder[b.status] || 10);
         });
-        
+
         setOrders(sortedOrders);
       }
     } catch (error) {
@@ -248,7 +248,7 @@ export function DeliveryPanel() {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       // api pe location update
       await fetch(`${API_BASE_URL}/update_driver_location.php`, {
         method: 'POST',
@@ -364,7 +364,7 @@ export function DeliveryPanel() {
         }));
         return data;
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('Failed to generate tracking link:', e);
     }
     return null;
@@ -373,6 +373,77 @@ export function DeliveryPanel() {
   // Helper to generate clean WhatsApp message link (without tracking link)
   const generateWhatsAppLink = useCallback((order) => {
     const customerPhone = order.phone || order.customer_phone || '';
+    const isCombined = order.is_combined_order === 1 || order.is_combined_order === '1' || order.is_combined_order === true;
+    const hybridStage = order.hybrid_stage;
+
+    // Special WhatsApp message for combined orders in prep_and_collect stage
+    if (isCombined && hybridStage === 'prep_and_collect') {
+      const readyItems = (order.items || []).filter(
+        it => it.is_weight_pending !== 1 && it.is_weight_pending !== '1' && it.unit !== 'trip'
+      );
+      const pickupItems = (order.items || []).filter(
+        it => it.is_weight_pending === 1 || it.is_weight_pending === '1' || it.unit === 'trip'
+      );
+
+      let deliverText = "";
+      readyItems.forEach(it => {
+        deliverText += `*${it.name || it.service?.name}* × ${it.quantity} ${it.unit || 'unit'}\n`;
+      });
+      let collectText = "";
+      pickupItems.forEach(it => {
+        collectText += `*${it.name || it.service?.name}* (Raw grain to weigh at shop)\n`;
+      });
+
+      const subtotal = parseFloat(order.total_amount || order.total) || 0;
+      const advancePaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
+      const remainingDue = Math.max(0, subtotal - advancePaid);
+      const isPaid = (order.paymentStatus === 'paid' || order.payment_status === 'paid' || (subtotal > 0 && advancePaid >= subtotal));
+
+      const paymentMsg = isPaid
+        ? `💳 *Payment:* PAID Online (Rs. 0 to collect)`
+        : `💵 *Payment for Ready Goods:* Rs. ${remainingDue.toLocaleString()} (Cash on Delivery)`;
+
+      const msg =
+        `🌟 *Suchi Chakki — Delivery & Grain Pickup!* 🌟\n\n` +
+        `Assalam-o-Alaikum! Our rider *${user?.name || 'Suchi Chakki Driver'}* is on the way to your location with your purchased goods, and will also collect your grain for grinding. 🛵💨\n\n` +
+        `📦 *ITEMS BEING DELIVERED:*\n${deliverText || '   No items\n'}\n` +
+        `🌾 *GRAIN TO BE COLLECTED:*\n${collectText || '   Grain for grinding\n'}\n` +
+        `-----------------------------------\n` +
+        `${paymentMsg}\n` +
+        `🚚 *Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +
+        `⚠️ *Note:* Please keep your raw grain ready for our rider. After bringing it to the chakki, we will weigh it, update your bill, and grind it fresh for final delivery.\n\n` +
+        `Thank you for choosing Suchi Chakki! JazakAllah! 🙏`;
+
+      return getWhatsAppUrl(customerPhone, msg);
+    }
+
+    // Special WhatsApp message for combined orders in final_delivery stage
+    if (isCombined && hybridStage === 'final_delivery') {
+      let flourText = "";
+      (order.items || []).forEach(it => {
+        flourText += `   🌾 *${it.name || it.service?.name}* × ${it.quantity} ${it.unit || 'kg'}\n`;
+      });
+
+      const subtotal = parseFloat(order.total_amount || order.total) || 0;
+      const advancePaid = parseFloat(order.amount_paid || order.advancePayment) || 0;
+      const remainingDue = Math.max(0, subtotal - advancePaid);
+      const isPaid = (order.paymentStatus === 'paid' || order.payment_status === 'paid' || (subtotal > 0 && advancePaid >= subtotal));
+
+      const paymentMsg = isPaid
+        ? `💳 *Payment:* Fully Paid (Rs. 0 to collect)`
+        : `💵 *Final Amount to Collect:* Rs. ${remainingDue.toLocaleString()} (Cash on Delivery)`;
+
+      const msg =
+        `🌟 *Suchi Chakki — Fresh Flour On The Way!* 🌟\n\n` +
+        `Assalam-o-Alaikum! Your freshly ground flour is ready and our rider *${user?.name || 'Suchi Chakki Driver'}* is on the way to deliver it to you! 🛵💨\n\n` +
+        `🌾 *FRESH FLOUR ITEMS:*\n${flourText}\n` +
+        `-----------------------------------\n` +
+        `${paymentMsg}\n` +
+        `🚚 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +
+        `Thank you for trusting Suchi Chakki! JazakAllah! 🙏🌾`;
+
+      return getWhatsAppUrl(customerPhone, msg);
+    }
 
     let itemsText = "";
     if (order.items && order.items.length > 0) {
@@ -380,30 +451,30 @@ export function DeliveryPanel() {
         const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
         const unit = item.unit || item.service?.unit || 'unit';
         const name = item.name || item.service?.name || '';
-        
+
         let customText = "";
         if (item.customizations?.length > 0) {
-            customText = item.customizations.map(c => c.option_name).join(' + ');
+          customText = item.customizations.map(c => c.option_name).join(' + ');
         } else {
-            const services = [];
-            if (item.is_cleaning == 1) services.push('Cleaning');
-            if (item.is_grinding == 1) services.push('Grinding');
-            customText = services.join(' + ');
+          const services = [];
+          if (item.is_cleaning == 1) services.push('Cleaning');
+          if (item.is_grinding == 1) services.push('Grinding');
+          customText = services.join(' + ');
         }
-        
+
         itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
         if (customText) {
-            itemsText += ` (${customText})`;
+          itemsText += ` (${customText})`;
         }
         if (itemPrice > 0) {
-            itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+          itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
         }
         itemsText += `\n`;
-        
+
         // Rental details
         if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
-            itemsText += `   📅 _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
-            itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
+          itemsText += `   📅 _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+          itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
         }
       });
     }
@@ -416,11 +487,11 @@ export function DeliveryPanel() {
 
     let priceBreakdown = `💰 *Subtotal:* Rs. ${subtotal.toLocaleString()}\n`;
     if (discount > 0) {
-        priceBreakdown += `🏷️ *Discount:* -Rs. ${discount.toLocaleString()}\n`;
-        priceBreakdown += `💰 *Grand Total:* Rs. ${grandTotal.toLocaleString()}\n`;
+      priceBreakdown += `🏷️ *Discount:* -Rs. ${discount.toLocaleString()}\n`;
+      priceBreakdown += `💰 *Grand Total:* Rs. ${grandTotal.toLocaleString()}\n`;
     }
     if (advancePaid > 0) {
-        priceBreakdown += `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n`;
+      priceBreakdown += `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n`;
     }
     priceBreakdown += `❗ *Remaining Due:* Rs. ${remainingDue.toLocaleString()}`;
 
@@ -476,8 +547,8 @@ export function DeliveryPanel() {
       (isPickup
         ? `💰 *Amount:* TBD (Pickup Request)\n`
         : `💰 *Total:* Rs. ${grandTotal.toLocaleString()}\n` +
-          (advancePaid > 0 ? `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n` : '') +
-          `❗ *Remaining Due:* Rs. ${remaining.toLocaleString()}\n`) +
+        (advancePaid > 0 ? `✅ *Advance Paid:* Rs. ${advancePaid.toLocaleString()}\n` : '') +
+        `❗ *Remaining Due:* Rs. ${remaining.toLocaleString()}\n`) +
       `\n📍 *Delivery Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n` +
       `🧑‍💼 *Rider:* ${user?.name || 'Suchi Chakki Driver'}\n\n` +
       `Apna phone paas rakhein taake rider aap tak asaani se pahunch sake.\n\n` +
@@ -509,7 +580,7 @@ export function DeliveryPanel() {
       ]);
 
       const result = await statusRes.json();
-      
+
       if (result.success) {
         toast.success('🚚 Delivery started!');
 
@@ -535,7 +606,7 @@ export function DeliveryPanel() {
                 accuracy: position.coords.accuracy || 0,
                 status: 'started'
               })
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
 
@@ -595,7 +666,7 @@ export function DeliveryPanel() {
                 accuracy: position.coords.accuracy || 0,
                 status: 'completed'
               })
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
 
@@ -610,7 +681,7 @@ export function DeliveryPanel() {
         if (result.success) {
           const isPickupReq = ['pickup_assigned', 'coming_for_pickup'].includes(order.status) || order.total === 0;
           const displayTotal = isPickupReq ? 'TBD' : `Rs. ${order.total?.toLocaleString()}`;
-          
+
           toast.success(
             `🎉 Order #${order.id} Delivered!\nCustomer: ${order.customerName}\nAmount: ${displayTotal}`,
             { duration: 4000 }
@@ -623,29 +694,29 @@ export function DeliveryPanel() {
                 const itemPrice = parseFloat(item.price_at_purchase) || parseFloat(item.service?.price) || 0;
                 const unit = item.unit || item.service?.unit || 'unit';
                 const name = item.name || item.service?.name || '';
-                
+
                 let customText = "";
                 if (item.customizations?.length > 0) {
-                    customText = item.customizations.map(c => c.option_name).join(' + ');
+                  customText = item.customizations.map(c => c.option_name).join(' + ');
                 } else {
-                    const services = [];
-                    if (item.is_cleaning == 1) services.push('Cleaning');
-                    if (item.is_grinding == 1) services.push('Grinding');
-                    customText = services.join(' + ');
+                  const services = [];
+                  if (item.is_cleaning == 1) services.push('Cleaning');
+                  if (item.is_grinding == 1) services.push('Grinding');
+                  customText = services.join(' + ');
                 }
-                
+
                 itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
                 if (customText) {
-                    itemsText += ` (${customText})`;
+                  itemsText += ` (${customText})`;
                 }
                 if (itemPrice > 0) {
-                    itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
+                  itemsText += ` = Rs. ${(item.quantity * itemPrice).toLocaleString()}`;
                 }
                 itemsText += `\n`;
-                
+
                 if (item.is_rental === 1 || item.is_rental === '1' || item.isRental) {
-                    itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
-                    itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
+                  itemsText += `   🗓️ _Rental: ${item.rental_days} days (${item.rental_start_date} to ${item.rental_end_date})_\n`;
+                  itemsText += `   💰 _Rate: Rs. ${Number(item.rental_price_per_day).toLocaleString()}/day | Deposit: Rs. ${Number(item.security_deposit).toLocaleString()}_\n`;
                 }
               });
             }
@@ -742,36 +813,36 @@ export function DeliveryPanel() {
         body: JSON.stringify({ order_id: order.id, status: 'coming_for_pickup' })
       });
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success('Status updated to Coming for Pickup! GPS tracking started.');
-        
+
         // Start GPS tracking for live driver location
         startGpsTracking(order.id);
 
         const cPhone = result.customer_phone || order.phone;
         const cName = result.customer_name || order.customerName;
-        
+
         if (cPhone) {
           let itemsText = "";
           if (order.items && order.items.length > 0) {
             order.items.forEach(item => {
               const unit = item.unit || item.service?.unit || 'unit';
               const name = item.name || item.service?.name || '';
-              
+
               let customText = "";
               if (item.customizations?.length > 0) {
-                  customText = item.customizations.map(c => c.option_name).join(' + ');
+                customText = item.customizations.map(c => c.option_name).join(' + ');
               } else {
-                  const services = [];
-                  if (item.is_cleaning == 1) services.push('Cleaning');
-                  if (item.is_grinding == 1) services.push('Grinding');
-                  customText = services.join(' + ');
+                const services = [];
+                if (item.is_cleaning == 1) services.push('Cleaning');
+                if (item.is_grinding == 1) services.push('Grinding');
+                customText = services.join(' + ');
               }
-              
+
               itemsText += `🔸 *${name}* × ${item.quantity} ${unit}`;
               if (customText) {
-                  itemsText += ` (${customText})`;
+                itemsText += ` (${customText})`;
               }
               itemsText += `\n`;
             });
@@ -786,10 +857,10 @@ export function DeliveryPanel() {
             `📍 *Pickup Address:* ${order.deliveryAddress || order.shipping_address || 'Not provided'}\n\n` +
             `Please keep your items ready. If you have any specific instructions, feel free to let us know.\n\n` +
             `JazakAllah! 🙏🌾`;
-          
+
           setTimeout(() => sendWhatsAppMessage(cPhone, msg), 400);
         }
-        
+
         loadOrders();
       } else {
         toast.error(result.message || 'Failed to update status');
@@ -864,7 +935,7 @@ export function DeliveryPanel() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        }).catch(() => {});
+        }).catch(() => { });
       });
 
       // 2. Start tracking if not already active
@@ -908,11 +979,10 @@ export function DeliveryPanel() {
               onClick={handleToggleDriverStatus}
               disabled={isTogglingStatus}
               title={isDriverActive ? t("Click to go Inactive / Off Duty (Emergency)") : t("Click to go Active / On Duty")}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border cursor-pointer active:scale-95 shadow-sm ${
-                isDriverActive
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border cursor-pointer active:scale-95 shadow-sm ${isDriverActive
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/60 ring-2 ring-emerald-400/20'
                   : 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400/60 ring-2 ring-rose-400/20 animate-pulse'
-              }`}
+                }`}
             >
               {isTogglingStatus ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-white shrink-0" />
@@ -1014,7 +1084,7 @@ export function DeliveryPanel() {
       />
     </div>
   );
-} 
+}
 
 
 

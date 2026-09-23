@@ -72,13 +72,21 @@ export default function AdminLayout({ children }) {
             if (prev !== null && maxId > prev) {
               const newUnread = notifs.filter(n => (parseInt(n.id) || 0) > prev && !readAdminIds.includes(String(n.id)) && n.is_read == 0 && n.type !== 'driver_status');
               newUnread.forEach(n => {
-                toast.info(n.title, {
+                const icon = n.type === 'pickup_request' ? '🚚' : 
+                             n.type === 'custom_order' ? '🌾' : 
+                             n.type === 'contact_message' ? '💬' : '🛍️';
+                toast.success(`${icon} ${n.title}`, {
                   description: n.message,
+                  duration: 8000,
                   action: {
                     label: 'View',
                     onClick: () => handleNotificationNavigation(n)
                   }
                 });
+                try {
+                  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                  audio.play().catch(() => {});
+                } catch(e) {}
               });
             }
             return maxId;
@@ -96,7 +104,7 @@ export default function AdminLayout({ children }) {
       if (!document.hidden) {
         fetchNotifications();
       }
-    }, 12000); // Check every 12 seconds
+    }, 5000); // Check every 5 seconds
     
     const handleFocus = () => fetchNotifications();
     window.addEventListener('focus', handleFocus);
@@ -109,13 +117,36 @@ export default function AdminLayout({ children }) {
     };
   }, []);
 
-  // Real-time driver status notifications via Socket.io
+  // Real-time notifications via Socket.io
   useEffect(() => {
     if (import.meta.env.VITE_ENABLE_SOCKET === 'true' && SOCKET_URL) {
       const socket = io(SOCKET_URL, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         timeout: 8000,
+      });
+
+      socket.on('admin:notification', (data) => {
+        fetchNotifications();
+        if (data && data.title) {
+          const icon = data.type === 'pickup_request' ? '🚚' : 
+                       data.type === 'custom_order' ? '🌾' : 
+                       data.type === 'contact_message' ? '💬' : '🛍️';
+          
+          toast.success(`${icon} ${data.title}`, {
+            description: data.message,
+            duration: 9000,
+            action: {
+              label: 'View',
+              onClick: () => handleNotificationNavigation(data)
+            }
+          });
+
+          try {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+            audio.play().catch(() => {});
+          } catch(e) {}
+        }
       });
 
       socket.on('driver:status_changed', (data) => {

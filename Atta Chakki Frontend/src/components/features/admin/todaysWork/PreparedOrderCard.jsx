@@ -128,8 +128,14 @@ export function PreparedOrderCard({
                   <p className="font-bold text-slate-800 break-words">{item.name}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
-                  {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
+                  {(item.is_weight_pending == 1 || item.is_weight_pending === '1') ? (
+                    <Badge variant="secondary" className="font-bold bg-amber-100 text-amber-700 border border-amber-300">TBD</Badge>
+                  ) : (
+                    <>
+                      <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">x {item.quantity}</Badge>
+                      {item.unit && <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.unit}</span>}
+                    </>
+                  )}
                 </div>
               </li>
             ))}

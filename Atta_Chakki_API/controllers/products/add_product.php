@@ -87,7 +87,19 @@ try {
     $stock_quantity = isset($data['stock_quantity']) ? floatval($data['stock_quantity']) : 100.00;
     $min_stock_level = isset($data['min_stock_level']) ? floatval($data['min_stock_level']) : 10.00;
     $dual_unit = isset($data['dual_unit']) ? (int)$data['dual_unit'] : 0;
-    $weight_options = isset($data['weight_options']) ? json_encode($data['weight_options']) : '[]';
+    
+    $wOpt = $data['weight_options'] ?? null;
+    if (is_array($wOpt)) {
+        $weight_options = json_encode(array_values(array_map('floatval', $wOpt)));
+    } elseif (is_string($wOpt) && trim($wOpt) !== '') {
+        $decoded = json_decode($wOpt, true);
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true);
+        }
+        $weight_options = is_array($decoded) ? json_encode(array_values(array_map('floatval', $decoded))) : '[]';
+    } else {
+        $weight_options = '[]';
+    }
     $is_custom_mix = isset($data['is_custom_mix']) ? (int)$data['is_custom_mix'] : 0;
     $track_inventory = isset($data['track_inventory']) ? (int)$data['track_inventory'] : 1;
     $discount_type = isset($data['discount_type']) ? $data['discount_type'] : 'none';
@@ -121,12 +133,13 @@ try {
 
         // Save Customizations
         if (isset($data['customizations']) && is_array($data['customizations'])) {
-            $cust_stmt = $conn->prepare("INSERT INTO product_customizations (product_id, option_name, option_price, sort_order) VALUES (?, ?, ?, ?)");
+            $cust_stmt = $conn->prepare("INSERT INTO product_customizations (product_id, linked_product_id, option_name, option_price, sort_order) VALUES (?, ?, ?, ?, ?)");
             foreach ($data['customizations'] as $cust) {
+                $linked_product_id = !empty($cust['linked_product_id']) ? intval($cust['linked_product_id']) : null;
                 $opt_name = $cust['option_name'];
                 $opt_price = floatval($cust['option_price']);
                 $sort_order = intval($cust['sort_order'] ?? 0);
-                $cust_stmt->bind_param("isdi", $product_id, $opt_name, $opt_price, $sort_order);
+                $cust_stmt->bind_param("iisdi", $product_id, $linked_product_id, $opt_name, $opt_price, $sort_order);
                 $cust_stmt->execute();
             }
             $cust_stmt->close();
@@ -134,13 +147,14 @@ try {
 
         // Save Mix Items
         if (isset($data['mix_items']) && is_array($data['mix_items'])) {
-            $mix_stmt = $conn->prepare("INSERT INTO product_mix_items (product_id, item_name, price_per_kg, default_ratio, sort_order) VALUES (?, ?, ?, ?, ?)");
+            $mix_stmt = $conn->prepare("INSERT INTO product_mix_items (product_id, product_ingredient_id, item_name, price_per_kg, default_ratio, sort_order) VALUES (?, ?, ?, ?, ?, ?)");
             foreach ($data['mix_items'] as $mix) {
+                $product_ingredient_id = !empty($mix['product_ingredient_id']) ? intval($mix['product_ingredient_id']) : null;
                 $item_name = $mix['item_name'];
                 $price_per_kg = floatval($mix['price_per_kg']);
                 $default_ratio = floatval($mix['default_ratio'] ?? 1.00);
                 $sort_order = intval($mix['sort_order'] ?? 0);
-                $mix_stmt->bind_param("isddi", $product_id, $item_name, $price_per_kg, $default_ratio, $sort_order);
+                $mix_stmt->bind_param("iisddi", $product_id, $product_ingredient_id, $item_name, $price_per_kg, $default_ratio, $sort_order);
                 $mix_stmt->execute();
             }
             $mix_stmt->close();

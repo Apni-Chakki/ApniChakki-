@@ -32,6 +32,7 @@ export function ServiceForm({
   removeMixItem,
   updateMixItem,
   computeDiscountedPrice,
+  allProducts = [],
 }) {
   return (
     <div ref={formRef}>
@@ -162,7 +163,7 @@ export function ServiceForm({
                 Customer will see these as quick-select buttons along with +/- manual selector.
               </p>
               <div className="flex flex-wrap gap-2 mb-2">
-                {formData.weight_options.map((w, idx) => (
+                {(formData.weight_options || []).map((w, idx) => (
                   <span
                     key={idx}
                     className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300"
@@ -173,7 +174,7 @@ export function ServiceForm({
                       onClick={() =>
                         setFormData((prev) => ({
                           ...prev,
-                          weight_options: prev.weight_options.filter((_, i) => i !== idx),
+                          weight_options: (prev.weight_options || []).filter((_, i) => i !== idx),
                         }))
                       }
                       className="text-emerald-500 hover:text-red-500 ml-1 font-bold"
@@ -194,10 +195,11 @@ export function ServiceForm({
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       const val = parseFloat(weightInput);
-                      if (val > 0 && !formData.weight_options.includes(val)) {
+                      const currentOpts = (formData.weight_options || []).map(Number);
+                      if (val > 0 && !currentOpts.includes(val)) {
                         setFormData((prev) => ({
                           ...prev,
-                          weight_options: [...prev.weight_options, val].sort((a, b) => a - b),
+                          weight_options: [...(prev.weight_options || []).map(Number), val].sort((a, b) => a - b),
                         }));
                         setWeightInput('');
                       }
@@ -214,10 +216,11 @@ export function ServiceForm({
                   disabled={isSaving}
                   onClick={() => {
                     const val = parseFloat(weightInput);
-                    if (val > 0 && !formData.weight_options.includes(val)) {
+                    const currentOpts = (formData.weight_options || []).map(Number);
+                    if (val > 0 && !currentOpts.includes(val)) {
                       setFormData((prev) => ({
                         ...prev,
-                        weight_options: [...prev.weight_options, val].sort((a, b) => a - b),
+                        weight_options: [...(prev.weight_options || []).map(Number), val].sort((a, b) => a - b),
                       }));
                       setWeightInput('');
                     }
@@ -306,6 +309,7 @@ export function ServiceForm({
             addMixItem={addMixItem}
             removeMixItem={removeMixItem}
             updateMixItem={updateMixItem}
+            allProducts={allProducts}
           />
 
           {/* RENTAL TOGGLE & CONFIGURATION */}

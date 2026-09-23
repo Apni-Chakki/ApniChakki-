@@ -53,6 +53,7 @@ export function useTrackOrder() {
 
     try {
       const isPhone = term.startsWith('+') || term.startsWith('0') || term.length > 7;
+      const param = isPhone ? `phone=${encodeURIComponent(term)}` : `order_id=${encodeURIComponent(term)}`;
       const token = localStorage.getItem('token');
       const headers = { 'Content-Type': 'application/json' };
       if (token) {
@@ -80,10 +81,13 @@ export function useTrackOrder() {
           cancellationReason: o.cancellation_reason,
           cancelledBy: o.cancelled_by,
           cancelledAt: o.cancelled_at,
+          is_combined_order: o.is_combined_order === 1 || o.is_combined_order === '1' || o.is_combined_order === true,
+          hybrid_stage: o.hybrid_stage,
           items: (o.items || []).map(item => ({
             name: item.name,
             quantity: item.quantity,
             price: item.price_at_purchase,
+            unit: item.unit || 'unit',
           })),
         }));
         setOrders(mappedOrders);

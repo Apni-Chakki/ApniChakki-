@@ -75,6 +75,15 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         // 2. Determine order total
         $passed_total = isset($data->total) ? floatval($data->total) : 0;
         $delivery_fee_input = isset($data->delivery_fee) ? floatval($data->delivery_fee) : 0;
+        
+        if ($delivery_fee_input <= 0 && strtolower(trim($order_type)) !== 'pickup') {
+            try {
+                $dsRes = $conn->query("SELECT base_fare FROM delivery_settings LIMIT 1");
+                if ($dsRes && $dsRow = $dsRes->fetch_assoc()) {
+                    $delivery_fee_input = floatval($dsRow['base_fare'] ?? 0);
+                }
+            } catch (Throwable $t) {}
+        }
 
         if ($passed_total > 0 && !$has_trip_item) {
             $total_amount = round($passed_total);
@@ -89,21 +98,46 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
         $coupon_id = $coupon_info['coupon_id'];
         $coupon_discount = $coupon_info['coupon_discount'];
 
-        // Adjust pickup / kg flags
-        if ($has_trip_item || $has_pending_weight_item) {
+        // Determine item categories: ready goods vs pending pickup items
+        $has_ready_items = false;
+        $has_pickup_items = false;
+        foreach ($valid_items as $v_it) {
+            $u = strtolower(trim($v_it['unit'] ?? ''));
+            $wp = !empty($v_it['is_weight_pending']);
+            if ($u === 'trip' || $wp) {
+                $has_pickup_items = true;
+            } else {
+                $has_ready_items = true;
+            }
+        }
+
+        $is_combined_order = ($has_ready_items && $has_pickup_items) ? 1 : 0;
+        $hybrid_stage = $is_combined_order ? 'prep_and_collect' : null;
+
+        // Adjust pickup / kg flags & initial status
+        if ($is_combined_order) {
             $is_pickup_request = true;
             $is_kg_order = false;
+            // Hybrid orders start in 'pending' so shop prepares ready items first, then driver dispatches for Delivery + Pickup
+            $status = 'pending';
+        } elseif ($has_trip_item || $has_pending_weight_item) {
+            $is_pickup_request = true;
+            $is_kg_order = false;
+            $status = 'pickup_pending';
         } elseif ($is_kg_order || !$is_pickup_request) {
             $is_pickup_request = false;
             $is_kg_order = true;
+            $status = 'pending';
+        } else {
+            $status = 'pending';
         }
 
         // 4. Determine final payment status
-        if ($total_amount <= 0 && $has_pending_weight_item) {
+        if ($total_amount <= 0 && $has_pending_weight_item && !$is_combined_order) {
             $final_payment_status = 'pending';
             $amount_paid_input = 0;
         } else {
-            if ($amount_paid_input >= $total_amount) {
+            if ($amount_paid_input >= $total_amount && $total_amount > 0) {
                 $final_payment_status = $has_pending_weight_item ? 'partial' : 'paid';
                 $amount_paid_input = $total_amount;
             } elseif ($amount_paid_input > 0 && $amount_paid_input < $total_amount) {
@@ -114,13 +148,11 @@ if ($user_id && isset($data->cart_items) && !empty($data->cart_items)) {
             }
         }
 
-        $status = $is_pickup_request ? 'pickup_pending' : 'pending';
-
-        $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, delivery_fee, amount_paid, coupon_code, coupon_discount, status, order_type, shipping_address, latitude, longitude, payment_method, payment_status, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', NOW())");
+        $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, delivery_fee, amount_paid, coupon_code, coupon_discount, status, order_type, shipping_address, latitude, longitude, payment_method, payment_status, source, is_combined_order, hybrid_stage, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', ?, ?, NOW())");
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $conn->error, 500);
         }
-        $stmt->bind_param("idddsdsssddss", $user_id, $total_amount, $delivery_fee_input, $amount_paid_input, $coupon_code, $coupon_discount, $status, $order_type, $address, $latitude, $longitude, $db_payment_method, $final_payment_status);
+        $stmt->bind_param("idddsdsssddssis", $user_id, $total_amount, $delivery_fee_input, $amount_paid_input, $coupon_code, $coupon_discount, $status, $order_type, $address, $latitude, $longitude, $db_payment_method, $final_payment_status, $is_combined_order, $hybrid_stage);
         
         if (!$stmt->execute()) {
             throw new Exception("Failed to create order: " . $stmt->error, 500);

@@ -1,10 +1,118 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../../../common/button';
 import { Input } from '../../../common/input';
 import { Label } from '../../../common/label';
 import { Checkbox } from '../../../common/checkbox';
-import { Plus, Trash2, GripVertical, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, Search, Package, ChevronDown } from 'lucide-react';
 import { Textarea } from '../../../common/textarea';
+
+/**
+ * Searchable dropdown to select an existing inventory product.
+ * When a product is selected, it auto-fills the name and price.
+ */
+function InventoryProductSelector({ allProducts, selectedProductId, currentName, onSelect, disabled, placeholder, colorScheme = 'purple' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = allProducts.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Find selected product name for display
+  const selectedProduct = selectedProductId
+    ? allProducts.find(p => String(p.id) === String(selectedProductId))
+    : null;
+  const displayName = selectedProduct ? selectedProduct.name : currentName;
+
+  const colors = colorScheme === 'purple'
+    ? { border: 'border-purple-200', ring: 'ring-purple-400', bg: 'bg-purple-50', hoverBg: 'hover:bg-purple-50', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-800' }
+    : { border: 'border-blue-200', ring: 'ring-blue-400', bg: 'bg-blue-50', hoverBg: 'hover:bg-blue-50', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => { if (!disabled) setIsOpen(!isOpen); }}
+        disabled={disabled}
+        className={`flex items-center justify-between w-full h-10 rounded-md border ${colors.border} bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 ${colors.ring} focus:ring-offset-1 disabled:opacity-50 ${!displayName ? 'text-muted-foreground' : ''}`}
+      >
+        <span className="truncate">
+          {displayName || placeholder || 'Select from inventory...'}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 ml-1 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full min-w-[240px] max-h-64 bg-white rounded-lg border shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1">
+          {/* Search input */}
+          <div className="flex items-center gap-2 p-2 border-b bg-gray-50/80">
+            <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search inventory products..."
+              className="w-full text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
+            />
+          </div>
+
+          {/* Product list */}
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-center">
+                <Package className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">No inventory products found</p>
+                <p className="text-[10px] text-amber-600 font-medium mt-1">
+                  ⚠️ Pehle yeh product inventory mein add karein
+                </p>
+              </div>
+            ) : (
+              filtered.map(product => {
+                const isSelected = String(product.id) === String(selectedProductId);
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(product);
+                      setIsOpen(false);
+                      setSearch('');
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${isSelected ? colors.bg + ' font-medium' : colors.hoverBg}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="block truncate">{product.name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Rs. {product.price}/{product.unit || 'kg'} • Stock: {product.stock_quantity ?? 'N/A'}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${colors.badge}`}>✓</span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CustomizationsSection({
   formData,
@@ -16,6 +124,7 @@ export function CustomizationsSection({
   addMixItem,
   removeMixItem,
   updateMixItem,
+  allProducts = [],
 }) {
   return (
     <div className="flex flex-col gap-4 pt-2">
@@ -29,7 +138,7 @@ export function CustomizationsSection({
               has_customizations: checked,
               is_custom_mix: checked ? false : prev.is_custom_mix,
               customizations: checked && prev.customizations.length === 0
-                ? [{ option_name: '', option_price: '', sort_order: 1 }]
+                ? [{ linked_product_id: null, option_name: '', option_price: '', sort_order: 1 }]
                 : prev.customizations
             }));
           }}
@@ -50,7 +159,7 @@ export function CustomizationsSection({
               is_custom_mix: checked,
               has_customizations: checked ? false : prev.has_customizations,
               mix_items: checked && prev.mix_items.length === 0
-                ? [{ item_name: '', price_per_kg: '', default_ratio: '1', sort_order: 1 }]
+                ? [{ product_ingredient_id: null, item_name: '', price_per_kg: '', default_ratio: '1', sort_order: 1 }]
                 : prev.mix_items
             }));
           }}
@@ -69,6 +178,14 @@ export function CustomizationsSection({
               <Plus className="h-3 w-3 mr-1" /> Add Option
             </Button>
           </div>
+
+          {/* Inventory link info — only for Average Rate mode */}
+          {allProducts.length > 0 && formData.customization_pricing_mode === 'average' && (
+            <div className="p-2 bg-blue-50/60 rounded-md border border-blue-200 text-[11px] text-blue-700">
+              <Package className="h-3.5 w-3.5 inline-block mr-1 -mt-0.5" />
+              Select an inventory product to link each option. Price will auto-fill and stock will be tracked.
+            </div>
+          )}
 
           {/* Customer Warning / Pre-Info Note */}
           <div className="p-3.5 bg-amber-50/90 rounded-lg border border-amber-300 space-y-2 shadow-xs">
@@ -135,14 +252,32 @@ export function CustomizationsSection({
             <div key={idx} className="flex items-end gap-2 p-3 bg-background rounded-lg border shadow-sm">
               <GripVertical className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0 mb-2.5" />
               <div className="flex-1 min-w-0">
-                <Label className="text-[10px] text-muted-foreground mb-1 block">Option Name</Label>
-                <Input
-                  placeholder="e.g. Fine Flour, Coarse Flour"
-                  value={cust.option_name}
-                  onChange={(e) => updateCustomization(idx, 'option_name', e.target.value)}
-                  disabled={isSaving}
-                  className="text-sm"
-                />
+                <Label className="text-[10px] text-muted-foreground mb-1 block">
+                  Option Name {allProducts.length > 0 && formData.customization_pricing_mode === 'average' ? '(Select from inventory)' : ''}
+                </Label>
+                {allProducts.length > 0 && formData.customization_pricing_mode === 'average' ? (
+                  <InventoryProductSelector
+                    allProducts={allProducts}
+                    selectedProductId={cust.linked_product_id}
+                    currentName={cust.option_name}
+                    disabled={isSaving}
+                    placeholder="Select inventory product..."
+                    colorScheme="blue"
+                    onSelect={(product) => {
+                      updateCustomization(idx, 'option_name', product.name);
+                      updateCustomization(idx, 'option_price', String(product.price || ''));
+                      updateCustomization(idx, 'linked_product_id', product.id);
+                    }}
+                  />
+                ) : (
+                  <Input
+                    placeholder="e.g. Fine Flour, Coarse Flour"
+                    value={cust.option_name}
+                    onChange={(e) => updateCustomization(idx, 'option_name', e.target.value)}
+                    disabled={isSaving}
+                    className="text-sm"
+                  />
+                )}
               </div>
               <div className="w-28 sm:w-32 shrink-0">
                 <Label className="text-[10px] text-muted-foreground mb-1 block">
@@ -201,18 +336,49 @@ export function CustomizationsSection({
             </Button>
           </div>
 
+          {/* Inventory-only enforcement notice */}
+          {allProducts.length > 0 ? (
+            <div className="p-2 bg-purple-100/60 rounded-md border border-purple-200 text-[11px] text-purple-700">
+              <Package className="h-3.5 w-3.5 inline-block mr-1 -mt-0.5" />
+              <strong>Sirf inventory products:</strong> Mix ingredients inventory se select karen. Naya item add karne ke liye pehle inventory mein product add karein.
+            </div>
+          ) : (
+            <div className="p-2 bg-amber-50 rounded-md border border-amber-300 text-[11px] text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5 inline-block mr-1 -mt-0.5" />
+              <strong>⚠️ No inventory products loaded.</strong> Pehle inventory mein products add karein, phir yahan ingredients select hon ge.
+            </div>
+          )}
+
           {formData.mix_items.map((item, idx) => (
             <div key={idx} className="flex items-end gap-2 p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
               <GripVertical className="hidden sm:block h-4 w-4 text-purple-300 shrink-0 mb-2.5" />
               <div className="flex-1 min-w-0">
-                <Label className="text-[10px] text-purple-600 mb-1 block">Ingredient Name</Label>
-                <Input
-                  placeholder="e.g. Wheat, Chana, Bajra"
-                  value={item.item_name}
-                  onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
-                  disabled={isSaving}
-                  className="text-sm border-purple-100 focus-visible:ring-purple-400"
-                />
+                <Label className="text-[10px] text-purple-600 mb-1 block">
+                  Ingredient {allProducts.length > 0 ? '(Select from inventory)' : 'Name'}
+                </Label>
+                {allProducts.length > 0 ? (
+                  <InventoryProductSelector
+                    allProducts={allProducts}
+                    selectedProductId={item.product_ingredient_id}
+                    currentName={item.item_name}
+                    disabled={isSaving}
+                    placeholder="Select ingredient from inventory..."
+                    colorScheme="purple"
+                    onSelect={(product) => {
+                      updateMixItem(idx, 'item_name', product.name);
+                      updateMixItem(idx, 'price_per_kg', String(product.price || ''));
+                      updateMixItem(idx, 'product_ingredient_id', product.id);
+                    }}
+                  />
+                ) : (
+                  <Input
+                    placeholder="e.g. Wheat, Chana, Bajra"
+                    value={item.item_name}
+                    onChange={(e) => updateMixItem(idx, 'item_name', e.target.value)}
+                    disabled={isSaving}
+                    className="text-sm border-purple-100 focus-visible:ring-purple-400"
+                  />
+                )}
               </div>
               <div className="w-24 sm:w-28 shrink-0">
                 <Label className="text-[10px] text-purple-600 mb-1 block">Price / kg</Label>
@@ -250,7 +416,7 @@ export function CustomizationsSection({
           ))}
           
           <p className="text-[10px] text-purple-600 italic">
-            Note: Price is automatically calculated on the frontend based on user's selected proportions.
+            Note: Price is automatically calculated on the frontend based on user's selected proportions. Stock will be deducted proportionally from each ingredient's inventory.
           </p>
         </div>
       )}

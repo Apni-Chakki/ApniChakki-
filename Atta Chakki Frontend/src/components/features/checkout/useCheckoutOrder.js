@@ -151,6 +151,7 @@ export function useCheckoutOrder({
         selected_customizations: item.service.is_custom_mix
           ? (item.service.selected_mix_items || []).map(m => ({ option_name: `Mix: ${m.item_name} (${m.ratio})`, option_price: 0 }))
           : (item.service.selected_customizations || []),
+        selected_mix_items: item.service.is_custom_mix ? (item.service.selected_mix_items || []) : [],
         is_custom_mix: item.service.is_custom_mix ? 1 : 0,
         is_rental: isRental ? 1 : 0,
         rental_start_date: isRental ? item.service.rental_start_date : null,

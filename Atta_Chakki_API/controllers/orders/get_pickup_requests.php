@@ -14,16 +14,17 @@ try {
     $offset = ($page - 1) * $limit;
 
     // Whitelist orders in SQL so pagination is consistent with the count
-    // Only return orders that are in active pickup phase OR have pending weight to be determined
+    // Return orders in active pickup phase OR hybrid orders where grain needs to be collected/weighed
     $baseWhere = "TRIM(LOWER(o.status)) IN ('pickup_pending', 'pickup_assigned', 'coming_for_pickup', 'arrived_at_shop')
+                  OR (o.is_combined_order = 1 AND o.hybrid_stage IN ('prep_and_collect', 'grain_received') AND TRIM(LOWER(o.status)) NOT IN ('completed', 'cancelled'))
                   OR (
                      EXISTS (
                         SELECT 1 FROM order_items oi2
                         JOIN products p2 ON p2.id = oi2.product_id
                         WHERE oi2.order_id = o.id
-                          AND LOWER(TRIM(p2.unit)) = 'trip'
+                          AND (LOWER(TRIM(p2.unit)) = 'trip' OR oi2.is_weight_pending = 1)
                      )
-                     AND (o.total_weight_kg IS NULL OR o.total_weight_kg = 0 OR o.total_amount = 0)
+                     AND (o.total_weight_kg IS NULL OR o.total_weight_kg = 0)
                      AND TRIM(LOWER(o.status)) NOT IN ('completed', 'cancelled')
                   )";
 
@@ -44,6 +45,8 @@ try {
         $row['items'] = [];
         $row['total'] = $row['total_amount'];
         $row['delivery_fee'] = (float)($row['delivery_fee'] ?? 0);
+        $row['is_combined_order'] = (int)($row['is_combined_order'] ?? 0);
+        $row['hybrid_stage'] = $row['hybrid_stage'] ?? null;
         $ordersMap[$id] = $row;
         $orderIds[] = $id;
         if ((int)$row['user_id'] > 0) { $userIds[(int)$row['user_id']] = true; }
@@ -54,6 +57,7 @@ try {
     if (!empty($orderIds)) {
         $idList = implode(',', array_map('intval', $orderIds));
         $itemSql = "SELECT oi.order_id, oi.id, oi.quantity, oi.product_id, oi.price_at_purchase,
+                           oi.is_weight_pending,
                            p.name AS prod_name, p.unit AS prod_unit, p.price AS prod_price
                     FROM order_items oi
                     LEFT JOIN products p ON p.id = oi.product_id
@@ -61,7 +65,6 @@ try {
         $itemRes = $conn->query($itemSql);
         while ($i = $itemRes->fetch_assoc()) {
             $oid = (int)$i['order_id'];
-            $rawUnit = strtolower(trim($i['prod_unit'] ?? ''));
             $item = [
                 'id'                => (int)$i['id'],
                 'quantity'          => $i['quantity'],
@@ -69,7 +72,8 @@ try {
                 'price_at_purchase' => $i['price_at_purchase'],
                 'name'              => $i['prod_name'] ?? ('Item #' . (int)$i['product_id']),
                 'price_per_kg'      => (float)($i['prod_price'] ?? 0),
-                'unit'              => ($rawUnit === 'trip' && (float)$i['price_at_purchase'] > 0) ? 'kg' : ($i['prod_unit'] ?? 'kg'),
+                'unit'              => $i['prod_unit'] ?? 'kg',
+                'is_weight_pending' => (int)($i['is_weight_pending'] ?? 0),
             ];
             if (isset($ordersMap[$oid])) {
                 $ordersMap[$oid]['items'][] = $item;

@@ -55,7 +55,7 @@ try {
     if (!empty($product_ids)) {
         $in_clause = implode(',', array_map('intval', $product_ids));
         
-        $cust_res = $conn->query("SELECT product_id, id, option_name, option_price, sort_order FROM product_customizations WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
+        $cust_res = $conn->query("SELECT product_id, id, linked_product_id, option_name, option_price, sort_order FROM product_customizations WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
         if ($cust_res) {
             while ($c_row = $cust_res->fetch_assoc()) {
                 $pid = (int)$c_row['product_id'];
@@ -64,6 +64,7 @@ try {
                 }
                 $customizations_map[$pid][] = [
                     'id' => (int)$c_row['id'],
+                    'linked_product_id' => !empty($c_row['linked_product_id']) ? (int)$c_row['linked_product_id'] : null,
                     'option_name' => $c_row['option_name'],
                     'option_price' => floatval($c_row['option_price']),
                     'sort_order' => (int)$c_row['sort_order']
@@ -72,7 +73,7 @@ try {
         }
 
         // BULK BATCH QUERY 2: Mix items
-        $mix_res = $conn->query("SELECT product_id, id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
+        $mix_res = $conn->query("SELECT product_id, id, product_ingredient_id, item_name, price_per_kg, default_ratio, sort_order FROM product_mix_items WHERE product_id IN ($in_clause) ORDER BY sort_order ASC");
         if ($mix_res) {
             while ($m_row = $mix_res->fetch_assoc()) {
                 $pid = (int)$m_row['product_id'];
@@ -81,6 +82,7 @@ try {
                 }
                 $mix_items_map[$pid][] = [
                     'id' => (int)$m_row['id'],
+                    'product_ingredient_id' => !empty($m_row['product_ingredient_id']) ? (int)$m_row['product_ingredient_id'] : null,
                     'item_name' => $m_row['item_name'],
                     'price_per_kg' => floatval($m_row['price_per_kg']),
                     'default_ratio' => floatval($m_row['default_ratio']),
@@ -95,9 +97,13 @@ try {
         $product_id = (int)$row['id'];
         $weight_options_raw = $row['weight_options'] ?? '[]';
         $weight_options = json_decode($weight_options_raw, true);
+        if (is_string($weight_options)) {
+            $weight_options = json_decode($weight_options, true);
+        }
         if (!is_array($weight_options)) {
             $weight_options = [];
         }
+        $weight_options = array_values(array_map('floatval', $weight_options));
 
         $row['price'] = floatval($row['price']);
         $row['stock'] = intval($row['stock_quantity'] ?? 0);

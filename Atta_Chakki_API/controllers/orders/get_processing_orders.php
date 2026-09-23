@@ -61,7 +61,8 @@ try {
 
         // 2. Batch fetch ALL order_items across all orders
         $itemSql = "SELECT oi.id, oi.order_id, oi.quantity, oi.product_id, oi.price_at_purchase, 
-                           oi.is_cleaning, oi.is_grinding, p.name as prod_name, p.unit as prod_unit
+                           oi.is_cleaning, oi.is_grinding, oi.is_weight_pending, 
+                           p.name as prod_name, p.unit as prod_unit, p.is_grinding_service
                     FROM order_items oi
                     LEFT JOIN products p ON oi.product_id = p.id
                     WHERE oi.order_id IN ($idList)";
@@ -78,13 +79,25 @@ try {
 
             $rawUnit = strtolower(trim($i['prod_unit'] ?? ''));
             $i['name'] = $i['prod_name'] ?? "Item #{$i['product_id']}";
+            $i['is_weight_pending'] = intval($i['is_weight_pending'] ?? 0);
+            $i['is_grinding_service'] = intval($i['is_grinding_service'] ?? 0);
+            $i['is_grinding'] = intval($i['is_grinding'] ?? 0);
+            $i['is_cleaning'] = intval($i['is_cleaning'] ?? 0);
             
-            if ($rawUnit === 'trip' && floatval($i['price_at_purchase']) > 0) {
+            $isPending = $i['is_weight_pending'];
+            if ($rawUnit === 'trip' && floatval($i['price_at_purchase']) > 0 && !$isPending) {
                 $i['unit'] = 'kg';
             } else {
                 $i['unit'] = $i['prod_unit'] ?? 'kg';
             }
-            if ($rawUnit === 'trip') {
+
+            // Identify grinding / pickup items vs initial delivery items
+            $i['is_grinding_item'] = ($rawUnit === 'trip' || 
+                                     $i['is_grinding_service'] === 1 || 
+                                     $i['is_grinding'] === 1 || 
+                                     $i['is_cleaning'] === 1);
+
+            if ($rawUnit === 'trip' || $i['is_grinding_item']) {
                 $hasTripMap[$orderId] = true;
             }
             $i['customizations'] = [];
@@ -187,7 +200,79 @@ try {
 
         // Assign items & filter out initial pickup requests
         foreach ($ordersMap as $id => &$oRef) {
-            $oRef['items'] = $itemsByOrder[$id] ?? [];
+            $allItems = $itemsByOrder[$id] ?? [];
+            
+            $oFee = floatval($oRef['delivery_fee'] ?? 0);
+            if ($oFee <= 0 && strtolower(trim($oRef['order_type'] ?? 'delivery')) !== 'pickup') {
+                try {
+                    $dsRes = $conn->query("SELECT base_fare FROM delivery_settings LIMIT 1");
+                    if ($dsRes && $dsRow = $dsRes->fetch_assoc()) {
+                        $oFee = floatval($dsRow['base_fare'] ?? 0);
+                    }
+                } catch (Throwable $t) {}
+            }
+            $oRef['delivery_fee'] = $oFee;
+
+            $isCombined = intval($oRef['is_combined_order'] ?? 0);
+            $stage = strtolower(trim($oRef['hybrid_stage'] ?? ''));
+            
+            if ($isCombined === 1 && $stage === 'grinding') {
+                // Filter items to show & bill ONLY grinding/pickup items for stage 2 (ready goods were delivered in stage 1)
+                $grindingItems = array_values(array_filter($allItems, function($item) {
+                    return !empty($item['is_grinding_item']) || !empty($item['is_weight_pending']) || strtolower(trim($item['unit'] ?? '')) === 'trip';
+                }));
+                
+                $stage1Items = array_values(array_filter($allItems, function($item) {
+                    return empty($item['is_grinding_item']) && empty($item['is_weight_pending']) && strtolower(trim($item['unit'] ?? '')) !== 'trip';
+                }));
+                
+                if (!empty($grindingItems)) {
+                    $oRef['items'] = $grindingItems;
+                    $oRef['all_items'] = $grindingItems;
+                    
+                    // Recalculate total_amount for grinding items only + delivery fee
+                    $grindingSubtotal = 0;
+                    foreach ($grindingItems as $gIt) {
+                        $grindingSubtotal += (floatval($gIt['quantity']) * floatval($gIt['price_at_purchase']));
+                    }
+                    
+                    $stage1Subtotal = 0;
+                    foreach ($stage1Items as $s1It) {
+                        $stage1Subtotal += (floatval($s1It['quantity']) * floatval($s1It['price_at_purchase']));
+                    }
+                    
+                    $couponDiscount = floatval($oRef['coupon_discount'] ?? 0);
+                    $oRef['total_amount'] = max(0, round($grindingSubtotal + $oFee - $couponDiscount));
+                    $oRef['total'] = $oRef['total_amount'];
+
+                    // Stage 1 payment covered stage 1 items. Deduct stage 1 items cost from amount_paid
+                    $rawPaid = floatval($oRef['amount_paid'] ?? 0);
+                    $stage2Paid = max(0, round($rawPaid - $stage1Subtotal));
+                    
+                    // If rawPaid was equal or close to stage 1 items total + fee, stage 2 advance is 0
+                    if ($rawPaid > 0 && abs($rawPaid - $stage1Subtotal) <= 100 && $stage1Subtotal > 0) {
+                        $stage2Paid = 0;
+                    }
+
+                    $oRef['amount_paid'] = $stage2Paid;
+                    $oRef['advancePayment'] = $stage2Paid;
+                    
+                    if ($stage2Paid >= $oRef['total_amount'] && $oRef['total_amount'] > 0) {
+                        $oRef['payment_status'] = 'paid';
+                    } elseif ($stage2Paid > 0) {
+                        $oRef['payment_status'] = 'partial';
+                    } else {
+                        $oRef['payment_status'] = 'pending';
+                    }
+                } else {
+                    $oRef['items'] = $allItems;
+                    $oRef['all_items'] = $allItems;
+                }
+            } else {
+                $oRef['items'] = $allItems;
+                $oRef['all_items'] = $allItems;
+            }
+            
             if (!empty($hasTripMap[$id])) {
                 $st = strtolower(trim($oRef['status']));
                 if (!in_array($st, ['awaiting_weight', 'pending', 'processing'])) {
